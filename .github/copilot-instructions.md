@@ -1,50 +1,72 @@
-# GitHub Copilot Instructions – LoP01
+# Project-wide Copilot instructions
 
-## Project overview
+You are working in a 2D single-player game project written in C++20 using raylib and CMake.
 
-**LoP01** (Lands of Peril) is a text-based adventure RPG written in **C++17** and built with **CMake**.
-Players navigate a world made up of interconnected locations, interact with NPCs, gather items and
-engage in turn-based combat.
+## High-level goals
 
-## Repository layout
+- Build a playable vertical slice first, not a full game.
+- Prioritize maintainable gameplay code over clever abstractions.
+- Prefer deterministic, testable logic.
+- Keep rendering and UI simple while gameplay systems mature.
+- Use placeholder assets and data-driven content.
 
-| Path | Purpose |
-|------|---------|
-| `src/` | Game source code |
-| `tests/` | Unit and integration tests |
-| `data/` | JSON data files (locations, items, enemies) |
-| `assets/` | Art, audio and other raw assets |
-| `docs/` | Game design and technical documentation |
-| `.github/` | CI workflows, Copilot instructions and prompt files |
+## Design pillars
 
-## Coding conventions
+- Overworld flow inspired by Heroes of Might and Magic 2/3
+- Town and dungeon exploration inspired by SNES-era Final Fantasy
+- True turn-based CTB combat inspired by Final Fantasy X
+- Cozy progression and restoration elements inspired by farming/life-sim games
+- Tone: fantasy + light dystopia + cozy restoration
 
-- Follow the guidelines in `.github/instructions/cpp.instructions.md`.
-- Gameplay systems follow `.github/instructions/gameplay.instructions.md`.
-- Console/UI code follows `.github/instructions/ui.instructions.md`.
+## Technical rules
 
-## Key design documents
+- Use C++20.
+- Use raylib for graphics/input/audio.
+- Use CMake.
+- Prefer plain classes and clear ownership.
+- Avoid premature ECS or overengineering.
+- Keep gameplay systems separated:
+  - time/day system
+  - overworld system
+  - location system
+  - battle system
+  - content loading
+  - save/load
+- Keep core gameplay logic independent from rendering where practical.
+- Put balance values and content definitions in JSON, not hardcoded in gameplay logic.
+- Add tests for pure logic wherever feasible.
 
-Before implementing any feature read the relevant doc in `docs/`:
+## Working style
 
-- `game_vision.md` – high-level game vision and pillars
-- `core_loop_rules.md` – the player-facing game loop
-- `combat_rules.md` – turn-based combat specification
-- `content_scope_v0.md` – what is in and out of scope for v0
-- `technical_direction.md` – architectural decisions and constraints
+- Before large changes, summarize the plan briefly.
+- For ambiguous requirements, choose the simplest implementation that preserves the intended gameplay.
+- Document non-obvious design decisions in README_DECISIONS.md.
+- When creating new systems, provide extension points but do not generalize prematurely.
+- Prefer small, complete milestones that build and run.
 
-## Prompt files
+## Current scope
 
-Reusable prompt files live in `.github/prompts/`. Use them when bootstrapping new systems:
+Target only a vertical slice with:
+- 1 overworld region
+- 6 to 8 destinations
+- 1 town
+- 1 inn
+- 1 home/base
+- 1 mine with 5 prototype floors
+- 3 heroes
+- 4 generic unit types
+- 4 enemy groups
+- 1 shop
+- 1 recruit point
+- 2 simple quests
+- save/load
+- placeholder art
 
-- `bootstrap-vertical-slice.prompt.md` – spin up a new playable slice
-- `implement-battle-module.prompt.md` – add the combat system
-- `add-location-scene.prompt.md` – add a new navigable location
+## Key docs to follow
 
-## Build & test
-
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
+Always consult these docs when relevant:
+- docs/game_vision.md
+- docs/core_loop_rules.md
+- docs/combat_rules.md
+- docs/content_scope_v0.md
+- docs/technical_direction.md
