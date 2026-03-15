@@ -1,28 +1,44 @@
 ---
-mode: agent
-description: Bootstrap a new vertical slice (playable end-to-end demo) of the LoP01 game.
+agent: 'agent'
+description: 'Bootstrap the first playable vertical slice for the game'
 ---
 
-# Bootstrap Vertical Slice
+Bootstrap the first playable vertical slice for this project.
 
-You are setting up a self-contained playable prototype of **Lands of Peril**.
-A vertical slice must demonstrate one complete loop: start → navigate locations → reach an end state.
+Read and follow:
+- docs/game_vision.md
+- docs/core_loop_rules.md
+- docs/combat_rules.md
+- docs/content_scope_v0.md
+- docs/technical_direction.md
 
-## Steps
+Requirements:
+- C++20
+- raylib
+- CMake
+- placeholder assets only
+- data-driven JSON content
+- save/load support
+- tests for pure logic
 
-1. **Review** `docs/game_vision.md`, `docs/core_loop_rules.md` and `docs/content_scope_v0.md`.
-2. **Scaffold** the directory structure according to the layout in `.github/copilot-instructions.md`.
-3. **Implement** the following systems (stub-level is fine for anything outside the slice scope):
-   - `Game` – main loop, command processing
-   - `Location` + `LocationManager` – at least 4 interconnected locations
-   - `Scene` – title screen and location view rendering
-   - `Player` – current location tracking
-4. **Wire up** `CMakeLists.txt` so `cmake --build build && ./build/LoP01` launches the game.
-5. **Add** at least one test per implemented system in `tests/`.
-6. **Verify** the slice is playable: start → move between locations → quit.
+Deliverables for this task:
+1. Propose the folder structure
+2. Propose the gameplay/data architecture
+3. Create the initial CMake project
+4. Create the core application loop
+5. Create game state scaffolding for:
+   - title
+   - opening sequence
+   - overworld selection
+   - overworld mode
+   - location mode
+   - battle mode
+6. Create starter JSON data files
+7. Create README and README_DECISIONS.md
 
-## Acceptance criteria
-
-- `cmake -B build && cmake --build build` succeeds with no errors.
-- `ctest --test-dir build` passes all tests.
-- The player can type `start`, navigate between all locations using direction commands, and `quit`.
+Constraints:
+- Do not attempt to build the full game
+- Keep scope to the vertical slice
+- Avoid overengineering
+- Prefer small compilable increments
+- Explain any simplifying assumptions
