@@ -1,58 +1,93 @@
 # Combat Rules
 
-> **Status:** Planned for v1. Not implemented in v0.
+## Battle format
 
-## Overview
+- true turn-based CTB battle
+- one battle module used by both overworld and location encounters
+- each side can field up to 5 units
 
-Combat in Lands of Peril is **turn-based** and **deterministic with randomised damage rolls**.
-The player and enemy alternate actions until one side is defeated.
+## Unit categories
 
-## Trigger
+### Hero units
+- unique named characters
+- do not stack
+- have personality and story relevance
+- if reduced to 0 HP, they leave the party
+- they must be rediscovered/recruited later
 
-Combat begins when:
-- The player moves into a location that contains a living enemy, **or**
-- The player issues an `attack` command while in a location with an enemy.
+### Generic units
+- stackable
+- when defeated, they are permanently lost
 
-## Turn order
+## Stats
 
-1. **Player acts first** each round.
-2. The enemy acts second.
-3. Repeat until one combatant's HP reaches 0.
+Each unit has:
+- Attack
+- Defense
+- Magic
+- MinDamage
+- MaxDamage
+- HP
+- MP
+- Agility
+- Life
 
-## Actions
+## Interpretation
 
-### Player actions
+- HP = current health of one active body/unit
+- MP = magic resource
+- Agility = how quickly turns come up in CTB
+- Life:
+  - for generic units, this is stack count
+  - for heroes, Life is effectively 1
 
-| Command | Effect |
-|---------|--------|
-| `attack` | Deal damage to the enemy |
-| `flee` | Attempt to escape to the previous location |
+## Prototype formulas
 
-### Enemy actions
+These are prototype formulas for vertical slice and may be revised later.
 
-Enemies always attack the player (v1). More complex behaviours are deferred to v2.
+### Physical damage
+baseDamage = random(MinDamage, MaxDamage)
+modifiedDamage = baseDamage + Attack - floor(Defense / 2)
+finalDamage = max(1, modifiedDamage)
 
-## Damage calculation
+### Magic damage
+baseMagic = Magic * skillPower
+finalMagicDamage = max(1, baseMagic - floor(targetMagicResistPlaceholder))
 
-```
-damage = max(1, attacker.attack - defender.defence + roll(-2, +2))
-```
+If the implementation needs a simpler prototype, document the simplification.
 
-`roll(-2, +2)` is a uniform random integer in [−2, +2].
+## Applying damage to generic stacks
 
-## Defeat conditions
+For generic stack units:
+- damage reduces current HP
+- if HP reaches 0, lose 1 Life
+- if Life remains, HP resets to base HP for the next unit in the stack
+- if Life reaches 0, the stack is removed
 
-| Condition | Outcome |
-|-----------|---------|
-| Enemy HP ≤ 0 | Enemy removed from location; player may continue exploring |
-| Player HP ≤ 0 | Game over |
+## Applying damage to heroes
 
-## Fleeing
+For hero units:
+- if HP reaches 0, the hero is KO'd and removed from battle
+- after battle, remove the hero from the active party and flag them as lost
 
-- The player rolls a **1-in-3 chance** of a successful flee each attempt.
-- On success the player moves to the previous location with no penalty.
-- On failure the enemy gets a free attack before the next player turn.
+## Minimum prototype actions
 
-## Enemy definitions
+- Attack
+- Defend
+- Skill 1
+- Skill 2
+- Item use may be stubbed or deferred
 
-Enemy stats are defined in `data/enemies.json`. See `content_scope_v0.md` for the v0 enemy list.
+## CTB requirements
+
+- battle UI must show upcoming turn order
+- agility influences how frequently units act
+- system should be deterministic apart from intentional RNG
+
+## Win/loss conditions
+
+Win:
+- all enemy units removed
+
+Loss:
+- all allied units removed or incapacitated
