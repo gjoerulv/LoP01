@@ -1,8 +1,4 @@
 ---
-applyTo: "src/**"
----
-
----
 applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/**/*.h,docs/**/*.md"
 ---
 
