@@ -1,42 +1,61 @@
-# Game Vision – Lands of Peril
+# Game Vision
+
+## Working title
+
+Project Ashvale
 
 ## Elevator pitch
 
-**Lands of Peril** (LoP) is a single-player, text-based adventure RPG set in a grim fantasy world.
-Players explore an interconnected map of locations, gather resources, talk to NPCs and fight monsters
-in turn-based combat — all through a simple command-line interface.
+A 2D single-player strategy/RPG hybrid that combines:
+- HoMM-style destination-based overworld travel
+- FF-style location exploration
+- true turn-based CTB battles
+- cozy town restoration and resource gathering
+- a soft dystopian fantasy tone
 
-## Vision pillars
+## Tone and atmosphere
 
-| Pillar | Description |
-|--------|-------------|
-| **Exploration** | Every location has a distinct identity; discovery is rewarding. |
-| **Tension** | Danger is always close. Resources are limited and decisions matter. |
-| **Clarity** | The interface is unambiguous. Players always know where they are and what they can do. |
-| **Accessibility** | Plain text; works with screen readers; no colour dependency. |
+The world is damaged, but not hopeless.
+The mood should feel:
+- melancholic
+- mysterious
+- lived-in
+- cozy in safe places
+- dystopian in occupied places
 
-## Target audience
+This is not grimdark. Recovery, routine, and rebuilding matter.
 
-Fans of classic text adventures (Zork, Adventure) and old-school CRPGs who appreciate
-atmosphere over spectacle.
+## Story setup
 
-## Tone
+The player wakes in an abandoned town with no memory.
 
-Dark, moody and slightly gothic. Think Warhammer Fantasy rather than high-fantasy Tolkien.
-Descriptions are terse and evocative. Humour is dry and rare.
+An old man is the only visible survivor. He explains that the country has largely fallen to android occupation. The abandoned town can be restored, but only if the player finds survivors, resources, and forgotten truths.
 
-## World
+Ghostly remnants of former townspeople can be discovered and interacted with. These encounters reveal memories, town functions, and clues about what was lost.
 
-The game is set on the continent of **Valdross**, a once-prosperous land now blighted by war,
-plague and dark magic. The player begins as an unnamed adventurer arriving at the town of
-**Stonehaven** — one of the last bastions of civilisation — and must uncover the source of
-the blight.
+The player starts in their home/base. Beneath the house is a mine used for training, danger, and resources.
 
-## Version milestones
+## Core fantasy
 
-| Milestone | Scope |
-|-----------|-------|
-| **v0** | Navigable world with ≥ 6 locations, title screen, look/go/quit commands |
-| **v1** | Turn-based combat, 3 enemy types, player HP |
-| **v2** | Items, inventory, a simple shop |
-| **v3** | NPCs with dialogue, main quest line |
+The player should feel like they are:
+- surviving day by day
+- rebuilding a forgotten home
+- gathering allies
+- slowly making the world livable again
+- balancing time, risk, and long-term progress
+
+## Primary inspirations
+
+- Heroes of Might and Magic 2/3: overworld structure and visitable places
+- SNES Final Fantasy: towns, dungeons, menus, character flavor
+- Final Fantasy X: CTB battle pacing
+- Stardew-like progression: restoration, routine, resource use, cozy structure
+
+## Non-goals for v0
+
+- full narrative arc
+- huge world
+- final art quality
+- advanced enemy AI
+- hundreds of items
+- full-scale farming systems
