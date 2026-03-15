@@ -1,48 +1,63 @@
-# Content Scope – v0
+# Vertical Slice Content Scope
 
-This document defines exactly what content is **in scope** for the v0 milestone.
-Anything not listed here is out of scope and should be deferred.
+## Region count
 
-## In scope
+Implement exactly 1 overworld region for v0.
 
-### Locations (6)
+## Overworld destinations
 
-| ID | Name | Connected to |
-|----|------|--------------|
-| `town_square` | Town Square | market (N), blacksmith (E), south_gate (S) |
-| `market` | Market District | town_square (S), tavern (E) |
-| `blacksmith` | Blacksmith's Forge | town_square (W) |
-| `tavern` | The Rusty Flagon | market (W), darkwood_forest (N) |
-| `south_gate` | South Gate | town_square (N) |
-| `darkwood_forest` | Darkwood Forest | tavern (S) |
+Target 6 to 8 destinations:
+- home/base
+- abandoned town center
+- inn
+- shop/recruit point
+- mine entrance
+- one dungeon/ruin
+- one service node
+- one optional threat/combat node
 
-### Scenes
+## Locations
 
-- Title screen
-- Location scene (name + description + exits)
-- Game-over screen
+Implement:
+- 1 town-style location
+- 1 dungeon-style location
+- 1 home/base interior
 
-### Commands
+## Party content
 
-- `start`
-- `look` / `l`
-- `north` / `n`, `south` / `s`, `east` / `e`, `west` / `w`
-- `go <direction>`
-- `quit` / `q`
+- 1 player character
+- 3 hero characters total
+- 4 generic unit types
+- 4 enemy groups
 
-### Systems
+## Systems
 
-- Location system (`Location`, `LocationManager` via `Game`)
-- Scene rendering (`Scene`)
-- Player tracking (`Player`)
-- Main game loop (`Game`)
+Must exist in v0:
+- time/day progression
+- travel time
+- location time costs
+- sleeping
+- wake-up penalty
+- battle module
+- recruitment
+- shop
+- save/load
+- opening story sequence
+- 2 simple quests
 
-## Out of scope for v0
+## Mine
 
-- Combat / battle system (v1)
-- Items and inventory (v2)
-- NPCs and dialogue (v3)
-- Saving / loading game state
-- Colour / ANSI escape codes
-- Audio
-- Any graphical UI
+For v0:
+- implement 5 floors only
+- procedural or semi-random floor generation is acceptable
+- floor 5 acts as first checkpoint
+
+## UI
+
+Must show:
+- current day
+- current time
+- gold
+- current location/region
+- party summary
+- battle turn order
