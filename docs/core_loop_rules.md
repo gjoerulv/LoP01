@@ -1,63 +1,75 @@
 # Core Loop Rules
 
-## Overview
+## Day structure
 
-The core gameplay loop describes everything the player can do on their turn and how the game responds.
+- Day starts at 06:00
+- Day ends at 02:00 the following night
+- If the player fails to sleep in a valid bed before 02:00, apply wake-up penalty next day
+- Gold can never go below 0
 
-## Turn structure
+## Wake-up penalty
 
-Each player input constitutes one **turn**. A turn consists of:
+If the player:
+- is fully defeated
+- or fails to reach a bed before 02:00
 
-1. **Player issues a command** (typed at the `>` prompt).
-2. **Game processes the command** and updates state.
-3. **Game renders the new scene** and displays the result.
+then:
+- next day starts at 11:00
+- player wakes in nearest hospital or jail depending on context
+- player loses 1000 gold, but not below 0
 
-## Command categories
+## Valid sleeping locations
 
-### Navigation
+- player home/base
+- inns
 
-The player moves between locations using directional commands.
+## Overworld selection mode
 
-| Input | Canonical direction |
-|-------|---------------------|
-| `north` / `n` | north |
-| `south` / `s` | south |
-| `east` / `e` | east |
-| `west` / `w` | west |
-| `go <direction>` | as above |
+- player chooses current overworld region
+- switching region costs 1 full day
+- region transfer must be initiated before 11:00
+- region transfer must be discovered/unlocked first
 
-If the current location has no exit in the requested direction the game responds:
-> *You can't go that way.*
+## Overworld mode
 
-### Inspection
+- player does not move freely on the map
+- player selects a destination
+- travel time is based on distance
+- travel time is quantized to 15-minute steps
+- shortest travel time: 15 minutes
+- longest travel time: 4 hours
 
-| Command | Effect |
-|---------|--------|
-| `look` / `l` | Redisplay the current scene in full |
+Destinations can be:
+- enterable locations
+- single-use service locations
+- recruit points
+- buff points
+- combat locations
+- dungeons
 
-### Meta
+## Location mode
 
-| Command | Effect |
-|---------|--------|
-| `quit` / `q` | End the session and show the game-over screen |
+Walking is free.
 
-## Scene transitions
+Time costs:
+- opening a door = 1 minute
+- each chosen dialogue option = 1 minute
+- shopping transaction = 5 minutes
+- recruiting = 10 minutes
 
-| Trigger | New scene |
-|---------|-----------|
-| Game launch | Title screen |
-| `start` command | Location scene (starting location) |
-| Successful move | Location scene (new location) |
-| Player HP reaches 0 | Game-over screen |
-| `quit` command | Game-over screen |
+Location mode exits back to the overworld entrance point.
 
-## Unknown commands
+The player can open a menu here for:
+- party
+- inventory
+- skills
 
-If the game does not recognise a command it responds:
-> *You can't go that way.*
+## Defeat handling
 
-(For v0 this keeps the response set minimal.)
+If the player party is fully defeated:
+- wake at hospital or jail
+- lose 1000 gold, min 0
+- next day starts at 11:00
 
-## Entry point
-
-The starting location is always `town_square`.
+If the player character is KO'd in battle but the party still wins:
+- set player HP to 1 after battle
