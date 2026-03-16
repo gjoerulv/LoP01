@@ -14,7 +14,7 @@ Task:
 - Build a reusable battle module used by both overworld and location encounters
 - Implement CTB turn order
 - Support 5 units per side
-- Support hero units and stackable generic units
+- Support 1 leader unit, hero units and stackable generic units
 - Implement:
   - basic attack
   - defend

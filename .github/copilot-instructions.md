@@ -36,6 +36,11 @@ You are working in a 2D single-player game project written in C++20 using raylib
 - Put balance values and content definitions in JSON, not hardcoded in gameplay logic.
 - Add tests for pure logic wherever feasible.
 
+## Combat System Implementation
+
+- Follow docs/combat_rules.md exactly when implementing combat systems.
+- Keep formulas simple and testable.
+
 ## Working style
 
 - Before large changes, summarize the plan briefly.
@@ -47,17 +52,17 @@ You are working in a 2D single-player game project written in C++20 using raylib
 ## Current scope
 
 Target only a vertical slice with:
-- 1 overworld region
-- 6 to 8 destinations
-- 1 town
-- 1 inn
+- 2 overworld regions
+- 10 to 20 destinations
+- 2 towns
+- 2 inns
 - 1 home/base
-- 1 mine with 5 prototype floors
+- 2 to 3 mines with 5 prototype floors
 - 3 heroes
-- 4 generic unit types
-- 4 enemy groups
-- 1 shop
-- 1 recruit point
+- 8 generic unit types
+- 6 enemy groups
+- 2 to 3 shops
+- 2 to 3 recruit points
 - 2 simple quests
 - save/load
 - placeholder art
@@ -70,3 +75,17 @@ Always consult these docs when relevant:
 - docs/combat_rules.md
 - docs/content_scope_v0.md
 - docs/technical_direction.md
+
+## Current milestone focus
+
+The project is currently in the first visual gameplay pass.
+
+Priorities for this milestone:
+- improve presentation
+- reduce debug-screen dominance
+- create dedicated renderers for each game mode
+- improve readability and contextual controls
+- preserve existing gameplay logic
+- For location-screen polish, keep logic unchanged and focus on presentation-only improvements, ensuring all UI elements are visible within game resolution.
+
+Avoid expanding the project with major new mechanics until the current systems are visually represented and playable.

@@ -1,0 +1,74 @@
+{
+  "locations": [
+    {
+      "id": "home_base",
+      "name": "Home Base",
+      "type": "home",
+      "allows_sleep": true,
+      "overworld_destination": true
+    },
+    {
+      "id": "town_center",
+      "name": "Abandoned Town Center",
+      "type": "town",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "old_inn",
+      "name": "Old Inn",
+      "type": "inn",
+      "allows_sleep": true,
+      "overworld_destination": true
+    },
+    {
+      "id": "survivor_recruit_post",
+      "name": "Survivor Recruit Post",
+      "type": "recruit",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "mine_entrance",
+      "name": "Mine Entrance",
+      "type": "dungeon",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "sunken_ruin",
+      "name": "Sunken Ruin",
+      "type": "dungeon",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "supply_cart",
+      "name": "Supply Cart",
+      "type": "service",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "bridge_checkpoint",
+      "name": "Bridge Checkpoint",
+      "type": "combat",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "orchard_pass",
+      "name": "Orchard Pass",
+      "type": "combat",
+      "allows_sleep": false,
+      "overworld_destination": true
+    },
+    {
+      "id": "clocktower_square",
+      "name": "Clocktower Square",
+      "type": "town",
+      "allows_sleep": false,
+      "overworld_destination": true
+    }
+  ]
+}

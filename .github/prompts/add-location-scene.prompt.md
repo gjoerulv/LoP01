@@ -11,7 +11,7 @@ Read first:
 - docs/content_scope_v0.md
 
 Build:
-- one town location
+- town locations
 - walkable top-down map
 - inn
 - shop
