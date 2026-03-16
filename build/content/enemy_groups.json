@@ -1,0 +1,12 @@
+{
+  "enemy_groups": [
+    { "id": "eg_patrol_01", "name": "Rust Patrol A", "units": ["unit_guard", "unit_scout"] },
+    { "id": "eg_patrol_02", "name": "Rust Patrol B", "units": ["unit_guard", "unit_lancer"] },
+    { "id": "eg_ruin_01", "name": "Ruin Watchers", "units": ["unit_arcanist", "unit_slingshot"] },
+    { "id": "eg_ruin_02", "name": "Collapsed Gate", "units": ["unit_guard", "unit_guard", "unit_medic"] },
+    { "id": "eg_mine_01", "name": "Mine Ambush", "units": ["unit_miner", "unit_lancer"] },
+    { "id": "eg_mine_02", "name": "Deep Tunnel", "units": ["unit_miner", "unit_miner", "unit_arcanist"] },
+    { "id": "eg_square_01", "name": "Clocktower Occupation", "units": ["unit_guard", "unit_longbow"] },
+    { "id": "eg_boss_01", "name": "Checkpoint Warden", "units": ["unit_lancer", "unit_longbow", "unit_arcanist"] }
+  ]
+}

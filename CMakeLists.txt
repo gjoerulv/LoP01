@@ -22,14 +22,19 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(raylib nlohmann_json)
 
-add_library(game_core
+add_library(ashvale_logic
   src/core/GameClock.cpp
   src/core/SaveGame.cpp
   src/data/ContentRepository.cpp
   src/gameplay/battle/Battle.cpp
   src/gameplay/GameSession.cpp
   src/gameplay/location/LocationScene.cpp
+)
 
+target_include_directories(ashvale_logic PUBLIC src)
+target_link_libraries(ashvale_logic PUBLIC nlohmann_json::nlohmann_json)
+
+add_library(ashvale_rendering
   src/rendering/HudRenderer.cpp
   src/rendering/DebugOverlay.cpp
   src/rendering/TitleRenderer.cpp
@@ -38,20 +43,15 @@ add_library(game_core
   src/rendering/BattleRenderer.cpp
 )
 
-target_include_directories(game_core PUBLIC src)
-
-target_link_libraries(game_core
-  PUBLIC
-    nlohmann_json::nlohmann_json
-    raylib
-)
+target_include_directories(ashvale_rendering PUBLIC src)
+target_link_libraries(ashvale_rendering PUBLIC raylib)
 
 add_executable(ashvale_slice
   src/app/App.cpp
   src/app/main.cpp
 )
 
-target_link_libraries(ashvale_slice PRIVATE game_core)
+target_link_libraries(ashvale_slice PRIVATE ashvale_logic ashvale_rendering)
 
 if (EXISTS "${CMAKE_SOURCE_DIR}/content")
   add_custom_command(TARGET ashvale_slice POST_BUILD
@@ -83,11 +83,7 @@ if (BUILD_TESTING)
     tests/SaveGameTests.cpp
   )
 
-  target_link_libraries(ashvale_logic_tests
-    PRIVATE
-      game_core
-      Catch2::Catch2WithMain
-  )
+  target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic Catch2::Catch2WithMain)
 
   include(Catch)
   catch_discover_tests(ashvale_logic_tests)
