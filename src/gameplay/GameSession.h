@@ -32,6 +32,7 @@ public:
     void AdvanceMode();
     void AddMinutes(int minutes);
     bool SpendGold(int amount);
+    [[nodiscard]] bool TrySpendGold(int amount);
 
     void EnterLocationMode(const std::string& locationId);
     void ExitLocationMode();

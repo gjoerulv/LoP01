@@ -5,21 +5,24 @@
       "name": "Home Base",
       "type": "home",
       "allows_sleep": true,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "scene_id": "town_square_proto"
     },
     {
       "id": "town_center",
       "name": "Abandoned Town Center",
       "type": "town",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "scene_id": "town_square_proto"
     },
     {
       "id": "old_inn",
       "name": "Old Inn",
       "type": "inn",
       "allows_sleep": true,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "scene_id": "town_square_proto"
     },
     {
       "id": "survivor_recruit_post",
@@ -33,14 +36,16 @@
       "name": "Mine Entrance",
       "type": "dungeon",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "battle_scenario_id": "debug_intro_battle"
     },
     {
       "id": "sunken_ruin",
       "name": "Sunken Ruin",
       "type": "dungeon",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "battle_scenario_id": "debug_intro_battle"
     },
     {
       "id": "supply_cart",
@@ -54,21 +59,24 @@
       "name": "Bridge Checkpoint",
       "type": "combat",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "battle_scenario_id": "debug_intro_battle"
     },
     {
       "id": "orchard_pass",
       "name": "Orchard Pass",
       "type": "combat",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "battle_scenario_id": "debug_intro_battle"
     },
     {
       "id": "clocktower_square",
       "name": "Clocktower Square",
       "type": "town",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "scene_id": "town_square_proto"
     }
   ]
 }

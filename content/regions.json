@@ -4,17 +4,89 @@
       "id": "ashvale_heartland",
       "name": "Ashvale Heartland",
       "unlocked": true,
-      "destinations": [
-        "home_base",
-        "town_center",
-        "old_inn",
-        "survivor_recruit_post",
-        "mine_entrance",
-        "sunken_ruin",
-        "supply_cart",
-        "bridge_checkpoint",
-        "orchard_pass",
-        "clocktower_square"
+      "nodes": [
+        {
+          "location_id": "home_base",
+          "x": 110,
+          "y": 460,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "town_center",
+          "x": 230,
+          "y": 370,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "old_inn",
+          "x": 360,
+          "y": 430,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "survivor_recruit_post",
+          "x": 470,
+          "y": 300,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "mine_entrance",
+          "x": 610,
+          "y": 410,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "sunken_ruin",
+          "x": 740,
+          "y": 340,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "supply_cart",
+          "x": 190,
+          "y": 230,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "bridge_checkpoint",
+          "x": 350,
+          "y": 210,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "orchard_pass",
+          "x": 520,
+          "y": 200,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "clocktower_square",
+          "x": 680,
+          "y": 210,
+          "discovered": true,
+          "travel_available": true
+        }
+      ],
+      "links": [
+        [ "home_base", "town_center" ],
+        [ "town_center", "old_inn" ],
+        [ "old_inn", "survivor_recruit_post" ],
+        [ "survivor_recruit_post", "mine_entrance" ],
+        [ "mine_entrance", "sunken_ruin" ],
+        [ "town_center", "supply_cart" ],
+        [ "supply_cart", "bridge_checkpoint" ],
+        [ "bridge_checkpoint", "orchard_pass" ],
+        [ "orchard_pass", "clocktower_square" ],
+        [ "survivor_recruit_post", "bridge_checkpoint" ]
       ]
     }
   ]

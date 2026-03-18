@@ -25,81 +25,6 @@ bool IsAlive(const BattleUnit& unit) {
 
 } // namespace
 
-BattleState BattleState::CreateDebugBattle(const uint32_t seed) {
-    std::vector<BattleUnit> units;
-    units.reserve(6);
-
-    BattleUnit playerLeader;
-    playerLeader.id = "hero_player";
-    playerLeader.name = "Wanderer";
-    playerLeader.side = TeamSide::Allies;
-    playerLeader.category = UnitCategory::Leader;
-    playerLeader.isPlayerCharacter = true;
-    playerLeader.stats = UnitStats{6, 5, 5, 4, 6, 8, 36, 18, 8, 1, UnitPosition::Leader, UnitRange::LongRanged};
-    playerLeader.hp = playerLeader.stats.maxHp;
-    playerLeader.mp = playerLeader.stats.maxMp;
-    playerLeader.life = 1;
-    playerLeader.inReserve = false;
-
-    BattleUnit ally;
-    ally.id = "unit_guard";
-    ally.name = "Guard Recruit";
-    ally.side = TeamSide::Allies;
-    ally.category = UnitCategory::Generic;
-    ally.stats = UnitStats{4, 3, 1, 1, 4, 6, 14, 0, 10, 3, UnitPosition::Front, UnitRange::Melee};
-    ally.hp = ally.stats.maxHp;
-    ally.mp = 0;
-    ally.life = ally.stats.life;
-
-    BattleUnit allyHero;
-    allyHero.id = "hero_mira";
-    allyHero.name = "Mira";
-    allyHero.side = TeamSide::Allies;
-    allyHero.category = UnitCategory::Hero;
-    allyHero.stats = UnitStats{5, 3, 6, 3, 5, 7, 24, 14, 11, 1, UnitPosition::Back, UnitRange::LongRanged};
-    allyHero.hp = allyHero.stats.maxHp;
-    allyHero.mp = allyHero.stats.maxMp;
-    allyHero.life = 1;
-
-    BattleUnit enemyLeader;
-    enemyLeader.id = "enemy_captain";
-    enemyLeader.name = "Checkpoint Warden";
-    enemyLeader.side = TeamSide::Enemies;
-    enemyLeader.category = UnitCategory::Leader;
-    enemyLeader.stats = UnitStats{5, 4, 4, 4, 5, 7, 30, 14, 7, 1, UnitPosition::Leader, UnitRange::LongRanged};
-    enemyLeader.hp = enemyLeader.stats.maxHp;
-    enemyLeader.mp = enemyLeader.stats.maxMp;
-    enemyLeader.life = 1;
-
-    BattleUnit enemyA;
-    enemyA.id = "enemy_lancer";
-    enemyA.name = "Lancer";
-    enemyA.side = TeamSide::Enemies;
-    enemyA.category = UnitCategory::Generic;
-    enemyA.stats = UnitStats{4, 2, 1, 1, 3, 5, 12, 0, 9, 2, UnitPosition::Front, UnitRange::Melee};
-    enemyA.hp = enemyA.stats.maxHp;
-    enemyA.mp = 0;
-    enemyA.life = enemyA.stats.life;
-
-    BattleUnit enemyB;
-    enemyB.id = "enemy_longbow";
-    enemyB.name = "Longbow";
-    enemyB.side = TeamSide::Enemies;
-    enemyB.category = UnitCategory::Generic;
-    enemyB.stats = UnitStats{3, 2, 1, 1, 3, 4, 10, 0, 10, 2, UnitPosition::Back, UnitRange::LongRanged};
-    enemyB.hp = enemyB.stats.maxHp;
-    enemyB.mp = 0;
-    enemyB.life = enemyB.stats.life;
-
-    units.push_back(playerLeader);
-    units.push_back(ally);
-    units.push_back(allyHero);
-    units.push_back(enemyLeader);
-    units.push_back(enemyA);
-    units.push_back(enemyB);
-
-    return CreateForTests(std::move(units), seed);
-}
 
 BattleState BattleState::CreateForTests(std::vector<BattleUnit> units, const uint32_t seed) {
     BattleState state(seed);
@@ -153,7 +78,7 @@ bool BattleState::SetUnits(std::vector<BattleUnit> units) {
 
     units_ = std::move(units);
     summary_ = {};
-    lastActionText_ = "Battle started";
+    // lastActionText_ = "Battle started";
     AdvanceToNextTurn();
     return true;
 }
@@ -213,8 +138,13 @@ std::vector<int> BattleState::UpcomingTurnOrder(const int count) const {
     return order;
 }
 
-std::string BattleState::LastActionText() const {
-    return lastActionText_;
+//std::string BattleState::LastActionText() const {
+//    return lastActionText_;
+//}
+
+const std::vector<BattleEvent>& BattleState::LastEvents() const
+{
+    return lastEvents_;
 }
 
 int BattleState::FindFirstTargetForActive() const {
@@ -236,7 +166,7 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
     if (summary_.finished || activeUnitIndex_ < 0 || activeUnitIndex_ >= static_cast<int>(units_.size())) {
         return false;
     }
-
+    lastEvents_.clear();
     BattleUnit& actor = units_[activeUnitIndex_];
     if (!IsAliveAndActive(actor)) {
         AdvanceToNextTurn();
@@ -244,6 +174,23 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
     }
 
     actor.defending = false;
+
+    auto pushEvent = [&](const BattleEventType type,
+        const BattleActionType eventAction,
+        const std::string& actorName,
+        const std::string& targetName,
+        const int amount,
+        const TeamSide winner)
+        {
+            lastEvents_.push_back(BattleEvent{
+                type,
+                eventAction,
+                actorName,
+                targetName,
+                amount,
+                winner
+                });
+        };
 
     int resolvedTarget = targetIndex;
     const bool needsTarget = action == BattleActionType::Attack || action == BattleActionType::Skill1 || action == BattleActionType::Skill2;
@@ -261,43 +208,62 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
         }
         damage = ComputePhysicalDamage(actor, units_[resolvedTarget]);
         damage = ApplyDamage(units_[resolvedTarget], damage);
-        lastActionText_ = actor.name + " attacks " + units_[resolvedTarget].name + " for " + std::to_string(damage);
+        // lastActionText_ = actor.name + " attacks " + units_[resolvedTarget].name + " for " + std::to_string(damage);
+
+        pushEvent(BattleEventType::AttackResolved, action, 
+            actor.name, units_[resolvedTarget].name,
+            damage, TeamSide::Allies);
+
         break;
     case BattleActionType::Defend:
         actor.defending = true;
-        lastActionText_ = actor.name + " defends";
+        // lastActionText_ = actor.name + " defends";
+        pushEvent(BattleEventType::Defended, action, actor.name, "", 0, actor.side);
         break;
     case BattleActionType::Wait:
         waited = true;
-        lastActionText_ = actor.name + " waits";
+        // lastActionText_ = actor.name + " waits";
+        pushEvent(BattleEventType::Waited, action, actor.name, "", 0, actor.side);
         break;
     case BattleActionType::Skill1:
         if (resolvedTarget < 0) {
             return false;
         }
         if (actor.mp < kSkill1MpCost) {
-            lastActionText_ = actor.name + " lacks MP, uses attack";
+            // lastActionText_ = actor.name + " lacks MP, uses attack";
             damage = ComputePhysicalDamage(actor, units_[resolvedTarget]);
+            pushEvent(BattleEventType::Information, action,
+                actor.name + " lacks MP, uses attack", units_[resolvedTarget].name, damage, actor.side);
         } else {
             actor.mp -= kSkill1MpCost;
             damage = static_cast<int>(std::round(ComputePhysicalDamage(actor, units_[resolvedTarget]) * 1.25f));
         }
         damage = ApplyDamage(units_[resolvedTarget], damage);
-        lastActionText_ = actor.name + " uses Skill1 on " + units_[resolvedTarget].name + " for " + std::to_string(damage);
+        // lastActionText_ = actor.name + " uses Skill1 on " + units_[resolvedTarget].name + " for " + std::to_string(damage);
+
+        pushEvent(BattleEventType::SkillResolved, action,
+            actor.name, units_[resolvedTarget].name,
+            damage, actor.side);
+
         break;
     case BattleActionType::Skill2:
         if (resolvedTarget < 0) {
             return false;
         }
         if (actor.mp < kSkill2MpCost) {
-            lastActionText_ = actor.name + " lacks MP, uses attack";
+            // lastActionText_ = actor.name + " lacks MP, uses attack";
             damage = ComputePhysicalDamage(actor, units_[resolvedTarget]);
+            pushEvent(BattleEventType::Information, action,
+                actor.name + " lacks MP, uses attack", units_[resolvedTarget].name, damage, actor.side);
         } else {
             actor.mp -= kSkill2MpCost;
             damage = ComputeMagicDamage(actor, units_[resolvedTarget], 1.5f);
         }
         damage = ApplyDamage(units_[resolvedTarget], damage);
-        lastActionText_ = actor.name + " uses Skill2 on " + units_[resolvedTarget].name + " for " + std::to_string(damage);
+        // lastActionText_ = actor.name + " uses Skill2 on " + units_[resolvedTarget].name + " for " + std::to_string(damage);
+        pushEvent(BattleEventType::SkillResolved, action,
+            actor.name, units_[resolvedTarget].name,
+            damage, actor.side);
         break;
     }
 
