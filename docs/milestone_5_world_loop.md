@@ -3,7 +3,7 @@
 ## Purpose
 
 Milestone 4 made the game visibly playable.
-This milestone makes the prototype behave more like the intended day-to-day strategy/RPG loop.
+This milestone makes the playable slice behave more like the intended day-to-day strategy/RPG loop.
 
 The goal is to connect existing travel, location, and battle systems to meaningful consequences and progression.
 
@@ -14,7 +14,7 @@ After this milestone, the player should be able to:
 - sleep at valid resting locations
 - suffer the documented wake-up penalty after defeat or missing sleep
 - see simple quest progress from existing content targets
-- return cleanly between overworld, location, and battle without debug-style glue
+- move cleanly between overworld, location, and battle as part of the intended loop
 
 ## Scope
 

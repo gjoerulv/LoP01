@@ -4,7 +4,7 @@ You are working in a 2D single-player game project written in C++20 using raylib
 
 ## High-level goals
 
-- Build a playable vertical slice first, not a full game.
+- Continue evolving the existing playable slice through small, complete milestones.
 - Prioritize maintainable gameplay code over clever abstractions.
 - Prefer deterministic, testable logic.
 - Keep rendering and UI simple while gameplay systems mature.
@@ -32,11 +32,12 @@ You are working in a 2D single-player game project written in C++20 using raylib
   - battle system
   - content loading
   - save/load
+  - quest/progression flow
 - Keep core gameplay logic independent from rendering where practical.
 - Put balance values and content definitions in JSON, not hardcoded in gameplay logic.
 - Add tests for pure logic wherever feasible.
 
-## Combat System Implementation
+## Combat system implementation
 
 - Follow docs/combat_rules.md exactly when implementing combat systems.
 - Keep formulas simple and testable.
@@ -49,9 +50,9 @@ You are working in a 2D single-player game project written in C++20 using raylib
 - When creating new systems, provide extension points but do not generalize prematurely.
 - Prefer small, complete milestones that build and run.
 
-## Current scope
+## Current bounded scope
 
-Target only a vertical slice with:
+Keep the playable slice intentionally limited:
 - 1 overworld region
 - 10 to 20 destinations
 - 1 or 2 town-style locations
@@ -75,7 +76,7 @@ Always consult these docs when relevant:
 
 ## Current milestone focus
 
-The project has completed the first visual gameplay pass and is moving into the next gameplay-loop milestone.
+The project has completed the initial architecture and visual gameplay pass. The current milestone is the first full world-loop milestone.
 
 Priorities for the current milestone:
 - preserve the existing renderer/controller/mapper architecture

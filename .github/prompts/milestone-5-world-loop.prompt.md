@@ -13,7 +13,7 @@ Read first:
 - docs/milestone_5_world_loop.md
 
 Primary goal:
-Connect the existing visual prototype into a more complete day-to-day gameplay loop.
+Extend the existing playable slice into a more complete day-to-day gameplay loop.
 
 Required work:
 
@@ -47,6 +47,7 @@ Constraints:
 - Keep content data-driven
 - Keep the codebase compilable in small steps
 - Prefer a playable end-to-end loop over broad incomplete systems
+- Do not restructure stable architecture unless required to complete milestone goals cleanly
 
 Expected output:
 1. short implementation plan

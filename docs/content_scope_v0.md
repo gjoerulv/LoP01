@@ -1,8 +1,11 @@
 # Vertical Slice Content Scope
 
+This document defines the bounded content scope for the current playable slice.
+The `v0` name is historical. Treat this document as a scope cap, not as a milestone checklist or a statement that every item is already fully implemented.
+
 ## Region count
 
-Implement exactly 1 overworld region for v0.
+The current playable slice uses exactly 1 overworld region.
 
 ## Overworld destinations
 
@@ -20,8 +23,8 @@ Target 10 to 20 destinations:
 ## Locations
 
 Implement:
-- 1 or 2 town-style location per overworld region
-- 1, 2 or 3 dungeon-style location per overworld region
+- 1 or 2 town-style locations per overworld region
+- 1 to 3 dungeon-style locations per overworld region
 - 1 home/base interior per overworld region
 
 ## Party content
@@ -29,11 +32,11 @@ Implement:
 - 1 player character
 - 3 hero characters total
 - 8 generic unit types
-- 8, 9 or 10 enemy groups
+- 8 to 10 enemy groups
 
 ## Systems
 
-Must exist in v0:
+The bounded slice is expected to include:
 - time/day progression
 - travel time
 - location time costs
@@ -45,24 +48,3 @@ Must exist in v0:
 - save/load
 - opening story sequence
 - 2 simple quests
-
-## Mine
-
-For v0:
-- implement 10 floors only
-- procedural or semi-random floor generation is acceptable
-- floor 5 acts as first checkpoint, floor 10 acts as second checkpoint
-- A checkpoint happens every fifth floor
-- The player can choose to exit the mine from each floor entrance
-- From the main entrance to the main, the player can choose to enter from floor 0 or any checkpoint floor
-- Even when returning to a checkpoint, floors are regenerated
-
-## UI
-
-Must show:
-- current day
-- current time
-- gold
-- current location/region
-- party summary
-- battle turn order
