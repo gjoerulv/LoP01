@@ -16,6 +16,7 @@ A 2D single-player strategy/RPG hybrid that combines:
 ## Tone and atmosphere
 
 The world is damaged, but not hopeless.
+
 The mood should feel:
 - melancholic
 - mysterious
@@ -51,7 +52,18 @@ The player should feel like they are:
 - Final Fantasy X: CTB battle pacing
 - Stardew-like progression: restoration, routine, resource use, cozy structure
 
-## Non-goals for v0
+## Current playable-slice focus
+
+The current playable slice should prove the core loop of:
+- overworld travel between destinations
+- location exploration and interactions
+- CTB battles with clear consequences
+- day/time pressure, sleep, and wake-up penalty
+- early restoration/progression through simple quests and services
+
+The slice should stay intentionally bounded and data-driven.
+
+## Non-goals for the current playable slice
 
 - full narrative arc
 - huge world
@@ -59,3 +71,13 @@ The player should feel like they are:
 - advanced enemy AI
 - hundreds of items
 - full-scale farming systems
+- designer-facing editor tooling
+- multiplayer/networked play
+
+## Longer-term direction
+
+These are possible future directions, but not part of the current milestone path:
+- a designer-facing tool for editing content, events, locations, and balance data
+- multiplayer/networking support if the core single-player loop proves strong enough to justify it
+
+These should not drive current architecture prematurely. The near-term priority is a strong, maintainable, data-driven single-player playable slice.

@@ -10,31 +10,33 @@
 
 ## Architectural principles
 
-- Prefer a simple game state machine
+- Prefer a simple, explicit gameplay state machine
 - Keep systems explicit rather than overly abstract
-- Keep data-driven content in JSON
-- Separate rules from presentation
+- Keep content data-driven in JSON
+- Separate gameplay rules from presentation
+- Keep rendering models and mappers separate from gameplay state
 - Make pure logic testable without raylib dependency where possible
 
-## Proposed module layout
+## Module layout
 
-- src/app
+- `src/app`
   - main loop
-  - app bootstrap
-  - screen/state switching
+  - application shell
+  - mode transitions
+  - input/update/draw integration
 
-- src/core
+- `src/core`
   - time
   - random
   - ids
   - save/load
 
-- src/data
-  - json loading
+- `src/data`
+  - JSON loading
   - content repositories
-  - definitions for units, heroes, locations, items, encounters
+  - content definitions and typed gameplay-facing data mapping where needed
 
-- src/gameplay
+- `src/gameplay`
   - overworld
   - locations
   - party
@@ -42,12 +44,13 @@
   - quests
   - penalties
   - progression
+  - gameplay session/controllers
 
-- src/ui
-  - menus
-  - battle HUD
-  - tooltips
-  - overlays
+- `src/rendering`
+  - renderers
+  - render models
+  - mappers
+  - HUD / overlays
 
 ## Implementation guidance
 
@@ -56,4 +59,6 @@
 - Do not add networking
 - Do not add mod support yet
 - Keep the battle simulator mostly independent from rendering
-- Favor compileable, testable milestones
+- Prefer explicit mode-entry helpers over generic chained transitions for gameplay flow
+- Favor compilable, testable milestones
+- Extend the current playable slice incrementally instead of broadening scope prematurely

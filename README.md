@@ -1,57 +1,73 @@
-# Project Ashvale (LoP01) - Vertical Slice Bootstrap
+# Project Ashvale (LoP01)
 
-This repository now contains a **minimal playable scaffold** for the first vertical slice:
+This repository contains a **playable vertical slice** of a 2D single-player strategy/RPG built with:
 
 - C++20
 - raylib
 - CMake
-- nlohmann/json content loading
-- save/load scaffolding
+- JSON-driven content
+- save/load support
 - Catch2 tests for pure logic
 
-## Scope in this bootstrap
+The current project focus is to extend the playable slice in small, maintainable milestones while keeping gameplay logic deterministic, testable, and data-driven.
 
-This is not the full game. It intentionally includes only:
+## Current slice scope
 
-- an app loop
-- a simple game state machine scaffold
-- JSON content definitions and loader
-- save/load persistence scaffold
-- logic tests for core rules
+This is not the full game. The current slice is intentionally limited to a single bounded region and a small set of destinations, locations, encounters, and quests.
 
-## Proposed folder structure
+The slice currently aims to support:
+
+- a full app loop with title/opening/gameplay flow
+- overworld travel and destination selection
+- location scenes and interactions
+- turn-based battle encounters
+- day/time progression
+- sleep and wake-up penalty rules
+- simple quest progression
+- save/load for the current gameplay slice
+- placeholder content and presentation assets
+
+## Folder structure
 
 - `src/app`
-  - app bootstrap and main loop
-  - state-driven update/draw shell
+  - application shell
+  - mode transitions
+  - input/update/draw integration
 - `src/core`
   - pure logic and foundational systems
-  - day/time rules
-  - save/load JSON serialization
+  - time/day rules
+  - save/load serialization
 - `src/data`
-  - JSON content repository loading starter files
+  - content loading and repositories
 - `src/gameplay`
-  - game session/state scaffolding for gameplay flow
+  - gameplay session state
+  - controllers
+  - mode-specific gameplay systems
+  - typed gameplay/content-facing models
+- `src/rendering`
+  - render models
+  - mappers
+  - mode-specific renderers
 - `content`
-  - data-driven JSON content definitions
+  - JSON content definitions
 - `tests`
-  - pure logic tests (no raylib dependency)
+  - pure logic tests without raylib dependency
 - `docs`
-  - game vision and design/rules references
+  - game vision, technical direction, combat rules, and milestone docs
 
-## Proposed gameplay/data architecture
+## Gameplay and data architecture
 
 ### Runtime flow
 
-- `App` owns the high-level run loop and rendering/input glue.
-- `GameSession` owns gameplay-facing state mode transitions and player-facing values.
+- `App` owns the application run loop and integrates rendering, input, and mode entry.
+- `GameSession` owns gameplay-facing state, current mode, and cross-mode progression.
 - `GameClock` owns day/time progression logic.
-- `SaveGameRepository` handles save/load to JSON files.
-- `ContentRepository` loads static JSON content into in-memory documents.
+- Save/load code persists the gameplay state needed for the current slice.
+- Content is loaded from JSON and mapped into gameplay-facing data structures used by the slice.
 
-### State scaffold included
+### Gameplay modes
 
-Current scaffold contains these required modes:
+The current playable slice includes these primary modes:
 
 - `title`
 - `opening_sequence`
@@ -60,11 +76,11 @@ Current scaffold contains these required modes:
 - `location_mode`
 - `battle_mode`
 
-The scaffold intentionally transitions with simple key input so each mode exists and can be extended without rewriting architecture.
+Mode transitions should remain explicit and easy to follow. Prefer clear mode-entry helpers over generic chained advancement for gameplay transitions.
 
 ### Data-driven content
 
-Starter JSON files are under `content/`:
+Content files under `content/` define the current slice:
 
 - `regions.json`
 - `locations.json`
@@ -72,14 +88,17 @@ Starter JSON files are under `content/`:
 - `enemy_groups.json`
 - `quests.json`
 
-These provide v0 placeholder content compatible with the target direction.
+These files provide the bounded playable-slice content used by the current milestone path.
 
-## Controls (current scaffold)
+## Current controls
 
-- `Enter`: advance to next state
-- `1`: add 1 minute (location-style small action)
-- `T`: add 15 minutes (travel step)
-- `P`: apply wake-up penalty (time to 11:00 + -1000 gold, floor 0)
+Controls may evolve by milestone, but the current slice supports:
+
+- `Enter`: confirm / advance in relevant contexts
+- `1`: add 1 minute in location-style interactions
+- `T`: add 15 minutes for travel/testing flow where enabled
+- `P`: apply wake-up penalty for testing
+- `F1`: toggle debug overlay
 - `F5`: save to `saves/slot_1.json`
 - `F9`: load from `saves/slot_1.json`
 
@@ -88,15 +107,3 @@ These provide v0 placeholder content compatible with the target direction.
 ```bash
 cmake -S . -B build -G Ninja
 cmake --build build
-```
-
-Run app:
-
-```bash
-./build/ashvale_slice
-```
-
-Run tests:
-
-```bash
-ctest --test-dir build --output-on-failure
