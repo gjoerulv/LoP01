@@ -97,6 +97,7 @@ struct BattleEvent
 
     std::string actorName;
     std::string targetName;
+    std::string infoText;
 
     int amount = 0;
     TeamSide winner = TeamSide::Allies;
@@ -117,7 +118,6 @@ public:
     [[nodiscard]] int ActiveUnitIndex() const;
     [[nodiscard]] const std::vector<BattleUnit>& Units() const;
     [[nodiscard]] std::vector<int> UpcomingTurnOrder(int count) const;
-    // [[nodiscard]] std::string LastActionText() const;
 
     [[nodiscard]] const std::vector<BattleEvent>& LastEvents() const;
 
@@ -144,7 +144,6 @@ private:
     std::vector<BattleUnit> units_;
     int activeUnitIndex_ = -1;
     BattleSummary summary_;
-    // std::string lastActionText_;
     std::vector<BattleEvent> lastEvents_;
 };
 

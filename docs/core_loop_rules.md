@@ -33,31 +33,40 @@ then:
 ## Overworld mode
 
 - player does not move freely on the map
-- player selects a destination
+- player selects a destination node
 - travel time is based on distance
 - travel time is quantized to 15-minute steps
 - shortest travel time: 15 minutes
 - longest travel time: 4 hours
+- Entering/using same location as the player is already in, costs 0 minutes
+- If 1 or more enmies are blocking a destination node, the player can't pass without defeating them first
 
-Destinations can be:
+Destination nodes can be:
 - enterable locations
 - single-use service locations
 - recruit points
 - buff points
 - combat locations
 - dungeons
+- multi-purpose location containing 2-3 single-purpose serveices. The user can select between them, and optionally use all
+- Placeholder nodes that may be empty, contain a single resource/item, or a single fight
+- Picking up resources/items are optional. If picked up, node becomes empty
+- Winning a fight at a fighting node, clears the node and makes it empty
+- Enemies may spawn on placeholder nodes at the start of day with a low probability (~3%)
 
 ## Location mode
 
 Walking is free.
 
 Time costs:
-- opening a door = 1 minute
+- opening a door/entering a building = 1 minute
+- scene transitions = 1 - 5 minutes, depending on the transition
 - each chosen dialogue option = 1 minute
 - shopping transaction = 5 minutes
 - recruiting = 10 minutes
+- cutscenes: varies, may take 1 minute to several days depending on the scene.
 
-Location mode exits back to the overworld entrance point.
+Location mode exits back to the overworld entrance point by walking into it.
 
 The player can open a menu here for:
 - party

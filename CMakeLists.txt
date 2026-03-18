@@ -87,8 +87,11 @@ if (BUILD_TESTING)
   FetchContent_MakeAvailable(Catch2)
 
   add_executable(ashvale_logic_tests
+    src/app/BattleEventTextFormatter.cpp
     tests/BattleTests.cpp
+    tests/BattleEventTextFormatterTests.cpp
     tests/GameClockTests.cpp
+    tests/GameSessionTests.cpp
     tests/LocationSceneTests.cpp
     tests/SaveGameTests.cpp
   )

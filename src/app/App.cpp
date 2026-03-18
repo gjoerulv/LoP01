@@ -40,6 +40,121 @@ void App::Run() {
     CloseWindow();
 }
 
+void App::InitializeModeStateIfNeeded(const gameplay::SessionSnapshot& snapshot) {
+    if (snapshot.mode == gameplay::GameMode::BattleMode) {
+        InitializeBattleIfNeeded(snapshot);
+    }
+
+    if (snapshot.mode == gameplay::GameMode::LocationMode) {
+        InitializeLocationIfNeeded(snapshot);
+    }
+}
+
+void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
+    if (battleInitialized_) {
+        return;
+    }
+
+    const std::string scenarioId = ResolveBattleScenarioId(snapshot);
+    const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(
+        content_,
+        scenarioId,
+        7);
+
+    if (battle.has_value()) {
+        debugBattle_ = std::move(*battle);
+        battleControllerState_ = {};
+        battleControllerState_.selectedTargetIndex = debugBattle_.FindFirstTargetForActive();
+        battleInitialized_ = true;
+        statusMessage_ = "Battle started: " + scenarioId;
+    }
+    else {
+        debugBattle_ = gameplay::battle::BattleState{};
+        battleControllerState_ = {};
+        battleInitialized_ = false;
+        statusMessage_ = "Failed to initialize battle scenario: " + scenarioId;
+    }
+
+    pendingBattleScenarioId_.clear();
+}
+
+void App::InitializeLocationIfNeeded(const gameplay::SessionSnapshot& snapshot) {
+    if (locationInitialized_) {
+        return;
+    }
+
+    if (const auto* location = content_.FindLocationById(snapshot.destinationId)) {
+        if (!location->sceneId.empty()) {
+            if (const auto* scene = content_.FindLocationSceneById(location->sceneId)) {
+                locationScene_.Reset(*scene);
+                locationInitialized_ = true;
+                statusMessage_ = "Entered location: " + location->name;
+                return;
+            }
+
+            locationScene_ = gameplay::location::LocationScene{};
+            statusMessage_ = "Missing scene definition: " + location->sceneId;
+            return;
+        }
+
+        locationScene_ = gameplay::location::LocationScene{};
+        statusMessage_ = "Location has no scene: " + location->name;
+        return;
+    }
+
+    locationScene_ = gameplay::location::LocationScene{};
+    statusMessage_ = "Unknown location scene target: " + snapshot.destinationId;
+}
+
+void App::AdvanceFrontEndModesIfRequested(
+    const gameplay::SessionSnapshot& snapshot,
+    const input::InputState& input) {
+    if (!input.confirm) {
+        return;
+    }
+
+    if (snapshot.mode == gameplay::GameMode::Title ||
+        snapshot.mode == gameplay::GameMode::OpeningSequence ||
+        snapshot.mode == gameplay::GameMode::OverworldSelection) {
+        session_.AdvanceMode();
+    }
+}
+
+void App::StartBattleScenario(const std::string& scenarioId, const std::string& statusMessage) {
+    pendingBattleScenarioId_ = scenarioId;
+    session_.EnterBattleMode();
+    battleInitialized_ = false;
+    battleControllerState_ = {};
+    statusMessage_ = statusMessage;
+}
+
+void App::StartLocationMode(const std::string& locationId, const std::string& statusMessage) {
+    session_.EnterLocationMode(locationId);
+    locationInitialized_ = false;
+    statusMessage_ = statusMessage;
+}
+
+void App::ResetTransientModeState() {
+    pendingBattleScenarioId_.clear();
+    battleInitialized_ = false;
+    locationInitialized_ = false;
+    battleControllerState_ = {};
+}
+
+std::string App::ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const {
+    if (!pendingBattleScenarioId_.empty()) {
+        return pendingBattleScenarioId_;
+    }
+
+    if (const auto* location = content_.FindLocationById(snapshot.destinationId)) {
+        if (!location->battleScenarioId.empty()) {
+            return location->battleScenarioId;
+        }
+    }
+
+    return "debug_intro_battle";
+}
+
 void App::Update() {
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     const input::InputState input = inputTranslator_.Poll();
@@ -48,57 +163,8 @@ void App::Update() {
         debugOverlayVisible_ = !debugOverlayVisible_;
     }
 
-    if (snapshot.mode == gameplay::GameMode::BattleMode && !battleInitialized_) {
-        const std::string scenarioId =
-            !pendingBattleScenarioId_.empty() ? pendingBattleScenarioId_ : "debug_intro_battle";
-
-        const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(
-            content_,
-            scenarioId,
-            7);
-
-        battleInitialized_ = true;
-
-        if (battle.has_value()) {
-            debugBattle_ = std::move(*battle);
-            battleControllerState_ = {};
-            battleControllerState_.selectedTargetIndex = debugBattle_.FindFirstTargetForActive();
-            statusMessage_ = "Battle started: " + scenarioId;
-        }
-        else {
-            statusMessage_ = "Failed to initialize battle scenario: " + scenarioId;
-        }
-
-        pendingBattleScenarioId_.clear();
-    }
-
-    if (snapshot.mode == gameplay::GameMode::LocationMode && !locationInitialized_) {
-        if (const auto* location = content_.FindLocationById(snapshot.destinationId)) {
-            if (!location->sceneId.empty()) {
-                if (const auto* scene = content_.FindLocationSceneById(location->sceneId)) {
-                    locationScene_.Reset(*scene);
-                    locationInitialized_ = true;
-                    statusMessage_ = "Entered location: " + location->name;
-                } else {
-                    statusMessage_ = "Missing scene definition: " + location->sceneId;
-                }
-            } else {
-                statusMessage_ = "Location has no scene: " + location->name;
-            }
-        } else {
-            statusMessage_ = "Unknown location scene target: " + snapshot.destinationId;
-        }
-    }
-
-    if (snapshot.mode == gameplay::GameMode::Title && input.confirm) {
-        session_.AdvanceMode();
-    }
-    if (snapshot.mode == gameplay::GameMode::OpeningSequence && input.confirm) {
-        session_.AdvanceMode();
-    }
-    if (snapshot.mode == gameplay::GameMode::OverworldSelection && input.confirm) {
-        session_.AdvanceMode();
-    }
+    InitializeModeStateIfNeeded(snapshot);
+    AdvanceFrontEndModesIfRequested(snapshot, input);
 
     if (snapshot.mode == gameplay::GameMode::OverworldMode) {
         UpdateOverworldMode(input);
@@ -121,6 +187,7 @@ void App::Update() {
         const auto loaded = saveRepository_.LoadFromFile("saves/slot_1.json");
         if (loaded.has_value()) {
             session_.ApplySaveData(*loaded);
+            ResetTransientModeState();
             statusMessage_ = "Loaded saves/slot_1.json";
         } else {
             statusMessage_ = "Load failed";
@@ -167,30 +234,20 @@ void App::UpdateOverworldMode(const input::InputState& input) {
             "Traveled to " + destination.label + " (" + overworldModelMapper_.FormatTravelTime(travelMinutes) + ")";
 
         if (destination.supportsBattle && !destination.battleScenarioId.empty()) {
-            pendingBattleScenarioId_ = destination.battleScenarioId;
-            session_.AdvanceMode();
-            session_.AdvanceMode();
-            battleInitialized_ = false;
-            statusMessage_ = "Encounter started at " + destination.label;
+            StartBattleScenario(destination.battleScenarioId, "Encounter started at " + destination.label);
             return;
         }
 
         if (destination.entersLocationMode) {
-            session_.EnterLocationMode(destination.id);
-            locationInitialized_ = false;
-            statusMessage_ = "Entering location: " + destination.label;
+            StartLocationMode(destination.id, "Entering location: " + destination.label);
         }
     }
 
     if (result.requestDebugBattle) {
         const auto& destination = nodes[overworldSelectedNodeIndex_];
-        pendingBattleScenarioId_ =
-            !destination.battleScenarioId.empty() ? destination.battleScenarioId : "debug_intro_battle";
-
-        session_.AdvanceMode();
-        session_.AdvanceMode();
-        battleInitialized_ = false;
-        statusMessage_ = "Debug battle requested";
+        StartBattleScenario(
+            !destination.battleScenarioId.empty() ? destination.battleScenarioId : "debug_intro_battle",
+            "Debug battle requested");
     }
 }
 
@@ -253,7 +310,6 @@ void App::UpdateBattleMode(const input::InputState& input) {
 
     const bool executed = debugBattle_.ExecuteAction(result.action, result.targetIndex);
     if (executed) {
-        // statusMessage_ = debugBattle_.LastActionText();
         statusMessage_ = battleEventTextFormatter_.FormatSummary(debugBattle_.LastEvents());
         battleControllerState_.selectedTargetIndex = debugBattle_.FindFirstTargetForActive();
     }

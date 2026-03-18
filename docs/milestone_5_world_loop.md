@@ -1,0 +1,106 @@
+# Milestone 5 - World Loop Consequences
+
+## Purpose
+
+Milestone 4 made the game visibly playable.
+This milestone makes the prototype behave more like the intended day-to-day strategy/RPG loop.
+
+The goal is to connect existing travel, location, and battle systems to meaningful consequences and progression.
+
+## Main outcome
+
+After this milestone, the player should be able to:
+- travel through the current region and use key services
+- sleep at valid resting locations
+- suffer the documented wake-up penalty after defeat or missing sleep
+- see simple quest progress from existing content targets
+- return cleanly between overworld, location, and battle without debug-style glue
+
+## Scope
+
+This milestone should focus on:
+- sleep/rest flow
+- wake-up penalty handling
+- defeat fallout
+- simple quest state
+- light UI support for loop state
+- save/load updates only where needed to support the above
+
+It should avoid:
+- new regions
+- large content expansion
+- new major combat mechanics
+- inventory/equipment systems
+- full procedural dungeon scope
+
+## Gameplay priorities
+
+### 1. Valid sleep flow
+
+Use existing content flags and location interactions to support resting at:
+- player home/base
+- inns
+
+A successful rest should cleanly advance to the next valid day start.
+Choose the simplest implementation that preserves the rules and keeps the slice playable.
+
+### 2. Wake-up penalty
+
+Apply the documented wake-up penalty when the player:
+- is fully defeated
+- or fails to sleep before the end of the day
+
+For this milestone, fallback recovery locations may be simplified if needed, but the penalty outcome must be consistent and visible.
+
+### 3. Battle fallout integration
+
+The battle system already resolves KO and victory.
+This milestone should wire the app/session flow so that:
+- victory returns the player to the correct outer loop
+- player-at-1-HP victory recovery remains intact
+- full defeat triggers the wake-up penalty path
+
+### 4. Quest slice
+
+Use the existing quest content as a simple progression layer.
+A quest system for this milestone should support:
+- showing available quests
+- marking progress/completion when the relevant destination or interaction is reached
+- simple readable quest text in UI or overlay panels
+
+Keep quest state small and data-driven.
+
+### 5. UI expectations
+
+UI changes should stay lightweight, but the player should be able to understand:
+- whether they can sleep here
+- whether a penalty was applied
+- current quest targets or completed quest state
+- the result of battle return flow
+
+## Architectural expectations
+
+- Keep gameplay logic separate from rendering.
+- Continue using render models and mappers.
+- Prefer explicit mode-entry helpers over generic chained state advancement.
+- Keep status text/event text single-sourced where possible.
+- Add tests for pure logic introduced in this milestone.
+
+## Recommended implementation order
+
+1. Finish transition cleanup and remove dead status-text paths
+2. Add explicit rest/sleep flow
+3. Wire wake-up penalty and defeat recovery flow
+4. Add quest state and simple quest presentation
+5. Extend save/load only as needed for milestone state
+
+## Acceptance checklist
+
+- [ ] Player can rest at home/base or inns
+- [ ] Missing sleep before day end applies wake-up penalty
+- [ ] Full defeat applies wake-up penalty
+- [ ] Winning after player KO still restores player to 1 HP
+- [ ] Battle returns cleanly to the surrounding loop
+- [ ] At least 2 simple quests are visible and progressable
+- [ ] Quest state is data-driven
+- [ ] New milestone logic has tests where feasible

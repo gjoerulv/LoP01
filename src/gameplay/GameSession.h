@@ -35,7 +35,9 @@ public:
     [[nodiscard]] bool TrySpendGold(int amount);
 
     void EnterLocationMode(const std::string& locationId);
+    void EnterOverworldMode();
     void ExitLocationMode();
+    void EnterBattleMode();
     [[nodiscard]] bool IsInLocationMode() const;
     void SetDestination(const std::string& destinationId);
 

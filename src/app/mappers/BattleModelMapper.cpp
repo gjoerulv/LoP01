@@ -32,7 +32,6 @@ namespace app::mappers
     {
         BattleRenderModel model;
         model.battleTitle = "CTB Battle";
-        // model.statusText = battle.LastActionText();
         model.statusText = statusText;
 
         const auto& units = battle.Units();

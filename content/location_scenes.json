@@ -1,0 +1,173 @@
+{
+  "location_scenes": [
+    {
+      "id": "town_square_proto",
+      "spawn": {
+        "x": 84,
+        "y": 520,
+        "width": 24,
+        "height": 24
+      },
+      "blocking_rects": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 40
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "width": 40,
+          "height": 720
+        },
+        {
+          "x": 1240,
+          "y": 0,
+          "width": 40,
+          "height": 720
+        },
+        {
+          "x": 0,
+          "y": 680,
+          "width": 1280,
+          "height": 40
+        },
+        {
+          "x": 120,
+          "y": 140,
+          "width": 260,
+          "height": 180
+        },
+        {
+          "x": 520,
+          "y": 140,
+          "width": 260,
+          "height": 180
+        },
+        {
+          "x": 920,
+          "y": 140,
+          "width": 260,
+          "height": 180
+        }
+      ],
+      "zones": [
+        {
+          "id": "inn_door",
+          "type": "inn_door",
+          "area": {
+            "x": 220,
+            "y": 320,
+            "width": 80,
+            "height": 20
+          },
+          "prompt_text": "E: Open Inn Door",
+          "result_text": "Opened inn door",
+          "failure_text": "",
+          "time_cost_minutes": 1,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
+          "id": "shop_counter",
+          "type": "shop",
+          "area": {
+            "x": 620,
+            "y": 320,
+            "width": 80,
+            "height": 20
+          },
+          "prompt_text": "E: Shop",
+          "result_text": "Bought supplies",
+          "failure_text": "Not enough gold for shopping",
+          "time_cost_minutes": 5,
+          "gold_cost": 50,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
+          "id": "recruit_board",
+          "type": "recruit",
+          "area": {
+            "x": 1020,
+            "y": 320,
+            "width": 80,
+            "height": 20
+          },
+          "prompt_text": "E: Recruit",
+          "result_text": "Recruit completed",
+          "failure_text": "Not enough gold to recruit",
+          "time_cost_minutes": 10,
+          "gold_cost": 120,
+          "recruit_count": 1,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
+          "id": "npc_old_man",
+          "type": "npc",
+          "area": {
+            "x": 460,
+            "y": 500,
+            "width": 40,
+            "height": 40
+          },
+          "prompt_text": "E: Talk",
+          "result_text": "",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": [
+            "Ask about the town",
+            "Ask about the mine"
+          ]
+        },
+        {
+          "id": "npc_guard",
+          "type": "npc",
+          "area": {
+            "x": 760,
+            "y": 500,
+            "width": 40,
+            "height": 40
+          },
+          "prompt_text": "E: Talk",
+          "result_text": "",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": [
+            "Ask about patrol routes",
+            "Ask about recruitment"
+          ]
+        },
+        {
+          "id": "town_exit",
+          "type": "exit",
+          "area": {
+            "x": 70,
+            "y": 560,
+            "width": 80,
+            "height": 80
+          },
+          "prompt_text": "E: Exit To Overworld",
+          "result_text": "Exited to overworld",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        }
+      ]
+    }
+  ]
+}
