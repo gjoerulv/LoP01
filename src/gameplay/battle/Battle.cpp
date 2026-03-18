@@ -78,7 +78,6 @@ bool BattleState::SetUnits(std::vector<BattleUnit> units) {
 
     units_ = std::move(units);
     summary_ = {};
-    // lastActionText_ = "Battle started";
     AdvanceToNextTurn();
     return true;
 }
@@ -138,10 +137,6 @@ std::vector<int> BattleState::UpcomingTurnOrder(const int count) const {
     return order;
 }
 
-//std::string BattleState::LastActionText() const {
-//    return lastActionText_;
-//}
-
 const std::vector<BattleEvent>& BattleState::LastEvents() const
 {
     return lastEvents_;
@@ -180,13 +175,15 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
         const std::string& actorName,
         const std::string& targetName,
         const int amount,
-        const TeamSide winner)
+        const TeamSide winner,
+        const std::string& infoText = {})
         {
             lastEvents_.push_back(BattleEvent{
                 type,
                 eventAction,
                 actorName,
                 targetName,
+                infoText,
                 amount,
                 winner
                 });
@@ -208,8 +205,6 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
         }
         damage = ComputePhysicalDamage(actor, units_[resolvedTarget]);
         damage = ApplyDamage(units_[resolvedTarget], damage);
-        // lastActionText_ = actor.name + " attacks " + units_[resolvedTarget].name + " for " + std::to_string(damage);
-
         pushEvent(BattleEventType::AttackResolved, action, 
             actor.name, units_[resolvedTarget].name,
             damage, TeamSide::Allies);
@@ -217,12 +212,10 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
         break;
     case BattleActionType::Defend:
         actor.defending = true;
-        // lastActionText_ = actor.name + " defends";
         pushEvent(BattleEventType::Defended, action, actor.name, "", 0, actor.side);
         break;
     case BattleActionType::Wait:
         waited = true;
-        // lastActionText_ = actor.name + " waits";
         pushEvent(BattleEventType::Waited, action, actor.name, "", 0, actor.side);
         break;
     case BattleActionType::Skill1:
@@ -230,17 +223,14 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
             return false;
         }
         if (actor.mp < kSkill1MpCost) {
-            // lastActionText_ = actor.name + " lacks MP, uses attack";
             damage = ComputePhysicalDamage(actor, units_[resolvedTarget]);
             pushEvent(BattleEventType::Information, action,
-                actor.name + " lacks MP, uses attack", units_[resolvedTarget].name, damage, actor.side);
+                actor.name, units_[resolvedTarget].name, damage, actor.side, actor.name + " lacks MP, uses attack");
         } else {
             actor.mp -= kSkill1MpCost;
             damage = static_cast<int>(std::round(ComputePhysicalDamage(actor, units_[resolvedTarget]) * 1.25f));
         }
         damage = ApplyDamage(units_[resolvedTarget], damage);
-        // lastActionText_ = actor.name + " uses Skill1 on " + units_[resolvedTarget].name + " for " + std::to_string(damage);
-
         pushEvent(BattleEventType::SkillResolved, action,
             actor.name, units_[resolvedTarget].name,
             damage, actor.side);
@@ -251,16 +241,14 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
             return false;
         }
         if (actor.mp < kSkill2MpCost) {
-            // lastActionText_ = actor.name + " lacks MP, uses attack";
             damage = ComputePhysicalDamage(actor, units_[resolvedTarget]);
             pushEvent(BattleEventType::Information, action,
-                actor.name + " lacks MP, uses attack", units_[resolvedTarget].name, damage, actor.side);
+                actor.name, units_[resolvedTarget].name, damage, actor.side, actor.name + " lacks MP, uses attack");
         } else {
             actor.mp -= kSkill2MpCost;
             damage = ComputeMagicDamage(actor, units_[resolvedTarget], 1.5f);
         }
         damage = ApplyDamage(units_[resolvedTarget], damage);
-        // lastActionText_ = actor.name + " uses Skill2 on " + units_[resolvedTarget].name + " for " + std::to_string(damage);
         pushEvent(BattleEventType::SkillResolved, action,
             actor.name, units_[resolvedTarget].name,
             damage, actor.side);

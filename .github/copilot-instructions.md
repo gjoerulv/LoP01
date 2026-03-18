@@ -52,17 +52,14 @@ You are working in a 2D single-player game project written in C++20 using raylib
 ## Current scope
 
 Target only a vertical slice with:
-- 2 overworld regions
+- 1 overworld region
 - 10 to 20 destinations
-- 2 towns
-- 2 inns
+- 1 or 2 town-style locations
 - 1 home/base
-- 2 to 3 mines with 5 prototype floors
-- 3 heroes
+- 1 to 3 dungeon-style locations
+- 3 heroes total
 - 8 generic unit types
-- 6 enemy groups
-- 2 to 3 shops
-- 2 to 3 recruit points
+- 8 to 10 enemy groups
 - 2 simple quests
 - save/load
 - placeholder art
@@ -78,14 +75,14 @@ Always consult these docs when relevant:
 
 ## Current milestone focus
 
-The project is currently in the first visual gameplay pass.
+The project has completed the first visual gameplay pass and is moving into the next gameplay-loop milestone.
 
-Priorities for this milestone:
-- improve presentation
-- reduce debug-screen dominance
-- create dedicated renderers for each game mode
-- improve readability and contextual controls
-- preserve existing gameplay logic
-- For location-screen polish, keep logic unchanged and focus on presentation-only improvements, ensuring all UI elements are visible within game resolution.
+Priorities for the current milestone:
+- preserve the existing renderer/controller/mapper architecture
+- keep mode transitions explicit and easy to follow
+- implement sleep/rest flow at valid locations
+- implement wake-up penalty and defeat fallout consistently with docs/core_loop_rules.md
+- add simple quest progression using existing content data
+- keep UI additions lightweight and focused on communicating loop state
 
-Avoid expanding the project with major new mechanics until the current systems are visually represented and playable.
+Avoid broad content expansion, extra regions, or major new combat mechanics until the day-loop consequences and basic quest loop are playable end-to-end.

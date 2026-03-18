@@ -64,8 +64,16 @@ void GameSession::EnterLocationMode(const std::string& locationId) {
     mode_ = GameMode::LocationMode;
 }
 
-void GameSession::ExitLocationMode() {
+void GameSession::EnterOverworldMode() {
     mode_ = GameMode::OverworldMode;
+}
+
+void GameSession::ExitLocationMode() {
+    EnterOverworldMode();
+}
+
+void GameSession::EnterBattleMode() {
+    mode_ = GameMode::BattleMode;
 }
 
 bool GameSession::IsInLocationMode() const {

@@ -38,6 +38,15 @@ namespace app {
         void Update();
         void Draw() const;
 
+        void InitializeModeStateIfNeeded(const gameplay::SessionSnapshot& snapshot);
+        void InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot);
+        void InitializeLocationIfNeeded(const gameplay::SessionSnapshot& snapshot);
+        void AdvanceFrontEndModesIfRequested(const gameplay::SessionSnapshot& snapshot, const input::InputState& input);
+        void StartBattleScenario(const std::string& scenarioId, const std::string& statusMessage);
+        void StartLocationMode(const std::string& locationId, const std::string& statusMessage);
+        void ResetTransientModeState();
+        [[nodiscard]] std::string ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const;
+
         void UpdateOverworldMode(const input::InputState& input);
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);

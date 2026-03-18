@@ -1,0 +1,19 @@
+{
+  "battle_scenarios": [
+    {
+      "id": "debug_intro_battle",
+      "name": "Checkpoint Warden Skirmish",
+      "seed": 7,
+      "allies": [
+        { "unit_id": "hero_player" },
+        { "unit_id": "unit_guard" },
+        { "unit_id": "hero_mira" }
+      ],
+      "enemies": [
+        { "unit_id": "enemy_captain" },
+        { "unit_id": "unit_lancer" },
+        { "unit_id": "unit_longbow" }
+      ]
+    }
+  ]
+}

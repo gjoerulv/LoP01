@@ -17,3 +17,7 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Keep game rules data-driven where possible.
 - Do not invent major story elements that contradict docs/game_vision.md.
 - Prefer a playable incomplete feature over a broad unfinished feature.
+
+- Prefer explicit mode-entry helpers for battle/location/overworld transitions instead of chaining generic mode advancement.
+- Prefer a single source of truth for status/event text; remove duplicate shadow strings once event-driven text exists.
+- Next milestone priority after the visual pass: complete the day-loop consequences (sleep, wake penalty, defeat fallout) and simple quest progression before adding new regions or large content expansion.

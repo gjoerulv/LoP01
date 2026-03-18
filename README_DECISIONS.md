@@ -107,3 +107,27 @@ Why:
 - [ ] Battle mode shows turn order as UI
 - [ ] Battle mode shows action menu visually
 - [ ] Main gameplay no longer feels primarily text-based
+
+### 10) Replace deprecated battle last-action string with event-only status text
+
+Decision:
+- Removed the old commented `LastActionText` / `lastActionText_` path and committed to `BattleEvent` summaries as the single battle-status source.
+
+Why:
+- Avoids duplicate state for the same outcome.
+- Keeps combat UI text aligned with the event stream already used by the renderer and app shell.
+
+Tradeoff:
+- Event payloads need to stay expressive enough for UI text, so an explicit `infoText` field was added for non-targeted informational messages.
+
+### 11) App transition cleanup uses explicit gameplay entry helpers
+
+Decision:
+- Extracted app-level helpers for mode initialization and battle/location transitions, and added explicit `GameSession` helpers for entering overworld and battle modes.
+
+Why:
+- Removes brittle double-`AdvanceMode()` jumps when entering battle from the overworld.
+- Keeps transition intent readable and makes future milestone work easier to extend.
+
+Tradeoff:
+- `AdvanceMode()` still exists for the linear title/opening/front-end flow, so the codebase now intentionally uses both linear advancement and explicit mode entry where each is a better fit.

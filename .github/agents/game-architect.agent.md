@@ -32,3 +32,9 @@ If requirements conflict, prioritize:
 3. battle correctness
 4. clarity of architecture
 5. UI polish
+
+Current focus after Milestone 4 cleanup:
+- preserve the renderer/controller/mapper split
+- finish explicit transition flows before new features
+- prioritize sleep/rest, wake-penalty, defeat handling, and basic quest progression for the next milestone
+- keep additions data-driven and testable
