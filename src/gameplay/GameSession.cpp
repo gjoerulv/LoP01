@@ -46,6 +46,19 @@ bool GameSession::SpendGold(const int amount) {
     return true;
 }
 
+bool GameSession::TrySpendGold(const int amount) {
+    if (amount <= 0) {
+        return true;
+    }
+
+    if (gold_ < amount) {
+        return false;
+    }
+
+    gold_ -= amount;
+    return true;
+}
+
 void GameSession::EnterLocationMode(const std::string& locationId) {
     destinationId_ = locationId;
     mode_ = GameMode::LocationMode;

@@ -79,11 +79,33 @@ struct BattleSummary {
     bool playerSetToOneHp = false;
 };
 
+enum class BattleEventType
+{
+    Information,
+    AttackResolved,
+    SkillResolved,
+    Defended,
+    Waited,
+    UnitKo,
+    BattleFinished
+};
+
+struct BattleEvent
+{
+    BattleEventType type = BattleEventType::AttackResolved;
+    BattleActionType action = BattleActionType::Attack;
+
+    std::string actorName;
+    std::string targetName;
+
+    int amount = 0;
+    TeamSide winner = TeamSide::Allies;
+};
+
 class BattleState {
 public:
     static constexpr int kMaxUnitsPerSide = 5;
 
-    static BattleState CreateDebugBattle(uint32_t seed = 7);
     static BattleState CreateForTests(std::vector<BattleUnit> units, uint32_t seed = 7);
 
     explicit BattleState(uint32_t seed = 7);
@@ -95,7 +117,9 @@ public:
     [[nodiscard]] int ActiveUnitIndex() const;
     [[nodiscard]] const std::vector<BattleUnit>& Units() const;
     [[nodiscard]] std::vector<int> UpcomingTurnOrder(int count) const;
-    [[nodiscard]] std::string LastActionText() const;
+    // [[nodiscard]] std::string LastActionText() const;
+
+    [[nodiscard]] const std::vector<BattleEvent>& LastEvents() const;
 
     [[nodiscard]] int FindFirstTargetForActive() const;
 
@@ -120,7 +144,8 @@ private:
     std::vector<BattleUnit> units_;
     int activeUnitIndex_ = -1;
     BattleSummary summary_;
-    std::string lastActionText_;
+    // std::string lastActionText_;
+    std::vector<BattleEvent> lastEvents_;
 };
 
 } // namespace gameplay::battle

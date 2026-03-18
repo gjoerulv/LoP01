@@ -29,6 +29,7 @@ add_library(ashvale_logic
   src/gameplay/battle/Battle.cpp
   src/gameplay/GameSession.cpp
   src/gameplay/location/LocationScene.cpp
+  src/gameplay/battle/BattleFactory.cpp
 )
 
 target_include_directories(ashvale_logic PUBLIC src)
@@ -49,6 +50,15 @@ target_link_libraries(ashvale_rendering PUBLIC raylib)
 add_executable(ashvale_slice
   src/app/App.cpp
   src/app/main.cpp
+  src/app/input/InputTranslator.cpp
+  src/app/OverworldController.cpp
+  src/app/LocationController.cpp
+  src/app/BattleController.cpp
+  src/app/mappers/HudModelMapper.cpp
+  src/app/mappers/OverworldModelMapper.cpp
+  src/app/mappers/LocationModelMapper.cpp
+  src/app/mappers/BattleModelMapper.cpp
+  src/app/BattleEventTextFormatter.cpp
 )
 
 target_link_libraries(ashvale_slice PRIVATE ashvale_logic ashvale_rendering)
