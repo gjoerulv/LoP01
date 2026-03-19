@@ -1,41 +1,16 @@
 #include "app/mappers/HudModelMapper.h"
 
 #include <algorithm>
-#include <cctype>
 
 namespace app::mappers
 {
-    namespace {
-        std::string HumanizeId(std::string value)
-        {
-            bool nextUpper = true;
-            for (char& ch : value)
-            {
-                if (ch == '_')
-                {
-                    ch = ' ';
-                    nextUpper = true;
-                    continue;
-                }
-
-                if (nextUpper)
-                {
-                    ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
-                    nextUpper = false;
-                }
-            }
-
-            return value;
-        }
-    }
-
     ashvale::rendering::HudModel HudModelMapper::Map(
         const gameplay::SessionSnapshot& snapshot,
         const std::string& statusText,
         const std::vector<gameplay::quests::QuestProgress>& quests) const
     {
         int completed = 0;
-        std::vector<std::string> activeTargets;
+        std::vector<std::string> activeQuestNames;
 
         for (const auto& quest : quests)
         {
@@ -46,26 +21,26 @@ namespace app::mappers
 
             if (quest.status == gameplay::quests::QuestStatus::InProgress)
             {
-                activeTargets.push_back(HumanizeId(quest.target));
+                activeQuestNames.push_back(quest.name);
             }
         }
 
         std::string questInfo = "Quests " + std::to_string(completed) + "/" + std::to_string(quests.size()) + " complete";
-        if (!activeTargets.empty())
+        if (!activeQuestNames.empty())
         {
-            questInfo += " | Targets: ";
-            const int maxTargetsToShow = std::min(2, static_cast<int>(activeTargets.size()));
-            for (int i = 0; i < maxTargetsToShow; ++i)
+            questInfo += " | Active: ";
+            const int maxQuestsToShow = std::min(2, static_cast<int>(activeQuestNames.size()));
+            for (int i = 0; i < maxQuestsToShow; ++i)
             {
                 if (i > 0)
                 {
                     questInfo += ", ";
                 }
 
-                questInfo += activeTargets[i];
+                questInfo += activeQuestNames[i];
             }
 
-            if (static_cast<int>(activeTargets.size()) > maxTargetsToShow)
+            if (static_cast<int>(activeQuestNames.size()) > maxQuestsToShow)
             {
                 questInfo += ", ...";
             }

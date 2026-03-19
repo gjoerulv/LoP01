@@ -66,6 +66,7 @@ public:
 
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
     [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);
+    [[nodiscard]] std::vector<std::string> NotifyCombatNodeCleared(const std::string& nodeId);
     [[nodiscard]] const std::vector<quests::QuestProgress>& QuestProgress() const;
 
     [[nodiscard]] SessionSnapshot Snapshot() const;

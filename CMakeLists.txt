@@ -93,6 +93,7 @@ if (BUILD_TESTING)
 
   add_executable(ashvale_logic_tests
     src/app/BattleEventTextFormatter.cpp
+    src/app/mappers/OverworldModelMapper.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
     tests/ContentRepositoryTests.cpp
@@ -102,12 +103,13 @@ if (BUILD_TESTING)
     tests/LocationServiceRulesTests.cpp
     tests/NodeWorldStateTests.cpp
     tests/OverworldDeadEndRulesTests.cpp
+    tests/OverworldModelMapperTests.cpp
     tests/OverworldTravelRulesTests.cpp
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
   )
 
-  target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic Catch2::Catch2WithMain)
+  target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)
 
   include(Catch)
   catch_discover_tests(ashvale_logic_tests)

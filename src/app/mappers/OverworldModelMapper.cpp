@@ -208,6 +208,16 @@ namespace app::mappers
             model.currentNodeLabel = nodes[currentIndex].label;
             model.selectedNodeLabel = nodes[safeSelectedIndex].label;
             model.selectedNodeType = "Type: " + data::ToDisplayString(nodes[safeSelectedIndex].type);
+            if (nodes[safeSelectedIndex].combatNodeCleared)
+            {
+                model.selectedNodeType += " | Node: Cleared";
+            }
+            if (nodes[safeSelectedIndex].blocksTransitUntilCleared)
+            {
+                model.selectedNodeType += nodes[safeSelectedIndex].combatNodeCleared
+                    ? " | Route: Blocker Cleared"
+                    : " | Route: Blocker Uncleared";
+            }
 
             std::string travelText = "Yes";
             if (!travel.legal)
