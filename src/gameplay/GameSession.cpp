@@ -159,6 +159,10 @@ std::vector<std::string> GameSession::NotifyDestinationReached(const std::string
     return questState_.OnDestinationReached(destinationId);
 }
 
+std::vector<std::string> GameSession::NotifyCombatNodeCleared(const std::string& nodeId) {
+    return questState_.OnCombatNodeCleared(nodeId);
+}
+
 const std::vector<quests::QuestProgress>& GameSession::QuestProgress() const {
     return questState_.Quests();
 }

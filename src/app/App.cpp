@@ -231,12 +231,33 @@ void App::ResolveBattleOutcomeIfNeeded() {
         const gameplay::SessionSnapshot snapshot = session_.Snapshot();
         const auto* location = content_.FindLocationById(snapshot.destinationId);
         const bool nodeIsCombatType = location != nullptr && location->type == data::LocationType::Combat;
+        const bool wasCleared = session_.IsCombatNodeCleared(snapshot.destinationId);
         session_.ApplyOverworldCombatVictoryNodeClear(
             summary.alliesWon,
             summary.enemiesWon,
             battleReturnMode_,
             snapshot.destinationId,
             nodeIsCombatType);
+        const bool newlyCleared = !wasCleared && session_.IsCombatNodeCleared(snapshot.destinationId);
+
+        if (newlyCleared) {
+            const auto questUpdates = session_.NotifyCombatNodeCleared(snapshot.destinationId);
+            if (!questUpdates.empty()) {
+                statusMessage_ = summary.playerSetToOneHp
+                    ? "Battle won. Player recovered to 1 HP. | " + questUpdates.front()
+                    : "Battle won. | " + questUpdates.front();
+            }
+            else {
+                statusMessage_ = summary.playerSetToOneHp
+                    ? "Battle won. Player recovered to 1 HP."
+                    : "Battle won.";
+            }
+        }
+        else {
+            statusMessage_ = summary.playerSetToOneHp
+                ? "Battle won. Player recovered to 1 HP."
+                : "Battle won.";
+        }
 
         if (battleReturnMode_ == gameplay::GameMode::LocationMode) {
             session_.EnterLocationMode(snapshot.destinationId);
@@ -245,9 +266,6 @@ void App::ResolveBattleOutcomeIfNeeded() {
             session_.EnterOverworldMode();
         }
 
-        statusMessage_ = summary.playerSetToOneHp
-            ? "Battle won. Player recovered to 1 HP."
-            : "Battle won.";
         return;
     }
 

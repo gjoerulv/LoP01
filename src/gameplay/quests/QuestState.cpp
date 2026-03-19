@@ -4,6 +4,15 @@
 
 namespace gameplay::quests {
 
+namespace {
+
+bool IsDestinationStyleObjective(const data::QuestObjectiveType objective) {
+    return objective == data::QuestObjectiveType::BringResource ||
+        objective == data::QuestObjectiveType::MeetHero;
+}
+
+} // namespace
+
 void QuestState::Initialize(const std::vector<data::QuestDefinition>& definitions) {
     quests_.clear();
     quests_.reserve(definitions.size());
@@ -28,7 +37,34 @@ std::vector<std::string> QuestState::OnDestinationReached(const std::string& des
             continue;
         }
 
+        if (!IsDestinationStyleObjective(quest.objective)) {
+            continue;
+        }
+
         if (quest.target != destinationId) {
+            continue;
+        }
+
+        quest.status = QuestStatus::Completed;
+        completed.push_back("Quest completed: " + quest.name);
+    }
+
+    return completed;
+}
+
+std::vector<std::string> QuestState::OnCombatNodeCleared(const std::string& nodeId) {
+    std::vector<std::string> completed;
+
+    for (auto& quest : quests_) {
+        if (quest.status != QuestStatus::InProgress) {
+            continue;
+        }
+
+        if (quest.objective != data::QuestObjectiveType::ClearCombatNode) {
+            continue;
+        }
+
+        if (quest.target != nodeId) {
             continue;
         }
 

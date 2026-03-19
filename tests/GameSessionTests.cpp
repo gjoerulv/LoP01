@@ -84,14 +84,33 @@ TEST_CASE("GameSession updates quest progress from destination triggers") {
 
     const std::vector<data::QuestDefinition> quests = {
         data::QuestDefinition{"q_restore_well", "Restore the Well", "Collect spare parts", data::QuestObjectiveType::BringResource, "mine_entrance"},
-        data::QuestDefinition{"q_find_mira", "Find Mira", "Locate Mira", data::QuestObjectiveType::MeetHero, "bridge_checkpoint"}
+        data::QuestDefinition{"q_secure_bridge", "Secure the Bridge", "Clear the checkpoint", data::QuestObjectiveType::ClearCombatNode, "bridge_checkpoint"}
     };
 
     session.InitializeQuestState(quests);
     const auto updates = session.NotifyDestinationReached("bridge_checkpoint");
 
+    REQUIRE(updates.empty());
+
+    const auto& progress = session.QuestProgress();
+    REQUIRE(progress.size() == 2);
+    REQUIRE(progress[0].status == gameplay::quests::QuestStatus::InProgress);
+    REQUIRE(progress[1].status == gameplay::quests::QuestStatus::InProgress);
+}
+
+TEST_CASE("GameSession updates quest progress from combat-node-clear triggers") {
+    gameplay::GameSession session;
+
+    const std::vector<data::QuestDefinition> quests = {
+        data::QuestDefinition{"q_restore_well", "Restore the Well", "Collect spare parts", data::QuestObjectiveType::BringResource, "mine_entrance"},
+        data::QuestDefinition{"q_secure_bridge", "Secure the Bridge", "Clear the checkpoint", data::QuestObjectiveType::ClearCombatNode, "bridge_checkpoint"}
+    };
+
+    session.InitializeQuestState(quests);
+    const auto updates = session.NotifyCombatNodeCleared("bridge_checkpoint");
+
     REQUIRE(updates.size() == 1);
-    REQUIRE(updates.front() == "Quest completed: Find Mira");
+    REQUIRE(updates.front() == "Quest completed: Secure the Bridge");
 
     const auto& progress = session.QuestProgress();
     REQUIRE(progress.size() == 2);
@@ -121,13 +140,15 @@ TEST_CASE("Setting destination alone does not auto-complete quests") {
 TEST_CASE("GameSession save and load restores completed quest progression") {
     const std::vector<data::QuestDefinition> quests = {
         data::QuestDefinition{"q_restore_well", "Restore the Well", "Collect spare parts", data::QuestObjectiveType::BringResource, "mine_entrance"},
-        data::QuestDefinition{"q_find_mira", "Find Mira", "Locate Mira", data::QuestObjectiveType::MeetHero, "bridge_checkpoint"}
+        data::QuestDefinition{"q_secure_bridge", "Secure the Bridge", "Clear the checkpoint", data::QuestObjectiveType::ClearCombatNode, "bridge_checkpoint"}
     };
 
     gameplay::GameSession source;
     source.InitializeQuestState(quests);
     const auto sourceUpdates = source.NotifyDestinationReached("mine_entrance");
     REQUIRE(sourceUpdates.size() == 1);
+    const auto clearUpdates = source.NotifyCombatNodeCleared("bridge_checkpoint");
+    REQUIRE(clearUpdates.size() == 1);
     source.MarkCombatNodeCleared("bridge_checkpoint");
 
     const core::SaveData saveData = source.ToSaveData();
@@ -139,7 +160,7 @@ TEST_CASE("GameSession save and load restores completed quest progression") {
     const auto& progress = loaded.QuestProgress();
     REQUIRE(progress.size() == 2);
     REQUIRE(progress[0].status == gameplay::quests::QuestStatus::Completed);
-    REQUIRE(progress[1].status == gameplay::quests::QuestStatus::InProgress);
+    REQUIRE(progress[1].status == gameplay::quests::QuestStatus::Completed);
     REQUIRE(loaded.IsCombatNodeCleared("bridge_checkpoint"));
 }
 

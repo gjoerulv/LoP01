@@ -7,7 +7,8 @@ namespace data {
 enum class QuestObjectiveType {
     Unknown,
     BringResource,
-    MeetHero
+    MeetHero,
+    ClearCombatNode
 };
 
 inline QuestObjectiveType QuestObjectiveTypeFromString(const std::string& value) {
@@ -16,6 +17,9 @@ inline QuestObjectiveType QuestObjectiveTypeFromString(const std::string& value)
     }
     if (value == "meet_hero") {
         return QuestObjectiveType::MeetHero;
+    }
+    if (value == "clear_combat_node") {
+        return QuestObjectiveType::ClearCombatNode;
     }
 
     return QuestObjectiveType::Unknown;

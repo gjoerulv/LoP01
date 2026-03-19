@@ -26,6 +26,7 @@ class QuestState {
 public:
     void Initialize(const std::vector<data::QuestDefinition>& definitions);
     std::vector<std::string> OnDestinationReached(const std::string& destinationId);
+    std::vector<std::string> OnCombatNodeCleared(const std::string& nodeId);
     void RestoreCompletedQuestIds(const std::vector<std::string>& completedQuestIds);
 
     [[nodiscard]] const std::vector<QuestProgress>& Quests() const;

@@ -8,10 +8,10 @@
       "target": "mine_entrance"
     },
     {
-      "id": "q_find_mira",
-      "name": "Find Mira",
-      "description": "Locate Mira near the bridge checkpoint and convince her to return.",
-      "objective": "meet_hero",
+      "id": "q_secure_bridge",
+      "name": "Secure the Bridge",
+      "description": "Clear the bridge checkpoint so routes beyond it reopen.",
+      "objective": "clear_combat_node",
       "target": "bridge_checkpoint"
     }
   ]
