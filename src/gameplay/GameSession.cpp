@@ -108,9 +108,26 @@ bool GameSession::ApplyRecruitCost(const int goldCost) {
     return true;
 }
 
+void GameSession::RestToNextDayStart() {
+    const int remainingMinutes = core::GameClock::kMinutesPerSliceDay - clock_.MinutesIntoSliceDay();
+    clock_.AdvanceMinutes(std::max(1, remainingMinutes));
+}
+
 void GameSession::ApplyWakePenalty() {
     gold_ = std::max(0, gold_ - 1000);
     clock_.SetToWakePenaltyStart();
+}
+
+void GameSession::InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions) {
+    questState_.Initialize(questDefinitions);
+}
+
+std::vector<std::string> GameSession::NotifyDestinationReached(const std::string& destinationId) {
+    return questState_.OnDestinationReached(destinationId);
+}
+
+const std::vector<quests::QuestProgress>& GameSession::QuestProgress() const {
+    return questState_.Quests();
 }
 
 SessionSnapshot GameSession::Snapshot() const {
@@ -131,7 +148,8 @@ core::SaveData GameSession::ToSaveData() const {
         gold_,
         ToString(mode_),
         regionId_,
-        destinationId_
+        destinationId_,
+        questState_.CompletedQuestIds()
     };
 }
 
@@ -144,6 +162,8 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     clock_ = core::GameClock();
     const int daysToAdvance = std::max(0, saveData.day - 1);
     clock_.AdvanceMinutes(daysToAdvance * core::GameClock::kMinutesPerSliceDay + std::max(0, saveData.minutesIntoSliceDay));
+
+    questState_.RestoreCompletedQuestIds(saveData.completedQuestIds);
 }
 
 std::string GameSession::ToString(const GameMode mode) {

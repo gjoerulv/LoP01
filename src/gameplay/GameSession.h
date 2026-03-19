@@ -1,9 +1,12 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "core/GameClock.h"
 #include "core/SaveGame.h"
+#include "data/definitions/QuestDefinition.h"
+#include "gameplay/quests/QuestState.h"
 
 namespace gameplay {
 
@@ -45,8 +48,13 @@ public:
     void ApplyDialogueChoiceCost();
     bool ApplyShopCost(int goldCost);
     bool ApplyRecruitCost(int goldCost);
+    void RestToNextDayStart();
 
     void ApplyWakePenalty();
+
+    void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
+    [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);
+    [[nodiscard]] const std::vector<quests::QuestProgress>& QuestProgress() const;
 
     [[nodiscard]] SessionSnapshot Snapshot() const;
 
@@ -62,6 +70,7 @@ private:
     int gold_;
     std::string regionId_;
     std::string destinationId_;
+    quests::QuestState questState_;
 };
 
 } // namespace gameplay

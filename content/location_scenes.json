@@ -62,8 +62,8 @@
             "width": 80,
             "height": 20
           },
-          "prompt_text": "E: Open Inn Door",
-          "result_text": "Opened inn door",
+          "prompt_text": "E: Rest at Inn",
+          "result_text": "Rested at the inn",
           "failure_text": "",
           "time_cost_minutes": 1,
           "gold_cost": 0,

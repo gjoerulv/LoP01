@@ -14,7 +14,8 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
         1337,
         "overworld_mode",
         "ashvale_heartland",
-        "town_center"
+        "town_center",
+        {"q_restore_well"}
     };
 
     REQUIRE(repository.SaveToFile(original, testSavePath.string()));
@@ -28,6 +29,7 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     REQUIRE(loaded->mode == original.mode);
     REQUIRE(loaded->regionId == original.regionId);
     REQUIRE(loaded->destinationId == original.destinationId);
+    REQUIRE(loaded->completedQuestIds == original.completedQuestIds);
 
     std::filesystem::remove(testSavePath);
 }

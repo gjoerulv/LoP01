@@ -30,6 +30,7 @@ add_library(ashvale_logic
   src/gameplay/GameSession.cpp
   src/gameplay/location/LocationScene.cpp
   src/gameplay/battle/BattleFactory.cpp
+  src/gameplay/quests/QuestState.cpp
 )
 
 target_include_directories(ashvale_logic PUBLIC src)
@@ -93,6 +94,7 @@ if (BUILD_TESTING)
     tests/GameClockTests.cpp
     tests/GameSessionTests.cpp
     tests/LocationSceneTests.cpp
+    tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
   )
 

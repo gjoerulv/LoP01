@@ -164,3 +164,33 @@ TEST_CASE("Location action costs follow minute and gold rules") {
 	REQUIRE(snapshot.gold == initialGold - 170);
 	REQUIRE(snapshot.time != initialTime);
 }
+
+TEST_CASE("Inn marker interaction resolves as inn-door action") {
+	gameplay::location::LocationScene scene;
+	scene.Reset(MakeTestScene());
+
+	REQUIRE(scene.TryMovePlayer(140.0f, -200.0f));
+	const auto interaction = scene.Interact();
+
+	REQUIRE(interaction.has_value());
+	REQUIRE(interaction->type == gameplay::location::InteractionType::InnDoor);
+	REQUIRE_FALSE(interaction->requiresDialogueChoice);
+}
+
+TEST_CASE("Shop and recruit interactions are not inn-door actions") {
+	gameplay::location::LocationScene scene;
+	scene.Reset(MakeTestScene());
+
+	REQUIRE(scene.TryMovePlayer(540.0f, -200.0f));
+	const auto shopInteraction = scene.Interact();
+	REQUIRE(shopInteraction.has_value());
+	REQUIRE(shopInteraction->type == gameplay::location::InteractionType::Shop);
+	REQUIRE(shopInteraction->type != gameplay::location::InteractionType::InnDoor);
+
+	scene.Reset(MakeTestScene());
+	REQUIRE(scene.TryMovePlayer(940.0f, -200.0f));
+	const auto recruitInteraction = scene.Interact();
+	REQUIRE(recruitInteraction.has_value());
+	REQUIRE(recruitInteraction->type == gameplay::location::InteractionType::Recruit);
+	REQUIRE(recruitInteraction->type != gameplay::location::InteractionType::InnDoor);
+}

@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace core {
 
@@ -12,6 +13,7 @@ struct SaveData {
     std::string mode;
     std::string regionId;
     std::string destinationId;
+    std::vector<std::string> completedQuestIds;
 };
 
 class SaveGameRepository {

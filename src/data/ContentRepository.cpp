@@ -266,6 +266,34 @@ namespace data {
             return true;
         }
 
+        bool LoadQuestDefinitionsFile(const std::filesystem::path& path, std::vector<QuestDefinition>& output) {
+            std::ifstream input(path);
+            if (!input.is_open()) {
+                return false;
+            }
+
+            nlohmann::json root;
+            input >> root;
+
+            if (!root.contains("quests") || !root["quests"].is_array()) {
+                return false;
+            }
+
+            output.clear();
+
+            for (const auto& questJson : root["quests"]) {
+                QuestDefinition definition;
+                definition.id = questJson.value("id", "unknown");
+                definition.name = questJson.value("name", "Unknown");
+                definition.description = questJson.value("description", "");
+                definition.objective = QuestObjectiveTypeFromString(questJson.value("objective", "unknown"));
+                definition.target = questJson.value("target", "");
+                output.push_back(definition);
+            }
+
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -275,11 +303,12 @@ namespace data {
         const bool unitsLoaded = LoadUnitsFile(root / "units.json", units_);
         const bool battleScenariosLoaded = LoadBattleScenariosFile(root / "battle_scenarios.json", battleScenarios_);
         const bool enemyGroupsLoaded = LoadJsonFile(root / "enemy_groups.json", enemyGroups_);
+        const bool questDefinitionsLoaded = LoadQuestDefinitionsFile(root / "quests.json", questDefinitions_);
         const bool questsLoaded = LoadJsonFile(root / "quests.json", quests_);
 
         return regionsLoaded && locationsLoaded && locationScenesLoaded &&
             unitsLoaded && battleScenariosLoaded &&
-            enemyGroupsLoaded && questsLoaded;
+            enemyGroupsLoaded && questDefinitionsLoaded && questsLoaded;
     }
 
     const std::vector<RegionDefinition>& ContentRepository::Regions() const {
@@ -345,6 +374,10 @@ namespace data {
             }
         }
         return nullptr;
+    }
+
+    const std::vector<QuestDefinition>& ContentRepository::QuestDefinitions() const {
+        return questDefinitions_;
     }
 
     const nlohmann::json& ContentRepository::EnemyGroups() const {
