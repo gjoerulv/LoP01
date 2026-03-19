@@ -62,6 +62,7 @@ namespace data
         std::string name;
         LocationType type = LocationType::Unknown;
         bool allowsSleep = false;
+        bool blocksTransitUntilCleared = false;
         bool overworldDestination = true;
         std::string sceneId;
         std::string battleScenarioId;

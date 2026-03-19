@@ -36,6 +36,7 @@ You are working in a 2D single-player game project written in C++20 using raylib
 - Keep core gameplay logic independent from rendering where practical.
 - Put balance values and content definitions in JSON, not hardcoded in gameplay logic.
 - Add tests for pure logic wherever feasible.
+- Use explicit raw time naming as `minutesIntoSliceDay` and avoid time-string parsing in gameplay rules.
 
 ## Combat system implementation
 
@@ -92,7 +93,6 @@ When documents overlap or conflict, use this order of authority:
 7. archived docs as history only
 
 `docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
-
 
 ## Current milestone baseline
 

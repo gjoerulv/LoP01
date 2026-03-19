@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "core/GameClock.h"
+#include "gameplay/overworld/OverworldTravelRules.h"
 
 namespace app::mappers
 {
@@ -44,11 +44,33 @@ namespace app::mappers
 
             return nullptr;
         }
+
+        bool IsClearedCombatNode(
+            const std::vector<std::string>& clearedCombatNodeIds,
+            const std::string& nodeId)
+        {
+            return std::ranges::find(clearedCombatNodeIds, nodeId) != clearedCombatNodeIds.end();
+        }
+
+        std::vector<std::string> BuildBlockedTransitNodeIds(const std::vector<OverworldNodeMeta>& nodes)
+        {
+            std::vector<std::string> blockedNodeIds;
+            for (const auto& node : nodes)
+            {
+                if (node.blocksTransitUntilCleared && !node.combatNodeCleared)
+                {
+                    blockedNodeIds.push_back(node.id);
+                }
+            }
+
+            return blockedNodeIds;
+        }
     }
 
     std::vector<OverworldNodeMeta> OverworldModelMapper::BuildNodes(
         const data::ContentRepository& content,
-        const std::string& regionId) const
+        const std::string& regionId,
+        const std::vector<std::string>& clearedCombatNodeIds) const
     {
         std::vector<OverworldNodeMeta> nodes;
 
@@ -64,13 +86,20 @@ namespace app::mappers
                 continue;
             }
 
+            const bool supportsBattle = data::SupportsBattleScenario(location->type) && !location->battleScenarioId.empty();
+            const bool combatNodeCleared = supportsBattle &&
+                location->type == data::LocationType::Combat &&
+                IsClearedCombatNode(clearedCombatNodeIds, location->id);
+
             nodes.push_back(OverworldNodeMeta{
                 location->id,
                 location->name,
                 location->type,
                 regionNode.travelAvailable,
                 data::EntersLocationMode(location->type),
-                data::SupportsBattleScenario(location->type) && !location->battleScenarioId.empty(),
+                supportsBattle,
+                combatNodeCleared,
+                location->blocksTransitUntilCleared,
                 location->battleScenarioId,
                 regionNode.discovered,
                 regionNode.x,
@@ -96,14 +125,6 @@ namespace app::mappers
         return 0;
     }
 
-    int OverworldModelMapper::ComputeTravelPreviewMinutes(
-        const int currentIndex,
-        const int selectedIndex) const
-    {
-        const int distanceSteps = std::abs(selectedIndex - currentIndex);
-        return core::GameClock::QuantizeTravelMinutes(15 + distanceSteps * 15);
-    }
-
     std::string OverworldModelMapper::FormatTravelTime(const int minutes) const
     {
         if (minutes < 60)
@@ -124,7 +145,8 @@ namespace app::mappers
     OverworldRenderModel OverworldModelMapper::Map(
         const data::ContentRepository& content,
         const gameplay::SessionSnapshot& snapshot,
-        const int selectedNodeIndex) const
+        const int selectedNodeIndex,
+        const std::vector<std::string>& clearedCombatNodeIds) const
     {
         OverworldRenderModel model;
 
@@ -133,7 +155,7 @@ namespace app::mappers
         model.hintText = "Left/Right: select destination";
         model.controlsText = "Enter: confirm travel | Esc: cancel selection";
 
-        const auto nodes = BuildNodes(content, snapshot.regionId);
+        const auto nodes = BuildNodes(content, snapshot.regionId, clearedCombatNodeIds);
 
         const int currentIndex = FindNodeIndexById(nodes, snapshot.destinationId);
         const int safeSelectedIndex = nodes.empty()
@@ -173,15 +195,53 @@ namespace app::mappers
 
         if (!nodes.empty())
         {
+            const auto blockedTransitNodeIds = BuildBlockedTransitNodeIds(nodes);
+            const std::vector<data::RegionLinkDefinition> emptyLinks;
+            const auto travel = gameplay::overworld::EvaluateTravel(
+                snapshot.destinationId,
+                nodes[safeSelectedIndex].id,
+                nodes[safeSelectedIndex].travelAvailable,
+                snapshot.minutesIntoSliceDay,
+                region != nullptr ? region->links : emptyLinks,
+                blockedTransitNodeIds);
+
             model.currentNodeLabel = nodes[currentIndex].label;
             model.selectedNodeLabel = nodes[safeSelectedIndex].label;
             model.selectedNodeType = "Type: " + data::ToDisplayString(nodes[safeSelectedIndex].type);
+
+            std::string travelText = "Yes";
+            if (!travel.legal)
+            {
+                if (travel.reason == gameplay::overworld::TravelBlockReason::DestinationUnavailable)
+                {
+                    travelText = "No (destination unavailable)";
+                }
+                else if (travel.reason == gameplay::overworld::TravelBlockReason::NoRouteLink)
+                {
+                    travelText = "No (no route link)";
+                }
+                else if (travel.reason == gameplay::overworld::TravelBlockReason::ArrivalPastDayEnd)
+                {
+                    travelText = "No (arrives past 02:00)";
+                }
+                else if (travel.reason == gameplay::overworld::TravelBlockReason::BlockedByUnclearedTransitNode)
+                {
+                    travelText = "No (blocked by uncleared route blocker)";
+                }
+                else
+                {
+                    travelText = "No";
+                }
+            }
+
             model.selectedNodeEnterable =
-                std::string("Travel: ") + (nodes[safeSelectedIndex].travelAvailable ? "Yes" : "No") +
+                "Travel: " + travelText +
                 " | Scene: " + (nodes[safeSelectedIndex].entersLocationMode ? "Yes" : "No") +
-                " | Battle: " + (nodes[safeSelectedIndex].supportsBattle ? "Yes" : "No");
-            model.travelTimeText =
-                FormatTravelTime(ComputeTravelPreviewMinutes(currentIndex, safeSelectedIndex));
+                " | Battle: " + ((nodes[safeSelectedIndex].supportsBattle && !nodes[safeSelectedIndex].combatNodeCleared) ? "Yes" : "No") +
+                (nodes[safeSelectedIndex].combatNodeCleared ? " (Cleared)" : "");
+            model.travelTimeText = travel.legal
+                ? FormatTravelTime(travel.minutes)
+                : "Unavailable";
         }
 
         return model;

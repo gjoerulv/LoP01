@@ -17,7 +17,8 @@ void to_json(json& j, const SaveData& data) {
         {"mode", data.mode},
         {"region_id", data.regionId},
         {"destination_id", data.destinationId},
-        {"completed_quest_ids", data.completedQuestIds}
+        {"completed_quest_ids", data.completedQuestIds},
+        {"cleared_combat_node_ids", data.clearedCombatNodeIds}
     };
 }
 
@@ -32,6 +33,11 @@ void from_json(const json& j, SaveData& data) {
     data.completedQuestIds.clear();
     if (j.contains("completed_quest_ids") && j["completed_quest_ids"].is_array()) {
         data.completedQuestIds = j["completed_quest_ids"].get<std::vector<std::string>>();
+    }
+
+    data.clearedCombatNodeIds.clear();
+    if (j.contains("cleared_combat_node_ids") && j["cleared_combat_node_ids"].is_array()) {
+        data.clearedCombatNodeIds = j["cleared_combat_node_ids"].get<std::vector<std::string>>();
     }
 }
 

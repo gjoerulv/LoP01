@@ -37,6 +37,7 @@ namespace data {
                 def.name = location.value("name", "Unknown");
                 def.type = LocationTypeFromString(location.value("type", "unknown"));
                 def.allowsSleep = location.value("allows_sleep", false);
+                def.blocksTransitUntilCleared = location.value("blocks_transit_until_cleared", false);
                 def.overworldDestination = location.value("overworld_destination", true);
                 def.sceneId = location.value("scene_id", "");
                 def.battleScenarioId = location.value("battle_scenario_id", "");
