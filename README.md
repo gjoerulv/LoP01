@@ -9,61 +9,90 @@ This repository contains a **playable vertical slice** of a 2D single-player str
 - save/load support
 - Catch2 tests for pure logic
 
-The current project focus is to extend the playable slice in small, maintainable milestones while keeping gameplay logic deterministic, testable, and data-driven.
+The project is being extended in small, maintainable milestones while keeping gameplay logic deterministic, testable, explicit, and data-driven.
 
 ## Current slice scope
 
-This is not the full game. The current slice is intentionally limited to a single bounded region and a small set of destinations, locations, encounters, and quests.
+This is not the full game. The current slice is intentionally bounded to a single region and a small set of destinations, locations, encounters, quests, and placeholder presentation.
 
-The slice currently aims to support:
+The current slice supports:
 
-- a full app loop with title/opening/gameplay flow
-- overworld travel and destination selection
-- location scenes and interactions
-- turn-based battle encounters
+- a full app flow with title, opening, overworld selection, and gameplay
+- explicit mode transitions between overworld, location, and battle
+- content-driven overworld destinations and typed location definitions
+- content-driven location scenes and battle scenario selection
+- turn-based CTB battle encounters
 - day/time progression
 - sleep and wake-up penalty rules
-- simple quest progression
+- simple typed quest progression
 - save/load for the current gameplay slice
 - placeholder content and presentation assets
+
+## Milestone 5 baseline
+
+Milestone 5 is complete and acts as the current implementation baseline.
+
+The current baseline includes:
+
+- explicit `App` / `GameSession` flow
+- controller / mapper / renderer split
+- typed regions, locations, location scenes, battle scenarios, and quests
+- interaction-driven location services
+- unified wake-penalty recovery flow for missed sleep and full defeat
+- explicit battle return routing
+- minimal typed quest progression
+- save/load for current slice state and completed quest ids
+
+Milestone 6 should preserve this architecture and build on it incrementally.
 
 ## Folder structure
 
 - `src/app`
   - application shell
   - mode transitions
-  - input/update/draw integration
+  - input polling / translation
+  - controllers
+  - render-model mappers
+
 - `src/core`
-  - pure logic and foundational systems
   - time/day rules
   - save/load serialization
+
 - `src/data`
-  - content loading and repositories
+  - JSON loading
+  - content repositories
+  - typed content definitions
+
 - `src/gameplay`
-  - gameplay session state
-  - controllers
-  - mode-specific gameplay systems
-  - typed gameplay/content-facing models
+  - `GameSession`
+  - gameplay state and rules
+  - battle runtime
+  - location runtime
+  - quest runtime
+
 - `src/rendering`
-  - render models
-  - mappers
   - mode-specific renderers
+  - shared HUD and debug overlay
+  - render context/theme helpers
+
 - `content`
-  - JSON content definitions
+  - JSON content definitions used by the current slice
+
 - `tests`
-  - pure logic tests without raylib dependency
+  - pure-logic tests without raylib dependency
+
 - `docs`
-  - game vision, technical direction, combat rules, and milestone docs
+  - vision, technical direction, core-loop rules, combat rules, and milestone docs
 
 ## Gameplay and data architecture
 
 ### Runtime flow
 
-- `App` owns the application run loop and integrates rendering, input, and mode entry.
-- `GameSession` owns gameplay-facing state, current mode, and cross-mode progression.
+- `App` owns the main loop, top-level mode handling, and integration of input, gameplay update, and drawing.
+- `GameSession` owns gameplay-facing session state and explicit mode transitions.
 - `GameClock` owns day/time progression logic.
-- Save/load code persists the gameplay state needed for the current slice.
-- Content is loaded from JSON and mapped into gameplay-facing data structures used by the slice.
+- Save/load persists only the gameplay state needed for the current slice.
+- Content is loaded from JSON and mapped into typed gameplay-facing data structures where needed.
 
 ### Gameplay modes
 
@@ -76,14 +105,16 @@ The current playable slice includes these primary modes:
 - `location_mode`
 - `battle_mode`
 
-Mode transitions should remain explicit and easy to follow. Prefer clear mode-entry helpers over generic chained advancement for gameplay transitions.
+Mode transitions should remain explicit and easy to follow. Prefer clear mode-entry helpers over generic chained advancement.
 
 ### Data-driven content
 
-Content files under `content/` define the current slice:
+Content files under `content/` define the current slice, including:
 
 - `regions.json`
 - `locations.json`
+- `location_scenes.json`
+- `battle_scenarios.json`
 - `units.json`
 - `enemy_groups.json`
 - `quests.json`
@@ -92,15 +123,32 @@ These files provide the bounded playable-slice content used by the current miles
 
 ## Current controls
 
-Controls may evolve by milestone, but the current slice supports:
+Controls are still prototype-level and may evolve, but the current slice supports:
 
 - `Enter`: confirm / advance in relevant contexts
-- `1`: add 1 minute in location-style interactions
-- `T`: add 15 minutes for travel/testing flow where enabled
-- `P`: apply wake-up penalty for testing
+- `Escape`: cancel / back where supported
+- `E`: interact in location mode
+- `Arrow keys` / `WASD`: movement in location mode
+- `Left` / `Right`: previous / next selection in menu-style contexts
+- `Up` / `Down`: target selection in battle-style contexts
+- `1`: option 1 in contexts that expose it
+- `2`: option 2 in contexts that expose it
+- `B`: debug battle shortcut where enabled
 - `F1`: toggle debug overlay
 - `F5`: save to `saves/slot_1.json`
 - `F9`: load from `saves/slot_1.json`
+
+## Milestone 6 direction
+
+Milestone 6 should focus on making the world rules match the current typed content model more closely.
+
+Current Milestone 6 priorities:
+
+- make location identity clearer and more location-specific
+- make rest/services valid per location, not only by shared prototype scene layout
+- make overworld travel follow the route graph more explicitly
+- add minimal persistent node/world state where needed
+- preserve the current architecture and implement in small compilable steps
 
 ## Build
 

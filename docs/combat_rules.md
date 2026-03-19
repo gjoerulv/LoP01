@@ -10,7 +10,7 @@
 
 ### Leader
 - Must be the player character or a hero unit
-- The leader's Attack, Defense, Magic and Resistance stats are directly added to the stats of all units on their team.
+- The leader's Attack, Defense, Magic and Resistance stats are directly added to the stats of all units on their team (including the leader).
 - The leader position is always "Leader" (furthest back).
 - As long as the leader's turn is active, the leader can choose to cast a spell or wait.
 - After the leader has cast a spell, the leader's Agility decidec when he/she can cast a spell again.
@@ -25,7 +25,9 @@
 
 ### Generic units
 - stackable
-- when defeated, they are permanently lost
+- when defeated (stack count/life = 0), they are permanently lost, unless revived before battle ends
+- stacks do not refill automatically
+- stack can fill up by recruiting more units. Recruiting costs gold, and, sometimes additional resources pr unit.
 
 ## Stats
 
@@ -125,6 +127,8 @@ For hero units:
 
 - battle UI must show upcoming turn order
 - agility influences how frequently units act
+- player action, shuch as waiting or using skills, can influence turn order, and this should be communicated to the player by updateing the turn order UI immediately after the player action is selected, and reset if actions are cancelled or changed, but be mainteaned if the player goes through with the action
+- turn order UI should always update according to what happens in battle, and reflect the actual turn order, even if the player does not select an action that influences turn order. For example, if a unit is defeated, the turn order should update immediately to reflect the change in units and their turn order.
 - system should be deterministic apart from intentional RNG
 
 ## Win/loss conditions

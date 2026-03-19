@@ -39,20 +39,21 @@ You are working in a 2D single-player game project written in C++20 using raylib
 
 ## Combat system implementation
 
-- Follow docs/combat_rules.md exactly when implementing combat systems.
+- Follow `docs/combat_rules.md` exactly when implementing combat systems.
 - Keep formulas simple and testable.
 
 ## Working style
 
 - Before large changes, summarize the plan briefly.
 - For ambiguous requirements, choose the simplest implementation that preserves the intended gameplay.
-- Document non-obvious design decisions in README_DECISIONS.md.
+- Document non-obvious design decisions in `README_DECISIONS.md`.
 - When creating new systems, provide extension points but do not generalize prematurely.
 - Prefer small, complete milestones that build and run.
 
 ## Current bounded scope
 
 Keep the playable slice intentionally limited:
+
 - 1 overworld region
 - 10 to 20 destinations
 - 1 or 2 town-style locations
@@ -68,22 +69,68 @@ Keep the playable slice intentionally limited:
 ## Key docs to follow
 
 Always consult these docs when relevant:
-- docs/game_vision.md
-- docs/core_loop_rules.md
-- docs/combat_rules.md
-- docs/content_scope_v0.md
-- docs/technical_direction.md
+
+- `README.md`
+- `README_DECISIONS.md`
+- `docs/game_vision.md`
+- `docs/core_loop_rules.md`
+- `docs/combat_rules.md`
+- `docs/content_scope_v0.md`
+- `docs/technical_direction.md`
+- `docs/milestone_6_world_identity.md` when working on Milestone 6 tasks
+
+## Document precedence
+
+When documents overlap or conflict, use this order of authority:
+
+1. current codebase
+2. active milestone doc
+3. `README_DECISIONS.md`
+4. core rules / combat rules / technical direction
+5. `docs/content_scope_v0.md` as a bounded scope cap only
+6. complete-vision notes as incomplete long-term direction
+7. archived docs as history only
+
+`docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
+
+
+## Current milestone baseline
+
+Milestone 5 is complete.
+
+Assume the current baseline already includes:
+
+- explicit `App` / `GameSession` flow
+- controller / mapper / renderer split
+- typed regions, locations, location scenes, battle scenarios, and quests
+- interaction-driven location services
+- unified wake-penalty recovery flow
+- explicit battle return routing
+- minimal typed quest progression
+- save/load for current slice state and completed quest ids
+
+Preserve this baseline unless a change is clearly necessary.
 
 ## Current milestone focus
 
-The project has completed the initial architecture and visual gameplay pass. The current milestone is the first full world-loop milestone.
+The current milestone is Milestone 6: world identity and route rules.
 
 Priorities for the current milestone:
-- preserve the existing renderer/controller/mapper architecture
-- keep mode transitions explicit and easy to follow
-- implement sleep/rest flow at valid locations
-- implement wake-up penalty and defeat fallout consistently with docs/core_loop_rules.md
-- add simple quest progression using existing content data
-- keep UI additions lightweight and focused on communicating loop state
 
-Avoid broad content expansion, extra regions, or major new combat mechanics until the day-loop consequences and basic quest loop are playable end-to-end.
+- preserve the existing `App` / `GameSession` and controller / mapper / renderer architecture
+- keep mode transitions explicit and easy to follow
+- make location services valid per location, not only because of shared scene prototype layout
+- make overworld travel more faithful to route/graph rules
+- add minimal persistent node/world state only where needed
+- keep quests minimal and typed
+- keep UI additions lightweight and focused on communicating state clearly
+
+Avoid:
+
+- broad content expansion
+- extra regions
+- major new combat mechanics
+- generic service/event frameworks
+- large architectural rewrites
+
+When in doubt, prefer the smallest clean implementation that keeps the playable slice coherent.

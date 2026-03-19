@@ -1,0 +1,29 @@
+---
+This document is incomplete. The finished version should cantain a complete description of the final version of the Overworld module of the game.
+---
+
+# Overworld Vision
+
+## Structure
+
+- The overworld is a map of a large region the player can interact with
+- The entire map covers more space than what the resolution can show, scrolling and/or zooming is required to see the entire map
+- Overworld is filled with nodes and lines connecting nodes
+- A node represent a destination, a line represents a valid travel route between nodes
+- The player can visit nodes using travel lines
+- Only nodes in close proximity has a line/travel route connecting them (all nodes are not directly connected)
+- A node can have a miximum of four travel routes connected to other nodes, connected to nodes in proximity
+- A node can be empty, a single-use service, multiple single-use services (user can scroll between them), an enterable locations that triggers "lacation mode" when used/entered
+- A node can also contain a single enemy unit, a single item or a single resource.
+- A node can also be a blocker node by: Quest guards (requires completing a quest to pass), Situational guards that requires a specific item/situation to be able to pass. 
+- Entering a node with an enemy triggers a fight with that enemy (battle mode)
+- Winning the fight earns the player a reward based on the battle, and removes the nemy from the map. The node now becommes an empty node
+- The player can not pass through enemy nodes without winnning against them first, making enemy nodes act as blocker nodes until they are defeated
+
+
+## Movement
+
+- Player can select to travel to nodes on the overworld.
+- Player selects a node with directional buttons, or clicking on a node with a mouse-clicking
+- Player must confirm movement by pressing the confirm button, or clicking on the same node again (double click)
+- Node types incl

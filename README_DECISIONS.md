@@ -102,6 +102,23 @@ Decision:
 Why:
 - Avoids duplicate outcome state and keeps combat UI text consistent.
 
+### 11) Milestone 6 prioritizes world identity over feature breadth
+
+Decision:
+- Milestone 6 focuses on making the existing world model behave more coherently before adding broader feature scope.
+- Location-valid services should be determined by the current location, not only by shared prototype scene layout.
+- Overworld travel should move toward route-aware rules using the existing content structure.
+- Persistent world state should remain minimal and slice-driven.
+
+Why:
+- The current architecture is already strong enough to extend without major restructuring.
+- The biggest gap in the current slice is world-behavior coherence, not missing subsystems.
+- This improves game feel and content credibility without destabilizing the codebase.
+
+Tradeoff:
+- Some content and presentation will remain placeholder while rules are tightened.
+- Milestone 6 intentionally favors correctness/coherence over broad new content.
+
 ## Assumptions
 
 - Region count remains one in the current slice.
