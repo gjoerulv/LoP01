@@ -1,5 +1,7 @@
 # Core Loop Rules
 
+- Some overworld travel rules are still target behavior rather than fully implemented baseline
+
 ## Day structure
 
 - Day starts at 06:00
