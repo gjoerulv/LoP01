@@ -118,6 +118,39 @@ void GameSession::ApplyWakePenalty() {
     clock_.SetToWakePenaltyStart();
 }
 
+void GameSession::MarkCombatNodeCleared(const std::string& nodeId) {
+    nodeWorldState_.MarkCombatNodeCleared(nodeId);
+}
+
+bool GameSession::IsCombatNodeCleared(const std::string& nodeId) const {
+    return nodeWorldState_.IsCombatNodeCleared(nodeId);
+}
+
+const std::vector<std::string>& GameSession::ClearedCombatNodeIds() const {
+    return nodeWorldState_.ClearedCombatNodeIds();
+}
+
+void GameSession::ApplyOverworldCombatVictoryNodeClear(
+    const bool alliesWon,
+    const bool enemiesWon,
+    const GameMode battleReturnMode,
+    const std::string& nodeId,
+    const bool nodeIsCombatType) {
+    if (!alliesWon || enemiesWon) {
+        return;
+    }
+
+    if (battleReturnMode != GameMode::OverworldMode) {
+        return;
+    }
+
+    if (!nodeIsCombatType) {
+        return;
+    }
+
+    MarkCombatNodeCleared(nodeId);
+}
+
 void GameSession::InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions) {
     questState_.Initialize(questDefinitions);
 }
@@ -134,6 +167,7 @@ SessionSnapshot GameSession::Snapshot() const {
     return SessionSnapshot{
         mode_,
         clock_.Day(),
+        clock_.MinutesIntoSliceDay(),
         clock_.TimeString(),
         gold_,
         regionId_,
@@ -149,7 +183,8 @@ core::SaveData GameSession::ToSaveData() const {
         ToString(mode_),
         regionId_,
         destinationId_,
-        questState_.CompletedQuestIds()
+        questState_.CompletedQuestIds(),
+        nodeWorldState_.ClearedCombatNodeIds()
     };
 }
 
@@ -164,6 +199,7 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     clock_.AdvanceMinutes(daysToAdvance * core::GameClock::kMinutesPerSliceDay + std::max(0, saveData.minutesIntoSliceDay));
 
     questState_.RestoreCompletedQuestIds(saveData.completedQuestIds);
+    nodeWorldState_.RestoreClearedCombatNodeIds(saveData.clearedCombatNodeIds);
 }
 
 std::string GameSession::ToString(const GameMode mode) {

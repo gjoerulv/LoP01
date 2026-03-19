@@ -1,0 +1,69 @@
+---
+agent: 'agent'
+description: 'Implement Milestone 6 world identity and route rules in small compilable steps'
+---
+
+Implement Milestone 6: World identity and route rules.
+
+Read first:
+- README.md
+- README_DECISIONS.md
+- docs/game_vision.md
+- docs/core_loop_rules.md
+- docs/content_scope_v0.md
+- docs/technical_direction.md
+- docs/milestone_6_world_identity.md
+
+Primary goal:
+Make the world behave more like the current typed content model already implies, while preserving the Milestone 5 architecture.
+
+Required work priorities:
+
+1. Preserve baseline architecture
+- Preserve explicit `App` / `GameSession` flow
+- Preserve controller / mapper / renderer split
+- Keep gameplay logic separate from rendering
+- Prefer explicit and readable changes over generalized systems
+
+2. Make location behavior more location-specific
+- Prevent invalid service/interactable behavior from leaking across locations that share prototype scene layout
+- Use the smallest clean implementation that preserves current architecture
+
+3. Harden valid service rules
+- Ensure rest/services are valid because the current location allows them, not only because a shared scene contains a matching interaction zone
+- Keep the current slice readable and data-driven where practical
+
+4. Make overworld travel more route-aware
+- Move travel rules toward route/graph-aware behavior
+- Keep same-node travel semantics clean
+- Keep travel preview understandable
+- Communicate blocked/unavailable travel clearly
+
+5. Add minimal persistent node/world state
+- Add only the smallest amount of world state needed to make node behavior coherent
+- Persist only what the current slice requires
+
+6. Extend quest triggers only where needed
+- Keep quests minimal and typed
+- Extend quest triggers only if needed to connect them to clearer world actions
+
+7. Tests and docs
+- Add tests for new pure logic where feasible
+- Update docs when behavior changes in a non-obvious way
+- Record meaningful tradeoffs in `README_DECISIONS.md`
+
+Constraints:
+- Do not add major new combat mechanics
+- Do not expand to new regions
+- Do not add broad inventory/equipment systems
+- Do not introduce generic scripting/event frameworks
+- Keep the codebase compilable in small steps
+- Prefer a coherent playable slice over broad incomplete systems
+- Do not restructure stable architecture unless required to complete milestone goals cleanly
+
+Expected output:
+1. short implementation plan
+2. affected files/modules
+3. implementation in small compilable steps
+4. tests/docs updates
+5. `README_DECISIONS.md` note for non-obvious tradeoffs

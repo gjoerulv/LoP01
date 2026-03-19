@@ -128,6 +128,7 @@ TEST_CASE("GameSession save and load restores completed quest progression") {
     source.InitializeQuestState(quests);
     const auto sourceUpdates = source.NotifyDestinationReached("mine_entrance");
     REQUIRE(sourceUpdates.size() == 1);
+    source.MarkCombatNodeCleared("bridge_checkpoint");
 
     const core::SaveData saveData = source.ToSaveData();
 
@@ -139,4 +140,35 @@ TEST_CASE("GameSession save and load restores completed quest progression") {
     REQUIRE(progress.size() == 2);
     REQUIRE(progress[0].status == gameplay::quests::QuestStatus::Completed);
     REQUIRE(progress[1].status == gameplay::quests::QuestStatus::InProgress);
+    REQUIRE(loaded.IsCombatNodeCleared("bridge_checkpoint"));
+}
+
+TEST_CASE("GameSession clears combat node only on allied overworld combat victory") {
+    gameplay::GameSession session;
+
+    session.ApplyOverworldCombatVictoryNodeClear(
+        true,
+        false,
+        gameplay::GameMode::OverworldMode,
+        "bridge_checkpoint",
+        true);
+
+    REQUIRE(session.IsCombatNodeCleared("bridge_checkpoint"));
+
+    session.ApplyOverworldCombatVictoryNodeClear(
+        false,
+        true,
+        gameplay::GameMode::OverworldMode,
+        "orchard_pass",
+        true);
+
+    session.ApplyOverworldCombatVictoryNodeClear(
+        true,
+        false,
+        gameplay::GameMode::LocationMode,
+        "clocktower_square",
+        true);
+
+    REQUIRE_FALSE(session.IsCombatNodeCleared("orchard_pass"));
+    REQUIRE_FALSE(session.IsCombatNodeCleared("clocktower_square"));
 }

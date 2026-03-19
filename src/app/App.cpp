@@ -10,7 +10,11 @@
 #include <nlohmann/json.hpp>
 #include <raylib.h>
 
+#include "core/GameClock.h"
 #include "gameplay/battle/BattleFactory.h"
+#include "gameplay/location/LocationServiceRules.h"
+#include "gameplay/overworld/OverworldDeadEndRules.h"
+#include "gameplay/overworld/OverworldTravelRules.h"
 
 namespace app {
 
@@ -18,6 +22,17 @@ namespace {
 using ashvale::rendering::DebugLine;
 using ashvale::rendering::DebugOverlayModel;
 using ashvale::rendering::TitleScreenModel;
+
+std::vector<std::string> BuildBlockedTransitNodeIds(const std::vector<app::mappers::OverworldNodeMeta>& nodes) {
+    std::vector<std::string> blockedNodeIds;
+    for (const auto& node : nodes) {
+        if (node.blocksTransitUntilCleared && !node.combatNodeCleared) {
+            blockedNodeIds.push_back(node.id);
+        }
+    }
+
+    return blockedNodeIds;
+}
 } // namespace
 
 App::App() {
@@ -213,8 +228,17 @@ void App::ResolveBattleOutcomeIfNeeded() {
     }
 
     if (summary.alliesWon) {
+        const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+        const auto* location = content_.FindLocationById(snapshot.destinationId);
+        const bool nodeIsCombatType = location != nullptr && location->type == data::LocationType::Combat;
+        session_.ApplyOverworldCombatVictoryNodeClear(
+            summary.alliesWon,
+            summary.enemiesWon,
+            battleReturnMode_,
+            snapshot.destinationId,
+            nodeIsCombatType);
+
         if (battleReturnMode_ == gameplay::GameMode::LocationMode) {
-            const gameplay::SessionSnapshot snapshot = session_.Snapshot();
             session_.EnterLocationMode(snapshot.destinationId);
         }
         else {
@@ -289,7 +313,7 @@ void App::Update() {
 
 void App::UpdateOverworldMode(const input::InputState& input) {
     const auto snapshot = session_.Snapshot();
-    const auto nodes = overworldModelMapper_.BuildNodes(content_, snapshot.regionId);
+    const auto nodes = overworldModelMapper_.BuildNodes(content_, snapshot.regionId, session_.ClearedCombatNodeIds());
     if (nodes.empty()) {
         return;
     }
@@ -306,27 +330,104 @@ void App::UpdateOverworldMode(const input::InputState& input) {
 
     overworldSelectedNodeIndex_ = result.selectedNodeIndex;
 
+    const auto& currentNode = nodes[currentIndex];
+    const bool hasUsableLocalAction =
+        currentNode.supportsBattle && !currentNode.combatNodeCleared && !currentNode.battleScenarioId.empty();
+
+    const auto* region = content_.FindRegionById(snapshot.regionId);
+    const std::vector<data::RegionLinkDefinition> emptyLinks;
+    const auto& links = region != nullptr ? region->links : emptyLinks;
+    const auto blockedTransitNodeIds = BuildBlockedTransitNodeIds(nodes);
+
+    bool hasLegalTravelNow = false;
+    bool hasReachableTravelIgnoringCutoff = false;
+    for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
+        if (i == currentIndex) {
+            continue;
+        }
+
+        const auto nowTravel = gameplay::overworld::EvaluateTravel(
+            snapshot.destinationId,
+            nodes[i].id,
+            nodes[i].travelAvailable,
+            snapshot.minutesIntoSliceDay,
+            links,
+            blockedTransitNodeIds);
+        if (nowTravel.legal) {
+            hasLegalTravelNow = true;
+        }
+
+        const auto ignoreCutoffTravel = gameplay::overworld::EvaluateTravel(
+            snapshot.destinationId,
+            nodes[i].id,
+            nodes[i].travelAvailable,
+            0,
+            links,
+            blockedTransitNodeIds);
+        if (ignoreCutoffTravel.legal) {
+            hasReachableTravelIgnoringCutoff = true;
+        }
+
+        if (hasLegalTravelNow && hasReachableTravelIgnoringCutoff) {
+            break;
+        }
+    }
+
+    const bool declinedUsableLocalAction = hasUsableLocalAction && result.travelCancelled;
+    const auto deadEndDecision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+        snapshot.minutesIntoSliceDay,
+        hasLegalTravelNow,
+        hasReachableTravelIgnoringCutoff,
+        hasUsableLocalAction,
+        declinedUsableLocalAction,
+        core::GameClock::kMinutesPerSliceDay);
+    if (deadEndDecision.shouldApplyWakePenalty) {
+        ApplyWakePenaltyAndRecover("No legal remaining action before day end");
+        return;
+    }
+
     if (result.travelCancelled) {
         statusMessage_ = "Travel selection cancelled";
     }
 
     if (result.travelConfirmed) {
         const auto& destination = nodes[overworldSelectedNodeIndex_];
-        if (!destination.travelAvailable) {
-            statusMessage_ = destination.label + " is not reachable yet";
+        const auto travel = gameplay::overworld::EvaluateTravel(
+            snapshot.destinationId,
+            destination.id,
+            destination.travelAvailable,
+            snapshot.minutesIntoSliceDay,
+            links,
+            blockedTransitNodeIds);
+
+        if (!travel.legal) {
+            if (travel.reason == gameplay::overworld::TravelBlockReason::DestinationUnavailable) {
+                statusMessage_ = destination.label + " is not reachable yet";
+            }
+            else if (travel.reason == gameplay::overworld::TravelBlockReason::NoRouteLink) {
+                statusMessage_ = "No route link from current node to " + destination.label;
+            }
+            else if (travel.reason == gameplay::overworld::TravelBlockReason::ArrivalPastDayEnd) {
+                statusMessage_ = "Travel would arrive past 02:00";
+            }
+            else if (travel.reason == gameplay::overworld::TravelBlockReason::BlockedByUnclearedTransitNode) {
+                statusMessage_ = "Route is blocked by an uncleared blocker node";
+            }
+            else {
+                statusMessage_ = "Travel unavailable";
+            }
+
             return;
         }
 
-        const int travelMinutes =
-            overworldModelMapper_.ComputeTravelPreviewMinutes(currentIndex, overworldSelectedNodeIndex_);
-        session_.AddMinutes(travelMinutes);
+        session_.AddMinutes(travel.minutes);
 
         session_.SetDestination(destination.id);
         statusMessage_ =
-            "Traveled to " + destination.label + " (" + overworldModelMapper_.FormatTravelTime(travelMinutes) + ")";
+            "Traveled to " + destination.label + " (" + overworldModelMapper_.FormatTravelTime(travel.minutes) + ")";
         OnDestinationArrived(destination.id);
 
-        if (destination.supportsBattle && !destination.battleScenarioId.empty()) {
+        if (destination.supportsBattle && !destination.combatNodeCleared && !destination.battleScenarioId.empty()) {
             StartBattleScenario(destination.battleScenarioId, "Encounter started at " + destination.label);
             return;
         }
@@ -398,8 +499,15 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
 
     if (outcome->type == gameplay::location::InteractionType::InnDoor) {
         const gameplay::SessionSnapshot beforeRest = session_.Snapshot();
+        const auto* location = content_.FindLocationById(beforeRest.destinationId);
+        const bool allowsSleep = location != nullptr && location->allowsSleep;
+        if (!gameplay::location::IsRestValidForLocation(outcome->type, allowsSleep)) {
+            statusMessage_ = "Cannot rest here.";
+            return;
+        }
+
         std::string locationName = beforeRest.destinationId;
-        if (const auto* location = content_.FindLocationById(beforeRest.destinationId)) {
+        if (location != nullptr) {
             locationName = location->name;
         }
 
@@ -497,7 +605,8 @@ void App::Draw() const {
         const auto model = overworldModelMapper_.Map(
             content_,
             snapshot,
-            overworldSelectedNodeIndex_);
+            overworldSelectedNodeIndex_,
+            session_.ClearedCombatNodeIds());
 
         overworldRenderer_.Draw(context, model);
         break;

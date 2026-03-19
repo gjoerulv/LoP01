@@ -28,7 +28,11 @@ add_library(ashvale_logic
   src/data/ContentRepository.cpp
   src/gameplay/battle/Battle.cpp
   src/gameplay/GameSession.cpp
+  src/gameplay/world/NodeWorldState.cpp
+  src/gameplay/overworld/OverworldDeadEndRules.cpp
+  src/gameplay/overworld/OverworldTravelRules.cpp
   src/gameplay/location/LocationScene.cpp
+  src/gameplay/location/LocationServiceRules.cpp
   src/gameplay/battle/BattleFactory.cpp
   src/gameplay/quests/QuestState.cpp
 )
@@ -91,9 +95,14 @@ if (BUILD_TESTING)
     src/app/BattleEventTextFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
+    tests/ContentRepositoryTests.cpp
     tests/GameClockTests.cpp
     tests/GameSessionTests.cpp
     tests/LocationSceneTests.cpp
+    tests/LocationServiceRulesTests.cpp
+    tests/NodeWorldStateTests.cpp
+    tests/OverworldDeadEndRulesTests.cpp
+    tests/OverworldTravelRulesTests.cpp
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
   )

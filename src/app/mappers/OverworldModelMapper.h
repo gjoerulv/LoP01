@@ -18,6 +18,8 @@ namespace app::mappers
         bool travelAvailable = true;
         bool entersLocationMode = false;
         bool supportsBattle = false;
+        bool combatNodeCleared = false;
+        bool blocksTransitUntilCleared = false;
         std::string battleScenarioId;
         bool discovered = true;
         float x = 0.0f;
@@ -29,21 +31,19 @@ namespace app::mappers
     public:
         [[nodiscard]] std::vector<OverworldNodeMeta> BuildNodes(
             const data::ContentRepository& content,
-            const std::string& regionId) const;
+            const std::string& regionId,
+            const std::vector<std::string>& clearedCombatNodeIds) const;
 
         [[nodiscard]] int FindNodeIndexById(
             const std::vector<OverworldNodeMeta>& nodes,
             const std::string& id) const;
-
-        [[nodiscard]] int ComputeTravelPreviewMinutes(
-            int currentIndex,
-            int selectedIndex) const;
 
         [[nodiscard]] std::string FormatTravelTime(int minutes) const;
 
         [[nodiscard]] ashvale::rendering::OverworldRenderModel Map(
             const data::ContentRepository& content,
             const gameplay::SessionSnapshot& snapshot,
-            int selectedNodeIndex) const;
+            int selectedNodeIndex,
+            const std::vector<std::string>& clearedCombatNodeIds) const;
     };
 }

@@ -59,6 +59,7 @@
       "name": "Bridge Checkpoint",
       "type": "combat",
       "allows_sleep": false,
+      "blocks_transit_until_cleared": true,
       "overworld_destination": true,
       "battle_scenario_id": "debug_intro_battle"
     },
@@ -67,6 +68,7 @@
       "name": "Orchard Pass",
       "type": "combat",
       "allows_sleep": false,
+      "blocks_transit_until_cleared": false,
       "overworld_destination": true,
       "battle_scenario_id": "debug_intro_battle"
     },

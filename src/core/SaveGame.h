@@ -14,6 +14,7 @@ struct SaveData {
     std::string regionId;
     std::string destinationId;
     std::vector<std::string> completedQuestIds;
+    std::vector<std::string> clearedCombatNodeIds;
 };
 
 class SaveGameRepository {
