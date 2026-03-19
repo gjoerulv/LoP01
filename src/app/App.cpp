@@ -22,7 +22,11 @@ using ashvale::rendering::TitleScreenModel;
 
 App::App() {
     contentLoaded_ = content_.LoadFromDirectory("content");
+    if (contentLoaded_) {
+        session_.InitializeQuestState(content_.QuestDefinitions());
+    }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
+    observedDay_ = session_.Snapshot().day;
 }
 
 void App::Run() {
@@ -121,6 +125,11 @@ void App::AdvanceFrontEndModesIfRequested(
 }
 
 void App::StartBattleScenario(const std::string& scenarioId, const std::string& statusMessage) {
+    const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+    battleReturnMode_ = snapshot.mode == gameplay::GameMode::LocationMode
+        ? gameplay::GameMode::LocationMode
+        : gameplay::GameMode::OverworldMode;
+
     pendingBattleScenarioId_ = scenarioId;
     session_.EnterBattleMode();
     battleInitialized_ = false;
@@ -139,6 +148,87 @@ void App::ResetTransientModeState() {
     battleInitialized_ = false;
     locationInitialized_ = false;
     battleControllerState_ = {};
+
+    const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+    observedDay_ = snapshot.day;
+    restedThisDay_ = false;
+}
+
+void App::ApplyMissedSleepPenaltyIfNeeded() {
+    const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+
+    if (snapshot.day == observedDay_) {
+        return;
+    }
+
+    if (!restedThisDay_) {
+        ApplyWakePenaltyAndRecover("Missed sleep before day end");
+    }
+
+    restedThisDay_ = false;
+    observedDay_ = session_.Snapshot().day;
+}
+
+std::string App::ResolveSafeFallbackLocationId() const {
+    if (content_.FindLocationById("home_base") != nullptr) {
+        return "home_base";
+    }
+
+    if (content_.FindLocationById("old_inn") != nullptr) {
+        return "old_inn";
+    }
+
+    const auto& locations = content_.Locations();
+    if (!locations.empty()) {
+        return locations.front().id;
+    }
+
+    return session_.Snapshot().destinationId;
+}
+
+void App::ApplyWakePenaltyAndRecover(const std::string& reason) {
+    session_.ApplyWakePenalty();
+
+    const std::string fallbackLocationId = ResolveSafeFallbackLocationId();
+    session_.SetDestination(fallbackLocationId);
+    session_.EnterOverworldMode();
+    ResetTransientModeState();
+
+    const gameplay::SessionSnapshot penalized = session_.Snapshot();
+    statusMessage_ = reason + ". Wake-up penalty applied (-1000 gold, wake at " + penalized.time + ") and moved to " + fallbackLocationId;
+}
+
+void App::ResolveBattleOutcomeIfNeeded() {
+    if (!battleInitialized_ || !debugBattle_.IsFinished()) {
+        return;
+    }
+
+    const gameplay::battle::BattleSummary summary = debugBattle_.Summary();
+    battleInitialized_ = false;
+    battleControllerState_ = {};
+
+    if (summary.enemiesWon) {
+        ApplyWakePenaltyAndRecover("Party defeated in battle");
+        return;
+    }
+
+    if (summary.alliesWon) {
+        if (battleReturnMode_ == gameplay::GameMode::LocationMode) {
+            const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+            session_.EnterLocationMode(snapshot.destinationId);
+        }
+        else {
+            session_.EnterOverworldMode();
+        }
+
+        statusMessage_ = summary.playerSetToOneHp
+            ? "Battle won. Player recovered to 1 HP."
+            : "Battle won.";
+        return;
+    }
+
+    session_.EnterOverworldMode();
+    statusMessage_ = "Battle ended.";
 }
 
 std::string App::ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const {
@@ -193,6 +283,8 @@ void App::Update() {
             statusMessage_ = "Load failed";
         }
     }
+
+    ApplyMissedSleepPenaltyIfNeeded();
 }
 
 void App::UpdateOverworldMode(const input::InputState& input) {
@@ -232,6 +324,7 @@ void App::UpdateOverworldMode(const input::InputState& input) {
         session_.SetDestination(destination.id);
         statusMessage_ =
             "Traveled to " + destination.label + " (" + overworldModelMapper_.FormatTravelTime(travelMinutes) + ")";
+        OnDestinationArrived(destination.id);
 
         if (destination.supportsBattle && !destination.battleScenarioId.empty()) {
             StartBattleScenario(destination.battleScenarioId, "Encounter started at " + destination.label);
@@ -248,6 +341,18 @@ void App::UpdateOverworldMode(const input::InputState& input) {
         StartBattleScenario(
             !destination.battleScenarioId.empty() ? destination.battleScenarioId : "debug_intro_battle",
             "Debug battle requested");
+    }
+}
+
+void App::OnDestinationArrived(const std::string& destinationId) {
+    const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+    if (snapshot.destinationId != destinationId) {
+        return;
+    }
+
+    const auto questUpdates = session_.NotifyDestinationReached(destinationId);
+    if (!questUpdates.empty()) {
+        statusMessage_ += " | " + questUpdates.front();
     }
 }
 
@@ -291,11 +396,26 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
         return;
     }
 
+    if (outcome->type == gameplay::location::InteractionType::InnDoor) {
+        const gameplay::SessionSnapshot beforeRest = session_.Snapshot();
+        std::string locationName = beforeRest.destinationId;
+        if (const auto* location = content_.FindLocationById(beforeRest.destinationId)) {
+            locationName = location->name;
+        }
+
+        restedThisDay_ = true;
+        session_.RestToNextDayStart();
+        const gameplay::SessionSnapshot afterRest = session_.Snapshot();
+        statusMessage_ = "Rested at inn in " + locationName + ". Day " + std::to_string(afterRest.day) + " " + afterRest.time;
+        return;
+    }
+
     ApplyLocationOutcome(*outcome);
 }
 
 void App::UpdateBattleMode(const input::InputState& input) {
     if (debugBattle_.IsFinished()) {
+        ResolveBattleOutcomeIfNeeded();
         return;
     }
 
@@ -312,6 +432,10 @@ void App::UpdateBattleMode(const input::InputState& input) {
     if (executed) {
         statusMessage_ = battleEventTextFormatter_.FormatSummary(debugBattle_.LastEvents());
         battleControllerState_.selectedTargetIndex = debugBattle_.FindFirstTargetForActive();
+
+        if (debugBattle_.IsFinished()) {
+            ResolveBattleOutcomeIfNeeded();
+        }
     }
 }
 
@@ -347,8 +471,7 @@ void App::Draw() const {
     context.debugEnabled = debugOverlayVisible_;
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
-
-    const auto hudModel = hudModelMapper_.Map(snapshot, statusMessage_);
+    const auto hudModel = hudModelMapper_.Map(snapshot, statusMessage_, session_.QuestProgress());
 
     switch (snapshot.mode) {
     case gameplay::GameMode::Title: {
@@ -405,6 +528,14 @@ void App::Draw() const {
     }
 
     DebugOverlayModel debugModel;
+    int completedQuests = 0;
+    const auto& questProgress = session_.QuestProgress();
+    for (const auto& quest : questProgress) {
+        if (quest.status == gameplay::quests::QuestStatus::Completed) {
+            ++completedQuests;
+        }
+    }
+
     debugModel.visible = debugOverlayVisible_;
     debugModel.lines = {
         DebugLine{"Content loaded", contentLoaded_ ? "true" : "false"},
@@ -414,6 +545,7 @@ void App::Draw() const {
         DebugLine{"Gold", std::to_string(snapshot.gold)},
         DebugLine{"Region", snapshot.regionId},
         DebugLine{"Destination", snapshot.destinationId},
+        DebugLine{"Quests", std::to_string(completedQuests) + "/" + std::to_string(questProgress.size()) + " completed"},
         DebugLine{"Recruits", std::to_string(recruitedUnits_)},
         DebugLine{"Status", statusMessage_}
     };

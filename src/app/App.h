@@ -45,11 +45,16 @@ namespace app {
         void StartBattleScenario(const std::string& scenarioId, const std::string& statusMessage);
         void StartLocationMode(const std::string& locationId, const std::string& statusMessage);
         void ResetTransientModeState();
+        void ApplyMissedSleepPenaltyIfNeeded();
+        void ResolveBattleOutcomeIfNeeded();
+        void ApplyWakePenaltyAndRecover(const std::string& reason);
+        [[nodiscard]] std::string ResolveSafeFallbackLocationId() const;
         [[nodiscard]] std::string ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const;
 
         void UpdateOverworldMode(const input::InputState& input);
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
+        void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
 
         gameplay::GameSession session_;
@@ -87,6 +92,9 @@ namespace app {
 
         int recruitedUnits_ = 0;
         int overworldSelectedNodeIndex_ = 0;
+        int observedDay_ = -1;
+        bool restedThisDay_ = false;
+        gameplay::GameMode battleReturnMode_ = gameplay::GameMode::OverworldMode;
 
         std::string statusMessage_;
         std::string pendingBattleScenarioId_;

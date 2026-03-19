@@ -2,121 +2,113 @@
 
 ## Current design decisions
 
-### 1) Simplest expandable architecture
+### 1) Keep architecture explicit and small
 
 Decision:
-- Use a small, explicit state-machine scaffold (`GameSession`) with a thin app shell (`App`).
+- Use a small, explicit gameplay state machine (GameSession) with a thin app shell (App).
+- Preserve the current controller/mapper/renderer split with shared HUD and debug overlay.
 
 Why:
-- Matches technical direction to avoid overengineering.
-- Keeps extension straightforward when each mode gets real gameplay.
+- Avoids overengineering while keeping the slice extendable.
+- Keeps gameplay flow readable and testable.
 
-### 2) Keep pure logic separate from raylib
+### 2) Keep pure gameplay logic separate from raylib glue
 
 Decision:
-- `GameClock` and `SaveGameRepository` are in `src/core` and testable without raylib.
+- Core loop logic (`GameClock`, `GameSession`, quest state, save data shaping) remains testable without raylib.
+- Rendering/input integration stays in `src/app` and `src/rendering`.
 
 Why:
 - Supports deterministic tests and faster iteration.
-- Keeps rendering/input glue confined to `src/app`.
 
-### 3) Content loading remains data-driven while gameplay-facing models become typed
-
-Decision:
-- Keep content JSON-driven, but use typed gameplay-facing models where they improve clarity, validation, and controller/mapper integration.
-
-Why:
-- Preserves fast iteration from content files.
-- Avoids leaving core gameplay systems coupled to raw JSON document shapes.
-
-### 4) Simplified slice day model
+### 3) Keep content data-driven with typed gameplay-facing models
 
 Decision:
-- Slice-day modeled as a 20-hour cycle (06:00 -> 02:00), with rollover to next day.
+- JSON remains the source of truth.
+- Typed definitions are used where needed (`locations`, `battle scenarios`, `quests`) for safer gameplay integration.
 
 Why:
-- Encodes the rule directly and keeps loop logic simple and testable for the playable slice.
+- Preserves content iteration speed while reducing runtime shape ambiguity.
 
-
-### 6) Combat formula interpretation for CTB prototype
+### 4) Slice day model is explicit and rule-aligned
 
 Decision:
-- Implemented agility penalty steps as `(target position value - attacker range value)`.
+- Slice day is modeled as a 20-hour cycle (`06:00 -> 02:00`) with rollover.
 
 Why:
-- This is the simplest interpretation that keeps penalties aligned with the intent (units attacking beyond effective range are slowed).
-- It preserves the documented 0 / 50% / 75% penalty tiers and remains deterministic and testable.
+- Encodes core-loop time pressure directly in a simple, testable form.
 
-
-## Assumptions documented
-
-- Region count currently uses one region in starter JSON (aligned with v0 scope doc).
-- Placeholder values/content names are intentionally non-final.
-- Save data stores minimal session data needed to restore core loop state.
-
-
-### 10) Replace deprecated battle last-action string with event-only status text
+### 5) Rest flow is interaction-driven in Milestone 5
 
 Decision:
-- Removed the old commented `LastActionText` / `lastActionText_` path and committed to `BattleEvent` summaries as the single battle-status source.
+- Rest is triggered by location-scene interaction outcomes, not by location type alone.
+- Current slice trigger is `inn_door`.
 
 Why:
-- Avoids duplicate state for the same outcome.
-- Keeps combat UI text aligned with the event stream already used by the renderer and app shell.
+- Matches scene-level service intent (a town can contain multiple interaction types).
 
 Tradeoff:
-- Event payloads need to stay expressive enough for UI text, so an explicit `infoText` field was added for non-targeted informational messages.
+- This is an intentional slice simplification, not a final generalized service framework.
 
-### 11) App transition cleanup uses explicit gameplay entry helpers
+### 6) Wake-penalty recovery is unified
 
 Decision:
-- Extracted app-level helpers for mode initialization and battle/location transitions, and added explicit `GameSession` helpers for entering overworld and battle modes.
+- Missed sleep and full defeat share one wake-penalty recovery flow.
+- Penalty application remains centralized in `GameSession::ApplyWakePenalty()`.
+- Recovery placement uses an explicit slice fallback policy, not nearest-location search.
 
 Why:
-- Removes brittle double-`AdvanceMode()` jumps when entering battle from the overworld.
-- Keeps transition intent readable and makes future milestone work easier to extend.
+- Keeps consequences consistent and transition logic readable.
+
+### 7) Battle return routing is explicit
+
+Decision:
+- Pre-battle outer mode is captured on battle entry.
+- Allied victory returns to the surrounding loop (`LocationMode` or `OverworldMode`).
+- Enemy victory routes through wake-penalty recovery.
+
+Why:
+- Prevents brittle mode chaining and keeps return behavior deterministic.
+
+### 8) Milestone 5 quest progression model is minimal by design
+
+Decision:
+- Quests use a minimal typed model loaded from `quests.json`.
+- Slice quests currently start immediately `InProgress`.
+- Progression is destination-triggered and completion-oriented for this slice.
+
+Why:
+- Delivers visible progression with low complexity in the bounded playable loop.
 
 Tradeoff:
-- `AdvanceMode()` still exists for the linear title/opening/front-end flow, so the codebase now intentionally uses both linear advancement and explicit mode entry where each is a better fit.
+- No acceptance flow, branching, rewards, or scripting yet.
 
-
-## Historical milestone notes
-
-### 5) Battle and location are scaffolds only in this milestone
+### 9) Save/load scope is minimal for Milestone 5
 
 Decision:
-- Provide mode shells and transitions now; full battle/location systems deferred.
+- Save/load persists completed quest ids for milestone quest state.
+- Existing session fields continue to restore current time/day/gold/mode/region/destination state.
+- No speculative future-facing persistence was added.
 
 Why:
-- Requirement is to bootstrap vertical slice foundation, not complete full systems.
-- Preserves small compilable increments.
+- Persists only what is required for current playable-slice resume behavior.
 
-### 7) Location scene collision/rendering prototype
+### 10) Battle status text uses event stream as single source
 
 Decision:
-- Use placeholder tile rendering and simple rectangular collision/interaction zones for the first playable town scene.
+- Deprecated `LastActionText` / `lastActionText_` path was removed.
+- Battle status text is derived from `BattleEvent` summaries.
 
 Why:
-- Keeps the location module playable with minimal complexity.
-- Matches vertical-slice scope and allows easy expansion to richer map data later.
+- Avoids duplicate outcome state and keeps combat UI text consistent.
 
-### 8) Milestone 4 visual-pass renderer extraction
+## Assumptions
 
-Decision:
-- Switched from a single app-level drawing layout to mode-specific renderers using render models (`Title`, `Overworld`, `Location`, `Battle`) plus shared `HUD` and toggleable `DebugOverlay`.
+- Region count remains one in the current slice.
+- Placeholder content names/values are non-final.
+- Current milestone prioritizes complete loop behavior over broader content expansion.
 
-Why:
-- Keeps gameplay state as source-of-truth while making rendering modular.
-- Avoids a giant `App::Draw` implementation and aligns with the visual-pass architecture goal.
+## Historical notes (short)
 
-Tradeoff:
-- Rendering remains deliberately straightforward, but gameplay state, mappers, and render models are now separated explicitly. Further decomposition should only happen when it reduces real complexity.
-
-### 9) Battle-screen readability pass
-
-Decision:
-- Kept existing battle logic and inputs, and improved only presentation with placeholder rectangles, clear HP/MP bars, active/target highlights, turn-order badges, and a simple action panel.
-
-Why:
-- Meets milestone visual goals without introducing new mechanics.
-- Keeps CTB rules stable while making combat state readable at a glance.
+- Milestone 4 established mode-specific renderers (`Title`, `Overworld`, `Location`, `Battle`) plus shared HUD/debug overlay.
+- Early bootstrap phases used scaffold-first battle/location shells before world-loop consequences were fully wired.
