@@ -23,6 +23,7 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
   - active unit
   - interactable object
   - disabled or unavailable action
+  - cost/stock/refresh state when services become deeper
 - Rendering and mapper code should not own gameplay rules.
 - Prefer renderer/view classes that consume session state or mapped render models.
 - UI text should help explain state changes such as:
@@ -30,5 +31,7 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
   - what they can do here
   - whether travel is available or blocked
   - whether a node/service has already been used or cleared
+  - what a service costs or has left in stock
 - Keep battle UI deterministic and readable.
 - Keep overworld navigation understandable at a glance.
+- Keep renderer work lightweight; do not introduce expensive per-frame work just for presentation polish.

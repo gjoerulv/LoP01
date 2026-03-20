@@ -1,17 +1,13 @@
-# Complete Vision Notes
+# Archived Complete-Vision Placeholders
 
-The files in this folder are incomplete long-term vision notes.
+This folder previously contained incomplete placeholder notes for future complete-vision documents.
 
-They are useful for directional thinking, but they are **not** the current implementation source of truth.
+Those files are now archived and should not be used as active implementation guidance.
 
-For active implementation work, prefer:
+Use these files instead:
 
-- `README.md`
-- `README_DECISIONS.md`
-- `docs/game_vision.md`
-- `docs/core_loop_rules.md`
-- `docs/combat_rules.md`
-- `docs/technical_direction.md`
-- active milestone docs such as `docs/milestone_6_world_identity.md`
+- `docs/game_vision.md` for the concise active slice vision
+- `docs/game_vision_complete.md` for the current north-star target state
+- `docs/milestone_7_services_economy_weekly_cadence.md` for the active next milestone direction
 
-If a complete-vision note conflicts with an active milestone doc or the current codebase, treat the active milestone doc and current codebase as authoritative.
+If archived placeholder notes conflict with active docs or the codebase, treat the active docs and current codebase as authoritative.

@@ -9,7 +9,7 @@ This repository contains a **playable vertical slice** of a 2D single-player str
 - save/load support
 - Catch2 tests for pure logic
 
-The project is being extended in small, maintainable milestones while keeping gameplay logic deterministic, testable, explicit, and data-driven.
+The project is being extended through small, maintainable milestones while keeping gameplay logic deterministic, explicit, testable, performant, and data-driven.
 
 ## Current slice scope
 
@@ -22,28 +22,30 @@ The current slice supports:
 - content-driven overworld destinations and typed location definitions
 - content-driven location scenes and battle scenario selection
 - turn-based CTB battle encounters
-- day/time progression
-- sleep and wake-up penalty rules
-- simple typed quest progression
+- day/time progression and wake-up penalty rules
+- route-aware overworld travel with blocker-aware routing
+- lightweight persistent world state for cleared combat nodes
+- simple typed quest progression, including combat-node-clear triggers
 - save/load for the current gameplay slice
 - placeholder content and presentation assets
 
-## Milestone 5 baseline
+## Current architecture baseline
 
-Milestone 5 is complete and acts as the current implementation baseline.
+Milestones 5 and 6 established the current implementation baseline.
 
 The current baseline includes:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
 - typed regions, locations, location scenes, battle scenarios, and quests
-- interaction-driven location services
 - unified wake-penalty recovery flow for missed sleep and full defeat
 - explicit battle return routing
-- minimal typed quest progression
-- save/load for current slice state and completed quest ids
+- route-aware travel rules shared by preview and confirm
+- minimal persistent world state for cleared combat nodes
+- minimal typed quest progression tied to world actions
+- save/load for current slice state and lightweight world/progression state
 
-Milestone 6 should preserve this architecture and build on it incrementally.
+Future milestones should preserve this architecture unless a change is clearly justified.
 
 ## Folder structure
 
@@ -68,6 +70,7 @@ Milestone 6 should preserve this architecture and build on it incrementally.
   - gameplay state and rules
   - battle runtime
   - location runtime
+  - overworld/world-state rules
   - quest runtime
 
 - `src/rendering`
@@ -93,6 +96,7 @@ Milestone 6 should preserve this architecture and build on it incrementally.
 - `GameClock` owns day/time progression logic.
 - Save/load persists only the gameplay state needed for the current slice.
 - Content is loaded from JSON and mapped into typed gameplay-facing data structures where needed.
+- Static content and runtime world state should remain separate so content stays editor-friendly.
 
 ### Gameplay modes
 
@@ -119,7 +123,7 @@ Content files under `content/` define the current slice, including:
 - `enemy_groups.json`
 - `quests.json`
 
-These files provide the bounded playable-slice content used by the current milestone path.
+These files provide the bounded playable-slice content used by the current milestone path. Future service/economy work should continue to extend content schemas rather than hardcoding service behavior in gameplay logic.
 
 ## Current controls
 
@@ -138,20 +142,47 @@ Controls are still prototype-level and may evolve, but the current slice support
 - `F5`: save to `saves/slot_1.json`
 - `F9`: load from `saves/slot_1.json`
 
-## Milestone 6 direction
+## Milestone 6 status
 
-Milestone 6 should focus on making the world rules match the current typed content model more closely.
+Milestone 6 goals are considered complete on the current `milestone-06` branch.
 
-Current Milestone 6 priorities:
+Delivered Milestone 6 outcomes:
 
-- make location identity clearer and more location-specific
-- make rest/services valid per location, not only by shared prototype scene layout
-- make overworld travel follow the route graph more explicitly
-- add minimal persistent node/world state where needed
-- preserve the current architecture and implement in small compilable steps
+- clearer world identity despite shared prototype scene reuse
+- rest validity fixed for the current slice without broad service gating
+- route-aware travel replacing placeholder index-distance travel
+- blocker-aware routing tied to lightweight persistent world state
+- combat-node-clear quest progression tied into the world loop
+- readability improvements for travel reasons, blockers, cleared nodes, and current quest hints
+
+Milestone 6 docs/prompts are retained as archived history only.
+
+## Milestone 7 direction
+
+Milestone 7 should be a larger, more visible update focused on **home base identity, service economy, and weekly cadence**.
+
+Current Milestone 7 priorities:
+
+- make home base feel like the central safe hub of the slice
+- make inns usable and paid, while home-base rest remains free
+- make recruit locations content-driven with unit offers, quantities, and weekly refresh
+- introduce content-driven service/economy state that remains editor-friendly
+- preserve separation of concerns and current architecture
+- keep the game responsive and performant, with clear ownership and no memory leaks
+
+See `docs/game_vision_complete.md` and `docs/milestone_7_services_economy_weekly_cadence.md` for the active planning direction.
 
 ## Build
 
 ```bash
 cmake -S . -B build -G Ninja
 cmake --build build
+```
+
+## Notes
+
+- Archived milestone docs and prompts are kept for history and should not be treated as active implementation guidance.
+- `docs/content_scope_v0.md` remains a scope cap, not a checklist of completed work.
+- The active long-term north-star doc is `docs/game_vision_complete.md`.
+- For the finished-direction hierarchy and terminology, see `docs/game_vision_complete.md`.
+- The current codebase is still a bounded slice and does not yet implement the full campaign/scenario/world-map structure.

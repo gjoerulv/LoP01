@@ -8,10 +8,10 @@ Improve the overworld presentation for the current playable slice.
 Read first:
 - README.md
 - README_DECISIONS.md
+- docs/game_vision_complete.md
 - docs/content_scope_v0.md
 - docs/core_loop_rules.md
 - docs/technical_direction.md
-- docs/milestone_6_world_identity.md
 
 Task:
 - Keep the current architecture intact
@@ -24,6 +24,7 @@ Task:
 - Show route/path availability as clearly as the current rules allow
 - Show whether destination is location / service / recruit / combat / dungeon if that data is available
 - Show blocked / unavailable / cleared state clearly if such state exists
+- Surface economically meaningful state if available, such as service role, price, stock, or refresh hints
 - Use contextual controls for selection and confirm/cancel
 
 Constraints:

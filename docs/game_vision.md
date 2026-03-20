@@ -13,6 +13,8 @@ A 2D single-player strategy/RPG hybrid that combines:
 - cozy town restoration and resource gathering
 - a soft dystopian fantasy tone
 
+For the fuller north-star direction beyond the current slice, see `docs/game_vision_complete.md`.
+
 ## Tone and atmosphere
 
 The world is damaged, but not hopeless.
@@ -25,6 +27,15 @@ The mood should feel:
 - dystopian in occupied places
 
 This is not grimdark. Recovery, routine, and rebuilding matter.
+
+## Terminology and hierarchy
+
+For precise terminology and long-term structure, see `docs/game_vision_complete.md`.
+
+Short version:
+- campaign -> scenario -> world map -> overworld/region -> node -> location
+- overworld and region refer to the same gameplay layer
+- world map is the higher-level scenario planning layer above overworld play
 
 ## Story setup
 
@@ -76,8 +87,10 @@ The slice should stay intentionally bounded and data-driven.
 
 ## Longer-term direction
 
-These are possible future directions, but not part of the current milestone path:
-- a designer-facing tool for editing content, events, locations, and balance data
-- multiplayer/networking support if the core single-player loop proves strong enough to justify it
+These are important future directions, but they should be approached only after the single-player slice is stronger:
+- a designer-facing tool for editing content, events, locations, services, and balance data
+- richer home-base progression and restoration loops
+- weekly service/economy cadence
+- multiplayer/networking only if the core single-player loop later proves strong enough to justify it
 
-These should not drive current architecture prematurely. The near-term priority is a strong, maintainable, data-driven single-player playable slice.
+These should inform structure, but they should not drive premature architecture today. The near-term priority is still a strong, maintainable, data-driven single-player playable slice.
