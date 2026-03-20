@@ -5,7 +5,7 @@
 ### 1) Keep architecture explicit and small
 
 Decision:
-- Use a small, explicit gameplay state machine (GameSession) with a thin app shell (App).
+- Use a small, explicit gameplay state machine (`GameSession`) with a thin app shell (`App`).
 - Preserve the current controller/mapper/renderer split with shared HUD and debug overlay.
 
 Why:
@@ -75,7 +75,7 @@ Why:
 Decision:
 - Quests use a minimal typed model loaded from `quests.json`.
 - Slice quests currently start immediately `InProgress`.
-- Progression is destination-triggered and completion-oriented for this slice.
+- Progression is completion-oriented for this slice.
 
 Why:
 - Delivers visible progression with low complexity in the bounded playable loop.
@@ -106,7 +106,7 @@ Why:
 
 Decision:
 - Milestone 6 focuses on making the existing world model behave more coherently before adding broader feature scope.
-- Location-valid services should be determined by the current location, not only by shared prototype scene layout.
+- Location-valid rest should be determined by the current location, not only by shared prototype scene layout.
 - Overworld travel should move toward route-aware rules using the existing content structure.
 - Persistent world state should remain minimal and slice-driven.
 
@@ -116,8 +116,72 @@ Why:
 - This improves game feel and content credibility without destabilizing the codebase.
 
 Tradeoff:
-- Some content and presentation will remain placeholder while rules are tightened.
+- Some content and presentation remain placeholder while rules are tightened.
 - Milestone 6 intentionally favors correctness/coherence over broad new content.
+
+### 12) Static content and runtime state should stay separate
+
+Decision:
+- Static authored data in `content/*.json` should describe the designed world, services, and balance inputs.
+- Runtime state such as cleared nodes, quantities, stock, or weekly refresh state should live in gameplay/session/save layers, not by mutating authored content definitions.
+
+Why:
+- Keeps content schemas editor-friendly.
+- Prevents accidental blending of design data with mutable runtime state.
+- Makes future tooling and save/load behavior much easier to reason about.
+
+### 13) Milestone 7 should favor visible service/economy progress
+
+Decision:
+- Milestone 7 should be a larger-feeling update centered on home base identity, service economy, recruit availability, and weekly cadence.
+- Future service work should model cost, stock, quantity, and refresh rather than expanding “valid/invalid service gating” as a general pattern.
+
+Why:
+- The next milestone should feel like meaningful game progression, not only coherence hardening.
+- Inns, recruit posts, and shops matter more as economic/service systems than as binary usable/unusable interactions.
+
+Tradeoff:
+- Milestone 7 is broader than Milestone 6 and should therefore be planned clearly before implementation starts.
+
+### 14) Content schemas should remain friendly to future editor tooling
+
+Decision:
+- Prefer stable ids, explicit typed fields, and content schemas that can be created/updated/deleted by future designer-facing tools.
+- Avoid burying content semantics in code-only conditionals when they can live in data.
+
+Why:
+- The long-term plan includes an editor for designers.
+- Stable, typed content schemas reduce migration pain when tooling is introduced.
+
+### 15) Responsiveness, performance, and ownership clarity are non-negotiable
+
+Decision:
+- Keep input handling out of rendering code and keep rendering out of gameplay rules/controllers.
+- Favor RAII and clear ownership to avoid leaks.
+- Avoid unnecessary per-frame allocations, repeated content parsing, and blocking work in the main loop.
+
+Why:
+- The game should feel responsive even while systems deepen.
+- Clear ownership and separation reduce leak risk and make performance issues easier to diagnose.
+
+### 16) Region travel is world-map-driven and region-local party state is preserved
+
+Decision:
+- Region travel happens through the scenario world map / region select layer.
+- The player may travel between regions only once per day, before 11:00.
+- Region travel resets the player character into the destination region at 11:00.
+- Only the player character travels between regions.
+- Each region preserves its own party state.
+
+Why:
+- Keeps region switching strategically meaningful.
+- Supports authored regional identity and region-specific progression.
+- Allows scenarios to use multiple overworlds without flattening party state into one global pool.
+
+Tradeoff:
+- Cross-region party rules are more explicit and less intuitive than a single global party model.
+- This should remain content-driven and clearly communicated in UI.
+
 
 ## Assumptions
 
@@ -128,4 +192,5 @@ Tradeoff:
 ## Historical notes (short)
 
 - Milestone 4 established mode-specific renderers (`Title`, `Overworld`, `Location`, `Battle`) plus shared HUD/debug overlay.
-- Early bootstrap phases used scaffold-first battle/location shells before world-loop consequences were fully wired.
+- Milestone 5 established the first complete world-loop baseline.
+- Milestone 6 hardened route/world/node/quest coherence while preserving the explicit architecture.

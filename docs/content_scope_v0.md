@@ -3,6 +3,9 @@
 This document defines the bounded content scope for the current playable slice.
 The `v0` name is historical. Treat this document as a scope cap, not as a milestone checklist or a statement that every item is already fully implemented.
 
+For long-term direction, use `docs/game_vision_complete.md`.
+For current implementation work, use the active milestone doc.
+
 ## Region count
 
 The current playable slice uses exactly 1 overworld region.

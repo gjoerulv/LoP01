@@ -17,8 +17,9 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
 - Location UI should clearly show:
   - location name
   - current interaction prompt
-  - whether a service is available here
+  - available services or actions
   - lightweight result/status text for interactions
+  - service cost or remaining quantity when relevant
 - Battle UI must clearly show:
   - turn order
   - active unit
@@ -27,3 +28,4 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
   - target selection
 - Keep placeholder UI art minimal and functional.
 - Prefer communicating current slice rules clearly over adding decorative complexity.
+- Do not assume that service identity is best communicated through binary enabled/disabled text; cost, stock, and refresh state are usually more valuable.
