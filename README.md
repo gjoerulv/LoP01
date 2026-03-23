@@ -7,7 +7,7 @@ This repository contains a **playable vertical slice** of a 2D single-player str
 - CMake
 - JSON-driven content
 - save/load support
-- Catch2 tests for pure logic
+- Catch2 tests for the current gameplay slice (mostly logic-focused; the current test target still links rendering)
 
 The project is being extended through small, maintainable milestones while keeping gameplay logic deterministic, explicit, testable, performant, and data-driven.
 
@@ -118,6 +118,7 @@ Content files under `content/` define the current slice, including:
 - `regions.json`
 - `locations.json`
 - `location_scenes.json`
+- `location_services.json`
 - `battle_scenarios.json`
 - `units.json`
 - `enemy_groups.json`
