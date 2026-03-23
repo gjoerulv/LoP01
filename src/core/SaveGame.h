@@ -6,6 +6,12 @@
 
 namespace core {
 
+struct RecruitServiceState {
+    std::string serviceId;
+    int remainingStock = 0;
+    int lastRefreshWeek = 1;
+};
+
 struct SaveData {
     int day = 1;
     int minutesIntoSliceDay = 0;
@@ -15,6 +21,7 @@ struct SaveData {
     std::string destinationId;
     std::vector<std::string> completedQuestIds;
     std::vector<std::string> clearedCombatNodeIds;
+    std::vector<RecruitServiceState> recruitServiceStates;
 };
 
 class SaveGameRepository {

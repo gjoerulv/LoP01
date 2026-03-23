@@ -8,15 +8,17 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     const std::filesystem::path testSavePath = "saves/test_slot.json";
 
     core::SaveGameRepository repository;
-    const core::SaveData original{
-        3,
-        45,
-        1337,
-        "overworld_mode",
-        "ashvale_heartland",
-        "town_center",
-        {"q_restore_well"},
-        {"bridge_checkpoint"}
+    core::SaveData original;
+    original.day = 3;
+    original.minutesIntoSliceDay = 45;
+    original.gold = 1337;
+    original.mode = "overworld_mode";
+    original.regionId = "ashvale_heartland";
+    original.destinationId = "town_center";
+    original.completedQuestIds = { "q_restore_well" };
+    original.clearedCombatNodeIds = { "bridge_checkpoint" };
+    original.recruitServiceStates = {
+        core::RecruitServiceState{"survivor_post_recruitment", 2, 1}
     };
 
     REQUIRE(repository.SaveToFile(original, testSavePath.string()));
@@ -32,6 +34,11 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     REQUIRE(loaded->destinationId == original.destinationId);
     REQUIRE(loaded->completedQuestIds == original.completedQuestIds);
     REQUIRE(loaded->clearedCombatNodeIds == original.clearedCombatNodeIds);
+
+    REQUIRE(loaded->recruitServiceStates.size() == 1);
+    REQUIRE(loaded->recruitServiceStates[0].serviceId == "survivor_post_recruitment");
+    REQUIRE(loaded->recruitServiceStates[0].remainingStock == 2);
+    REQUIRE(loaded->recruitServiceStates[0].lastRefreshWeek == 1);
 
     std::filesystem::remove(testSavePath);
 }

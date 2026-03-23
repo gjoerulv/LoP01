@@ -1,9 +1,11 @@
 #pragma once
 
-#include "gameplay/location/LocationScene.h"
+#include "data/definitions/LocationServiceDefinition.h"
 
 namespace gameplay::location {
 
-[[nodiscard]] bool IsRestValidForLocation(InteractionType interactionType, bool locationAllowsSleep);
+	[[nodiscard]] bool IsRestService(const data::LocationServiceDefinition* service);
+	[[nodiscard]] bool IsShopService(const data::LocationServiceDefinition* service);
+	[[nodiscard]] bool IsRecruitService(const data::LocationServiceDefinition* service);
 
 } // namespace gameplay::location

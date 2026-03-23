@@ -67,4 +67,9 @@ namespace data
         std::string sceneId;
         std::string battleScenarioId;
     };
+
+    inline bool EntersLocationMode(const LocationDefinition& location)
+    {
+        return !location.sceneId.empty();
+    }
 }

@@ -45,6 +45,7 @@ namespace gameplay::location {
         bool requiresDialogueChoice = false;
         bool exitsLocation = false;
 
+        std::string zoneId;
         std::string message;
         std::string failureText;
 

@@ -1,0 +1,64 @@
+{
+  "location_services": [
+    {
+      "id": "home_base_rest",
+      "location_id": "home_base",
+      "zone_id": "inn_door",
+      "kind": "rest",
+      "rest_kind": "home_base",
+      "prompt_text": "E: Rest at Home Base (Free)",
+      "success_text": "Rested safely at Home Base",
+      "failure_text": "",
+      "gold_cost": 0,
+      "time_cost_minutes": 0
+    },
+    {
+      "id": "old_inn_rest",
+      "location_id": "old_inn",
+      "zone_id": "inn_door",
+      "kind": "rest",
+      "rest_kind": "inn",
+      "prompt_text": "E: Rent a Room (25g)",
+      "success_text": "Rested at the Old Inn",
+      "failure_text": "Not enough gold for a room",
+      "gold_cost": 25,
+      "time_cost_minutes": 0
+    },
+    {
+      "id": "clocktower_market",
+      "location_id": "clocktower_square",
+      "zone_id": "shop_counter",
+      "kind": "shop",
+      "prompt_text": "E: Buy Supplies (50g)",
+      "success_text": "Bought supplies at Clocktower Square",
+      "failure_text": "Not enough gold for supplies",
+      "gold_cost": 50,
+      "time_cost_minutes": 5
+    },
+    {
+      "id": "survivor_post_recruitment",
+      "location_id": "survivor_recruit_post",
+      "zone_id": "recruit_board",
+      "kind": "recruit",
+      "prompt_text": "E: Recruit Town Guard (120g, 3/week)",
+      "success_text": "Recruited a Town Guard",
+      "failure_text": "No Town Guards available this week",
+      "gold_cost": 120,
+      "time_cost_minutes": 10,
+      "unit_id": "unit_guard",
+      "unit_display_name": "Town Guard",
+      "weekly_stock": 3
+    },
+    {
+      "id": "supply_cart_market",
+      "location_id": "supply_cart",
+      "zone_id": "shop_counter",
+      "kind": "shop",
+      "prompt_text": "E: Buy Trail Supplies (35g)",
+      "success_text": "Bought trail supplies",
+      "failure_text": "Not enough gold for trail supplies",
+      "gold_cost": 35,
+      "time_cost_minutes": 5
+    }
+  ]
+}

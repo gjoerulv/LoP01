@@ -154,11 +154,12 @@ TEST_CASE("Location action costs follow minute and gold rules") {
 
 	session.ApplyDoorOpenCost();
 	session.ApplyDialogueChoiceCost();
-	const bool shopped = session.ApplyShopCost(50);
-	const bool recruited = session.ApplyRecruitCost(120);
+	
+	REQUIRE(session.TrySpendGold(50));
+	session.AddMinutes(5);
 
-	REQUIRE(shopped);
-	REQUIRE(recruited);
+	REQUIRE(session.TrySpendGold(120));
+	session.AddMinutes(10);
 
 	snapshot = session.Snapshot();
 	REQUIRE(snapshot.gold == initialGold - 170);

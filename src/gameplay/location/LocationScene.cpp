@@ -91,6 +91,7 @@ namespace gameplay::location {
                 InteractionOutcome outcome;
                 outcome.type = zone.type;
                 outcome.requiresDialogueChoice = true;
+				outcome.zoneId = zone.id;
                 outcome.message = "Choose dialogue option";
                 return outcome;
             }
@@ -99,6 +100,7 @@ namespace gameplay::location {
             outcome.type = zone.type;
             outcome.requiresDialogueChoice = false;
             outcome.exitsLocation = zone.type == InteractionType::Exit;
+            outcome.zoneId = zone.id;
             outcome.message = zone.resultText;
             outcome.failureText = zone.failureText;
             outcome.timeCostMinutes = zone.timeCostMinutes;
@@ -124,11 +126,13 @@ namespace gameplay::location {
         }
 
         const std::string selected = activeDialogueChoices_[optionIndex];
+        const std::string zoneId = activeDialogueZoneId_.value_or("");
         activeDialogueZoneId_.reset();
         activeDialogueChoices_.clear();
 
         InteractionOutcome outcome;
         outcome.type = InteractionType::Npc;
+        outcome.zoneId = zoneId;
         outcome.message = selected;
         outcome.timeCostMinutes = activeDialogueChoiceTimeCostMinutes_;
         return outcome;

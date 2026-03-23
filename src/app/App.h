@@ -56,6 +56,7 @@ namespace app {
         void UpdateBattleMode(const input::InputState& input);
         void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
+        bool ApplyResolvedLocationService(const data::LocationServiceDefinition& service);
 
         gameplay::GameSession session_;
         data::ContentRepository content_;

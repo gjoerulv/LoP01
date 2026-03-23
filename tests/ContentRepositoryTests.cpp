@@ -25,6 +25,7 @@ TEST_CASE("ContentRepository loads blocks_transit_until_cleared flag") {
     WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[{"id":"debug_intro_battle","name":"Debug","seed":7,"allies":[{"unit_id":"hero"}],"enemies":[{"unit_id":"hero"}]}]})");
     WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
     WriteTextFile(root / "quests.json", R"({"quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"location_services":[]})");
 
     data::ContentRepository repository;
     REQUIRE(repository.LoadFromDirectory(root));
