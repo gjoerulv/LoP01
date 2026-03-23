@@ -295,6 +295,47 @@ namespace data {
             return true;
         }
 
+        bool LoadLocationServicesFile(const std::filesystem::path& path, std::vector<LocationServiceDefinition>& output) {
+            std::ifstream input(path);
+            if (!input.is_open()) {
+                return false;
+            }
+
+            nlohmann::json root;
+            input >> root;
+
+            if (!root.contains("location_services") || !root["location_services"].is_array()) {
+                return false;
+            }
+
+            output.clear();
+
+            for (const auto& serviceJson : root["location_services"]) {
+                LocationServiceDefinition service;
+                service.id = serviceJson.value("id", "unknown");
+                service.locationId = serviceJson.value("location_id", "");
+                service.zoneId = serviceJson.value("zone_id", "");
+                service.kind = LocationServiceKindFromString(serviceJson.value("kind", "unknown"));
+
+                service.promptText = serviceJson.value("prompt_text", "");
+                service.successText = serviceJson.value("success_text", "");
+                service.failureText = serviceJson.value("failure_text", "");
+
+                service.goldCost = serviceJson.value("gold_cost", 0);
+                service.timeCostMinutes = serviceJson.value("time_cost_minutes", 0);
+
+                service.restKind = RestServiceKindFromString(serviceJson.value("rest_kind", "unknown"));
+
+                service.unitId = serviceJson.value("unit_id", "");
+                service.unitDisplayName = serviceJson.value("unit_display_name", "");
+                service.weeklyStock = serviceJson.value("weekly_stock", 0);
+
+                output.push_back(service);
+            }
+
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -306,8 +347,10 @@ namespace data {
         const bool enemyGroupsLoaded = LoadJsonFile(root / "enemy_groups.json", enemyGroups_);
         const bool questDefinitionsLoaded = LoadQuestDefinitionsFile(root / "quests.json", questDefinitions_);
         const bool questsLoaded = LoadJsonFile(root / "quests.json", quests_);
+        const bool locationServicesLoaded = LoadLocationServicesFile(root / "location_services.json", locationServices_);
 
         return regionsLoaded && locationsLoaded && locationScenesLoaded &&
+            locationServicesLoaded &&
             unitsLoaded && battleScenariosLoaded &&
             enemyGroupsLoaded && questDefinitionsLoaded && questsLoaded;
     }
@@ -379,6 +422,22 @@ namespace data {
 
     const std::vector<QuestDefinition>& ContentRepository::QuestDefinitions() const {
         return questDefinitions_;
+    }
+
+    const std::vector<LocationServiceDefinition>& ContentRepository::LocationServices() const {
+        return locationServices_;
+    }
+
+    const LocationServiceDefinition* ContentRepository::FindLocationService(
+        const std::string& locationId,
+        const std::string& zoneId) const {
+        for (const auto& service : locationServices_) {
+            if (service.locationId == locationId && service.zoneId == zoneId) {
+                return &service;
+            }
+        }
+
+        return nullptr;
     }
 
     const nlohmann::json& ContentRepository::EnemyGroups() const {

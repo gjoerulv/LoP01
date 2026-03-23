@@ -96,7 +96,7 @@ namespace app::mappers
                 location->name,
                 location->type,
                 regionNode.travelAvailable,
-                data::EntersLocationMode(location->type),
+                data::EntersLocationMode(*location),
                 supportsBattle,
                 combatNodeCleared,
                 location->blocksTransitUntilCleared,

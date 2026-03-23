@@ -9,6 +9,20 @@ namespace core {
 
 using nlohmann::json;
 
+void to_json(json& j, const RecruitServiceState& data) {
+    j = json{
+        {"service_id", data.serviceId},
+        {"remaining_stock", data.remainingStock},
+        {"last_refresh_week", data.lastRefreshWeek}
+    };
+}
+
+void from_json(const json& j, RecruitServiceState& data) {
+    j.at("service_id").get_to(data.serviceId);
+    j.at("remaining_stock").get_to(data.remainingStock);
+    j.at("last_refresh_week").get_to(data.lastRefreshWeek);
+}
+
 void to_json(json& j, const SaveData& data) {
     j = json{
         {"day", data.day},
@@ -18,7 +32,8 @@ void to_json(json& j, const SaveData& data) {
         {"region_id", data.regionId},
         {"destination_id", data.destinationId},
         {"completed_quest_ids", data.completedQuestIds},
-        {"cleared_combat_node_ids", data.clearedCombatNodeIds}
+        {"cleared_combat_node_ids", data.clearedCombatNodeIds},
+        {"recruit_service_states", data.recruitServiceStates}
     };
 }
 
@@ -38,6 +53,10 @@ void from_json(const json& j, SaveData& data) {
     data.clearedCombatNodeIds.clear();
     if (j.contains("cleared_combat_node_ids") && j["cleared_combat_node_ids"].is_array()) {
         data.clearedCombatNodeIds = j["cleared_combat_node_ids"].get<std::vector<std::string>>();
+    }
+    data.recruitServiceStates.clear();
+    if (j.contains("recruit_service_states") && j["recruit_service_states"].is_array()) {
+        data.recruitServiceStates = j["recruit_service_states"].get<std::vector<RecruitServiceState>>();
     }
 }
 

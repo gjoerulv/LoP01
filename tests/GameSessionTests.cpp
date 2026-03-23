@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "core/GameClock.h"
 #include "data/definitions/QuestDefinition.h"
 #include "gameplay/GameSession.h"
 
@@ -192,4 +193,29 @@ TEST_CASE("GameSession clears combat node only on allied overworld combat victor
 
     REQUIRE_FALSE(session.IsCombatNodeCleared("orchard_pass"));
     REQUIRE_FALSE(session.IsCombatNodeCleared("clocktower_square"));
+}
+
+TEST_CASE("GameSession recruit stock refreshes weekly and survives save load") {
+    gameplay::GameSession session;
+
+    data::LocationServiceDefinition recruitService;
+    recruitService.id = "survivor_post_recruitment";
+    recruitService.kind = data::LocationServiceKind::Recruit;
+    recruitService.weeklyStock = 3;
+
+    session.RefreshWeeklyRecruitStocks({ recruitService });
+    REQUIRE(session.RemainingRecruitStock(recruitService.id, recruitService.weeklyStock) == 3);
+
+    REQUIRE(session.TryConsumeRecruitStock(recruitService.id, recruitService.weeklyStock));
+    REQUIRE(session.RemainingRecruitStock(recruitService.id, recruitService.weeklyStock) == 2);
+
+    const core::SaveData saveData = session.ToSaveData();
+
+    gameplay::GameSession loaded;
+    loaded.ApplySaveData(saveData);
+    REQUIRE(loaded.RemainingRecruitStock(recruitService.id, recruitService.weeklyStock) == 2);
+
+    loaded.AddMinutes(core::GameClock::kMinutesPerSliceDay * 7);
+    loaded.RefreshWeeklyRecruitStocks({ recruitService });
+    REQUIRE(loaded.RemainingRecruitStock(recruitService.id, recruitService.weeklyStock) == 3);
 }

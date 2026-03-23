@@ -8,6 +8,7 @@
 #include "data/definitions/BattleScenarioDefinition.h"
 #include "data/definitions/LocationDefinition.h"
 #include "data/definitions/LocationSceneDefinition.h"
+#include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/UnitDefinition.h"
@@ -38,6 +39,11 @@ namespace data {
         [[nodiscard]] const nlohmann::json& EnemyGroups() const;
         [[nodiscard]] const nlohmann::json& Quests() const;
 
+        [[nodiscard]] const std::vector<LocationServiceDefinition>& LocationServices() const;
+        [[nodiscard]] const LocationServiceDefinition* FindLocationService(
+            const std::string& locationId,
+            const std::string& zoneId) const;
+
     private:
         std::vector<RegionDefinition> regions_;
         std::vector<LocationDefinition> locations_;
@@ -45,6 +51,7 @@ namespace data {
         std::vector<UnitDefinition> units_;
         std::vector<BattleScenarioDefinition> battleScenarios_;
         std::vector<QuestDefinition> questDefinitions_;
+        std::vector<LocationServiceDefinition> locationServices_;
         nlohmann::json enemyGroups_;
         nlohmann::json quests_;
     };

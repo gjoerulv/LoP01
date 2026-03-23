@@ -115,16 +115,14 @@ Assume the current baseline already includes:
 - minimal persistent cleared combat-node state
 - minimal typed quest progression tied to world actions
 - save/load for current slice state and lightweight world/progression state
-- Use the following world hierarchy consistently:
+
+Use the following hierarchy as long-term project vocabulary and design direction:
+
 - campaign -> scenario -> world map -> overworld/region -> node -> location
 
-Important travel rules:
-- the world map is a scenario-level region selection/planning layer
-- the player may consult it at any time
-- actual region travel may occur only once per day, before 11:00
-- region travel places the player character in the destination region at 11:00
-- only the player character travels between regions
-- each region preserves its own party state
+The current codebase is still a bounded single-region slice and does not yet implement the full world-map / cross-region travel layer.
+
+Do not introduce world-map travel systems, per-region party transfer systems, or broader campaign structure as part of Milestone 7 unless explicitly requested.
 
 Preserve this baseline unless a change is clearly necessary.
 

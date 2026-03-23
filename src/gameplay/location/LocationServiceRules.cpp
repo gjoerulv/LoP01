@@ -2,8 +2,16 @@
 
 namespace gameplay::location {
 
-bool IsRestValidForLocation(const InteractionType interactionType, const bool locationAllowsSleep) {
-    return interactionType == InteractionType::InnDoor && locationAllowsSleep;
-}
+    bool IsRestService(const data::LocationServiceDefinition* service) {
+        return service != nullptr && service->kind == data::LocationServiceKind::Rest;
+    }
+
+    bool IsShopService(const data::LocationServiceDefinition* service) {
+        return service != nullptr && service->kind == data::LocationServiceKind::Shop;
+    }
+
+    bool IsRecruitService(const data::LocationServiceDefinition* service) {
+        return service != nullptr && service->kind == data::LocationServiceKind::Recruit;
+    }
 
 } // namespace gameplay::location

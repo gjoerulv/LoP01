@@ -86,12 +86,16 @@ namespace app::mappers
     }
 
     LocationRenderModel LocationModelMapper::Map(
+        const data::ContentRepository& content,
         const gameplay::SessionSnapshot& snapshot,
         const gameplay::location::LocationScene& scene,
         const std::string& statusText) const
     {
         LocationRenderModel model;
-        model.locationName = "Town: " + HumanizeId(snapshot.destinationId);
+        const data::LocationDefinition* location = content.FindLocationById(snapshot.destinationId);
+        model.locationName = location != nullptr
+            ? location->name
+            : HumanizeId(snapshot.destinationId);
 
         const auto& player = scene.Player();
         model.playerBounds = Rectangle{ player.x, player.y, player.width, player.height };
@@ -138,7 +142,12 @@ namespace app::mappers
         }
         else if (nearZone >= 0)
         {
-            model.interactPrompt = zones[nearZone].promptText;
+            const data::LocationServiceDefinition* service =
+                content.FindLocationService(snapshot.destinationId, zones[nearZone].id);
+
+            model.interactPrompt = service != nullptr
+                ? service->promptText
+                : zones[nearZone].promptText;
         }
         else
         {

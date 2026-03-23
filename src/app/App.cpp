@@ -515,24 +515,22 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
         return;
     }
 
-    if (outcome->type == gameplay::location::InteractionType::InnDoor) {
-        const gameplay::SessionSnapshot beforeRest = session_.Snapshot();
-        const auto* location = content_.FindLocationById(beforeRest.destinationId);
-        const bool allowsSleep = location != nullptr && location->allowsSleep;
-        if (!gameplay::location::IsRestValidForLocation(outcome->type, allowsSleep)) {
-            statusMessage_ = "Cannot rest here.";
-            return;
-        }
+    const auto snapshot = session_.Snapshot();
+    const data::LocationServiceDefinition* service =
+        content_.FindLocationService(snapshot.destinationId, outcome->zoneId);
 
-        std::string locationName = beforeRest.destinationId;
-        if (location != nullptr) {
-            locationName = location->name;
-        }
+    if (service != nullptr) {
+        ApplyResolvedLocationService(*service);
+        return;
+    }
 
-        restedThisDay_ = true;
-        session_.RestToNextDayStart();
-        const gameplay::SessionSnapshot afterRest = session_.Snapshot();
-        statusMessage_ = "Rested at inn in " + locationName + ". Day " + std::to_string(afterRest.day) + " " + afterRest.time;
+    const bool isServiceInteraction =
+        outcome->type == gameplay::location::InteractionType::InnDoor ||
+        outcome->type == gameplay::location::InteractionType::Shop ||
+        outcome->type == gameplay::location::InteractionType::Recruit;
+
+    if (isServiceInteraction) {
+        statusMessage_ = "Service unavailable here.";
         return;
     }
 
@@ -563,6 +561,80 @@ void App::UpdateBattleMode(const input::InputState& input) {
             ResolveBattleOutcomeIfNeeded();
         }
     }
+}
+
+bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& service) {
+    if (gameplay::location::IsRestService(&service)) {
+        if (service.goldCost > 0 && !session_.TrySpendGold(service.goldCost)) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "Not enough gold to rest";
+            return false;
+        }
+
+        restedThisDay_ = true;
+        session_.RestToNextDayStart();
+
+        const auto afterRest = session_.Snapshot();
+        statusMessage_ = service.successText + ". Day " +
+            std::to_string(afterRest.day) + " " + afterRest.time;
+        return true;
+    }
+
+    if (gameplay::location::IsShopService(&service)) {
+        if (service.goldCost > 0 && !session_.TrySpendGold(service.goldCost)) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "Not enough gold";
+            return false;
+        }
+
+        if (service.timeCostMinutes > 0) {
+            session_.AddMinutes(service.timeCostMinutes);
+        }
+
+        statusMessage_ = service.successText;
+        return true;
+    }
+
+    if (gameplay::location::IsRecruitService(&service)) {
+        session_.RefreshWeeklyRecruitStocks(content_.LocationServices());
+
+        const int remainingBefore = session_.RemainingRecruitStock(service.id, service.weeklyStock);
+        if (remainingBefore <= 0) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "No recruits available this week";
+            return false;
+        }
+
+        if (service.goldCost > 0 && !session_.TrySpendGold(service.goldCost)) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "Not enough gold to recruit";
+            return false;
+        }
+
+        if (!session_.TryConsumeRecruitStock(service.id, service.weeklyStock)) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "No recruits available this week";
+            return false;
+        }
+
+        if (service.timeCostMinutes > 0) {
+            session_.AddMinutes(service.timeCostMinutes);
+        }
+
+        ++recruitedUnits_;
+
+        const int remainingAfter = session_.RemainingRecruitStock(service.id, service.weeklyStock);
+        statusMessage_ = service.successText + " (" + std::to_string(remainingAfter) + " left this week)";
+        return true;
+    }
+
+    statusMessage_ = "Unknown service";
+    return false;
 }
 
 bool App::ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome) {
@@ -631,6 +703,7 @@ void App::Draw() const {
     }
     case gameplay::GameMode::LocationMode: {
         const auto model = locationModelMapper_.Map(
+            content_,
             snapshot,
             locationScene_,
             statusMessage_);

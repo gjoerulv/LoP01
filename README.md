@@ -82,7 +82,7 @@ Future milestones should preserve this architecture unless a change is clearly j
   - JSON content definitions used by the current slice
 
 - `tests`
-  - pure-logic tests without raylib dependency
+  - gameplay/presentation tests for the current slice; most are logic-focused, but the test target currently still links rendering
 
 - `docs`
   - vision, technical direction, core-loop rules, combat rules, and milestone docs
@@ -144,7 +144,7 @@ Controls are still prototype-level and may evolve, but the current slice support
 
 ## Milestone 6 status
 
-Milestone 6 goals are considered complete on the current `milestone-06` branch.
+Milestone 6 is complete and merged. The current branch starts from that post-M6 baseline.
 
 Delivered Milestone 6 outcomes:
 
@@ -156,6 +156,8 @@ Delivered Milestone 6 outcomes:
 - readability improvements for travel reasons, blockers, cleared nodes, and current quest hints
 
 Milestone 6 docs/prompts are retained as archived history only.
+
+Location scenes may still reuse prototype layout, but service identity for M7 must come from per-location authored service data rather than from shared scene interaction costs.
 
 ## Milestone 7 direction
 

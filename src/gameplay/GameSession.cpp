@@ -4,6 +4,35 @@
 
 namespace gameplay {
 
+
+namespace
+{
+    core::RecruitServiceState* FindRecruitServiceState(
+        std::vector<core::RecruitServiceState>& states,
+        const std::string& serviceId) {
+        for (auto& state : states) {
+            if (state.serviceId == serviceId) {
+                return &state;
+            }
+        }
+
+        return nullptr;
+    }
+
+    const core::RecruitServiceState* FindRecruitServiceState(
+        const std::vector<core::RecruitServiceState>& states,
+        const std::string& serviceId) {
+        for (const auto& state : states) {
+            if (state.serviceId == serviceId) {
+                return &state;
+            }
+        }
+
+        return nullptr;
+    }
+}
+
+
 GameSession::GameSession()
     : mode_(GameMode::Title), gold_(2500), regionId_("ashvale_heartland"), destinationId_("home_base") {}
 
@@ -92,25 +121,66 @@ void GameSession::ApplyDialogueChoiceCost() {
     AddMinutes(1);
 }
 
-bool GameSession::ApplyShopCost(const int goldCost) {
-    if (!SpendGold(goldCost)) {
-        return false;
-    }
-    AddMinutes(5);
-    return true;
-}
-
-bool GameSession::ApplyRecruitCost(const int goldCost) {
-    if (!SpendGold(goldCost)) {
-        return false;
-    }
-    AddMinutes(10);
-    return true;
-}
-
 void GameSession::RestToNextDayStart() {
     const int remainingMinutes = core::GameClock::kMinutesPerSliceDay - clock_.MinutesIntoSliceDay();
     clock_.AdvanceMinutes(std::max(1, remainingMinutes));
+}
+
+int GameSession::CurrentWeek() const {
+    return ((clock_.Day() - 1) / 7) + 1;
+}
+
+void GameSession::RefreshWeeklyRecruitStocks(const std::vector<data::LocationServiceDefinition>& services) {
+    const int currentWeek = CurrentWeek();
+
+    for (const auto& service : services) {
+        if (service.kind != data::LocationServiceKind::Recruit || service.weeklyStock <= 0) {
+            continue;
+        }
+
+        auto* state = FindRecruitServiceState(recruitServiceStates_, service.id);
+        if (state == nullptr) {
+            recruitServiceStates_.push_back(core::RecruitServiceState{
+                service.id,
+                service.weeklyStock,
+                currentWeek
+                });
+            continue;
+        }
+
+        if (state->lastRefreshWeek < currentWeek) {
+            state->remainingStock = service.weeklyStock;
+            state->lastRefreshWeek = currentWeek;
+        }
+    }
+}
+
+int GameSession::RemainingRecruitStock(const std::string& serviceId, const int defaultStock) const {
+    const auto* state = FindRecruitServiceState(recruitServiceStates_, serviceId);
+    if (state == nullptr) {
+        return std::max(0, defaultStock);
+    }
+
+    return std::max(0, state->remainingStock);
+}
+
+bool GameSession::TryConsumeRecruitStock(const std::string& serviceId, const int defaultStock) {
+    auto* state = FindRecruitServiceState(recruitServiceStates_, serviceId);
+    if (state == nullptr) {
+        recruitServiceStates_.push_back(core::RecruitServiceState{
+            serviceId,
+            std::max(0, defaultStock),
+            CurrentWeek()
+            });
+        state = &recruitServiceStates_.back();
+    }
+
+    if (state->remainingStock <= 0) {
+        return false;
+    }
+
+    --state->remainingStock;
+    return true;
 }
 
 void GameSession::ApplyWakePenalty() {
@@ -188,7 +258,8 @@ core::SaveData GameSession::ToSaveData() const {
         regionId_,
         destinationId_,
         questState_.CompletedQuestIds(),
-        nodeWorldState_.ClearedCombatNodeIds()
+        nodeWorldState_.ClearedCombatNodeIds(),
+        recruitServiceStates_
     };
 }
 
@@ -204,6 +275,7 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
 
     questState_.RestoreCompletedQuestIds(saveData.completedQuestIds);
     nodeWorldState_.RestoreClearedCombatNodeIds(saveData.clearedCombatNodeIds);
+    recruitServiceStates_ = saveData.recruitServiceStates;
 }
 
 std::string GameSession::ToString(const GameMode mode) {

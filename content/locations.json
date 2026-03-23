@@ -6,7 +6,7 @@
       "type": "home",
       "allows_sleep": true,
       "overworld_destination": true,
-      "scene_id": "town_square_proto"
+      "scene_id": "home_base_proto"
     },
     {
       "id": "town_center",
@@ -22,14 +22,15 @@
       "type": "inn",
       "allows_sleep": true,
       "overworld_destination": true,
-      "scene_id": "town_square_proto"
+      "scene_id": "old_inn_proto"
     },
     {
       "id": "survivor_recruit_post",
       "name": "Survivor Recruit Post",
       "type": "recruit",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "scene_id": "recruit_post_proto"
     },
     {
       "id": "mine_entrance",
@@ -52,7 +53,8 @@
       "name": "Supply Cart",
       "type": "service",
       "allows_sleep": false,
-      "overworld_destination": true
+      "overworld_destination": true,
+      "scene_id": "supply_cart_proto"
     },
     {
       "id": "bridge_checkpoint",
@@ -78,7 +80,7 @@
       "type": "town",
       "allows_sleep": false,
       "overworld_destination": true,
-      "scene_id": "town_square_proto"
+      "scene_id": "clocktower_square_proto"
     }
   ]
 }

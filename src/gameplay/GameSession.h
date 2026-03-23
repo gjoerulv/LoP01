@@ -5,6 +5,7 @@
 
 #include "core/GameClock.h"
 #include "core/SaveGame.h"
+#include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "gameplay/quests/QuestState.h"
 #include "gameplay/world/NodeWorldState.h"
@@ -48,9 +49,12 @@ public:
 
     void ApplyDoorOpenCost();
     void ApplyDialogueChoiceCost();
-    bool ApplyShopCost(int goldCost);
-    bool ApplyRecruitCost(int goldCost);
     void RestToNextDayStart();
+
+    [[nodiscard]] int CurrentWeek() const;
+    void RefreshWeeklyRecruitStocks(const std::vector<data::LocationServiceDefinition>& services);
+    [[nodiscard]] int RemainingRecruitStock(const std::string& serviceId, int defaultStock) const;
+    [[nodiscard]] bool TryConsumeRecruitStock(const std::string& serviceId, int defaultStock);
 
     void ApplyWakePenalty();
 
@@ -80,6 +84,7 @@ public:
 private:
     GameMode mode_;
     core::GameClock clock_;
+    std::vector<core::RecruitServiceState> recruitServiceStates_;
     int gold_;
     std::string regionId_;
     std::string destinationId_;

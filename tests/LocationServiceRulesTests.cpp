@@ -1,33 +1,31 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "gameplay/location/LocationScene.h"
+#include "data/definitions/LocationServiceDefinition.h"
 #include "gameplay/location/LocationServiceRules.h"
 
-TEST_CASE("Rest is valid for inn door when location allows sleep") {
-    const bool isValid = gameplay::location::IsRestValidForLocation(
-        gameplay::location::InteractionType::InnDoor,
-        true);
+TEST_CASE("Rest service is recognized by typed service kind") {
+    data::LocationServiceDefinition service;
+    service.kind = data::LocationServiceKind::Rest;
 
-    REQUIRE(isValid);
+    REQUIRE(gameplay::location::IsRestService(&service));
+    REQUIRE_FALSE(gameplay::location::IsShopService(&service));
+    REQUIRE_FALSE(gameplay::location::IsRecruitService(&service));
 }
 
-TEST_CASE("Rest is invalid for inn door when location does not allow sleep") {
-    const bool isValid = gameplay::location::IsRestValidForLocation(
-        gameplay::location::InteractionType::InnDoor,
-        false);
+TEST_CASE("Shop service is recognized by typed service kind") {
+    data::LocationServiceDefinition service;
+    service.kind = data::LocationServiceKind::Shop;
 
-    REQUIRE_FALSE(isValid);
+    REQUIRE(gameplay::location::IsShopService(&service));
+    REQUIRE_FALSE(gameplay::location::IsRestService(&service));
+    REQUIRE_FALSE(gameplay::location::IsRecruitService(&service));
 }
 
-TEST_CASE("Non-rest interactions are not treated as valid rest") {
-    const bool shopAsRest = gameplay::location::IsRestValidForLocation(
-        gameplay::location::InteractionType::Shop,
-        true);
+TEST_CASE("Recruit service is recognized by typed service kind") {
+    data::LocationServiceDefinition service;
+    service.kind = data::LocationServiceKind::Recruit;
 
-    const bool npcAsRest = gameplay::location::IsRestValidForLocation(
-        gameplay::location::InteractionType::Npc,
-        true);
-
-    REQUIRE_FALSE(shopAsRest);
-    REQUIRE_FALSE(npcAsRest);
+    REQUIRE(gameplay::location::IsRecruitService(&service));
+    REQUIRE_FALSE(gameplay::location::IsRestService(&service));
+    REQUIRE_FALSE(gameplay::location::IsShopService(&service));
 }
