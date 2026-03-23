@@ -24,6 +24,7 @@ std::filesystem::path BuildOverworldMapperTestContent() {
     WriteTextFile(root / "units.json", R"({"units":[{"id":"hero","name":"Hero","category":"hero","is_player_character":true,"attack":1,"defense":1,"magic":1,"resistance":1,"min_damage":1,"max_damage":1,"max_hp":10,"max_mp":0,"agility":1,"life":1,"position":"front","range":"melee"}]})");
     WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[{"id":"debug_intro_battle","name":"Debug","seed":7,"allies":[{"unit_id":"hero"}],"enemies":[{"unit_id":"hero"}]}]})");
     WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
+    WriteTextFile(root / "location_services.json", R"({"location_services":[]})");
     WriteTextFile(root / "quests.json", R"({"quests":[]})");
 
     return root;

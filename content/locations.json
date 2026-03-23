@@ -14,7 +14,7 @@
       "type": "town",
       "allows_sleep": false,
       "overworld_destination": true,
-      "scene_id": "town_square_proto"
+      "scene_id": "town_center_proto"
     },
     {
       "id": "old_inn",

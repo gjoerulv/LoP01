@@ -43,13 +43,6 @@ namespace data
         }
     }
 
-    inline bool EntersLocationMode(const LocationType type)
-    {
-        return type == LocationType::Home ||
-            type == LocationType::Town ||
-            type == LocationType::Inn;
-    }
-
     inline bool SupportsBattleScenario(const LocationType type)
     {
         return type == LocationType::Combat ||

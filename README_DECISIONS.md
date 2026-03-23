@@ -164,23 +164,28 @@ Why:
 - The game should feel responsive even while systems deepen.
 - Clear ownership and separation reduce leak risk and make performance issues easier to diagnose.
 
-### 16) Region travel is world-map-driven and region-local party state is preserved
+### 16) Region travel rules remain the long-term scenario/world-map direction
 
 Decision:
-- Region travel happens through the scenario world map / region select layer.
-- The player may travel between regions only once per day, before 11:00.
-- Region travel resets the player character into the destination region at 11:00.
-- Only the player character travels between regions.
-- Each region preserves its own party state.
+- Use the following as long-term design direction for future scenario/world-map work:
+  - region travel happens through the scenario world map / region select layer
+  - the player may travel between regions only once per day, before 11:00
+  - region travel places the player character in the destination region at 11:00
+  - only the player character travels between regions
+  - each region preserves its own party state
 
 Why:
 - Keeps region switching strategically meaningful.
 - Supports authored regional identity and region-specific progression.
 - Allows scenarios to use multiple overworlds without flattening party state into one global pool.
 
+Current-slice note:
+- The current playable slice is still bounded to one region.
+- These rules are vocabulary and design direction, not fully implemented baseline behavior yet.
+
 Tradeoff:
 - Cross-region party rules are more explicit and less intuitive than a single global party model.
-- This should remain content-driven and clearly communicated in UI.
+- This should remain content-driven and clearly communicated in UI when implemented.
 
 
 ## Assumptions
