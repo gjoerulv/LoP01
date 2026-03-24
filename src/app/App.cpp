@@ -291,6 +291,9 @@ void App::Update() {
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     const input::InputState input = inputTranslator_.Poll();
 
+    session_.RefreshDailyServiceUses(content_.LocationServices());
+    session_.RefreshWeeklyRecruitStocks(content_.LocationServices());
+
     if (IsKeyPressed(KEY_F1)) {
         debugOverlayVisible_ = !debugOverlayVisible_;
     }
@@ -438,20 +441,32 @@ void App::UpdateOverworldMode(const input::InputState& input) {
             return;
         }
 
-        session_.AddMinutes(travel.minutes);
+        const bool hadActiveSupplyPrep = session_.HasActiveSameDayTravelPrep();
+        const int appliedTravelMinutes = session_.ApplySameDayTravelPrepToTravelMinutes(travel.minutes);
+        session_.AddMinutes(appliedTravelMinutes);
 
         session_.SetDestination(destination.id);
-        statusMessage_ =
-            "Traveled to " + destination.label + " (" + overworldModelMapper_.FormatTravelTime(travel.minutes) + ")";
+        std::string travelStatus;
+        if (hadActiveSupplyPrep && appliedTravelMinutes < travel.minutes) {
+            travelStatus =
+                "Traveled to " + destination.label + " (" +
+                overworldModelMapper_.FormatTravelTime(appliedTravelMinutes) +
+                ") | Supply prep used (-" + std::to_string(travel.minutes - appliedTravelMinutes) + "m)";
+        }
+        else {
+            travelStatus =
+                "Traveled to " + destination.label + " (" + overworldModelMapper_.FormatTravelTime(appliedTravelMinutes) + ")";
+        }
+        statusMessage_ = travelStatus;
         OnDestinationArrived(destination.id);
 
         if (destination.supportsBattle && !destination.combatNodeCleared && !destination.battleScenarioId.empty()) {
-            StartBattleScenario(destination.battleScenarioId, "Encounter started at " + destination.label);
+            StartBattleScenario(destination.battleScenarioId, travelStatus + " | Encounter started at " + destination.label);
             return;
         }
 
         if (destination.entersLocationMode) {
-            StartLocationMode(destination.id, "Entering location: " + destination.label);
+            StartLocationMode(destination.id, travelStatus + " | Entering location: " + destination.label);
         }
     }
 
@@ -582,15 +597,43 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
     }
 
     if (gameplay::location::IsShopService(&service)) {
+        if (service.travelPrepDiscountMinutes > 0 && service.travelPrepCharges > 0 &&
+            session_.HasActiveSameDayTravelPrep()) {
+            statusMessage_ = "Travel prep already active for next travel";
+            return false;
+        }
+
+        if (service.dailyUseLimit > 0) {
+            const int remainingUses = session_.RemainingDailyServiceUses(service.id, service.dailyUseLimit);
+            if (remainingUses <= 0) {
+                statusMessage_ = !service.failureText.empty()
+                    ? service.failureText
+                    : "Service already used today";
+                return false;
+            }
+        }
+
         if (service.goldCost > 0 && !session_.TrySpendGold(service.goldCost)) {
+            statusMessage_ = "Not enough gold";
+            return false;
+        }
+
+        if (service.dailyUseLimit > 0 && !session_.TryConsumeDailyServiceUse(service.id, service.dailyUseLimit)) {
             statusMessage_ = !service.failureText.empty()
                 ? service.failureText
-                : "Not enough gold";
+                : "Service already used today";
             return false;
         }
 
         if (service.timeCostMinutes > 0) {
             session_.AddMinutes(service.timeCostMinutes);
+        }
+
+        if (service.travelPrepDiscountMinutes > 0 && service.travelPrepCharges > 0) {
+            session_.GrantSameDayTravelPrep(service.travelPrepDiscountMinutes, service.travelPrepCharges);
+            statusMessage_ = service.successText + " | Next travel today -" +
+                std::to_string(service.travelPrepDiscountMinutes) + "m";
+            return true;
         }
 
         statusMessage_ = service.successText;
@@ -694,6 +737,7 @@ void App::Draw() const {
     case gameplay::GameMode::OverworldMode: {
         const auto model = overworldModelMapper_.Map(
             content_,
+            session_,
             snapshot,
             overworldSelectedNodeIndex_,
             session_.ClearedCombatNodeIds());
@@ -704,6 +748,7 @@ void App::Draw() const {
     case gameplay::GameMode::LocationMode: {
         const auto model = locationModelMapper_.Map(
             content_,
+            session_,
             snapshot,
             locationScene_,
             statusMessage_);

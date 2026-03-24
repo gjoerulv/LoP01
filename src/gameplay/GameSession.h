@@ -56,6 +56,15 @@ public:
     [[nodiscard]] int RemainingRecruitStock(const std::string& serviceId, int defaultStock) const;
     [[nodiscard]] bool TryConsumeRecruitStock(const std::string& serviceId, int defaultStock);
 
+    void RefreshDailyServiceUses(const std::vector<data::LocationServiceDefinition>& services);
+    [[nodiscard]] int RemainingDailyServiceUses(const std::string& serviceId, int defaultUsesPerDay) const;
+    [[nodiscard]] bool TryConsumeDailyServiceUse(const std::string& serviceId, int defaultUsesPerDay);
+
+    void GrantSameDayTravelPrep(int discountMinutes, int charges);
+    [[nodiscard]] bool HasActiveSameDayTravelPrep() const;
+    [[nodiscard]] int PreviewSameDayTravelPrepToTravelMinutes(int baseTravelMinutes) const;
+    [[nodiscard]] int ApplySameDayTravelPrepToTravelMinutes(int baseTravelMinutes);
+
     void ApplyWakePenalty();
 
     void MarkCombatNodeCleared(const std::string& nodeId);
@@ -85,6 +94,10 @@ private:
     GameMode mode_;
     core::GameClock clock_;
     std::vector<core::RecruitServiceState> recruitServiceStates_;
+    std::vector<core::DailyServiceState> dailyServiceStates_;
+    int travelPrepDiscountMinutes_ = 0;
+    int travelPrepRemainingCharges_ = 0;
+    int travelPrepGrantedDay_ = 0;
     int gold_;
     std::string regionId_;
     std::string destinationId_;

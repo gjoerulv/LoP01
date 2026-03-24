@@ -14,6 +14,7 @@ namespace app::mappers
     public:
         [[nodiscard]] ashvale::rendering::LocationRenderModel Map(
             const data::ContentRepository& content,
+            const gameplay::GameSession& session,
             const gameplay::SessionSnapshot& snapshot,
             const gameplay::location::LocationScene& scene,
             const std::string& statusText) const;

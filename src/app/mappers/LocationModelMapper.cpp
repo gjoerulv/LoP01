@@ -3,6 +3,8 @@
 #include <cctype>
 #include <string>
 
+#include "gameplay/location/LocationServiceRules.h"
+
 namespace app::mappers
 {
     namespace
@@ -87,6 +89,7 @@ namespace app::mappers
 
     LocationRenderModel LocationModelMapper::Map(
         const data::ContentRepository& content,
+        const gameplay::GameSession& session,
         const gameplay::SessionSnapshot& snapshot,
         const gameplay::location::LocationScene& scene,
         const std::string& statusText) const
@@ -145,9 +148,24 @@ namespace app::mappers
             const data::LocationServiceDefinition* service =
                 content.FindLocationService(snapshot.destinationId, zones[nearZone].id);
 
-            model.interactPrompt = service != nullptr
-                ? service->promptText
-                : zones[nearZone].promptText;
+            if (service != nullptr)
+            {
+                const int remainingStock = gameplay::location::IsRecruitService(service)
+                    ? session.RemainingRecruitStock(service->id, service->weeklyStock)
+                    : service->weeklyStock;
+                const int remainingDailyUses = service->dailyUseLimit > 0
+                    ? session.RemainingDailyServiceUses(service->id, service->dailyUseLimit)
+                    : service->dailyUseLimit;
+                model.interactPrompt = gameplay::location::BuildServicePromptText(
+                    *service,
+                    remainingStock,
+                    session.CurrentWeek(),
+                    remainingDailyUses);
+            }
+            else
+            {
+                model.interactPrompt = zones[nearZone].promptText;
+            }
         }
         else
         {

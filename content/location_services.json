@@ -6,8 +6,8 @@
       "zone_id": "inn_door",
       "kind": "rest",
       "rest_kind": "home_base",
-      "prompt_text": "E: Rest at Home Base (Free)",
-      "success_text": "Rested safely at Home Base",
+      "prompt_text": "E: Rest at Home Base (Free Safe Rest)",
+      "success_text": "Recovered safely at Home Base",
       "failure_text": "",
       "gold_cost": 0,
       "time_cost_minutes": 0
@@ -18,11 +18,25 @@
       "zone_id": "inn_door",
       "kind": "rest",
       "rest_kind": "inn",
-      "prompt_text": "E: Rent a Room (25g)",
-      "success_text": "Rested at the Old Inn",
+      "prompt_text": "E: Rent a Room at Old Inn (Pay 25g)",
+      "success_text": "Paid for a room and rested at the Old Inn",
       "failure_text": "Not enough gold for a room",
       "gold_cost": 25,
       "time_cost_minutes": 0
+    },
+    {
+      "id": "home_base_preparation",
+      "location_id": "home_base",
+      "zone_id": "prep_table",
+      "kind": "shop",
+      "prompt_text": "E: Prepare at Home Base",
+      "success_text": "Prepared at Home Base",
+      "failure_text": "Home Base preparation already used today",
+      "gold_cost": 0,
+      "time_cost_minutes": 0,
+      "daily_use_limit": 1,
+      "travel_prep_discount_minutes": 20,
+      "travel_prep_charges": 1
     },
     {
       "id": "clocktower_market",
@@ -40,7 +54,7 @@
       "location_id": "survivor_recruit_post",
       "zone_id": "recruit_board",
       "kind": "recruit",
-      "prompt_text": "E: Recruit Town Guard (120g, 3/week)",
+      "prompt_text": "",
       "success_text": "Recruited a Town Guard",
       "failure_text": "No Town Guards available this week",
       "gold_cost": 120,
@@ -54,11 +68,14 @@
       "location_id": "supply_cart",
       "zone_id": "shop_counter",
       "kind": "shop",
-      "prompt_text": "E: Buy Trail Supplies (35g)",
+      "prompt_text": "",
       "success_text": "Bought trail supplies",
-      "failure_text": "Not enough gold for trail supplies",
+      "failure_text": "Trail supplies already purchased today",
       "gold_cost": 35,
-      "time_cost_minutes": 5
+      "time_cost_minutes": 5,
+      "daily_use_limit": 1,
+      "travel_prep_discount_minutes": 20,
+      "travel_prep_charges": 1
     }
   ]
 }

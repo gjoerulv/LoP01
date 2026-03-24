@@ -53,5 +53,9 @@ namespace data
         std::string unitId;
         std::string unitDisplayName;
         int weeklyStock = 0;
+
+        int dailyUseLimit = 0;
+        int travelPrepDiscountMinutes = 0;
+        int travelPrepCharges = 0;
     };
 }

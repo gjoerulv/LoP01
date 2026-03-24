@@ -20,6 +20,12 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     original.recruitServiceStates = {
         core::RecruitServiceState{"survivor_post_recruitment", 2, 1}
     };
+    original.dailyServiceStates = {
+        core::DailyServiceState{"supply_cart_market", 0, 3}
+    };
+    original.travelPrepDiscountMinutes = 20;
+    original.travelPrepRemainingCharges = 1;
+    original.travelPrepGrantedDay = 3;
 
     REQUIRE(repository.SaveToFile(original, testSavePath.string()));
 
@@ -39,6 +45,15 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     REQUIRE(loaded->recruitServiceStates[0].serviceId == "survivor_post_recruitment");
     REQUIRE(loaded->recruitServiceStates[0].remainingStock == 2);
     REQUIRE(loaded->recruitServiceStates[0].lastRefreshWeek == 1);
+
+    REQUIRE(loaded->dailyServiceStates.size() == 1);
+    REQUIRE(loaded->dailyServiceStates[0].serviceId == "supply_cart_market");
+    REQUIRE(loaded->dailyServiceStates[0].remainingUsesToday == 0);
+    REQUIRE(loaded->dailyServiceStates[0].lastRefreshDay == 3);
+
+    REQUIRE(loaded->travelPrepDiscountMinutes == 20);
+    REQUIRE(loaded->travelPrepRemainingCharges == 1);
+    REQUIRE(loaded->travelPrepGrantedDay == 3);
 
     std::filesystem::remove(testSavePath);
 }

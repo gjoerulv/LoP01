@@ -42,6 +42,7 @@ namespace app::mappers
 
         [[nodiscard]] ashvale::rendering::OverworldRenderModel Map(
             const data::ContentRepository& content,
+            const gameplay::GameSession& session,
             const gameplay::SessionSnapshot& snapshot,
             int selectedNodeIndex,
             const std::vector<std::string>& clearedCombatNodeIds) const;

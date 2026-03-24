@@ -93,12 +93,14 @@ if (BUILD_TESTING)
 
   add_executable(ashvale_logic_tests
     src/app/BattleEventTextFormatter.cpp
+    src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/OverworldModelMapper.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
     tests/ContentRepositoryTests.cpp
     tests/GameClockTests.cpp
     tests/GameSessionTests.cpp
+    tests/LocationModelMapperTests.cpp
     tests/LocationSceneTests.cpp
     tests/LocationServiceRulesTests.cpp
     tests/NodeWorldStateTests.cpp

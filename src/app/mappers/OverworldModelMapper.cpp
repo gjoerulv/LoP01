@@ -144,6 +144,7 @@ namespace app::mappers
 
     OverworldRenderModel OverworldModelMapper::Map(
         const data::ContentRepository& content,
+        const gameplay::GameSession& session,
         const gameplay::SessionSnapshot& snapshot,
         const int selectedNodeIndex,
         const std::vector<std::string>& clearedCombatNodeIds) const
@@ -249,9 +250,19 @@ namespace app::mappers
                 " | Scene: " + (nodes[safeSelectedIndex].entersLocationMode ? "Yes" : "No") +
                 " | Battle: " + ((nodes[safeSelectedIndex].supportsBattle && !nodes[safeSelectedIndex].combatNodeCleared) ? "Yes" : "No") +
                 (nodes[safeSelectedIndex].combatNodeCleared ? " (Cleared)" : "");
-            model.travelTimeText = travel.legal
-                ? FormatTravelTime(travel.minutes)
-                : "Unavailable";
+            if (travel.legal) {
+                const int previewTravelMinutes = session.PreviewSameDayTravelPrepToTravelMinutes(travel.minutes);
+                if (previewTravelMinutes < travel.minutes) {
+                    model.travelTimeText = FormatTravelTime(previewTravelMinutes) +
+                        " (Supply Prep from " + FormatTravelTime(travel.minutes) + ")";
+                }
+                else {
+                    model.travelTimeText = FormatTravelTime(travel.minutes);
+                }
+            }
+            else {
+                model.travelTimeText = "Unavailable";
+            }
         }
 
         return model;
