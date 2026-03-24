@@ -30,6 +30,30 @@ namespace
 
         return nullptr;
     }
+
+    core::DailyServiceState* FindDailyServiceState(
+        std::vector<core::DailyServiceState>& states,
+        const std::string& serviceId) {
+        for (auto& state : states) {
+            if (state.serviceId == serviceId) {
+                return &state;
+            }
+        }
+
+        return nullptr;
+    }
+
+    const core::DailyServiceState* FindDailyServiceState(
+        const std::vector<core::DailyServiceState>& states,
+        const std::string& serviceId) {
+        for (const auto& state : states) {
+            if (state.serviceId == serviceId) {
+                return &state;
+            }
+        }
+
+        return nullptr;
+    }
 }
 
 
@@ -67,6 +91,7 @@ bool GameSession::SpendGold(const int amount) {
     if (amount <= 0) {
         return true;
     }
+
     if (gold_ < amount) {
         return false;
     }
@@ -183,6 +208,104 @@ bool GameSession::TryConsumeRecruitStock(const std::string& serviceId, const int
     return true;
 }
 
+void GameSession::RefreshDailyServiceUses(const std::vector<data::LocationServiceDefinition>& services) {
+    const int currentDay = clock_.Day();
+
+    if (travelPrepRemainingCharges_ > 0 && travelPrepGrantedDay_ < currentDay) {
+        travelPrepRemainingCharges_ = 0;
+        travelPrepDiscountMinutes_ = 0;
+        travelPrepGrantedDay_ = 0;
+    }
+
+    for (const auto& service : services) {
+        if (service.dailyUseLimit <= 0) {
+            continue;
+        }
+
+        auto* state = FindDailyServiceState(dailyServiceStates_, service.id);
+        if (state == nullptr) {
+            dailyServiceStates_.push_back(core::DailyServiceState{
+                service.id,
+                service.dailyUseLimit,
+                currentDay
+                });
+            continue;
+        }
+
+        if (state->lastRefreshDay < currentDay) {
+            state->remainingUsesToday = service.dailyUseLimit;
+            state->lastRefreshDay = currentDay;
+        }
+    }
+}
+
+int GameSession::RemainingDailyServiceUses(const std::string& serviceId, const int defaultUsesPerDay) const {
+    const auto* state = FindDailyServiceState(dailyServiceStates_, serviceId);
+    if (state == nullptr) {
+        return std::max(0, defaultUsesPerDay);
+    }
+
+    return std::max(0, state->remainingUsesToday);
+}
+
+bool GameSession::TryConsumeDailyServiceUse(const std::string& serviceId, const int defaultUsesPerDay) {
+    auto* state = FindDailyServiceState(dailyServiceStates_, serviceId);
+    if (state == nullptr) {
+        dailyServiceStates_.push_back(core::DailyServiceState{
+            serviceId,
+            std::max(0, defaultUsesPerDay),
+            clock_.Day()
+            });
+        state = &dailyServiceStates_.back();
+    }
+
+    if (state->remainingUsesToday <= 0) {
+        return false;
+    }
+
+    --state->remainingUsesToday;
+    return true;
+}
+
+void GameSession::GrantSameDayTravelPrep(const int discountMinutes, const int charges) {
+    if (discountMinutes <= 0 || charges <= 0) {
+        return;
+    }
+
+    travelPrepDiscountMinutes_ = std::max(travelPrepDiscountMinutes_, discountMinutes);
+    travelPrepRemainingCharges_ += charges;
+    travelPrepGrantedDay_ = clock_.Day();
+}
+
+bool GameSession::HasActiveSameDayTravelPrep() const {
+    return travelPrepRemainingCharges_ > 0 && travelPrepGrantedDay_ == clock_.Day();
+}
+
+int GameSession::PreviewSameDayTravelPrepToTravelMinutes(const int baseTravelMinutes) const {
+    if (baseTravelMinutes <= 0) {
+        return 0;
+    }
+
+    if (!HasActiveSameDayTravelPrep()) {
+        return baseTravelMinutes;
+    }
+
+    return std::max(1, baseTravelMinutes - std::max(0, travelPrepDiscountMinutes_));
+}
+
+int GameSession::ApplySameDayTravelPrepToTravelMinutes(const int baseTravelMinutes) {
+    if (baseTravelMinutes <= 0) {
+        return 0;
+    }
+
+    if (!HasActiveSameDayTravelPrep()) {
+        return baseTravelMinutes;
+    }
+
+    --travelPrepRemainingCharges_;
+    return std::max(1, baseTravelMinutes - std::max(0, travelPrepDiscountMinutes_));
+}
+
 void GameSession::ApplyWakePenalty() {
     gold_ = std::max(0, gold_ - 1000);
     clock_.SetToWakePenaltyStart();
@@ -259,7 +382,11 @@ core::SaveData GameSession::ToSaveData() const {
         destinationId_,
         questState_.CompletedQuestIds(),
         nodeWorldState_.ClearedCombatNodeIds(),
-        recruitServiceStates_
+        recruitServiceStates_,
+        dailyServiceStates_,
+        travelPrepDiscountMinutes_,
+        travelPrepRemainingCharges_,
+        travelPrepGrantedDay_
     };
 }
 
@@ -276,6 +403,10 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     questState_.RestoreCompletedQuestIds(saveData.completedQuestIds);
     nodeWorldState_.RestoreClearedCombatNodeIds(saveData.clearedCombatNodeIds);
     recruitServiceStates_ = saveData.recruitServiceStates;
+    dailyServiceStates_ = saveData.dailyServiceStates;
+    travelPrepDiscountMinutes_ = std::max(0, saveData.travelPrepDiscountMinutes);
+    travelPrepRemainingCharges_ = std::max(0, saveData.travelPrepRemainingCharges);
+    travelPrepGrantedDay_ = std::max(0, saveData.travelPrepGrantedDay);
 }
 
 std::string GameSession::ToString(const GameMode mode) {

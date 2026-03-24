@@ -12,6 +12,12 @@ struct RecruitServiceState {
     int lastRefreshWeek = 1;
 };
 
+struct DailyServiceState {
+    std::string serviceId;
+    int remainingUsesToday = 0;
+    int lastRefreshDay = 1;
+};
+
 struct SaveData {
     int day = 1;
     int minutesIntoSliceDay = 0;
@@ -22,6 +28,10 @@ struct SaveData {
     std::vector<std::string> completedQuestIds;
     std::vector<std::string> clearedCombatNodeIds;
     std::vector<RecruitServiceState> recruitServiceStates;
+    std::vector<DailyServiceState> dailyServiceStates;
+    int travelPrepDiscountMinutes = 0;
+    int travelPrepRemainingCharges = 0;
+    int travelPrepGrantedDay = 0;
 };
 
 class SaveGameRepository {

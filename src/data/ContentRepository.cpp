@@ -329,6 +329,9 @@ namespace data {
                 service.unitId = serviceJson.value("unit_id", "");
                 service.unitDisplayName = serviceJson.value("unit_display_name", "");
                 service.weeklyStock = serviceJson.value("weekly_stock", 0);
+                service.dailyUseLimit = serviceJson.value("daily_use_limit", 0);
+                service.travelPrepDiscountMinutes = serviceJson.value("travel_prep_discount_minutes", 0);
+                service.travelPrepCharges = serviceJson.value("travel_prep_charges", 0);
 
                 output.push_back(service);
             }

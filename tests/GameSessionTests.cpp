@@ -219,3 +219,35 @@ TEST_CASE("GameSession recruit stock refreshes weekly and survives save load") {
     loaded.RefreshWeeklyRecruitStocks({ recruitService });
     REQUIRE(loaded.RemainingRecruitStock(recruitService.id, recruitService.weeklyStock) == 3);
 }
+
+TEST_CASE("GameSession daily service usage and same-day travel prep work with daily cadence") {
+    gameplay::GameSession session;
+
+    data::LocationServiceDefinition suppliesService;
+    suppliesService.id = "supply_cart_market";
+    suppliesService.kind = data::LocationServiceKind::Shop;
+    suppliesService.dailyUseLimit = 1;
+
+    session.RefreshDailyServiceUses({ suppliesService });
+    REQUIRE(session.RemainingDailyServiceUses(suppliesService.id, suppliesService.dailyUseLimit) == 1);
+    REQUIRE(session.TryConsumeDailyServiceUse(suppliesService.id, suppliesService.dailyUseLimit));
+    REQUIRE(session.RemainingDailyServiceUses(suppliesService.id, suppliesService.dailyUseLimit) == 0);
+    REQUIRE_FALSE(session.TryConsumeDailyServiceUse(suppliesService.id, suppliesService.dailyUseLimit));
+
+    session.GrantSameDayTravelPrep(20, 1);
+    REQUIRE(session.HasActiveSameDayTravelPrep());
+    REQUIRE(session.PreviewSameDayTravelPrepToTravelMinutes(40) == 20);
+    REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 20);
+    REQUIRE_FALSE(session.HasActiveSameDayTravelPrep());
+    REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 40);
+
+    session.GrantSameDayTravelPrep(20, 1);
+    REQUIRE(session.HasActiveSameDayTravelPrep());
+    session.AddMinutes(core::GameClock::kMinutesPerSliceDay);
+
+    session.RefreshDailyServiceUses({ suppliesService });
+    REQUIRE(session.RemainingDailyServiceUses(suppliesService.id, suppliesService.dailyUseLimit) == 1);
+    REQUIRE_FALSE(session.HasActiveSameDayTravelPrep());
+    REQUIRE(session.PreviewSameDayTravelPrepToTravelMinutes(40) == 40);
+    REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 40);
+}

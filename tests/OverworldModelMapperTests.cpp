@@ -44,8 +44,10 @@ TEST_CASE("OverworldModelMapper exposes cleared combat node text") {
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 0;
 
+    gameplay::GameSession session;
+
     app::mappers::OverworldModelMapper mapper;
-    const auto model = mapper.Map(repository, snapshot, 1, {"bridge_checkpoint"});
+    const auto model = mapper.Map(repository, session, snapshot, 1, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Bridge Checkpoint");
     REQUIRE(model.selectedNodeType.find("Node: Cleared") != std::string::npos);
@@ -66,8 +68,10 @@ TEST_CASE("OverworldModelMapper exposes uncleared blocker travel text") {
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 0;
 
+    gameplay::GameSession session;
+
     app::mappers::OverworldModelMapper mapper;
-    const auto model = mapper.Map(repository, snapshot, 2, {});
+    const auto model = mapper.Map(repository, session, snapshot, 2, {});
 
     REQUIRE(model.selectedNodeLabel == "Clocktower Square");
     REQUIRE(model.selectedNodeEnterable.find("blocked by uncleared route blocker") != std::string::npos);
@@ -87,11 +91,37 @@ TEST_CASE("OverworldModelMapper exposes past-02:00 blocked reason text") {
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 1180;
 
+    gameplay::GameSession session;
+
     app::mappers::OverworldModelMapper mapper;
-    const auto model = mapper.Map(repository, snapshot, 2, {"bridge_checkpoint"});
+    const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Clocktower Square");
     REQUIRE(model.selectedNodeEnterable.find("arrives past 02:00") != std::string::npos);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("OverworldModelMapper travel time preview reflects active supply prep discount") {
+    const auto root = BuildOverworldMapperTestContent();
+
+    data::ContentRepository repository;
+    REQUIRE(repository.LoadFromDirectory(root));
+
+    gameplay::GameSession session;
+    session.GrantSameDayTravelPrep(20, 1);
+
+    gameplay::SessionSnapshot snapshot;
+    snapshot.mode = gameplay::GameMode::OverworldMode;
+    snapshot.regionId = "ashvale_heartland";
+    snapshot.destinationId = "home_base";
+    snapshot.minutesIntoSliceDay = 0;
+
+    app::mappers::OverworldModelMapper mapper;
+    const auto model = mapper.Map(repository, session, snapshot, 1, {"bridge_checkpoint"});
+
+    REQUIRE(model.selectedNodeLabel == "Bridge Checkpoint");
+    REQUIRE(model.travelTimeText.find("Supply Prep") != std::string::npos);
 
     std::filesystem::remove_all(root);
 }

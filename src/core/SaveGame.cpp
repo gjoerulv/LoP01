@@ -17,10 +17,24 @@ void to_json(json& j, const RecruitServiceState& data) {
     };
 }
 
+void to_json(json& j, const DailyServiceState& data) {
+    j = json{
+        {"service_id", data.serviceId},
+        {"remaining_uses_today", data.remainingUsesToday},
+        {"last_refresh_day", data.lastRefreshDay}
+    };
+}
+
 void from_json(const json& j, RecruitServiceState& data) {
     j.at("service_id").get_to(data.serviceId);
     j.at("remaining_stock").get_to(data.remainingStock);
     j.at("last_refresh_week").get_to(data.lastRefreshWeek);
+}
+
+void from_json(const json& j, DailyServiceState& data) {
+    j.at("service_id").get_to(data.serviceId);
+    j.at("remaining_uses_today").get_to(data.remainingUsesToday);
+    j.at("last_refresh_day").get_to(data.lastRefreshDay);
 }
 
 void to_json(json& j, const SaveData& data) {
@@ -33,7 +47,11 @@ void to_json(json& j, const SaveData& data) {
         {"destination_id", data.destinationId},
         {"completed_quest_ids", data.completedQuestIds},
         {"cleared_combat_node_ids", data.clearedCombatNodeIds},
-        {"recruit_service_states", data.recruitServiceStates}
+        {"recruit_service_states", data.recruitServiceStates},
+        {"daily_service_states", data.dailyServiceStates},
+        {"travel_prep_discount_minutes", data.travelPrepDiscountMinutes},
+        {"travel_prep_remaining_charges", data.travelPrepRemainingCharges},
+        {"travel_prep_granted_day", data.travelPrepGrantedDay}
     };
 }
 
@@ -58,6 +76,15 @@ void from_json(const json& j, SaveData& data) {
     if (j.contains("recruit_service_states") && j["recruit_service_states"].is_array()) {
         data.recruitServiceStates = j["recruit_service_states"].get<std::vector<RecruitServiceState>>();
     }
+
+    data.dailyServiceStates.clear();
+    if (j.contains("daily_service_states") && j["daily_service_states"].is_array()) {
+        data.dailyServiceStates = j["daily_service_states"].get<std::vector<DailyServiceState>>();
+    }
+
+    data.travelPrepDiscountMinutes = j.value("travel_prep_discount_minutes", 0);
+    data.travelPrepRemainingCharges = j.value("travel_prep_remaining_charges", 0);
+    data.travelPrepGrantedDay = j.value("travel_prep_granted_day", 0);
 }
 
 bool SaveGameRepository::SaveToFile(const SaveData& saveData, const std::string& filePath) const {
