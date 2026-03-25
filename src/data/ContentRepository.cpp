@@ -339,6 +339,94 @@ namespace data {
             return true;
         }
 
+        bool ValidateCrossReferences(
+            const std::vector<RegionDefinition>& regions,
+            const std::vector<LocationDefinition>& locations,
+            const std::vector<LocationSceneDefinition>& scenes,
+            const std::vector<BattleScenarioDefinition>& battleScenarios,
+            const std::vector<LocationServiceDefinition>& services)
+        {
+            auto hasLocation = [&](const std::string& id) {
+                return std::ranges::any_of(locations, [&](const auto& x) { return x.id == id; });
+                };
+
+            auto findLocation = [&](const std::string& id) -> const LocationDefinition* {
+                for (const auto& location : locations) {
+                    if (location.id == id) {
+                        return &location;
+                    }
+                }
+                return nullptr;
+                };
+
+            auto hasScene = [&](const std::string& id) {
+                return std::ranges::any_of(scenes, [&](const auto& x) { return x.id == id; });
+                };
+
+            auto findScene = [&](const std::string& id) -> const LocationSceneDefinition* {
+                for (const auto& scene : scenes) {
+                    if (scene.id == id) {
+                        return &scene;
+                    }
+                }
+                return nullptr;
+                };
+
+            auto hasBattleScenario = [&](const std::string& id) {
+                return std::ranges::any_of(battleScenarios, [&](const auto& x) { return x.id == id; });
+                };
+
+            for (const auto& region : regions) {
+                for (const auto& node : region.nodes) {
+                    if (!hasLocation(node.locationId)) {
+                        return false;
+                    }
+                }
+
+                for (const auto& link : region.links) {
+                    if (!hasLocation(link.fromLocationId) || !hasLocation(link.toLocationId)) {
+                        return false;
+                    }
+                }
+            }
+
+            for (const auto& location : locations) {
+                if (!location.sceneId.empty() && !hasScene(location.sceneId)) {
+                    return false;
+                }
+
+                if (!location.battleScenarioId.empty() && !hasBattleScenario(location.battleScenarioId)) {
+                    return false;
+                }
+            }
+
+            for (const auto& service : services) {
+                const auto* location = findLocation(service.locationId);
+                if (location == nullptr) {
+                    return false;
+                }
+
+                if (location->sceneId.empty()) {
+                    return false;
+                }
+
+                const auto* scene = findScene(location->sceneId);
+                if (scene == nullptr) {
+                    return false;
+                }
+
+                const bool zoneExists = std::ranges::any_of(scene->zones, [&](const auto& zone) {
+                    return zone.id == service.zoneId;
+                    });
+
+                if (!zoneExists) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -352,10 +440,19 @@ namespace data {
         const bool questsLoaded = LoadJsonFile(root / "quests.json", quests_);
         const bool locationServicesLoaded = LoadLocationServicesFile(root / "location_services.json", locationServices_);
 
+
+        const bool crossReferencesValid = ValidateCrossReferences(
+            regions_,
+            locations_,
+            locationScenes_,
+            battleScenarios_,
+            locationServices_);
+
         return regionsLoaded && locationsLoaded && locationScenesLoaded &&
             locationServicesLoaded &&
             unitsLoaded && battleScenariosLoaded &&
-            enemyGroupsLoaded && questDefinitionsLoaded && questsLoaded;
+            enemyGroupsLoaded && questDefinitionsLoaded && questsLoaded &&
+            crossReferencesValid;
     }
 
     const std::vector<RegionDefinition>& ContentRepository::Regions() const {

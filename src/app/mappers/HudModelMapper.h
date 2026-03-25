@@ -6,6 +6,7 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/quests/QuestState.h"
 #include "rendering/HudRenderer.h"
+#include "data/ContentRepository.h"
 
 namespace app::mappers
 {
@@ -13,6 +14,8 @@ namespace app::mappers
     {
     public:
         [[nodiscard]] ashvale::rendering::HudModel Map(
+            const data::ContentRepository& content,
+            const gameplay::GameSession& session,
             const gameplay::SessionSnapshot& snapshot,
             const std::string& statusText,
             const std::vector<gameplay::quests::QuestProgress>& quests) const;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "RenderContext.h"
 
 namespace ashvale::rendering
@@ -9,8 +10,11 @@ namespace ashvale::rendering
     {
         std::string modeLabel;
         int day = 1;
+        int week = 1;
         std::string timeText = "06:00";
         int gold = 0;
+        std::string questCompactText;
+        std::vector<std::string> activeBuffIcons;
 
         std::string primaryAreaLabel;
         std::string primaryAreaValue;

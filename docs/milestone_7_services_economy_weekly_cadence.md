@@ -19,6 +19,17 @@ After this milestone, the player should be able to:
 - interact with at least one more service/economy system that is content-driven rather than hardcoded
 - keep playing through the same explicit overworld / location / battle loop without architectural drift
 
+## Implemented baseline snapshot (current branch)
+
+The current branch implementation now delivers:
+
+- Home Base free rest and free once-per-day travel prep
+- Old Inn paid rest with explicit pricing
+- Recruit Post weekly recruit stock with refresh and clear availability text
+- Supply Cart paid same-day travel prep fallback
+- Travel prep preview, explicit consumption messaging, non-stacking while active, and day-rollover expiry
+- HUD/readability updates for week visibility, active prep icon visibility, and clearer multiline service tooltips
+
 ## Scope
 
 Milestone 7 should focus on:
@@ -110,16 +121,16 @@ That means:
 
 ## Acceptance checklist
 
-- [ ] Milestone 6 architecture remains intact
-- [ ] Home base is clearly identified as the free-rest safe hub
-- [ ] Inns support paid rest with clear cost communication
-- [ ] At least one recruit location exposes content-driven unit offers
-- [ ] Recruit quantities decrease when used
-- [ ] Recruit quantities refresh on a weekly cadence
-- [ ] New service/economy runtime state persists through save/load
-- [ ] New service/economy rules are content-driven and typed
-- [ ] New logic has tests where feasible
-- [ ] Presentation clearly explains cost, quantity, and refresh state
+- [x] Milestone 6 architecture remains intact
+- [x] Home base is clearly identified as the free-rest safe hub
+- [x] Inns support paid rest with clear cost communication
+- [x] At least one recruit location exposes content-driven unit offers
+- [x] Recruit quantities decrease when used
+- [x] Recruit quantities refresh on a weekly cadence
+- [x] New service/economy runtime state persists through save/load
+- [x] New service/economy rules are content-driven and typed
+- [x] New logic has tests where feasible
+- [x] Presentation clearly explains cost, quantity, and refresh state
 
 ## Out of scope notes
 

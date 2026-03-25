@@ -6,7 +6,7 @@
       "zone_id": "inn_door",
       "kind": "rest",
       "rest_kind": "home_base",
-      "prompt_text": "E: Rest at Home Base (Free Safe Rest)",
+      "prompt_text": "E: Rest at Home Base",
       "success_text": "Recovered safely at Home Base",
       "failure_text": "",
       "gold_cost": 0,
@@ -18,7 +18,7 @@
       "zone_id": "inn_door",
       "kind": "rest",
       "rest_kind": "inn",
-      "prompt_text": "E: Rent a Room at Old Inn (Pay 25g)",
+      "prompt_text": "E: Rent a Room at Old Inn",
       "success_text": "Paid for a room and rested at the Old Inn",
       "failure_text": "Not enough gold for a room",
       "gold_cost": 25,
@@ -37,18 +37,7 @@
       "daily_use_limit": 1,
       "travel_prep_discount_minutes": 20,
       "travel_prep_charges": 1
-    },
-    {
-      "id": "clocktower_market",
-      "location_id": "clocktower_square",
-      "zone_id": "shop_counter",
-      "kind": "shop",
-      "prompt_text": "E: Buy Supplies (50g)",
-      "success_text": "Bought supplies at Clocktower Square",
-      "failure_text": "Not enough gold for supplies",
-      "gold_cost": 50,
-      "time_cost_minutes": 5
-    },
+    },    
     {
       "id": "survivor_post_recruitment",
       "location_id": "survivor_recruit_post",

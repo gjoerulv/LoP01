@@ -281,6 +281,14 @@ bool GameSession::HasActiveSameDayTravelPrep() const {
     return travelPrepRemainingCharges_ > 0 && travelPrepGrantedDay_ == clock_.Day();
 }
 
+int GameSession::ActiveSameDayTravelPrepDiscountMinutes() const {
+    if (!HasActiveSameDayTravelPrep()) {
+        return 0;
+    }
+
+    return std::max(0, travelPrepDiscountMinutes_);
+}
+
 int GameSession::PreviewSameDayTravelPrepToTravelMinutes(const int baseTravelMinutes) const {
     if (baseTravelMinutes <= 0) {
         return 0;

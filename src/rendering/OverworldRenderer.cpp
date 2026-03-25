@@ -87,22 +87,13 @@ namespace ashvale::rendering
         y += 34.0f;
         DrawTextEx(font, model.selectedNodeType.c_str(), { sideRect.x + 16.0f, y }, context.smallFontSize, 1.0f, context.theme.mutedTextColor);
         y += 24.0f;
+        DrawTextEx(font, "Properties", { sideRect.x + 16.0f, y }, context.smallFontSize, 1.0f, context.theme.mutedTextColor);
+        y += 20.0f;
         DrawTextEx(font, model.selectedNodeEnterable.c_str(), { sideRect.x + 16.0f, y }, context.smallFontSize, 1.0f, context.theme.mutedTextColor);
         y += 36.0f;
 
         DrawTextEx(font, "Travel Time", { sideRect.x + 16.0f, y }, context.smallFontSize, 1.0f, context.theme.mutedTextColor);
         y += 24.0f;
         DrawTextEx(font, model.travelTimeText.c_str(), { sideRect.x + 16.0f, y }, context.normalFontSize, 1.0f, context.theme.highlightTextColor);
-
-        y += 48.0f;
-        DrawTextEx(font, model.hintText.c_str(), { sideRect.x + 16.0f, y }, context.smallFontSize, 1.0f, context.theme.mutedTextColor);
-        y += 22.0f;
-        DrawTextEx(font, model.controlsText.c_str(), { sideRect.x + 16.0f, y }, context.smallFontSize, 1.0f, context.theme.mutedTextColor);
-
-        DrawTextEx(font, "Legend: P=current, blue ring=selected", 
-            { sideRect.x + 16.0f, sideRect.y + sideRect.height - 40.0f },
-            context.smallFontSize,
-            1.0f,
-            context.theme.mutedTextColor);
     }
 }

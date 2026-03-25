@@ -1,9 +1,33 @@
 #include "LocationRenderer.h"
 
 #include <algorithm>
+#include <string>
+#include <vector>
 
 namespace ashvale::rendering
 {
+    namespace {
+        std::vector<std::string> SplitLines(const std::string& text)
+        {
+            std::vector<std::string> lines;
+            std::string current;
+            for (const char ch : text)
+            {
+                if (ch == '\n')
+                {
+                    lines.push_back(current);
+                    current.clear();
+                    continue;
+                }
+
+                current.push_back(ch);
+            }
+
+            lines.push_back(current);
+            return lines;
+        }
+    }
+
     Color LocationRenderer::GetZoneColor(LocationInteractableType type, const UiTheme& theme) const
     {
         switch (type)
@@ -90,15 +114,33 @@ namespace ashvale::rendering
                 promptY = highlightedZone->bounds.y - 12.0f;
             }
 
-            const float promptW = 320.0f;
-            const float promptH = 36.0f;
+            const std::vector<std::string> promptLines = SplitLines(model.interactPrompt);
+            const float promptW = 380.0f;
+            const float lineHeight = context.smallFontSize + 4.0f;
+            const float promptH = std::max(36.0f, 10.0f + lineHeight * static_cast<float>(promptLines.size()));
             promptX = std::clamp(promptX, 8.0f, static_cast<float>(context.screenWidth) - promptW - 8.0f);
             promptY = std::clamp(promptY, static_cast<float>(hudBottom + 8), static_cast<float>(bottomUiTop) - promptH - 8.0f);
 
             const Rectangle promptRect{ promptX, promptY, promptW, promptH };
-            DrawRectangleRounded(promptRect, 0.15f, 6, context.theme.panelColor);
-            DrawRectangleRoundedLinesEx(promptRect, 0.15f, 6, 2.0f, context.theme.panelBorderColor);
-            DrawTextEx(font, model.interactPrompt.c_str(), { promptRect.x + 10.0f, promptRect.y + 8.0f }, context.smallFontSize, 1.0f, context.theme.textColor);
+            const Color usablePanel = Fade(context.theme.panelColor, 0.95f);
+            const Color unusablePanel = Fade(context.theme.panelColor, 0.75f);
+            const Color usableBorder = context.theme.highlightTextColor;
+            const Color unusableBorder = context.theme.mutedTextColor;
+            DrawRectangleRounded(promptRect, 0.15f, 6, model.interactPromptUsable ? usablePanel : unusablePanel);
+            DrawRectangleRoundedLinesEx(promptRect, 0.15f, 6, 2.0f, model.interactPromptUsable ? usableBorder : unusableBorder);
+
+            float lineY = promptRect.y + 8.0f;
+            for (const auto& line : promptLines)
+            {
+                DrawTextEx(
+                    font,
+                    line.c_str(),
+                    { promptRect.x + 10.0f, lineY },
+                    context.smallFontSize,
+                    1.0f,
+                    model.interactPromptUsable ? context.theme.textColor : context.theme.mutedTextColor);
+                lineY += lineHeight;
+            }
         }
 
         const Rectangle dialogueRect{

@@ -208,48 +208,35 @@ namespace app::mappers
 
             model.currentNodeLabel = nodes[currentIndex].label;
             model.selectedNodeLabel = nodes[safeSelectedIndex].label;
-            model.selectedNodeType = "Type: " + data::ToDisplayString(nodes[safeSelectedIndex].type);
-            if (nodes[safeSelectedIndex].combatNodeCleared)
+            model.selectedNodeType = data::ToDisplayString(nodes[safeSelectedIndex].type);
+
+            std::vector<std::string> positiveProperties;
+            if (travel.legal)
             {
-                model.selectedNodeType += " | Node: Cleared";
+                positiveProperties.push_back("Travel");
             }
-            if (nodes[safeSelectedIndex].blocksTransitUntilCleared)
+            if (nodes[safeSelectedIndex].entersLocationMode)
             {
-                model.selectedNodeType += nodes[safeSelectedIndex].combatNodeCleared
-                    ? " | Route: Blocker Cleared"
-                    : " | Route: Blocker Uncleared";
+                positiveProperties.push_back("Scene");
+            }
+            if (nodes[safeSelectedIndex].supportsBattle && !nodes[safeSelectedIndex].combatNodeCleared)
+            {
+                positiveProperties.push_back("Battle");
             }
 
-            std::string travelText = "Yes";
-            if (!travel.legal)
+            if (!positiveProperties.empty())
             {
-                if (travel.reason == gameplay::overworld::TravelBlockReason::DestinationUnavailable)
+                model.selectedNodeEnterable = positiveProperties.front();
+                for (int i = 1; i < static_cast<int>(positiveProperties.size()); ++i)
                 {
-                    travelText = "No (destination unavailable)";
-                }
-                else if (travel.reason == gameplay::overworld::TravelBlockReason::NoRouteLink)
-                {
-                    travelText = "No (no route link)";
-                }
-                else if (travel.reason == gameplay::overworld::TravelBlockReason::ArrivalPastDayEnd)
-                {
-                    travelText = "No (arrives past 02:00)";
-                }
-                else if (travel.reason == gameplay::overworld::TravelBlockReason::BlockedByUnclearedTransitNode)
-                {
-                    travelText = "No (blocked by uncleared route blocker)";
-                }
-                else
-                {
-                    travelText = "No";
+                    model.selectedNodeEnterable += " | " + positiveProperties[i];
                 }
             }
+            else
+            {
+                model.selectedNodeEnterable = "-";
+            }
 
-            model.selectedNodeEnterable =
-                "Travel: " + travelText +
-                " | Scene: " + (nodes[safeSelectedIndex].entersLocationMode ? "Yes" : "No") +
-                " | Battle: " + ((nodes[safeSelectedIndex].supportsBattle && !nodes[safeSelectedIndex].combatNodeCleared) ? "Yes" : "No") +
-                (nodes[safeSelectedIndex].combatNodeCleared ? " (Cleared)" : "");
             if (travel.legal) {
                 const int previewTravelMinutes = session.PreviewSameDayTravelPrepToTravelMinutes(travel.minutes);
                 if (previewTravelMinutes < travel.minutes) {

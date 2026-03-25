@@ -64,6 +64,7 @@ add_executable(ashvale_slice
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
   src/app/BattleEventTextFormatter.cpp
+  src/app/formatters/LocationServicePromptFormatter.cpp
 )
 
 target_link_libraries(ashvale_slice PRIVATE ashvale_logic ashvale_rendering)
@@ -95,6 +96,7 @@ if (BUILD_TESTING)
     src/app/BattleEventTextFormatter.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/OverworldModelMapper.cpp
+    src/app/formatters/LocationServicePromptFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
     tests/ContentRepositoryTests.cpp
@@ -108,7 +110,8 @@ if (BUILD_TESTING)
     tests/OverworldModelMapperTests.cpp
     tests/OverworldTravelRulesTests.cpp
     tests/QuestStateTests.cpp
-    tests/SaveGameTests.cpp
+    tests/SaveGameTests.cpp    
+    tests/LocationServicePromptFormatterTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)
