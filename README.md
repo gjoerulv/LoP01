@@ -175,6 +175,30 @@ Current Milestone 7 priorities:
 
 See `docs/game_vision_complete.md` and `docs/milestone_7_services_economy_weekly_cadence.md` for the active planning direction.
 
+## Milestone 7 implemented baseline (current branch)
+
+The current branch now includes the intended Milestone 7 service/economy slice:
+
+- **Home Base**
+  - free rest
+  - free once-per-day travel preparation service
+- **Old Inn**
+  - paid rest with explicit cost communication
+- **Recruit Post**
+  - recruit offers with weekly stock and weekly refresh
+  - player-facing stock and refresh timing text
+- **Supply Cart**
+  - paid same-day travel prep fallback in the field
+- **Travel prep behavior**
+  - discounted travel preview before confirm
+  - explicit consumption messaging when used
+  - expires at day rollover if unused
+  - cannot stack while an unused prep charge is active
+- **Readability/UI-light improvements**
+  - week visibility in HUD
+  - active prep shown as buff icon(s)
+  - clearer multiline service tooltip structure
+
 ## Build
 
 ```bash

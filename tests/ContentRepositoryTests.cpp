@@ -40,3 +40,316 @@ TEST_CASE("ContentRepository loads blocks_transit_until_cleared flag") {
 
     std::filesystem::remove_all(root);
 }
+
+TEST_CASE("ContentRepository fails when a location service references a missing scene zone") {
+    const std::filesystem::path root = "saves/content_repo_missing_service_zone_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({
+        "regions":[
+            {
+                "id":"ashvale_heartland",
+                "name":"Ashvale Heartland",
+                "unlocked":true,
+                "nodes":[
+                    {
+                        "location_id":"home_base",
+                        "x":0,
+                        "y":0,
+                        "discovered":true,
+                        "travel_available":true
+                    }
+                ],
+                "links":[]
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "locations.json", R"({
+        "locations":[
+            {
+                "id":"home_base",
+                "name":"Home Base",
+                "type":"home",
+                "allows_sleep":true,
+                "overworld_destination":true,
+                "scene_id":"home_base_proto"
+            }
+        ]
+    })");
+
+    // Important:
+    // The scene exists, but it does NOT contain the zone id "prep_table".
+    WriteTextFile(root / "location_scenes.json", R"({
+        "location_scenes":[
+            {
+                "id":"home_base_proto",
+                "spawn":{"x":0,"y":0,"width":1,"height":1},
+                "blocking_rects":[],
+                "zones":[
+                    {
+                        "id":"inn_door",
+                        "type":"inn_door",
+                        "area":{"x":0,"y":0,"width":1,"height":1},
+                        "prompt_text":"",
+                        "result_text":"",
+                        "failure_text":"",
+                        "time_cost_minutes":0,
+                        "gold_cost":0,
+                        "recruit_count":0,
+                        "dialogue_choice_time_cost_minutes":1,
+                        "dialogue_choices":[]
+                    }
+                ]
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "units.json", R"({
+        "units":[
+            {
+                "id":"hero",
+                "name":"Hero",
+                "category":"hero",
+                "is_player_character":true,
+                "attack":1,
+                "defense":1,
+                "magic":1,
+                "resistance":1,
+                "min_damage":1,
+                "max_damage":1,
+                "max_hp":10,
+                "max_mp":0,
+                "agility":1,
+                "life":1,
+                "position":"front",
+                "range":"melee"
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"quests":[]} )");
+
+    WriteTextFile(root / "location_services.json", R"({
+        "location_services":[
+            {
+                "id":"home_base_preparation",
+                "location_id":"home_base",
+                "zone_id":"prep_table",
+                "kind":"shop",
+                "prompt_text":"E: Prepare for Travel",
+                "success_text":"Prepared for travel",
+                "failure_text":"Already prepared",
+                "gold_cost":0,
+                "time_cost_minutes":0,
+                "daily_use_limit":1,
+                "travel_prep_discount_minutes":20,
+                "travel_prep_charges":1
+            }
+        ]
+    })");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ContentRepository fails when a location service references a missing location") {
+    const std::filesystem::path root = "saves/content_repo_missing_service_location_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({
+        "regions":[
+            {
+                "id":"ashvale_heartland",
+                "name":"Ashvale Heartland",
+                "unlocked":true,
+                "nodes":[
+                    {
+                        "location_id":"home_base",
+                        "x":0,
+                        "y":0,
+                        "discovered":true,
+                        "travel_available":true
+                    }
+                ],
+                "links":[]
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "locations.json", R"({
+        "locations":[
+            {
+                "id":"home_base",
+                "name":"Home Base",
+                "type":"home",
+                "allows_sleep":true,
+                "overworld_destination":true,
+                "scene_id":"home_base_proto"
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "location_scenes.json", R"({
+        "location_scenes":[
+            {
+                "id":"home_base_proto",
+                "spawn":{"x":0,"y":0,"width":1,"height":1},
+                "blocking_rects":[],
+                "zones":[
+                    {
+                        "id":"prep_table",
+                        "type":"shop",
+                        "area":{"x":0,"y":0,"width":1,"height":1},
+                        "prompt_text":"",
+                        "result_text":"",
+                        "failure_text":"",
+                        "time_cost_minutes":0,
+                        "gold_cost":0,
+                        "recruit_count":0,
+                        "dialogue_choice_time_cost_minutes":1,
+                        "dialogue_choices":[]
+                    }
+                ]
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "units.json", R"({
+        "units":[
+            {
+                "id":"hero",
+                "name":"Hero",
+                "category":"hero",
+                "is_player_character":true,
+                "attack":1,
+                "defense":1,
+                "magic":1,
+                "resistance":1,
+                "min_damage":1,
+                "max_damage":1,
+                "max_hp":10,
+                "max_mp":0,
+                "agility":1,
+                "life":1,
+                "position":"front",
+                "range":"melee"
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({
+        "location_services":[
+            {
+                "id":"missing_location_service",
+                "location_id":"does_not_exist",
+                "zone_id":"prep_table",
+                "kind":"shop",
+                "prompt_text":"E: Prepare for Travel",
+                "success_text":"Prepared for travel",
+                "failure_text":"Already prepared",
+                "gold_cost":0,
+                "time_cost_minutes":0,
+                "daily_use_limit":1,
+                "travel_prep_discount_minutes":20,
+                "travel_prep_charges":1
+            }
+        ]
+    })");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ContentRepository fails when a location references a missing scene") {
+    const std::filesystem::path root = "saves/content_repo_missing_location_scene_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({
+        "regions":[
+            {
+                "id":"ashvale_heartland",
+                "name":"Ashvale Heartland",
+                "unlocked":true,
+                "nodes":[
+                    {
+                        "location_id":"home_base",
+                        "x":0,
+                        "y":0,
+                        "discovered":true,
+                        "travel_available":true
+                    }
+                ],
+                "links":[]
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "locations.json", R"({
+        "locations":[
+            {
+                "id":"home_base",
+                "name":"Home Base",
+                "type":"home",
+                "allows_sleep":true,
+                "overworld_destination":true,
+                "scene_id":"missing_scene_id"
+            }
+        ]
+    })");
+
+    // Important:
+    // The location points to "missing_scene_id", but only "home_base_proto" exists.
+    WriteTextFile(root / "location_scenes.json", R"({
+        "location_scenes":[
+            {
+                "id":"home_base_proto",
+                "spawn":{"x":0,"y":0,"width":1,"height":1},
+                "blocking_rects":[],
+                "zones":[]
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "units.json", R"({
+        "units":[
+            {
+                "id":"hero",
+                "name":"Hero",
+                "category":"hero",
+                "is_player_character":true,
+                "attack":1,
+                "defense":1,
+                "magic":1,
+                "resistance":1,
+                "min_damage":1,
+                "max_damage":1,
+                "max_hp":10,
+                "max_mp":0,
+                "agility":1,
+                "life":1,
+                "position":"front",
+                "range":"melee"
+            }
+        ]
+    })");
+
+    WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"location_services":[]})");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}

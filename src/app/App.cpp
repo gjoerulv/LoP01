@@ -45,7 +45,7 @@ App::App() {
 }
 
 void App::Run() {
-    InitWindow(1280, 720, "Project Ashvale - Visual Pass");
+    InitWindow(1280, 720, "Project Ashvale");
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
@@ -599,7 +599,7 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
     if (gameplay::location::IsShopService(&service)) {
         if (service.travelPrepDiscountMinutes > 0 && service.travelPrepCharges > 0 &&
             session_.HasActiveSameDayTravelPrep()) {
-            statusMessage_ = "Travel prep already active for next travel";
+            statusMessage_ = "Travel prep already active for next travel (use it first or wait for day rollover)";
             return false;
         }
 
@@ -609,6 +609,7 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
                 statusMessage_ = !service.failureText.empty()
                     ? service.failureText
                     : "Service already used today";
+                statusMessage_ += " (resets next day)";
                 return false;
             }
         }
@@ -622,6 +623,7 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
             statusMessage_ = !service.failureText.empty()
                 ? service.failureText
                 : "Service already used today";
+            statusMessage_ += " (resets next day)";
             return false;
         }
 
@@ -632,7 +634,7 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
         if (service.travelPrepDiscountMinutes > 0 && service.travelPrepCharges > 0) {
             session_.GrantSameDayTravelPrep(service.travelPrepDiscountMinutes, service.travelPrepCharges);
             statusMessage_ = service.successText + " | Next travel today -" +
-                std::to_string(service.travelPrepDiscountMinutes) + "m";
+                std::to_string(service.travelPrepDiscountMinutes) + "m (expires day end)";
             return true;
         }
 
@@ -642,12 +644,15 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
 
     if (gameplay::location::IsRecruitService(&service)) {
         session_.RefreshWeeklyRecruitStocks(content_.LocationServices());
+        const int currentWeek = session_.CurrentWeek();
 
         const int remainingBefore = session_.RemainingRecruitStock(service.id, service.weeklyStock);
         if (remainingBefore <= 0) {
             statusMessage_ = !service.failureText.empty()
                 ? service.failureText
                 : "No recruits available this week";
+            statusMessage_ += " (Week " + std::to_string(currentWeek) +
+                ", refreshes next week)";
             return false;
         }
 
@@ -672,7 +677,8 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
         ++recruitedUnits_;
 
         const int remainingAfter = session_.RemainingRecruitStock(service.id, service.weeklyStock);
-        statusMessage_ = service.successText + " (" + std::to_string(remainingAfter) + " left this week)";
+        statusMessage_ = service.successText + " (" + std::to_string(remainingAfter) +
+            " left this week, Week " + std::to_string(currentWeek) + ")";
         return true;
     }
 
@@ -712,13 +718,13 @@ void App::Draw() const {
     context.debugEnabled = debugOverlayVisible_;
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
-    const auto hudModel = hudModelMapper_.Map(snapshot, statusMessage_, session_.QuestProgress());
-
+    const auto hudModel = hudModelMapper_.Map(content_, session_, snapshot, statusMessage_, session_.QuestProgress());
+    
     switch (snapshot.mode) {
     case gameplay::GameMode::Title: {
         TitleScreenModel model;
         model.title = "Project Ashvale";
-        model.subtitle = "First Visual Gameplay Pass";
+        model.subtitle = "Prototype Vertical Slice";
         model.menuItems = {"Start"};
         model.selectedIndex = 0;
         model.footerHint = "Press Enter to continue";

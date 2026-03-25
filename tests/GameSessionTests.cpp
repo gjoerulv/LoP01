@@ -236,9 +236,11 @@ TEST_CASE("GameSession daily service usage and same-day travel prep work with da
 
     session.GrantSameDayTravelPrep(20, 1);
     REQUIRE(session.HasActiveSameDayTravelPrep());
+    REQUIRE(session.ActiveSameDayTravelPrepDiscountMinutes() == 20);
     REQUIRE(session.PreviewSameDayTravelPrepToTravelMinutes(40) == 20);
     REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 20);
     REQUIRE_FALSE(session.HasActiveSameDayTravelPrep());
+    REQUIRE(session.ActiveSameDayTravelPrepDiscountMinutes() == 0);
     REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 40);
 
     session.GrantSameDayTravelPrep(20, 1);
@@ -248,6 +250,7 @@ TEST_CASE("GameSession daily service usage and same-day travel prep work with da
     session.RefreshDailyServiceUses({ suppliesService });
     REQUIRE(session.RemainingDailyServiceUses(suppliesService.id, suppliesService.dailyUseLimit) == 1);
     REQUIRE_FALSE(session.HasActiveSameDayTravelPrep());
+    REQUIRE(session.ActiveSameDayTravelPrepDiscountMinutes() == 0);
     REQUIRE(session.PreviewSameDayTravelPrepToTravelMinutes(40) == 40);
     REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 40);
 }

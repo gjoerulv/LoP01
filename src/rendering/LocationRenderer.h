@@ -53,6 +53,7 @@ namespace ashvale::rendering
 
         bool showInteractPrompt = false;
         std::string interactPrompt = "Press E to interact";
+        bool interactPromptUsable = true;
 
         LocationDialogueView dialogue;
     };

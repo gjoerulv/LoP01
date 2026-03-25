@@ -62,6 +62,7 @@ public:
 
     void GrantSameDayTravelPrep(int discountMinutes, int charges);
     [[nodiscard]] bool HasActiveSameDayTravelPrep() const;
+    [[nodiscard]] int ActiveSameDayTravelPrepDiscountMinutes() const;
     [[nodiscard]] int PreviewSameDayTravelPrepToTravelMinutes(int baseTravelMinutes) const;
     [[nodiscard]] int ApplySameDayTravelPrepToTravelMinutes(int baseTravelMinutes);
 

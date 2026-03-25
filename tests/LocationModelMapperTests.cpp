@@ -60,21 +60,23 @@ TEST_CASE("Location recruit prompt reflects weekly restock without requiring rec
 
     app::mappers::LocationModelMapper mapper;
     auto model = mapper.Map(content, session, session.Snapshot(), scene, "");
-    REQUIRE(model.interactPrompt.find("Stock 0/3") != std::string::npos);
+    REQUIRE(model.interactPrompt.find("Stock: 0/3") != std::string::npos);
+    REQUIRE_FALSE(model.interactPromptUsable);
 
     session.AddMinutes(core::GameClock::kMinutesPerSliceDay * 7);
 
     model = mapper.Map(content, session, session.Snapshot(), scene, "");
-    REQUIRE(model.interactPrompt.find("Stock 0/3") != std::string::npos);
+    REQUIRE(model.interactPrompt.find("Stock: 0/3") != std::string::npos);
 
     session.RefreshWeeklyRecruitStocks(content.LocationServices());
 
     model = mapper.Map(content, session, session.Snapshot(), scene, "");
-    REQUIRE(model.interactPrompt.find("Stock 3/3") != std::string::npos);
+    REQUIRE(model.interactPrompt.find("Stock: 3/3") != std::string::npos);
+    REQUIRE(model.interactPromptUsable);
 
     REQUIRE(session.TryConsumeRecruitStock(service->id, service->weeklyStock));
     model = mapper.Map(content, session, session.Snapshot(), scene, "");
-    REQUIRE(model.interactPrompt.find("Stock 2/3") != std::string::npos);
+    REQUIRE(model.interactPrompt.find("Stock: 2/3") != std::string::npos);
 
     std::filesystem::remove_all(root);
 }

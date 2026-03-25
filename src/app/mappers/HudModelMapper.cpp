@@ -5,6 +5,8 @@
 namespace app::mappers
 {
     ashvale::rendering::HudModel HudModelMapper::Map(
+        const data::ContentRepository& content,
+        const gameplay::GameSession& session,
         const gameplay::SessionSnapshot& snapshot,
         const std::string& statusText,
         const std::vector<gameplay::quests::QuestProgress>& quests) const
@@ -47,16 +49,34 @@ namespace app::mappers
         }
 
         ashvale::rendering::HudModel model;
-        model.modeLabel = gameplay::GameSession::ToString(snapshot.mode);
         model.day = snapshot.day;
+        model.week = ((snapshot.day - 1) / 7) + 1;
         model.timeText = snapshot.time;
         model.gold = snapshot.gold;
+        model.questCompactText = "Q" + std::to_string(completed) + "/" + std::to_string(quests.size());
+        if (session.HasActiveSameDayTravelPrep()) {
+            model.activeBuffIcons.push_back("travel_prep");
+        }
+
         model.primaryAreaLabel = "Region:";
-        model.primaryAreaValue = snapshot.regionId;
+        if (const auto* region = content.FindRegionById(snapshot.regionId)) {
+            model.primaryAreaValue = region->name;
+        }
+        else {
+            model.primaryAreaValue = snapshot.regionId;
+        }
+
         model.secondaryAreaLabel = "Location:";
-        model.secondaryAreaValue = snapshot.destinationId;
-        model.statusText = statusText.empty() ? questInfo : statusText + " | " + questInfo;
-        model.showStatus = true;
+        if (const auto* location = content.FindLocationById(snapshot.destinationId)) {
+            model.secondaryAreaValue = location->name;
+        }
+        else {
+            model.secondaryAreaValue = snapshot.destinationId;
+        }
+
+        (void)statusText;
+        (void)questInfo;
+        model.showStatus = false;
         return model;
     }
 }

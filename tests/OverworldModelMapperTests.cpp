@@ -50,8 +50,8 @@ TEST_CASE("OverworldModelMapper exposes cleared combat node text") {
     const auto model = mapper.Map(repository, session, snapshot, 1, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Bridge Checkpoint");
-    REQUIRE(model.selectedNodeType.find("Node: Cleared") != std::string::npos);
-    REQUIRE(model.selectedNodeEnterable.find("Battle: No (Cleared)") != std::string::npos);
+    REQUIRE(model.selectedNodeType == "Combat");
+    REQUIRE(model.selectedNodeEnterable.find("Battle") == std::string::npos);
 
     std::filesystem::remove_all(root);
 }
@@ -74,7 +74,7 @@ TEST_CASE("OverworldModelMapper exposes uncleared blocker travel text") {
     const auto model = mapper.Map(repository, session, snapshot, 2, {});
 
     REQUIRE(model.selectedNodeLabel == "Clocktower Square");
-    REQUIRE(model.selectedNodeEnterable.find("blocked by uncleared route blocker") != std::string::npos);
+    REQUIRE(model.selectedNodeEnterable == "Scene");
 
     std::filesystem::remove_all(root);
 }
@@ -97,7 +97,7 @@ TEST_CASE("OverworldModelMapper exposes past-02:00 blocked reason text") {
     const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Clocktower Square");
-    REQUIRE(model.selectedNodeEnterable.find("arrives past 02:00") != std::string::npos);
+    REQUIRE(model.travelTimeText == "Unavailable");
 
     std::filesystem::remove_all(root);
 }

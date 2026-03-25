@@ -187,6 +187,23 @@ Tradeoff:
 - Cross-region party rules are more explicit and less intuitive than a single global party model.
 - This should remain content-driven and clearly communicated in UI when implemented.
 
+### 17) Milestone 7 travel prep and service readability are explicit and UI-light
+
+Decision:
+- Travel prep remains one shared same-day travel effect granted by authored services (Home Base prep and Supply Cart prep).
+- Active prep does not stack with another unused prep charge.
+- Unused prep expires at day rollover.
+- Service tooltips use a consistent multiline structure (explanation, cost/effect, reset timing).
+- HUD remains compact and persistent-state focused, with week visibility and active prep icon visibility.
+
+Why:
+- Delivers visible service/economy clarity without introducing an inventory system, generic buff framework, or large UI rewrite.
+- Keeps the implementation aligned with the explicit App/GameSession/controller-mapper-renderer architecture.
+
+Tradeoff:
+- Tooltip/icon presentation is intentionally lightweight and not a full UI pass.
+- Richer buff/status visualization and broader economy UX should be deferred to later milestones.
+
 
 ## Assumptions
 

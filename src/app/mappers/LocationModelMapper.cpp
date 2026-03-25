@@ -3,6 +3,7 @@
 #include <cctype>
 #include <string>
 
+#include "app/formatters/LocationServicePromptFormatter.h"
 #include "gameplay/location/LocationServiceRules.h"
 
 namespace app::mappers
@@ -85,6 +86,18 @@ namespace app::mappers
 
             return LocationInteractableType::Unknown;
         }
+
+        std::string ReplaceFirst(std::string text, const std::string& from, const std::string& to)
+        {
+            const std::size_t index = text.find(from);
+            if (index == std::string::npos)
+            {
+                return text;
+            }
+
+            text.replace(index, from.size(), to);
+            return text;
+        }
     }
 
     LocationRenderModel LocationModelMapper::Map(
@@ -139,6 +152,7 @@ namespace app::mappers
         }
             
         model.showInteractPrompt = nearZone >= 0;
+        model.interactPromptUsable = true;
         if (scene.HasActiveDialogue())
         {
             model.interactPrompt = "Choose dialogue option (1/2)";
@@ -156,15 +170,55 @@ namespace app::mappers
                 const int remainingDailyUses = service->dailyUseLimit > 0
                     ? session.RemainingDailyServiceUses(service->id, service->dailyUseLimit)
                     : service->dailyUseLimit;
-                model.interactPrompt = gameplay::location::BuildServicePromptText(
-                    *service,
-                    remainingStock,
-                    session.CurrentWeek(),
-                    remainingDailyUses);
+
+                app::LocationServicePromptContext promptContext;
+                promptContext.remainingRecruitStock = remainingStock;
+                promptContext.currentWeek = session.CurrentWeek();
+                promptContext.remainingDailyUses = remainingDailyUses;
+                promptContext.hasActiveTravelPrep = session.HasActiveSameDayTravelPrep();
+
+                model.interactPrompt = app::BuildLocationServicePrompt(*service, promptContext);
+
+                bool promptUsable = true;
+                if (gameplay::location::IsRecruitService(service))
+                {
+                    if (remainingStock <= 0 || (service->goldCost > 0 && snapshot.gold < service->goldCost))
+                    {
+                        promptUsable = false;
+                    }
+                }
+                else if (gameplay::location::IsShopService(service))
+                {
+                    if (service->dailyUseLimit > 0 && remainingDailyUses <= 0)
+                    {
+                        promptUsable = false;
+                    }
+
+                    if (service->travelPrepDiscountMinutes > 0 && service->travelPrepCharges > 0 &&
+                        session.HasActiveSameDayTravelPrep())
+                    {
+                        promptUsable = false;
+                    }
+
+                    if (service->goldCost > 0 && snapshot.gold < service->goldCost)
+                    {
+                        promptUsable = false;
+                    }
+                }
+                else if (gameplay::location::IsRestService(service))
+                {
+                    if (service->goldCost > 0 && snapshot.gold < service->goldCost)
+                    {
+                        promptUsable = false;
+                    }
+                }
+
+                model.interactPromptUsable = promptUsable;
             }
             else
             {
                 model.interactPrompt = zones[nearZone].promptText;
+                model.interactPromptUsable = true;
             }
         }
         else
