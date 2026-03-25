@@ -85,7 +85,7 @@ Always consult these docs when relevant:
 - `docs/combat_rules.md`
 - `docs/content_scope_v0.md`
 - `docs/technical_direction.md`
-- `docs/milestone_7_services_economy_weekly_cadence.md` when working on Milestone 7 tasks
+- `docs/milestone_8_persistent_roster_home_base_mustering.md` when working on Milestone 8 tasks
 
 ## Document precedence
 
@@ -103,18 +103,23 @@ When documents overlap or conflict, use this order of authority:
 
 ## Current milestone baseline
 
-Milestone 6 is complete on the current branch.
+Milestone 7 is complete on the current branch.
 
 Assume the current baseline already includes:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
-- typed regions, locations, location scenes, battle scenarios, quests, and lightweight world state
+- typed regions, locations, location scenes, battle scenarios, quests, and service definitions
 - unified wake-penalty recovery flow
 - route-aware travel, cutoff-aware travel, and blocker-aware routing
 - minimal persistent cleared combat-node state
 - minimal typed quest progression tied to world actions
-- save/load for current slice state and lightweight world/progression state
+- save/load for current slice state and lightweight world/progression/service state
+- Home Base free rest and free once-per-day travel prep
+- Old Inn paid rest
+- Recruit Post weekly recruit stock and refresh behavior
+- Supply Cart paid same-day travel prep fallback
+- app-layer service prompt formatting and UI-light readability improvements
 
 Use the following hierarchy as long-term project vocabulary and design direction:
 
@@ -122,23 +127,24 @@ Use the following hierarchy as long-term project vocabulary and design direction
 
 The current codebase is still a bounded single-region slice and does not yet implement the full world-map / cross-region travel layer.
 
-Do not introduce world-map travel systems, per-region party transfer systems, or broader campaign structure as part of Milestone 7 unless explicitly requested.
+Do not introduce world-map travel systems, per-region party transfer systems, or broader campaign structure as part of Milestone 8 unless explicitly requested.
 
 Preserve this baseline unless a change is clearly necessary.
 
 ## Current milestone focus
 
-The active planning target is Milestone 7: home base, services, economy, and weekly cadence.
+The active planning target is Milestone 8: persistent roster state, Home Base mustering, and battle-party consequence.
 
 Priorities for the next milestone:
 
 - preserve the existing `App` / `GameSession` and controller / mapper / renderer architecture
 - keep mode transitions explicit and easy to follow
-- make home base feel like the free-rest safe hub of the slice
-- make inns meaningful as paid rest locations
-- make recruit locations content-driven with offers, quantities, and weekly refresh
-- keep new service/economy data editor-friendly and strongly content-driven
-- keep UI additions lightweight and focused on communicating cost, quantity, and refresh state
+- make recruitment produce persistent gameplay state instead of only economic/message state
+- introduce a clear distinction between reserve roster state and active field-party state
+- make Home Base the primary mustering/reorganization anchor of the slice
+- make battle allies come from current active-party state where appropriate
+- keep new roster/progression state explicit, testable, and save/load friendly
+- keep UI additions lightweight and focused on state clarity rather than large presentation rewrites
 - maintain responsiveness, performance, and ownership clarity as systems deepen
 
 Avoid:
@@ -146,8 +152,9 @@ Avoid:
 - broad content expansion disconnected from the milestone
 - extra regions
 - major new combat mechanics
-- generic service/event frameworks
+- inventory/equipment systems unless explicitly required
+- generic service/event/party-management frameworks
 - large architectural rewrites
 - building the editor itself during this milestone
 
-When in doubt, prefer the smallest clean implementation that keeps the playable slice coherent and moves the game toward a stronger service/economy identity.
+When in doubt, prefer the smallest clean implementation that keeps the playable slice coherent and moves the game toward a stronger persistent roster and Home Base identity.
