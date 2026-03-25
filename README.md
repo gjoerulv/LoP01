@@ -124,7 +124,7 @@ Content files under `content/` define the current slice, including:
 - `enemy_groups.json`
 - `quests.json`
 
-These files provide the bounded playable-slice content used by the current milestone path. Future service/economy work should continue to extend content schemas rather than hardcoding service behavior in gameplay logic.
+These files provide the bounded playable-slice content used by the current milestone path. Future progression work should continue to extend content schemas and gameplay-facing runtime state rather than hardcoding milestone-specific behavior into presentation or app glue.
 
 ## Current controls
 
@@ -143,41 +143,11 @@ Controls are still prototype-level and may evolve, but the current slice support
 - `F5`: save to `saves/slot_1.json`
 - `F9`: load from `saves/slot_1.json`
 
-## Milestone 6 status
+## Current milestone status
 
-Milestone 6 is complete and merged. The current branch starts from that post-M6 baseline.
+Milestone 7 is complete and merged to `main`.
 
-Delivered Milestone 6 outcomes:
-
-- clearer world identity despite shared prototype scene reuse
-- rest validity fixed for the current slice without broad service gating
-- route-aware travel replacing placeholder index-distance travel
-- blocker-aware routing tied to lightweight persistent world state
-- combat-node-clear quest progression tied into the world loop
-- readability improvements for travel reasons, blockers, cleared nodes, and current quest hints
-
-Milestone 6 docs/prompts are retained as archived history only.
-
-Location scenes may still reuse prototype layout, but service identity for M7 must come from per-location authored service data rather than from shared scene interaction costs.
-
-## Milestone 7 direction
-
-Milestone 7 should be a larger, more visible update focused on **home base identity, service economy, and weekly cadence**.
-
-Current Milestone 7 priorities:
-
-- make home base feel like the central safe hub of the slice
-- make inns usable and paid, while home-base rest remains free
-- make recruit locations content-driven with unit offers, quantities, and weekly refresh
-- introduce content-driven service/economy state that remains editor-friendly
-- preserve separation of concerns and current architecture
-- keep the game responsive and performant, with clear ownership and no memory leaks
-
-See `docs/game_vision_complete.md` and `docs/milestone_7_services_economy_weekly_cadence.md` for the active planning direction.
-
-## Milestone 7 implemented baseline (current branch)
-
-The current branch now includes the intended Milestone 7 service/economy slice:
+Delivered Milestone 7 outcomes:
 
 - **Home Base**
   - free rest
@@ -198,6 +168,42 @@ The current branch now includes the intended Milestone 7 service/economy slice:
   - week visibility in HUD
   - active prep shown as buff icon(s)
   - clearer multiline service tooltip structure
+- **Post-M7 hardening**
+  - service prompt text assembly moved out of gameplay rules and into the app layer
+
+Milestone 6 and Milestone 7 docs/prompts are retained as history only once archived.
+
+## Current gameplay baseline
+
+The current branch now includes this post-M7 baseline:
+
+- explicit `App` / `GameSession` flow
+- controller / mapper / renderer split
+- typed regions, locations, location scenes, battle scenarios, quests, and service definitions
+- unified wake-penalty recovery flow
+- route-aware travel replacing placeholder index-distance travel
+- blocker-aware routing tied to lightweight persistent world state
+- minimal typed quest progression tied into the world loop
+- save/load for current slice state and lightweight world/progression/service state
+- content-driven service/economy behavior for rest, recruit stock, and travel prep
+- app-layer service prompt formatting and UI-light readability improvements
+
+## Milestone 8 direction
+
+Milestone 8 should be a larger, meaningful step centered on **persistent roster state, Home Base mustering, and battle-party consequence**.
+
+Current Milestone 8 priorities:
+
+- preserve the existing `App` / `GameSession` and controller / mapper / renderer architecture
+- keep gameplay logic separate from rendering/input
+- make recruitment create persistent gameplay state instead of only economic/message state
+- make Home Base matter as the primary mustering/recovery anchor of the slice
+- make battles use the current active party rather than relying only on static allied battle setup
+- keep the work bounded to the current single-region slice
+- avoid depending on unresolved campaign/world-map/multi-region decisions
+- maintain responsiveness, explicit ownership, leak resistance, and performance
+
+See `docs/game_vision_complete.md` and `docs/milestone_8_persistent_roster_home_base_mustering.md` for the active planning direction.
 
 ## Build
 
@@ -211,5 +217,6 @@ cmake --build build
 - Archived milestone docs and prompts are kept for history and should not be treated as active implementation guidance.
 - `docs/content_scope_v0.md` remains a scope cap, not a checklist of completed work.
 - The active long-term north-star doc is `docs/game_vision_complete.md`.
+- The active milestone-planning doc is `docs/milestone_8_persistent_roster_home_base_mustering.md`.
 - For the finished-direction hierarchy and terminology, see `docs/game_vision_complete.md`.
 - The current codebase is still a bounded slice and does not yet implement the full campaign/scenario/world-map structure.

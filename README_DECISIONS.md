@@ -130,18 +130,19 @@ Why:
 - Prevents accidental blending of design data with mutable runtime state.
 - Makes future tooling and save/load behavior much easier to reason about.
 
-### 13) Milestone 7 should favor visible service/economy progress
+### 13) Milestone 7 favored visible service/economy progress
 
 Decision:
-- Milestone 7 should be a larger-feeling update centered on home base identity, service economy, recruit availability, and weekly cadence.
-- Future service work should model cost, stock, quantity, and refresh rather than expanding “valid/invalid service gating” as a general pattern.
+- Milestone 7 focused on home base identity, service economy, recruit availability, and weekly cadence.
+- Service work in that milestone modeled cost, stock, quantity, and refresh rather than expanding “valid/invalid service gating” as a general pattern.
 
 Why:
-- The next milestone should feel like meaningful game progression, not only coherence hardening.
-- Inns, recruit posts, and shops matter more as economic/service systems than as binary usable/unusable interactions.
+- The slice needed a more visible sense of game identity, not only coherence hardening.
+- Inns, recruit posts, and travel-prep services mattered more as economic/service systems than as binary usable/unusable interactions.
 
 Tradeoff:
-- Milestone 7 is broader than Milestone 6 and should therefore be planned clearly before implementation starts.
+- Milestone 7 broadened runtime state and service communication before recruits became full persistent party state.
+- That was acceptable for M7 because the milestone’s goal was service/economy grounding first, not yet durable roster consequence.
 
 ### 14) Content schemas should remain friendly to future editor tooling
 
@@ -187,7 +188,7 @@ Tradeoff:
 - Cross-region party rules are more explicit and less intuitive than a single global party model.
 - This should remain content-driven and clearly communicated in UI when implemented.
 
-### 17) Milestone 7 travel prep and service readability are explicit and UI-light
+### 17) Milestone 7 travel prep and service readability remain explicit and UI-light
 
 Decision:
 - Travel prep remains one shared same-day travel effect granted by authored services (Home Base prep and Supply Cart prep).
@@ -198,11 +199,28 @@ Decision:
 
 Why:
 - Delivers visible service/economy clarity without introducing an inventory system, generic buff framework, or large UI rewrite.
-- Keeps the implementation aligned with the explicit App/GameSession/controller-mapper-renderer architecture.
+- Keeps the implementation aligned with the explicit `App` / `GameSession` / controller / mapper / renderer architecture.
 
 Tradeoff:
-- Tooltip/icon presentation is intentionally lightweight and not a full UI pass.
-- Richer buff/status visualization and broader economy UX should be deferred to later milestones.
+- The service layer communicates state clearly, but recruit outcomes still stop short of becoming durable roster/party gameplay state.
+- That gap is intentionally the next milestone’s problem rather than something M7 solved halfway.
+
+### 18) Milestone 8 should turn recruits into persistent roster consequence
+
+Decision:
+- Milestone 8 should focus on persistent roster state, Home Base mustering, and active-party consequence.
+- Recruit actions should stop being merely economic/message events and should instead produce durable gameplay state.
+- Home Base should become the main place where reserve state and active-party state are organized.
+- The milestone should stay bounded to the current single-region slice and avoid depending on unresolved campaign/world-map structure.
+
+Why:
+- The largest remaining gap after Milestone 7 is that recruit services matter economically but not yet strategically in a durable way.
+- Turning recruitment into roster state creates a stronger strategy/RPG loop without requiring inventory systems, broad narrative systems, or multi-region design resolution.
+- Home Base gains clearer long-term identity if it is both a safe hub and the primary mustering anchor.
+
+Tradeoff:
+- This milestone should avoid overreaching into a full party-management UI, inventory/equipment systems, or cross-region roster transfer rules.
+- Battle-party integration should be strong enough to create consequence, but still remain explicit, testable, and slice-appropriate.
 
 
 ## Assumptions

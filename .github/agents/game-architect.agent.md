@@ -36,7 +36,7 @@ If requirements conflict, prioritize:
 6. UI polish
 
 Current baseline:
-- Milestone 6 is complete on this branch
+- Milestone 7 is complete on this branch
 - explicit `App` / `GameSession` flow is in place
 - controller / mapper / renderer split is in place
 - route-aware and blocker-aware overworld travel is in place
@@ -44,15 +44,21 @@ Current baseline:
 - battle return flow is explicit
 - wake-penalty recovery flow is unified
 - minimal typed quest progression exists
-- save/load persists current slice state plus lightweight world/progression state
+- save/load persists current slice state plus lightweight world/progression/service state
+- Home Base free rest and free once-per-day travel prep are implemented
+- Old Inn paid rest is implemented
+- Recruit Post weekly recruit stock/refresh is implemented
+- Supply Cart paid travel prep fallback is implemented
+- service prompt formatting lives in the app layer rather than gameplay rules
 
-Current focus for Milestone 7:
+Current focus for Milestone 8:
 - preserve the current architecture
-- make home base feel like the free-rest safe hub
-- make inns meaningful as paid rest locations
-- add content-driven recruit offers, quantities, and weekly refresh
-- keep new service/economy schemas editor-friendly and testable
-- maintain responsiveness and separation of concerns while service depth increases
+- make recruitment create persistent roster state
+- introduce a clear active-party versus reserve-state model
+- make Home Base the primary mustering/recovery anchor
+- make battle-party setup reflect current active-party state where appropriate
+- keep new runtime state explicit, save/load friendly, and testable
+- maintain responsiveness and separation of concerns while consequence depth increases
 - keep implementation incremental and compilable
 
 Avoid:
@@ -60,4 +66,6 @@ Avoid:
 - large renderer rewrites
 - premature generic frameworks
 - major combat redesign
+- inventory/equipment sprawl
+- unresolved cross-region roster systems
 - mixing input logic with rendering code
