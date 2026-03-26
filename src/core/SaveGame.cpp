@@ -17,12 +17,24 @@ void to_json(json& j, const RecruitServiceState& data) {
     };
 }
 
+void to_json(json& j, const OwnedUnitCountSaveState& data) {
+    j = json{
+        {"unit_id", data.unitId},
+        {"count", data.count}
+    };
+}
+
 void to_json(json& j, const DailyServiceState& data) {
     j = json{
         {"service_id", data.serviceId},
         {"remaining_uses_today", data.remainingUsesToday},
         {"last_refresh_day", data.lastRefreshDay}
     };
+}
+
+void from_json(const json& j, OwnedUnitCountSaveState& data) {
+    j.at("unit_id").get_to(data.unitId);
+    j.at("count").get_to(data.count);
 }
 
 void from_json(const json& j, RecruitServiceState& data) {
@@ -51,7 +63,9 @@ void to_json(json& j, const SaveData& data) {
         {"daily_service_states", data.dailyServiceStates},
         {"travel_prep_discount_minutes", data.travelPrepDiscountMinutes},
         {"travel_prep_remaining_charges", data.travelPrepRemainingCharges},
-        {"travel_prep_granted_day", data.travelPrepGrantedDay}
+        {"travel_prep_granted_day", data.travelPrepGrantedDay},
+        {"owned_unit_counts", data.ownedUnitCounts},
+        {"active_party_unit_ids", data.activePartyUnitIds}
     };
 }
 
@@ -85,6 +99,34 @@ void from_json(const json& j, SaveData& data) {
     data.travelPrepDiscountMinutes = j.value("travel_prep_discount_minutes", 0);
     data.travelPrepRemainingCharges = j.value("travel_prep_remaining_charges", 0);
     data.travelPrepGrantedDay = j.value("travel_prep_granted_day", 0);
+
+    data.ownedUnitCounts.clear();
+    if (j.contains("owned_unit_counts") && j["owned_unit_counts"].is_array()) {
+        for (const auto& entryJson : j["owned_unit_counts"]) {
+            if (!entryJson.is_object()) {
+                continue;
+            }
+
+            if (!entryJson.contains("unit_id") || !entryJson["unit_id"].is_string()) {
+                continue;
+            }
+
+            if (!entryJson.contains("count") ||
+                !(entryJson["count"].is_number_integer() || entryJson["count"].is_number_unsigned())) {
+                continue;
+            }
+
+            OwnedUnitCountSaveState entry;
+            entry.unitId = entryJson["unit_id"].get<std::string>();
+            entry.count = entryJson["count"].get<int>();
+            data.ownedUnitCounts.push_back(std::move(entry));
+        }
+    }
+
+    data.activePartyUnitIds.clear();
+    if (j.contains("active_party_unit_ids") && j["active_party_unit_ids"].is_array()) {
+        data.activePartyUnitIds = j["active_party_unit_ids"].get<std::vector<std::string>>();
+    }
 }
 
 bool SaveGameRepository::SaveToFile(const SaveData& saveData, const std::string& filePath) const {

@@ -41,6 +41,44 @@ TEST_CASE("ContentRepository loads blocks_transit_until_cleared flag") {
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("ContentRepository fails when recruit service is missing unit_id") {
+    const std::filesystem::path root = "saves/content_repo_recruit_missing_unit_id_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({"regions":[{"id":"ashvale_heartland","name":"Ashvale Heartland","unlocked":true,"nodes":[{"location_id":"survivor_recruit_post","x":0,"y":0,"discovered":true,"travel_available":true}],"links":[]}]})");
+    WriteTextFile(root / "locations.json", R"({"locations":[{"id":"survivor_recruit_post","name":"Survivor Recruit Post","type":"recruit","allows_sleep":false,"overworld_destination":true,"scene_id":"recruit_post_proto"}]})");
+    WriteTextFile(root / "location_scenes.json", R"({"location_scenes":[{"id":"recruit_post_proto","spawn":{"x":0,"y":0,"width":1,"height":1},"blocking_rects":[],"zones":[{"id":"recruit_board","type":"recruit","area":{"x":0,"y":0,"width":1,"height":1},"prompt_text":"","result_text":"","failure_text":"","time_cost_minutes":0,"gold_cost":0,"recruit_count":0,"dialogue_choice_time_cost_minutes":1,"dialogue_choices":[]}]}]})");
+    WriteTextFile(root / "units.json", R"({"units":[{"id":"unit_guard","name":"Guard","category":"generic","is_player_character":false,"attack":1,"defense":1,"magic":1,"resistance":1,"min_damage":1,"max_damage":1,"max_hp":10,"max_mp":0,"agility":1,"life":1,"position":"front","range":"melee"}]})");
+    WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"location_services":[{"id":"survivor_post_recruitment","location_id":"survivor_recruit_post","zone_id":"recruit_board","kind":"recruit","prompt_text":"","success_text":"Recruited","failure_text":"No stock","gold_cost":120,"time_cost_minutes":10,"weekly_stock":3}]})");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ContentRepository fails when recruit service unit_id is unknown") {
+    const std::filesystem::path root = "saves/content_repo_recruit_unknown_unit_id_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({"regions":[{"id":"ashvale_heartland","name":"Ashvale Heartland","unlocked":true,"nodes":[{"location_id":"survivor_recruit_post","x":0,"y":0,"discovered":true,"travel_available":true}],"links":[]}]})");
+    WriteTextFile(root / "locations.json", R"({"locations":[{"id":"survivor_recruit_post","name":"Survivor Recruit Post","type":"recruit","allows_sleep":false,"overworld_destination":true,"scene_id":"recruit_post_proto"}]})");
+    WriteTextFile(root / "location_scenes.json", R"({"location_scenes":[{"id":"recruit_post_proto","spawn":{"x":0,"y":0,"width":1,"height":1},"blocking_rects":[],"zones":[{"id":"recruit_board","type":"recruit","area":{"x":0,"y":0,"width":1,"height":1},"prompt_text":"","result_text":"","failure_text":"","time_cost_minutes":0,"gold_cost":0,"recruit_count":0,"dialogue_choice_time_cost_minutes":1,"dialogue_choices":[]}]}]})");
+    WriteTextFile(root / "units.json", R"({"units":[{"id":"unit_guard","name":"Guard","category":"generic","is_player_character":false,"attack":1,"defense":1,"magic":1,"resistance":1,"min_damage":1,"max_damage":1,"max_hp":10,"max_mp":0,"agility":1,"life":1,"position":"front","range":"melee"}]})");
+    WriteTextFile(root / "battle_scenarios.json", R"({"battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"location_services":[{"id":"survivor_post_recruitment","location_id":"survivor_recruit_post","zone_id":"recruit_board","kind":"recruit","prompt_text":"","success_text":"Recruited","failure_text":"No stock","gold_cost":120,"time_cost_minutes":10,"unit_id":"unit_missing","weekly_stock":3}]})");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_CASE("ContentRepository fails when a location service references a missing scene zone") {
     const std::filesystem::path root = "saves/content_repo_missing_service_zone_test";
     std::filesystem::create_directories(root);

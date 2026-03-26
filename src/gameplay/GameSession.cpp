@@ -7,6 +7,30 @@ namespace gameplay {
 
 namespace
 {
+    bool IsValidOwnedEntry(const OwnedUnitCountState& entry) {
+        return !entry.unitId.empty() && entry.count > 0;
+    }
+
+    bool OwnedUnitIdLess(const OwnedUnitCountState& left, const OwnedUnitCountState& right) {
+        return left.unitId < right.unitId;
+    }
+
+    auto FindOwnedUnitIt(std::vector<OwnedUnitCountState>& owned, const std::string& unitId) {
+        return std::lower_bound(
+            owned.begin(),
+            owned.end(),
+            OwnedUnitCountState{unitId, 0},
+            OwnedUnitIdLess);
+    }
+
+    auto FindOwnedUnitIt(const std::vector<OwnedUnitCountState>& owned, const std::string& unitId) {
+        return std::lower_bound(
+            owned.begin(),
+            owned.end(),
+            OwnedUnitCountState{unitId, 0},
+            OwnedUnitIdLess);
+    }
+
     core::RecruitServiceState* FindRecruitServiceState(
         std::vector<core::RecruitServiceState>& states,
         const std::string& serviceId) {
@@ -368,6 +392,140 @@ const std::vector<quests::QuestProgress>& GameSession::QuestProgress() const {
     return questState_.Quests();
 }
 
+int GameSession::ActivePartyCapacity() const {
+    return std::max(0, activePartyCapacity_);
+}
+
+int GameSession::OwnedUnitCount(const std::string& unitId) const {
+    if (unitId.empty()) {
+        return 0;
+    }
+
+    const auto it = FindOwnedUnitIt(ownedUnitCounts_, unitId);
+    if (it == ownedUnitCounts_.end() || it->unitId != unitId) {
+        return 0;
+    }
+
+    return std::max(0, it->count);
+}
+
+int GameSession::ActivePartyAllocatedCount(const std::string& unitId) const {
+    if (unitId.empty()) {
+        return 0;
+    }
+
+    int allocated = 0;
+    for (const auto& activeId : activePartyUnitIds_) {
+        if (activeId == unitId) {
+            ++allocated;
+        }
+    }
+
+    return allocated;
+}
+
+int GameSession::ReserveUnitCount(const std::string& unitId) const {
+    const int owned = OwnedUnitCount(unitId);
+    const int allocated = ActivePartyAllocatedCount(unitId);
+    return std::max(0, owned - allocated);
+}
+
+const std::vector<OwnedUnitCountState>& GameSession::OwnedUnitCounts() const {
+    return ownedUnitCounts_;
+}
+
+const std::vector<std::string>& GameSession::ActivePartyUnitIds() const {
+    return activePartyUnitIds_;
+}
+
+bool GameSession::AddOwnedUnit(const std::string& unitId, const int count) {
+    if (unitId.empty() || count <= 0) {
+        return false;
+    }
+
+    auto it = FindOwnedUnitIt(ownedUnitCounts_, unitId);
+    if (it != ownedUnitCounts_.end() && it->unitId == unitId) {
+        it->count += count;
+        return true;
+    }
+
+    ownedUnitCounts_.insert(it, OwnedUnitCountState{unitId, count});
+    return true;
+}
+
+bool GameSession::TryRemoveOwnedUnit(const std::string& unitId, const int count) {
+    if (unitId.empty() || count <= 0) {
+        return false;
+    }
+
+    auto it = FindOwnedUnitIt(ownedUnitCounts_, unitId);
+    if (it == ownedUnitCounts_.end() || it->unitId != unitId) {
+        return false;
+    }
+
+    const int owned = std::max(0, it->count);
+    const int activeAllocated = ActivePartyAllocatedCount(unitId);
+    if (owned < count || owned - count < activeAllocated) {
+        return false;
+    }
+
+    it->count -= count;
+    if (it->count <= 0) {
+        ownedUnitCounts_.erase(it);
+    }
+
+    return true;
+}
+
+bool GameSession::TryAddUnitToActiveParty(const std::string& unitId) {
+    if (unitId.empty()) {
+        return false;
+    }
+
+    if (static_cast<int>(activePartyUnitIds_.size()) >= ActivePartyCapacity()) {
+        return false;
+    }
+
+    if (ReserveUnitCount(unitId) <= 0) {
+        return false;
+    }
+
+    activePartyUnitIds_.push_back(unitId);
+    return true;
+}
+
+bool GameSession::TryRemoveActivePartyUnitAt(const int index) {
+    if (index < 0 || index >= static_cast<int>(activePartyUnitIds_.size())) {
+        return false;
+    }
+
+    activePartyUnitIds_.erase(activePartyUnitIds_.begin() + index);
+    return true;
+}
+
+bool GameSession::TryMoveActivePartyUnit(const int fromIndex, const int toIndex) {
+    if (fromIndex < 0 || fromIndex >= static_cast<int>(activePartyUnitIds_.size())) {
+        return false;
+    }
+
+    if (toIndex < 0 || toIndex >= static_cast<int>(activePartyUnitIds_.size())) {
+        return false;
+    }
+
+    if (fromIndex == toIndex) {
+        return true;
+    }
+
+    const std::string moved = activePartyUnitIds_[fromIndex];
+    activePartyUnitIds_.erase(activePartyUnitIds_.begin() + fromIndex);
+    activePartyUnitIds_.insert(activePartyUnitIds_.begin() + toIndex, moved);
+    return true;
+}
+
+void GameSession::ClearActiveParty() {
+    activePartyUnitIds_.clear();
+}
+
 SessionSnapshot GameSession::Snapshot() const {
     return SessionSnapshot{
         mode_,
@@ -381,6 +539,12 @@ SessionSnapshot GameSession::Snapshot() const {
 }
 
 core::SaveData GameSession::ToSaveData() const {
+    std::vector<core::OwnedUnitCountSaveState> ownedUnitCounts;
+    ownedUnitCounts.reserve(ownedUnitCounts_.size());
+    for (const auto& entry : ownedUnitCounts_) {
+        ownedUnitCounts.push_back(core::OwnedUnitCountSaveState{entry.unitId, entry.count});
+    }
+
     return core::SaveData{
         clock_.Day(),
         clock_.MinutesIntoSliceDay(),
@@ -394,7 +558,9 @@ core::SaveData GameSession::ToSaveData() const {
         dailyServiceStates_,
         travelPrepDiscountMinutes_,
         travelPrepRemainingCharges_,
-        travelPrepGrantedDay_
+        travelPrepGrantedDay_,
+        std::move(ownedUnitCounts),
+        activePartyUnitIds_
     };
 }
 
@@ -415,6 +581,64 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     travelPrepDiscountMinutes_ = std::max(0, saveData.travelPrepDiscountMinutes);
     travelPrepRemainingCharges_ = std::max(0, saveData.travelPrepRemainingCharges);
     travelPrepGrantedDay_ = std::max(0, saveData.travelPrepGrantedDay);
+
+    ownedUnitCounts_.clear();
+    ownedUnitCounts_.reserve(saveData.ownedUnitCounts.size());
+    for (const auto& entry : saveData.ownedUnitCounts) {
+        ownedUnitCounts_.push_back(OwnedUnitCountState{entry.unitId, entry.count});
+    }
+
+    activePartyUnitIds_ = saveData.activePartyUnitIds;
+    NormalizeRosterState();
+}
+
+void GameSession::NormalizeRosterState() {
+    std::vector<OwnedUnitCountState> normalizedOwned;
+    normalizedOwned.reserve(ownedUnitCounts_.size());
+
+    for (const auto& entry : ownedUnitCounts_) {
+        if (!IsValidOwnedEntry(entry)) {
+            continue;
+        }
+
+        auto it = FindOwnedUnitIt(normalizedOwned, entry.unitId);
+        if (it != normalizedOwned.end() && it->unitId == entry.unitId) {
+            it->count += entry.count;
+        }
+        else {
+            normalizedOwned.insert(it, entry);
+        }
+    }
+
+    ownedUnitCounts_ = std::move(normalizedOwned);
+
+    std::vector<std::string> normalizedActive;
+    normalizedActive.reserve(activePartyUnitIds_.size());
+
+    for (const auto& unitId : activePartyUnitIds_) {
+        if (unitId.empty()) {
+            continue;
+        }
+
+        if (static_cast<int>(normalizedActive.size()) >= ActivePartyCapacity()) {
+            break;
+        }
+
+        int alreadyAllocated = 0;
+        for (const auto& allocatedId : normalizedActive) {
+            if (allocatedId == unitId) {
+                ++alreadyAllocated;
+            }
+        }
+
+        if (alreadyAllocated >= OwnedUnitCount(unitId)) {
+            continue;
+        }
+
+        normalizedActive.push_back(unitId);
+    }
+
+    activePartyUnitIds_ = std::move(normalizedActive);
 }
 
 std::string GameSession::ToString(const GameMode mode) {

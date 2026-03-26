@@ -91,7 +91,6 @@ namespace app {
         bool contentLoaded_ = false;
         bool debugOverlayVisible_ = false;
 
-        int recruitedUnits_ = 0;
         int overworldSelectedNodeIndex_ = 0;
         int observedDay_ = -1;
         bool restedThisDay_ = false;

@@ -18,6 +18,11 @@ struct DailyServiceState {
     int lastRefreshDay = 1;
 };
 
+struct OwnedUnitCountSaveState {
+    std::string unitId;
+    int count = 0;
+};
+
 struct SaveData {
     int day = 1;
     int minutesIntoSliceDay = 0;
@@ -32,6 +37,8 @@ struct SaveData {
     int travelPrepDiscountMinutes = 0;
     int travelPrepRemainingCharges = 0;
     int travelPrepGrantedDay = 0;
+    std::vector<OwnedUnitCountSaveState> ownedUnitCounts;
+    std::vector<std::string> activePartyUnitIds;
 };
 
 class SaveGameRepository {
