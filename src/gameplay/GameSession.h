@@ -21,6 +21,11 @@ enum class GameMode {
     BattleMode
 };
 
+struct OwnedUnitCountState {
+    std::string unitId;
+    int count = 0;
+};
+
 struct SessionSnapshot {
     GameMode mode = GameMode::Title;
     int day = 1;
@@ -83,6 +88,20 @@ public:
     [[nodiscard]] std::vector<std::string> NotifyCombatNodeCleared(const std::string& nodeId);
     [[nodiscard]] const std::vector<quests::QuestProgress>& QuestProgress() const;
 
+    [[nodiscard]] int ActivePartyCapacity() const;
+    [[nodiscard]] int OwnedUnitCount(const std::string& unitId) const;
+    [[nodiscard]] int ActivePartyAllocatedCount(const std::string& unitId) const;
+    [[nodiscard]] int ReserveUnitCount(const std::string& unitId) const;
+    [[nodiscard]] const std::vector<OwnedUnitCountState>& OwnedUnitCounts() const;
+    [[nodiscard]] const std::vector<std::string>& ActivePartyUnitIds() const;
+
+    [[nodiscard]] bool AddOwnedUnit(const std::string& unitId, int count = 1);
+    [[nodiscard]] bool TryRemoveOwnedUnit(const std::string& unitId, int count = 1);
+    [[nodiscard]] bool TryAddUnitToActiveParty(const std::string& unitId);
+    [[nodiscard]] bool TryRemoveActivePartyUnitAt(int index);
+    [[nodiscard]] bool TryMoveActivePartyUnit(int fromIndex, int toIndex);
+    void ClearActiveParty();
+
     [[nodiscard]] SessionSnapshot Snapshot() const;
 
     [[nodiscard]] core::SaveData ToSaveData() const;
@@ -92,6 +111,8 @@ public:
     static GameMode FromString(const std::string& mode);
 
 private:
+    void NormalizeRosterState();
+
     GameMode mode_;
     core::GameClock clock_;
     std::vector<core::RecruitServiceState> recruitServiceStates_;
@@ -102,6 +123,9 @@ private:
     int gold_;
     std::string regionId_;
     std::string destinationId_;
+    std::vector<OwnedUnitCountState> ownedUnitCounts_;
+    std::vector<std::string> activePartyUnitIds_;
+    int activePartyCapacity_ = 3;
     quests::QuestState questState_;
     world::NodeWorldState nodeWorldState_;
 };

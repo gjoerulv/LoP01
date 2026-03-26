@@ -343,6 +343,7 @@ namespace data {
             const std::vector<RegionDefinition>& regions,
             const std::vector<LocationDefinition>& locations,
             const std::vector<LocationSceneDefinition>& scenes,
+            const std::vector<UnitDefinition>& units,
             const std::vector<BattleScenarioDefinition>& battleScenarios,
             const std::vector<LocationServiceDefinition>& services)
         {
@@ -374,6 +375,10 @@ namespace data {
 
             auto hasBattleScenario = [&](const std::string& id) {
                 return std::ranges::any_of(battleScenarios, [&](const auto& x) { return x.id == id; });
+                };
+
+            auto hasUnit = [&](const std::string& id) {
+                return std::ranges::any_of(units, [&](const auto& x) { return x.id == id; });
                 };
 
             for (const auto& region : regions) {
@@ -422,6 +427,16 @@ namespace data {
                 if (!zoneExists) {
                     return false;
                 }
+
+                if (service.kind == LocationServiceKind::Recruit) {
+                    if (service.unitId.empty()) {
+                        return false;
+                    }
+
+                    if (!hasUnit(service.unitId)) {
+                        return false;
+                    }
+                }
             }
 
             return true;
@@ -445,6 +460,7 @@ namespace data {
             regions_,
             locations_,
             locationScenes_,
+            units_,
             battleScenarios_,
             locationServices_);
 

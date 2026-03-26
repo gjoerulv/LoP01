@@ -643,43 +643,9 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
     }
 
     if (gameplay::location::IsRecruitService(&service)) {
-        session_.RefreshWeeklyRecruitStocks(content_.LocationServices());
-        const int currentWeek = session_.CurrentWeek();
-
-        const int remainingBefore = session_.RemainingRecruitStock(service.id, service.weeklyStock);
-        if (remainingBefore <= 0) {
-            statusMessage_ = !service.failureText.empty()
-                ? service.failureText
-                : "No recruits available this week";
-            statusMessage_ += " (Week " + std::to_string(currentWeek) +
-                ", refreshes next week)";
-            return false;
-        }
-
-        if (service.goldCost > 0 && !session_.TrySpendGold(service.goldCost)) {
-            statusMessage_ = !service.failureText.empty()
-                ? service.failureText
-                : "Not enough gold to recruit";
-            return false;
-        }
-
-        if (!session_.TryConsumeRecruitStock(service.id, service.weeklyStock)) {
-            statusMessage_ = !service.failureText.empty()
-                ? service.failureText
-                : "No recruits available this week";
-            return false;
-        }
-
-        if (service.timeCostMinutes > 0) {
-            session_.AddMinutes(service.timeCostMinutes);
-        }
-
-        ++recruitedUnits_;
-
-        const int remainingAfter = session_.RemainingRecruitStock(service.id, service.weeklyStock);
-        statusMessage_ = service.successText + " (" + std::to_string(remainingAfter) +
-            " left this week, Week " + std::to_string(currentWeek) + ")";
-        return true;
+        const auto result = gameplay::location::TryApplyRecruitService(session_, content_, service);
+        statusMessage_ = result.statusMessage;
+        return result.success;
     }
 
     statusMessage_ = "Unknown service";
@@ -696,10 +662,6 @@ bool App::ApplyLocationOutcome(const gameplay::location::InteractionOutcome& out
 
     if (outcome.timeCostMinutes > 0) {
         session_.AddMinutes(outcome.timeCostMinutes);
-    }
-
-    if (outcome.recruitCount > 0) {
-        recruitedUnits_ += outcome.recruitCount;
     }
 
     if (outcome.exitsLocation) {
@@ -797,7 +759,6 @@ void App::Draw() const {
         DebugLine{"Region", snapshot.regionId},
         DebugLine{"Destination", snapshot.destinationId},
         DebugLine{"Quests", std::to_string(completedQuests) + "/" + std::to_string(questProgress.size()) + " completed"},
-        DebugLine{"Recruits", std::to_string(recruitedUnits_)},
         DebugLine{"Status", statusMessage_}
     };
     debugOverlayRenderer_.Draw(context, debugModel);

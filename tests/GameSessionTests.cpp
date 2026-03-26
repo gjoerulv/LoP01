@@ -254,3 +254,146 @@ TEST_CASE("GameSession daily service usage and same-day travel prep work with da
     REQUIRE(session.PreviewSameDayTravelPrepToTravelMinutes(40) == 40);
     REQUIRE(session.ApplySameDayTravelPrepToTravelMinutes(40) == 40);
 }
+
+TEST_CASE("GameSession owned roster rejects invalid add inputs and keeps canonical order") {
+    gameplay::GameSession session;
+
+    REQUIRE_FALSE(session.AddOwnedUnit("", 1));
+    REQUIRE_FALSE(session.AddOwnedUnit("unit_guard", 0));
+    REQUIRE_FALSE(session.AddOwnedUnit("unit_guard", -2));
+
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+
+    const auto& owned = session.OwnedUnitCounts();
+    REQUIRE(owned.size() == 2);
+    REQUIRE(owned[0].unitId == "unit_guard");
+    REQUIRE(owned[0].count == 3);
+    REQUIRE(owned[1].unitId == "unit_medic");
+    REQUIRE(owned[1].count == 1);
+}
+
+TEST_CASE("GameSession active party requires reserve availability and preserves order") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE_FALSE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    const auto& active = session.ActivePartyUnitIds();
+    REQUIRE(active.size() == 3);
+    REQUIRE(active[0] == "unit_guard");
+    REQUIRE(active[1] == "unit_medic");
+    REQUIRE(active[2] == "unit_guard");
+}
+
+TEST_CASE("GameSession removing owned units fails when active allocations would underflow") {
+    gameplay::GameSession session;
+
+    REQUIRE_FALSE(session.TryRemoveOwnedUnit("", 1));
+    REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", 0));
+    REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", -1));
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", 2));
+    REQUIRE(session.TryRemoveOwnedUnit("unit_guard", 1));
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 1);
+    REQUIRE(session.ActivePartyAllocatedCount("unit_guard") == 1);
+
+    REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", 1));
+}
+
+TEST_CASE("GameSession active party mutation APIs validate indices and do not break invariants") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+
+    REQUIRE_FALSE(session.TryRemoveActivePartyUnitAt(-1));
+    REQUIRE_FALSE(session.TryRemoveActivePartyUnitAt(5));
+    REQUIRE(session.TryMoveActivePartyUnit(0, 1));
+
+    const auto& moved = session.ActivePartyUnitIds();
+    REQUIRE(moved.size() == 2);
+    REQUIRE(moved[0] == "unit_medic");
+    REQUIRE(moved[1] == "unit_guard");
+
+    REQUIRE_FALSE(session.TryMoveActivePartyUnit(0, 4));
+    REQUIRE(session.TryRemoveActivePartyUnitAt(0));
+    REQUIRE(session.ActivePartyUnitIds().size() == 1);
+    REQUIRE(session.ActivePartyUnitIds()[0] == "unit_guard");
+
+    session.ClearActiveParty();
+    REQUIRE(session.ActivePartyUnitIds().empty());
+}
+
+TEST_CASE("GameSession save and load roundtrips roster ownership and active party order") {
+    gameplay::GameSession source;
+
+    REQUIRE(source.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(source.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(source.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(source.TryAddUnitToActiveParty("unit_medic"));
+    REQUIRE(source.TryAddUnitToActiveParty("unit_guard"));
+
+    const core::SaveData saveData = source.ToSaveData();
+
+    gameplay::GameSession loaded;
+    loaded.ApplySaveData(saveData);
+
+    const auto& owned = loaded.OwnedUnitCounts();
+    REQUIRE(owned.size() == 2);
+    REQUIRE(owned[0].unitId == "unit_guard");
+    REQUIRE(owned[0].count == 2);
+    REQUIRE(owned[1].unitId == "unit_medic");
+    REQUIRE(owned[1].count == 1);
+
+    const auto& active = loaded.ActivePartyUnitIds();
+    REQUIRE(active.size() == 3);
+    REQUIRE(active[0] == "unit_guard");
+    REQUIRE(active[1] == "unit_medic");
+    REQUIRE(active[2] == "unit_guard");
+}
+
+TEST_CASE("GameSession load sanitizes invalid or out-of-sync roster save data") {
+    core::SaveData saveData;
+    saveData.mode = "overworld_mode";
+    saveData.regionId = "ashvale_heartland";
+    saveData.destinationId = "home_base";
+    saveData.ownedUnitCounts = {
+        core::OwnedUnitCountSaveState{"unit_guard", 1},
+        core::OwnedUnitCountSaveState{"unit_guard", 2},
+        core::OwnedUnitCountSaveState{"", 2},
+        core::OwnedUnitCountSaveState{"unit_medic", -1}
+    };
+    saveData.activePartyUnitIds = {
+        "unit_guard",
+        "",
+        "unit_guard",
+        "unit_guard",
+        "unit_medic"
+    };
+
+    gameplay::GameSession loaded;
+    loaded.ApplySaveData(saveData);
+
+    const auto& owned = loaded.OwnedUnitCounts();
+    REQUIRE(owned.size() == 1);
+    REQUIRE(owned[0].unitId == "unit_guard");
+    REQUIRE(owned[0].count == 3);
+
+    const auto& active = loaded.ActivePartyUnitIds();
+    REQUIRE(active.size() == 3);
+    REQUIRE(active[0] == "unit_guard");
+    REQUIRE(active[1] == "unit_guard");
+    REQUIRE(active[2] == "unit_guard");
+}
