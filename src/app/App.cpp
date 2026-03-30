@@ -76,10 +76,29 @@ void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
     }
 
     const std::string scenarioId = ResolveBattleScenarioId(snapshot);
+    const auto activeBattleEntries = session_.BuildActiveBattleStackEntries();
+
+    battleStartStackIds_.clear();
+    battleStartStackIds_.reserve(activeBattleEntries.size());
+    for (const auto& entry : activeBattleEntries) {
+        battleStartStackIds_.push_back(entry.stackId);
+    }
+
+    std::vector<gameplay::battle::PlayerBattleEntry> playerEntries;
+    playerEntries.reserve(activeBattleEntries.size());
+    for (const auto& entry : activeBattleEntries) {
+        playerEntries.push_back(gameplay::battle::PlayerBattleEntry{
+            entry.activeSlotIndex,
+            entry.stackId,
+            entry.unitId,
+            entry.quantity
+        });
+    }
+
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(
         content_,
         scenarioId,
-        session_.ActivePartyUnitIds(),
+        playerEntries,
         7);
 
     if (battle.has_value()) {
@@ -94,6 +113,7 @@ void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
         battleControllerState_ = {};
         battleInitialized_ = false;
         statusMessage_ = "Failed to initialize battle scenario: " + scenarioId;
+        battleStartStackIds_.clear();
     }
 
     pendingBattleScenarioId_.clear();
@@ -165,6 +185,7 @@ void App::ResetTransientModeState() {
     battleInitialized_ = false;
     locationInitialized_ = false;
     battleControllerState_ = {};
+    battleStartStackIds_.clear();
     musteringInteraction_.Close();
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
@@ -222,11 +243,28 @@ void App::ResolveBattleOutcomeIfNeeded() {
     }
 
     const gameplay::battle::BattleSummary summary = debugBattle_.Summary();
+    std::vector<gameplay::BattleStackLifeResult> writeBackResults;
+    writeBackResults.reserve(battleStartStackIds_.size());
+    for (const auto& unit : debugBattle_.Units()) {
+        if (unit.side != gameplay::battle::TeamSide::Allies || unit.rosterStackId.empty()) {
+            continue;
+        }
+
+        writeBackResults.push_back(gameplay::BattleStackLifeResult{unit.rosterStackId, std::max(0, unit.life)});
+    }
+
+    const bool writeBackOk = session_.ApplyBattleStackLifeResults(writeBackResults, battleStartStackIds_);
+    const bool writeBackFailed = !writeBackOk;
+
     battleInitialized_ = false;
     battleControllerState_ = {};
+    battleStartStackIds_.clear();
 
     if (summary.enemiesWon) {
         ApplyWakePenaltyAndRecover("Party defeated in battle");
+        if (writeBackFailed) {
+            statusMessage_ += " | Roster write-back failed";
+        }
         return;
     }
 
@@ -262,6 +300,10 @@ void App::ResolveBattleOutcomeIfNeeded() {
                 : "Battle won.";
         }
 
+        if (writeBackFailed) {
+            statusMessage_ += " | Roster write-back failed";
+        }
+
         if (battleReturnMode_ == gameplay::GameMode::LocationMode) {
             session_.EnterLocationMode(snapshot.destinationId);
         }
@@ -274,6 +316,9 @@ void App::ResolveBattleOutcomeIfNeeded() {
 
     session_.EnterOverworldMode();
     statusMessage_ = "Battle ended.";
+    if (writeBackFailed) {
+        statusMessage_ += " | Roster write-back failed";
+    }
 }
 
 std::string App::ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const {

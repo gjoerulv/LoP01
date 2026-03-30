@@ -32,6 +32,18 @@ struct RosterStackState {
     int quantity = 0;
 };
 
+struct ActiveBattleStackEntry {
+    int activeSlotIndex = -1;
+    std::string stackId;
+    std::string unitId;
+    int quantity = 0;
+};
+
+struct BattleStackLifeResult {
+    std::string stackId;
+    int resultingLife = 0;
+};
+
 struct SessionSnapshot {
     GameMode mode = GameMode::Title;
     int day = 1;
@@ -117,6 +129,10 @@ public:
     void ClearActiveParty();
 
     [[nodiscard]] const RosterStackState* FindRosterStackById(const std::string& stackId) const;
+    [[nodiscard]] std::vector<ActiveBattleStackEntry> BuildActiveBattleStackEntries() const;
+    [[nodiscard]] bool ApplyBattleStackLifeResults(
+        const std::vector<BattleStackLifeResult>& results,
+        const std::vector<std::string>& expectedStackIds);
 
     [[nodiscard]] SessionSnapshot Snapshot() const;
 

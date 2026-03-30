@@ -57,6 +57,7 @@ struct UnitStats {
 struct BattleUnit {
     std::string id;
     std::string name;
+    std::string rosterStackId;
     TeamSide side = TeamSide::Allies;
     UnitCategory category = UnitCategory::Generic;
     UnitStats stats;

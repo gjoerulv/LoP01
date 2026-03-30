@@ -1,5 +1,7 @@
 #include "gameplay/battle/BattleFactory.h"
 
+#include <algorithm>
+
 namespace gameplay::battle
 {
     namespace
@@ -56,11 +58,13 @@ namespace gameplay::battle
         BattleUnit BuildBattleUnit(
             const data::UnitDefinition& definition,
             const TeamSide side,
-            const int lifeOverride)
+            const int lifeOverride,
+            const std::string& rosterStackId)
         {
             BattleUnit unit;
             unit.id = definition.id;
             unit.name = definition.name;
+            unit.rosterStackId = rosterStackId;
             unit.side = side;
             unit.category = ToBattleCategory(definition.category);
             unit.isPlayerCharacter = definition.isPlayerCharacter;
@@ -81,7 +85,7 @@ namespace gameplay::battle
             {
                 if (const auto* definition = content.FindUnitById(entry.unitId))
                 {
-                    output.push_back(BuildBattleUnit(*definition, side, entry.lifeOverride));
+                    output.push_back(BuildBattleUnit(*definition, side, entry.lifeOverride, ""));
                 }
             }
         }
@@ -90,7 +94,7 @@ namespace gameplay::battle
     std::optional<BattleState> BattleFactory::CreateFromScenario(
         const data::ContentRepository& content,
         const std::string& scenarioId,
-        const std::vector<std::string>& activePartyUnitIds,
+        const std::vector<PlayerBattleEntry>& activePartyEntries,
         const uint32_t seed)
     {
         const auto* scenario = content.FindBattleScenarioById(scenarioId);
@@ -100,12 +104,21 @@ namespace gameplay::battle
         }
 
         std::vector<BattleUnit> resolvedActivePartyAllies;
-        resolvedActivePartyAllies.reserve(activePartyUnitIds.size());
-        for (const auto& unitId : activePartyUnitIds)
+        std::vector<PlayerBattleEntry> sortedEntries = activePartyEntries;
+        std::sort(sortedEntries.begin(), sortedEntries.end(), [](const PlayerBattleEntry& left, const PlayerBattleEntry& right) {
+            return left.activeSlotIndex < right.activeSlotIndex;
+        });
+
+        resolvedActivePartyAllies.reserve(sortedEntries.size());
+        for (const auto& entry : sortedEntries)
         {
-            if (const auto* definition = content.FindUnitById(unitId))
+            if (entry.activeSlotIndex < 0 || entry.stackId.empty() || entry.unitId.empty() || entry.quantity <= 0) {
+                continue;
+            }
+
+            if (const auto* definition = content.FindUnitById(entry.unitId))
             {
-                resolvedActivePartyAllies.push_back(BuildBattleUnit(*definition, TeamSide::Allies, 0));
+                resolvedActivePartyAllies.push_back(BuildBattleUnit(*definition, TeamSide::Allies, entry.quantity, entry.stackId));
             }
         }
 

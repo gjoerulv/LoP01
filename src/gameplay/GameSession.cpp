@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 
 namespace gameplay {
 
@@ -710,6 +711,134 @@ const RosterStackState* GameSession::FindRosterStackById(const std::string& stac
     return FindStackById(stackId);
 }
 
+std::vector<ActiveBattleStackEntry> GameSession::BuildActiveBattleStackEntries() const {
+    std::vector<ActiveBattleStackEntry> entries;
+    entries.reserve(activeSlotStackIds_.size());
+
+    for (int slotIndex = 0; slotIndex < static_cast<int>(activeSlotStackIds_.size()); ++slotIndex) {
+        const auto& stackId = activeSlotStackIds_[slotIndex];
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr || stack->quantity <= 0) {
+            continue;
+        }
+
+        entries.push_back(ActiveBattleStackEntry{
+            slotIndex,
+            stack->stackId,
+            stack->unitId,
+            stack->quantity
+        });
+    }
+
+    return entries;
+}
+
+bool GameSession::ApplyBattleStackLifeResults(
+    const std::vector<BattleStackLifeResult>& results,
+    const std::vector<std::string>& expectedStackIds) {
+    std::set<std::string> expectedSet;
+    for (const auto& stackId : expectedStackIds) {
+        if (stackId.empty()) {
+            return false;
+        }
+
+        if (!expectedSet.insert(stackId).second) {
+            return false;
+        }
+
+        if (FindStackById(stackId) == nullptr) {
+            return false;
+        }
+    }
+
+    std::map<std::string, int> resultByStackId;
+    for (const auto& result : results) {
+        if (result.stackId.empty() || result.resultingLife < 0) {
+            return false;
+        }
+
+        if (resultByStackId.find(result.stackId) != resultByStackId.end()) {
+            return false;
+        }
+
+        resultByStackId[result.stackId] = result.resultingLife;
+    }
+
+    if (resultByStackId.size() != expectedSet.size()) {
+        return false;
+    }
+
+    for (const auto& stackId : expectedSet) {
+        if (resultByStackId.find(stackId) == resultByStackId.end()) {
+            return false;
+        }
+    }
+
+    for (const auto& [stackId, _] : resultByStackId) {
+        if (expectedSet.find(stackId) == expectedSet.end()) {
+            return false;
+        }
+    }
+
+    auto stacksCopy = rosterStacks_;
+    auto activeSlotsCopy = activeSlotStackIds_;
+    auto reserveSlotsCopy = reserveSlotStackIds_;
+
+    auto findStackInCopy = [&](const std::string& stackId) -> RosterStackState* {
+        for (auto& stack : stacksCopy) {
+            if (stack.stackId == stackId) {
+                return &stack;
+            }
+        }
+
+        return nullptr;
+    };
+
+    auto removeStackInCopy = [&](const std::string& stackId) {
+        for (auto& slot : activeSlotsCopy) {
+            if (slot == stackId) {
+                slot.clear();
+            }
+        }
+
+        for (auto& slot : reserveSlotsCopy) {
+            if (slot == stackId) {
+                slot.clear();
+            }
+        }
+
+        stacksCopy.erase(
+            std::remove_if(
+                stacksCopy.begin(),
+                stacksCopy.end(),
+                [&](const RosterStackState& entry) {
+                    return entry.stackId == stackId;
+                }),
+            stacksCopy.end());
+    };
+
+    for (const auto& [stackId, resultingLife] : resultByStackId) {
+        auto* stack = findStackInCopy(stackId);
+        if (stack == nullptr) {
+            return false;
+        }
+
+        stack->quantity = resultingLife;
+    }
+
+    for (const auto& [stackId, resultingLife] : resultByStackId) {
+        if (resultingLife == 0) {
+            removeStackInCopy(stackId);
+        }
+    }
+
+    rosterStacks_ = std::move(stacksCopy);
+    activeSlotStackIds_ = std::move(activeSlotsCopy);
+    reserveSlotStackIds_ = std::move(reserveSlotsCopy);
+    NormalizeRosterState();
+    return true;
+}
+
 SessionSnapshot GameSession::Snapshot() const {
     return SessionSnapshot{
         mode_,
@@ -723,15 +852,8 @@ SessionSnapshot GameSession::Snapshot() const {
 }
 
 core::SaveData GameSession::ToSaveData() const {
-    RebuildRosterProjectionCache();
-
-    std::vector<core::OwnedUnitCountSaveState> ownedUnitCounts;
-    ownedUnitCounts.reserve(ownedUnitCountProjection_.size());
-    for (const auto& entry : ownedUnitCountProjection_) {
-        ownedUnitCounts.push_back(core::OwnedUnitCountSaveState{entry.unitId, entry.count});
-    }
-
     return core::SaveData{
+        2,
         clock_.Day(),
         clock_.MinutesIntoSliceDay(),
         gold_,
@@ -745,78 +867,136 @@ core::SaveData GameSession::ToSaveData() const {
         travelPrepDiscountMinutes_,
         travelPrepRemainingCharges_,
         travelPrepGrantedDay_,
-        std::move(ownedUnitCounts),
-        activePartyUnitIdProjection_
+        true,
+        [&]() {
+            std::vector<core::RosterStackSaveState> stacks;
+            stacks.reserve(rosterStacks_.size());
+            for (const auto& stack : rosterStacks_) {
+                if (IsValidStackEntry(stack)) {
+                    stacks.push_back(core::RosterStackSaveState{stack.stackId, stack.unitId, stack.quantity});
+                }
+            }
+            return stacks;
+        }(),
+        activeSlotStackIds_,
+        reserveSlotStackIds_,
+        nextStackIdCounter_,
+        {},
+        {}
     };
 }
 
 void GameSession::ApplySaveData(const core::SaveData& saveData) {
-    mode_ = FromString(saveData.mode);
-    gold_ = std::max(0, saveData.gold);
-    regionId_ = saveData.regionId;
-    destinationId_ = saveData.destinationId;
+    const GameMode loadedMode = FromString(saveData.mode);
+    const int loadedGold = std::max(0, saveData.gold);
+    const std::string loadedRegionId = saveData.regionId;
+    const std::string loadedDestinationId = saveData.destinationId;
 
-    clock_ = core::GameClock();
+    core::GameClock loadedClock;
     const int daysToAdvance = std::max(0, saveData.day - 1);
-    clock_.AdvanceMinutes(daysToAdvance * core::GameClock::kMinutesPerSliceDay + std::max(0, saveData.minutesIntoSliceDay));
+    loadedClock.AdvanceMinutes(daysToAdvance * core::GameClock::kMinutesPerSliceDay + std::max(0, saveData.minutesIntoSliceDay));
 
-    questState_.RestoreCompletedQuestIds(saveData.completedQuestIds);
-    nodeWorldState_.RestoreClearedCombatNodeIds(saveData.clearedCombatNodeIds);
-    recruitServiceStates_ = saveData.recruitServiceStates;
-    dailyServiceStates_ = saveData.dailyServiceStates;
-    travelPrepDiscountMinutes_ = std::max(0, saveData.travelPrepDiscountMinutes);
-    travelPrepRemainingCharges_ = std::max(0, saveData.travelPrepRemainingCharges);
-    travelPrepGrantedDay_ = std::max(0, saveData.travelPrepGrantedDay);
+    quests::QuestState loadedQuestState = questState_;
+    loadedQuestState.RestoreCompletedQuestIds(saveData.completedQuestIds);
 
-    rosterStacks_.clear();
-    std::fill(activeSlotStackIds_.begin(), activeSlotStackIds_.end(), "");
-    std::fill(reserveSlotStackIds_.begin(), reserveSlotStackIds_.end(), "");
-    nextStackIdCounter_ = 1;
+    world::NodeWorldState loadedNodeWorldState = nodeWorldState_;
+    loadedNodeWorldState.RestoreClearedCombatNodeIds(saveData.clearedCombatNodeIds);
 
-    std::map<std::string, int> normalizedOwned;
-    for (const auto& entry : saveData.ownedUnitCounts) {
-        if (entry.unitId.empty() || entry.count <= 0) {
-            continue;
+    const std::vector<core::RecruitServiceState> loadedRecruitStates = saveData.recruitServiceStates;
+    const std::vector<core::DailyServiceState> loadedDailyStates = saveData.dailyServiceStates;
+    const int loadedTravelPrepDiscount = std::max(0, saveData.travelPrepDiscountMinutes);
+    const int loadedTravelPrepCharges = std::max(0, saveData.travelPrepRemainingCharges);
+    const int loadedTravelPrepDay = std::max(0, saveData.travelPrepGrantedDay);
+
+    std::vector<RosterStackState> loadedStacks;
+    std::vector<std::string> loadedActiveSlots(kActiveSlotCount, "");
+    std::vector<std::string> loadedReserveSlots(kReserveSlotCount, "");
+    int loadedNextCounter = 1;
+
+    if (saveData.hasCanonicalRoster) {
+        loadedStacks.reserve(saveData.rosterStacks.size());
+        for (const auto& stack : saveData.rosterStacks) {
+            loadedStacks.push_back(RosterStackState{stack.stackId, stack.unitId, stack.quantity});
         }
 
-        normalizedOwned[entry.unitId] += entry.count;
+        if (saveData.activeSlotStackIds.size() != kActiveSlotCount ||
+            saveData.reserveSlotStackIds.size() != kReserveSlotCount) {
+            return;
+        }
+
+        loadedActiveSlots = saveData.activeSlotStackIds;
+        loadedReserveSlots = saveData.reserveSlotStackIds;
+        loadedNextCounter = std::max(1, saveData.nextStackIdCounter);
+    }
+    else {
+        std::map<std::string, int> normalizedOwned;
+        for (const auto& entry : saveData.ownedUnitCounts) {
+            if (entry.unitId.empty() || entry.count <= 0) {
+                continue;
+            }
+
+            normalizedOwned[entry.unitId] += entry.count;
+        }
+
+        int nextSuffix = 1;
+        auto allocateStackId = [&]() {
+            return std::string("stk_") + std::to_string(nextSuffix++);
+        };
+
+        int activeWriteIndex = 0;
+        for (const auto& unitId : saveData.activePartyUnitIds) {
+            if (activeWriteIndex >= kActiveSlotCount || unitId.empty()) {
+                continue;
+            }
+
+            auto ownedIt = normalizedOwned.find(unitId);
+            if (ownedIt == normalizedOwned.end() || ownedIt->second <= 0) {
+                continue;
+            }
+
+            const std::string stackId = allocateStackId();
+            loadedStacks.push_back(RosterStackState{stackId, unitId, 1});
+            loadedActiveSlots[activeWriteIndex] = stackId;
+            ++activeWriteIndex;
+            --ownedIt->second;
+        }
+
+        int reserveWriteIndex = 0;
+        for (const auto& [unitId, count] : normalizedOwned) {
+            if (count <= 0) {
+                continue;
+            }
+
+            if (reserveWriteIndex >= kReserveSlotCount) {
+                return;
+            }
+
+            const std::string stackId = allocateStackId();
+            loadedStacks.push_back(RosterStackState{stackId, unitId, count});
+            loadedReserveSlots[reserveWriteIndex] = stackId;
+            ++reserveWriteIndex;
+        }
+
+        loadedNextCounter = std::max(1, nextSuffix);
     }
 
-    int activeWriteIndex = 0;
-    for (const auto& unitId : saveData.activePartyUnitIds) {
-        if (activeWriteIndex >= kActiveSlotCount || unitId.empty()) {
-            continue;
-        }
-
-        auto ownedIt = normalizedOwned.find(unitId);
-        if (ownedIt == normalizedOwned.end() || ownedIt->second <= 0) {
-            continue;
-        }
-
-        const std::string stackId = GenerateNextStackId();
-        rosterStacks_.push_back(RosterStackState{stackId, unitId, 1});
-        activeSlotStackIds_[activeWriteIndex] = stackId;
-        ++activeWriteIndex;
-        --ownedIt->second;
-    }
-
-    int reserveWriteIndex = 0;
-    for (const auto& [unitId, count] : normalizedOwned) {
-        if (count <= 0) {
-            continue;
-        }
-
-        if (reserveWriteIndex >= kReserveSlotCount) {
-            break;
-        }
-
-        const std::string stackId = GenerateNextStackId();
-        rosterStacks_.push_back(RosterStackState{stackId, unitId, count});
-        reserveSlotStackIds_[reserveWriteIndex] = stackId;
-        ++reserveWriteIndex;
-    }
-
-    NormalizeRosterState();
+    mode_ = loadedMode;
+    gold_ = loadedGold;
+    regionId_ = loadedRegionId;
+    destinationId_ = loadedDestinationId;
+    clock_ = loadedClock;
+    questState_ = loadedQuestState;
+    nodeWorldState_ = loadedNodeWorldState;
+    recruitServiceStates_ = loadedRecruitStates;
+    dailyServiceStates_ = loadedDailyStates;
+    travelPrepDiscountMinutes_ = loadedTravelPrepDiscount;
+    travelPrepRemainingCharges_ = loadedTravelPrepCharges;
+    travelPrepGrantedDay_ = loadedTravelPrepDay;
+    rosterStacks_ = std::move(loadedStacks);
+    activeSlotStackIds_ = std::move(loadedActiveSlots);
+    reserveSlotStackIds_ = std::move(loadedReserveSlots);
+    nextStackIdCounter_ = loadedNextCounter;
+    MarkRosterProjectionDirty();
 }
 
 void GameSession::NormalizeRosterState() {

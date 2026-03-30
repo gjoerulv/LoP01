@@ -1,7 +1,11 @@
 #include "core/SaveGame.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <set>
+#include <stdexcept>
 
 #include <nlohmann/json.hpp>
 
@@ -9,11 +13,236 @@ namespace core {
 
 using nlohmann::json;
 
+namespace {
+
+int ParseStackIdSuffix(const std::string& stackId) {
+    constexpr const char* kPrefix = "stk_";
+    constexpr size_t kPrefixSize = 4;
+    if (stackId.size() <= kPrefixSize || stackId.rfind(kPrefix, 0) != 0) {
+        return -1;
+    }
+
+    const std::string suffix = stackId.substr(kPrefixSize);
+    if (suffix.empty()) {
+        return -1;
+    }
+
+    for (const char ch : suffix) {
+        if (ch < '0' || ch > '9') {
+            return -1;
+        }
+    }
+
+    try {
+        return std::stoi(suffix);
+    }
+    catch (...) {
+        return -1;
+    }
+}
+
+int ComputeNextStackIdCounter(const std::vector<RosterStackSaveState>& stacks) {
+    int maxSuffix = 0;
+    for (const auto& stack : stacks) {
+        maxSuffix = std::max(maxSuffix, ParseStackIdSuffix(stack.stackId));
+    }
+
+    return std::max(1, maxSuffix + 1);
+}
+
+bool TryReadOptionalStringArray(const json& j, const char* key, std::vector<std::string>& output) {
+    output.clear();
+    if (!j.contains(key)) {
+        return true;
+    }
+    if (!j[key].is_array()) {
+        return false;
+    }
+
+    for (const auto& value : j[key]) {
+        if (!value.is_string()) {
+            return false;
+        }
+        output.push_back(value.get<std::string>());
+    }
+
+    return true;
+}
+
+void BuildCanonicalRosterFromLegacyFields(const json& j, SaveData& data) {
+    std::map<std::string, int> normalizedOwned;
+    if (j.contains("owned_unit_counts")) {
+        if (!j["owned_unit_counts"].is_array()) {
+            throw std::runtime_error("Invalid owned_unit_counts");
+        }
+
+        for (const auto& entryJson : j["owned_unit_counts"]) {
+            if (!entryJson.is_object()) {
+                throw std::runtime_error("Invalid owned_unit_counts entry");
+            }
+            if (!entryJson.contains("unit_id") || !entryJson["unit_id"].is_string()) {
+                throw std::runtime_error("Invalid owned_unit_counts unit_id");
+            }
+            if (!entryJson.contains("count") ||
+                !(entryJson["count"].is_number_integer() || entryJson["count"].is_number_unsigned())) {
+                throw std::runtime_error("Invalid owned_unit_counts count");
+            }
+
+            const std::string unitId = entryJson["unit_id"].get<std::string>();
+            const int count = entryJson["count"].get<int>();
+            if (unitId.empty() || count <= 0) {
+                continue;
+            }
+
+            normalizedOwned[unitId] += count;
+            data.ownedUnitCounts.push_back(OwnedUnitCountSaveState{unitId, count});
+        }
+    }
+
+    if (!TryReadOptionalStringArray(j, "active_party_unit_ids", data.activePartyUnitIds)) {
+        throw std::runtime_error("Invalid active_party_unit_ids");
+    }
+
+    data.rosterStacks.clear();
+    data.activeSlotStackIds.assign(3, "");
+    data.reserveSlotStackIds.assign(8, "");
+
+    int nextSuffix = 1;
+    auto allocateStackId = [&]() {
+        return std::string("stk_") + std::to_string(nextSuffix++);
+    };
+
+    int activeWriteIndex = 0;
+    for (const auto& unitId : data.activePartyUnitIds) {
+        if (activeWriteIndex >= 3 || unitId.empty()) {
+            continue;
+        }
+
+        auto ownedIt = normalizedOwned.find(unitId);
+        if (ownedIt == normalizedOwned.end() || ownedIt->second <= 0) {
+            continue;
+        }
+
+        const std::string stackId = allocateStackId();
+        data.rosterStacks.push_back(RosterStackSaveState{stackId, unitId, 1});
+        data.activeSlotStackIds[activeWriteIndex] = stackId;
+        ++activeWriteIndex;
+        --ownedIt->second;
+    }
+
+    int reserveWriteIndex = 0;
+    for (const auto& [unitId, count] : normalizedOwned) {
+        if (count <= 0) {
+            continue;
+        }
+
+        if (reserveWriteIndex >= 8) {
+            throw std::runtime_error("Legacy roster overflow");
+        }
+
+        const std::string stackId = allocateStackId();
+        data.rosterStacks.push_back(RosterStackSaveState{stackId, unitId, count});
+        data.reserveSlotStackIds[reserveWriteIndex] = stackId;
+        ++reserveWriteIndex;
+    }
+
+    data.nextStackIdCounter = std::max(1, nextSuffix);
+    data.hasCanonicalRoster = true;
+}
+
+void ParseCanonicalRosterFromJson(const json& j, SaveData& data) {
+    if (!j["roster_stacks"].is_array() ||
+        !j["active_slot_stack_ids"].is_array() ||
+        !j["reserve_slot_stack_ids"].is_array()) {
+        throw std::runtime_error("Invalid canonical roster structure");
+    }
+
+    data.rosterStacks.clear();
+    for (const auto& entryJson : j["roster_stacks"]) {
+        if (!entryJson.is_object() ||
+            !entryJson.contains("stack_id") || !entryJson["stack_id"].is_string() ||
+            !entryJson.contains("unit_id") || !entryJson["unit_id"].is_string() ||
+            !entryJson.contains("quantity") ||
+            !(entryJson["quantity"].is_number_integer() || entryJson["quantity"].is_number_unsigned())) {
+            throw std::runtime_error("Invalid roster_stacks entry");
+        }
+
+        RosterStackSaveState stack;
+        stack.stackId = entryJson["stack_id"].get<std::string>();
+        stack.unitId = entryJson["unit_id"].get<std::string>();
+        stack.quantity = entryJson["quantity"].get<int>();
+        if (stack.stackId.empty() || stack.unitId.empty() || stack.quantity <= 0) {
+            throw std::runtime_error("Invalid canonical stack value");
+        }
+
+        data.rosterStacks.push_back(std::move(stack));
+    }
+
+    data.activeSlotStackIds.clear();
+    data.reserveSlotStackIds.clear();
+    if (!TryReadOptionalStringArray(j, "active_slot_stack_ids", data.activeSlotStackIds) ||
+        !TryReadOptionalStringArray(j, "reserve_slot_stack_ids", data.reserveSlotStackIds)) {
+        throw std::runtime_error("Invalid canonical slot ids");
+    }
+
+    if (data.activeSlotStackIds.size() != 3 || data.reserveSlotStackIds.size() != 8) {
+        throw std::runtime_error("Invalid canonical slot counts");
+    }
+
+    std::set<std::string> stackIds;
+    for (const auto& stack : data.rosterStacks) {
+        if (!stackIds.insert(stack.stackId).second) {
+            throw std::runtime_error("Duplicate stack id in canonical roster");
+        }
+    }
+
+    std::set<std::string> assignedSlots;
+    auto validateSlots = [&](const std::vector<std::string>& slots) {
+        for (const auto& stackId : slots) {
+            if (stackId.empty()) {
+                continue;
+            }
+
+            if (stackIds.find(stackId) == stackIds.end()) {
+                throw std::runtime_error("Slot references unknown stack id");
+            }
+
+            if (!assignedSlots.insert(stackId).second) {
+                throw std::runtime_error("Duplicate slot stack id reference");
+            }
+        }
+    };
+
+    validateSlots(data.activeSlotStackIds);
+    validateSlots(data.reserveSlotStackIds);
+
+    if (j.contains("next_stack_id_counter") &&
+        (j["next_stack_id_counter"].is_number_integer() || j["next_stack_id_counter"].is_number_unsigned())) {
+        const int candidate = j["next_stack_id_counter"].get<int>();
+        data.nextStackIdCounter = candidate >= 1 ? candidate : ComputeNextStackIdCounter(data.rosterStacks);
+    }
+    else {
+        data.nextStackIdCounter = ComputeNextStackIdCounter(data.rosterStacks);
+    }
+
+    data.hasCanonicalRoster = true;
+}
+
+} // namespace
+
 void to_json(json& j, const RecruitServiceState& data) {
     j = json{
         {"service_id", data.serviceId},
         {"remaining_stock", data.remainingStock},
         {"last_refresh_week", data.lastRefreshWeek}
+    };
+}
+
+void to_json(json& j, const RosterStackSaveState& data) {
+    j = json{
+        {"stack_id", data.stackId},
+        {"unit_id", data.unitId},
+        {"quantity", data.quantity}
     };
 }
 
@@ -51,6 +280,7 @@ void from_json(const json& j, DailyServiceState& data) {
 
 void to_json(json& j, const SaveData& data) {
     j = json{
+        {"schema_version", 2},
         {"day", data.day},
         {"minutes_into_slice_day", data.minutesIntoSliceDay},
         {"gold", data.gold},
@@ -64,12 +294,17 @@ void to_json(json& j, const SaveData& data) {
         {"travel_prep_discount_minutes", data.travelPrepDiscountMinutes},
         {"travel_prep_remaining_charges", data.travelPrepRemainingCharges},
         {"travel_prep_granted_day", data.travelPrepGrantedDay},
-        {"owned_unit_counts", data.ownedUnitCounts},
-        {"active_party_unit_ids", data.activePartyUnitIds}
+        {"roster_stacks", data.rosterStacks},
+        {"active_slot_stack_ids", data.activeSlotStackIds},
+        {"reserve_slot_stack_ids", data.reserveSlotStackIds},
+        {"next_stack_id_counter", data.nextStackIdCounter}
     };
 }
 
 void from_json(const json& j, SaveData& data) {
+    data = SaveData{};
+    data.schemaVersion = j.value("schema_version", 1);
+
     j.at("day").get_to(data.day);
     j.at("minutes_into_slice_day").get_to(data.minutesIntoSliceDay);
     j.at("gold").get_to(data.gold);
@@ -100,33 +335,17 @@ void from_json(const json& j, SaveData& data) {
     data.travelPrepRemainingCharges = j.value("travel_prep_remaining_charges", 0);
     data.travelPrepGrantedDay = j.value("travel_prep_granted_day", 0);
 
-    data.ownedUnitCounts.clear();
-    if (j.contains("owned_unit_counts") && j["owned_unit_counts"].is_array()) {
-        for (const auto& entryJson : j["owned_unit_counts"]) {
-            if (!entryJson.is_object()) {
-                continue;
-            }
+    const bool hasCanonicalStructuralFields =
+        j.contains("roster_stacks") &&
+        j.contains("active_slot_stack_ids") &&
+        j.contains("reserve_slot_stack_ids");
 
-            if (!entryJson.contains("unit_id") || !entryJson["unit_id"].is_string()) {
-                continue;
-            }
-
-            if (!entryJson.contains("count") ||
-                !(entryJson["count"].is_number_integer() || entryJson["count"].is_number_unsigned())) {
-                continue;
-            }
-
-            OwnedUnitCountSaveState entry;
-            entry.unitId = entryJson["unit_id"].get<std::string>();
-            entry.count = entryJson["count"].get<int>();
-            data.ownedUnitCounts.push_back(std::move(entry));
-        }
+    if (hasCanonicalStructuralFields) {
+        ParseCanonicalRosterFromJson(j, data);
+        return;
     }
 
-    data.activePartyUnitIds.clear();
-    if (j.contains("active_party_unit_ids") && j["active_party_unit_ids"].is_array()) {
-        data.activePartyUnitIds = j["active_party_unit_ids"].get<std::vector<std::string>>();
-    }
+    BuildCanonicalRosterFromLegacyFields(j, data);
 }
 
 bool SaveGameRepository::SaveToFile(const SaveData& saveData, const std::string& filePath) const {
@@ -150,9 +369,14 @@ std::optional<SaveData> SaveGameRepository::LoadFromFile(const std::string& file
         return std::nullopt;
     }
 
-    json j;
-    input >> j;
-    return j.get<SaveData>();
+    try {
+        json j;
+        input >> j;
+        return j.get<SaveData>();
+    }
+    catch (...) {
+        return std::nullopt;
+    }
 }
 
 } // namespace core

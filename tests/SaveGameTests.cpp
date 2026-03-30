@@ -10,6 +10,7 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
 
     core::SaveGameRepository repository;
     core::SaveData original;
+    original.schemaVersion = 2;
     original.day = 3;
     original.minutesIntoSliceDay = 45;
     original.gold = 1337;
@@ -27,11 +28,14 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     original.travelPrepDiscountMinutes = 20;
     original.travelPrepRemainingCharges = 1;
     original.travelPrepGrantedDay = 3;
-    original.ownedUnitCounts = {
-        core::OwnedUnitCountSaveState{"unit_guard", 3},
-        core::OwnedUnitCountSaveState{"unit_medic", 1}
+    original.hasCanonicalRoster = true;
+    original.rosterStacks = {
+        core::RosterStackSaveState{"stk_1", "unit_guard", 3},
+        core::RosterStackSaveState{"stk_2", "unit_medic", 1}
     };
-    original.activePartyUnitIds = {"unit_guard", "unit_medic", "unit_guard"};
+    original.activeSlotStackIds = {"stk_1", "", ""};
+    original.reserveSlotStackIds = {"stk_2", "", "", "", "", "", "", ""};
+    original.nextStackIdCounter = 3;
 
     REQUIRE(repository.SaveToFile(original, testSavePath.string()));
 
@@ -61,22 +65,23 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
     REQUIRE(loaded->travelPrepRemainingCharges == 1);
     REQUIRE(loaded->travelPrepGrantedDay == 3);
 
-    REQUIRE(loaded->ownedUnitCounts.size() == 2);
-    REQUIRE(loaded->ownedUnitCounts[0].unitId == "unit_guard");
-    REQUIRE(loaded->ownedUnitCounts[0].count == 3);
-    REQUIRE(loaded->ownedUnitCounts[1].unitId == "unit_medic");
-    REQUIRE(loaded->ownedUnitCounts[1].count == 1);
+    REQUIRE(loaded->hasCanonicalRoster);
+    REQUIRE(loaded->rosterStacks.size() == 2);
+    REQUIRE(loaded->rosterStacks[0].stackId == "stk_1");
+    REQUIRE(loaded->rosterStacks[0].unitId == "unit_guard");
+    REQUIRE(loaded->rosterStacks[0].quantity == 3);
+    REQUIRE(loaded->activeSlotStackIds == std::vector<std::string>{"stk_1", "", ""});
+    REQUIRE(loaded->reserveSlotStackIds == std::vector<std::string>{"stk_2", "", "", "", "", "", "", ""});
+    REQUIRE(loaded->nextStackIdCounter == 3);
 
-    REQUIRE(loaded->activePartyUnitIds.size() == 3);
-    REQUIRE(loaded->activePartyUnitIds[0] == "unit_guard");
-    REQUIRE(loaded->activePartyUnitIds[1] == "unit_medic");
-    REQUIRE(loaded->activePartyUnitIds[2] == "unit_guard");
+    REQUIRE(loaded->ownedUnitCounts.empty());
+    REQUIRE(loaded->activePartyUnitIds.empty());
 
     std::filesystem::remove(testSavePath);
 }
 
-TEST_CASE("SaveGameRepository skips malformed owned_unit_counts entries without failing load") {
-    const std::filesystem::path testSavePath = "saves/test_slot_malformed_owned_units.json";
+TEST_CASE("SaveGameRepository legacy upgrade is deterministic") {
+    const std::filesystem::path testSavePath = "saves/test_slot_legacy_upgrade.json";
 
     std::ofstream output(testSavePath, std::ios::trunc);
     output << R"({
@@ -94,14 +99,10 @@ TEST_CASE("SaveGameRepository skips malformed owned_unit_counts entries without 
   "travel_prep_remaining_charges": 0,
   "travel_prep_granted_day": 0,
   "owned_unit_counts": [
-    {"unit_id":"unit_guard","count":2},
-    {"unit_id":"unit_medic"},
-    {"count":1},
-    "bad",
-    {"unit_id":42,"count":1},
-    {"unit_id":"unit_scout","count":"3"}
+    {"unit_id":"unit_guard","count":3},
+    {"unit_id":"unit_medic","count":1}
   ],
-  "active_party_unit_ids": ["unit_guard"]
+  "active_party_unit_ids": ["unit_guard", "unit_medic", "unit_guard"]
 })";
     output.close();
 
@@ -109,17 +110,17 @@ TEST_CASE("SaveGameRepository skips malformed owned_unit_counts entries without 
     const auto loaded = repository.LoadFromFile(testSavePath.string());
     REQUIRE(loaded.has_value());
 
-    REQUIRE(loaded->ownedUnitCounts.size() == 1);
-    REQUIRE(loaded->ownedUnitCounts[0].unitId == "unit_guard");
-    REQUIRE(loaded->ownedUnitCounts[0].count == 2);
-    REQUIRE(loaded->activePartyUnitIds.size() == 1);
-    REQUIRE(loaded->activePartyUnitIds[0] == "unit_guard");
+    REQUIRE(loaded->hasCanonicalRoster);
+    REQUIRE(loaded->rosterStacks.size() == 4);
+    REQUIRE(loaded->activeSlotStackIds == std::vector<std::string>{"stk_1", "stk_2", "stk_3"});
+    REQUIRE(loaded->reserveSlotStackIds == std::vector<std::string>{"stk_4", "", "", "", "", "", "", ""});
+    REQUIRE(loaded->nextStackIdCounter == 5);
 
     std::filesystem::remove(testSavePath);
 }
 
-TEST_CASE("SaveGameRepository loads old saves without roster fields") {
-    const std::filesystem::path testSavePath = "saves/test_slot_old_schema.json";
+TEST_CASE("SaveGameRepository malformed canonical roster fails load") {
+    const std::filesystem::path testSavePath = "saves/test_slot_malformed_canonical.json";
 
     std::ofstream output(testSavePath, std::ios::trunc);
     output << R"({
@@ -135,15 +136,92 @@ TEST_CASE("SaveGameRepository loads old saves without roster fields") {
   "daily_service_states": [],
   "travel_prep_discount_minutes": 0,
   "travel_prep_remaining_charges": 0,
-  "travel_prep_granted_day": 0
+  "travel_prep_granted_day": 0,
+  "roster_stacks": [{"stack_id":"stk_1","unit_id":"unit_guard","quantity":2}],
+  "active_slot_stack_ids": ["stk_1", "", ""],
+  "reserve_slot_stack_ids": ["stk_1", "", "", "", "", "", "", ""]
+})";
+    output.close();
+
+    core::SaveGameRepository repository;
+    const auto loaded = repository.LoadFromFile(testSavePath.string());
+    REQUIRE_FALSE(loaded.has_value());
+
+    std::filesystem::remove(testSavePath);
+}
+
+TEST_CASE("SaveGameRepository missing or invalid canonical counter is recomputed deterministically") {
+    const std::filesystem::path testSavePath = "saves/test_slot_canonical_counter_recompute.json";
+
+    std::ofstream output(testSavePath, std::ios::trunc);
+    output << R"({
+  "day": 2,
+  "minutes_into_slice_day": 30,
+  "gold": 900,
+  "mode": "overworld_mode",
+  "region_id": "ashvale_heartland",
+  "destination_id": "home_base",
+  "completed_quest_ids": [],
+  "cleared_combat_node_ids": [],
+  "recruit_service_states": [],
+  "daily_service_states": [],
+  "travel_prep_discount_minutes": 0,
+  "travel_prep_remaining_charges": 0,
+  "travel_prep_granted_day": 0,
+  "roster_stacks": [
+    {"stack_id":"stk_4","unit_id":"unit_guard","quantity":2},
+    {"stack_id":"stk_9","unit_id":"unit_medic","quantity":1}
+  ],
+  "active_slot_stack_ids": ["stk_4", "", ""],
+  "reserve_slot_stack_ids": ["stk_9", "", "", "", "", "", "", ""],
+  "next_stack_id_counter": 0
 })";
     output.close();
 
     core::SaveGameRepository repository;
     const auto loaded = repository.LoadFromFile(testSavePath.string());
     REQUIRE(loaded.has_value());
-    REQUIRE(loaded->ownedUnitCounts.empty());
-    REQUIRE(loaded->activePartyUnitIds.empty());
+    REQUIRE(loaded->nextStackIdCounter == 10);
+
+    std::filesystem::remove(testSavePath);
+}
+
+TEST_CASE("SaveGameRepository legacy reserve overflow fails load") {
+    const std::filesystem::path testSavePath = "saves/test_slot_legacy_overflow.json";
+
+    std::ofstream output(testSavePath, std::ios::trunc);
+    output << R"({
+  "day": 2,
+  "minutes_into_slice_day": 30,
+  "gold": 900,
+  "mode": "overworld_mode",
+  "region_id": "ashvale_heartland",
+  "destination_id": "home_base",
+  "completed_quest_ids": [],
+  "cleared_combat_node_ids": [],
+  "recruit_service_states": [],
+  "daily_service_states": [],
+  "travel_prep_discount_minutes": 0,
+  "travel_prep_remaining_charges": 0,
+  "travel_prep_granted_day": 0,
+  "owned_unit_counts": [
+    {"unit_id":"unit_01","count":1},
+    {"unit_id":"unit_02","count":1},
+    {"unit_id":"unit_03","count":1},
+    {"unit_id":"unit_04","count":1},
+    {"unit_id":"unit_05","count":1},
+    {"unit_id":"unit_06","count":1},
+    {"unit_id":"unit_07","count":1},
+    {"unit_id":"unit_08","count":1},
+    {"unit_id":"unit_09","count":1}
+  ],
+  "active_party_unit_ids": []
+})";
+    output.close();
+
+    core::SaveGameRepository repository;
+    const auto loaded = repository.LoadFromFile(testSavePath.string());
+    REQUIRE_FALSE(loaded.has_value());
 
     std::filesystem::remove(testSavePath);
 }

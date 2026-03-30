@@ -98,6 +98,7 @@ namespace app {
         int observedDay_ = -1;
         bool restedThisDay_ = false;
         gameplay::GameMode battleReturnMode_ = gameplay::GameMode::OverworldMode;
+        std::vector<std::string> battleStartStackIds_;
 
         std::string statusMessage_;
         std::string pendingBattleScenarioId_;

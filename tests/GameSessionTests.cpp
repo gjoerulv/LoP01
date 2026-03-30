@@ -534,3 +534,189 @@ TEST_CASE("GameSession recruit placement follows reserve then active merge polic
     REQUIRE(session.RosterStacks().size() == 1);
     REQUIRE(session.RosterStacks()[0].quantity == 3);
 }
+
+TEST_CASE("GameSession canonical save roundtrip preserves exact stack ids quantities slots and counter") {
+    gameplay::GameSession source;
+    REQUIRE(source.AddOwnedUnit("unit_guard", 3));
+    REQUIRE(source.AddOwnedUnit("unit_medic", 2));
+    REQUIRE(source.TryAddUnitToActiveParty("unit_guard"));
+
+    const auto sourceStacks = source.RosterStacks();
+    const auto sourceActiveSlots = source.ActiveSlotStackIds();
+    const auto sourceReserveSlots = source.ReserveSlotStackIds();
+    const int sourceNextCounter = source.NextStackIdCounter();
+
+    const core::SaveData saveData = source.ToSaveData();
+
+    gameplay::GameSession loaded;
+    loaded.ApplySaveData(saveData);
+
+    REQUIRE(loaded.RosterStacks().size() == sourceStacks.size());
+    for (size_t i = 0; i < sourceStacks.size(); ++i) {
+        REQUIRE(loaded.RosterStacks()[i].stackId == sourceStacks[i].stackId);
+        REQUIRE(loaded.RosterStacks()[i].unitId == sourceStacks[i].unitId);
+        REQUIRE(loaded.RosterStacks()[i].quantity == sourceStacks[i].quantity);
+    }
+
+    REQUIRE(loaded.ActiveSlotStackIds() == sourceActiveSlots);
+    REQUIRE(loaded.ReserveSlotStackIds() == sourceReserveSlots);
+    REQUIRE(loaded.NextStackIdCounter() == sourceNextCounter);
+}
+
+TEST_CASE("GameSession ApplySaveData legacy overflow fails without partial mutation") {
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    const auto beforeSnapshot = session.Snapshot();
+    const auto beforeStacks = session.RosterStacks();
+    const auto beforeActiveSlots = session.ActiveSlotStackIds();
+    const auto beforeReserveSlots = session.ReserveSlotStackIds();
+    const int beforeCounter = session.NextStackIdCounter();
+
+    core::SaveData overflowLegacy;
+    overflowLegacy.mode = "overworld_mode";
+    overflowLegacy.regionId = "ashvale_heartland";
+    overflowLegacy.destinationId = "home_base";
+    overflowLegacy.ownedUnitCounts = {
+        core::OwnedUnitCountSaveState{"unit_01", 1},
+        core::OwnedUnitCountSaveState{"unit_02", 1},
+        core::OwnedUnitCountSaveState{"unit_03", 1},
+        core::OwnedUnitCountSaveState{"unit_04", 1},
+        core::OwnedUnitCountSaveState{"unit_05", 1},
+        core::OwnedUnitCountSaveState{"unit_06", 1},
+        core::OwnedUnitCountSaveState{"unit_07", 1},
+        core::OwnedUnitCountSaveState{"unit_08", 1},
+        core::OwnedUnitCountSaveState{"unit_09", 1}
+    };
+
+    session.ApplySaveData(overflowLegacy);
+
+    REQUIRE(session.Snapshot().mode == beforeSnapshot.mode);
+    REQUIRE(session.Snapshot().day == beforeSnapshot.day);
+    REQUIRE(session.Snapshot().gold == beforeSnapshot.gold);
+    REQUIRE(session.RosterStacks().size() == beforeStacks.size());
+    for (size_t i = 0; i < beforeStacks.size(); ++i) {
+        REQUIRE(session.RosterStacks()[i].stackId == beforeStacks[i].stackId);
+        REQUIRE(session.RosterStacks()[i].unitId == beforeStacks[i].unitId);
+        REQUIRE(session.RosterStacks()[i].quantity == beforeStacks[i].quantity);
+    }
+    REQUIRE(session.ActiveSlotStackIds() == beforeActiveSlots);
+    REQUIRE(session.ReserveSlotStackIds() == beforeReserveSlots);
+    REQUIRE(session.NextStackIdCounter() == beforeCounter);
+}
+
+TEST_CASE("GameSession BuildActiveBattleStackEntries exports stack identity and quantity") {
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("unit_guard", 3));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 2));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+
+    const auto entries = session.BuildActiveBattleStackEntries();
+    REQUIRE(entries.size() == 2);
+
+    REQUIRE(entries[0].activeSlotIndex == 0);
+    REQUIRE(entries[0].unitId == "unit_guard");
+    REQUIRE(entries[0].quantity == 3);
+    REQUIRE_FALSE(entries[0].stackId.empty());
+
+    REQUIRE(entries[1].activeSlotIndex == 1);
+    REQUIRE(entries[1].unitId == "unit_medic");
+    REQUIRE(entries[1].quantity == 2);
+    REQUIRE_FALSE(entries[1].stackId.empty());
+}
+
+TEST_CASE("GameSession ApplyBattleStackLifeResults writes by stackId and removes zero-life stacks") {
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("unit_guard", 3));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 2));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+
+    const auto entries = session.BuildActiveBattleStackEntries();
+    REQUIRE(entries.size() == 2);
+
+    const std::vector<std::string> expectedStackIds = {entries[0].stackId, entries[1].stackId};
+    const std::vector<gameplay::BattleStackLifeResult> results = {
+        gameplay::BattleStackLifeResult{entries[0].stackId, 1},
+        gameplay::BattleStackLifeResult{entries[1].stackId, 0}
+    };
+
+    REQUIRE(session.ApplyBattleStackLifeResults(results, expectedStackIds));
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 1);
+    REQUIRE(session.OwnedUnitCount("unit_medic") == 0);
+
+    bool removedStackStillReferenced = false;
+    for (const auto& slotId : session.ActiveSlotStackIds()) {
+        if (slotId == entries[1].stackId) {
+            removedStackStillReferenced = true;
+        }
+    }
+    for (const auto& slotId : session.ReserveSlotStackIds()) {
+        if (slotId == entries[1].stackId) {
+            removedStackStillReferenced = true;
+        }
+    }
+    REQUIRE_FALSE(removedStackStillReferenced);
+}
+
+TEST_CASE("GameSession ApplyBattleStackLifeResults invalid payload fails atomically") {
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("unit_guard", 3));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 2));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+
+    const auto entries = session.BuildActiveBattleStackEntries();
+    REQUIRE(entries.size() == 2);
+
+    const std::vector<std::string> expectedStackIds = {entries[0].stackId, entries[1].stackId};
+    const int ownedGuardBefore = session.OwnedUnitCount("unit_guard");
+    const int ownedMedicBefore = session.OwnedUnitCount("unit_medic");
+    const auto activeBefore = session.ActiveSlotStackIds();
+    const auto reserveBefore = session.ReserveSlotStackIds();
+
+    const std::vector<gameplay::BattleStackLifeResult> invalidResults = {
+        gameplay::BattleStackLifeResult{entries[0].stackId, 1},
+        gameplay::BattleStackLifeResult{entries[0].stackId, 0}
+    };
+
+    REQUIRE_FALSE(session.ApplyBattleStackLifeResults(invalidResults, expectedStackIds));
+    REQUIRE(session.OwnedUnitCount("unit_guard") == ownedGuardBefore);
+    REQUIRE(session.OwnedUnitCount("unit_medic") == ownedMedicBefore);
+    REQUIRE(session.ActiveSlotStackIds() == activeBefore);
+    REQUIRE(session.ReserveSlotStackIds() == reserveBefore);
+}
+
+TEST_CASE("GameSession ApplyBattleStackLifeResults rejects missing and non-participating stack ids") {
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+
+    const auto entries = session.BuildActiveBattleStackEntries();
+    REQUIRE(entries.size() == 2);
+
+    const std::vector<std::string> expectedStackIds = {entries[0].stackId, entries[1].stackId};
+
+    const auto activeBefore = session.ActiveSlotStackIds();
+    const auto reserveBefore = session.ReserveSlotStackIds();
+
+    const std::vector<gameplay::BattleStackLifeResult> missingResult = {
+        gameplay::BattleStackLifeResult{entries[0].stackId, 1}
+    };
+    REQUIRE_FALSE(session.ApplyBattleStackLifeResults(missingResult, expectedStackIds));
+    REQUIRE(session.ActiveSlotStackIds() == activeBefore);
+    REQUIRE(session.ReserveSlotStackIds() == reserveBefore);
+
+    const std::vector<gameplay::BattleStackLifeResult> extraResult = {
+        gameplay::BattleStackLifeResult{entries[0].stackId, 1},
+        gameplay::BattleStackLifeResult{entries[1].stackId, 1},
+        gameplay::BattleStackLifeResult{"stk_non_participating", 1}
+    };
+    REQUIRE_FALSE(session.ApplyBattleStackLifeResults(extraResult, expectedStackIds));
+    REQUIRE(session.ActiveSlotStackIds() == activeBefore);
+    REQUIRE(session.ReserveSlotStackIds() == reserveBefore);
+}

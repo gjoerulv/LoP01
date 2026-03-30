@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -55,6 +56,26 @@ int CountPlayerCharacterAllies(const std::vector<gameplay::battle::BattleUnit>& 
     return count;
 }
 
+std::vector<gameplay::battle::PlayerBattleEntry> BuildActiveEntries(
+    const std::vector<std::string>& stackIds,
+    const std::vector<std::string>& unitIds,
+    const std::vector<int>& quantities) {
+    std::vector<gameplay::battle::PlayerBattleEntry> entries;
+    const size_t count = std::min(stackIds.size(), std::min(unitIds.size(), quantities.size()));
+    entries.reserve(count);
+
+    for (size_t i = 0; i < count; ++i) {
+        entries.push_back(gameplay::battle::PlayerBattleEntry{
+            static_cast<int>(i),
+            stackIds[i],
+            unitIds[i],
+            quantities[i]
+        });
+    }
+
+    return entries;
+}
+
 } // namespace
 
 TEST_CASE("EmptyActiveParty_UsesScenarioAuthoredAllies") {
@@ -78,7 +99,10 @@ TEST_CASE("ValidActiveParty_FullyOverridesScenarioAuthoredAllies") {
     data::ContentRepository content;
     REQUIRE(content.LoadFromDirectory(root));
 
-    const std::vector<std::string> activeParty = {"unit_guard", "unit_medic"};
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2"},
+        {"unit_guard", "unit_medic"},
+        {3, 2});
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
     REQUIRE(battle.has_value());
 
@@ -94,7 +118,10 @@ TEST_CASE("MixedValidAndInvalidActiveParty_UsesOnlyValidResolvedActivePartyAllie
     data::ContentRepository content;
     REQUIRE(content.LoadFromDirectory(root));
 
-    const std::vector<std::string> activeParty = {"unit_guard", "unit_missing", "unit_medic"};
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2", "stk_3"},
+        {"unit_guard", "unit_missing", "unit_medic"},
+        {3, 1, 2});
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
     REQUIRE(battle.has_value());
 
@@ -110,7 +137,10 @@ TEST_CASE("AllInvalidActiveParty_FallsBackToScenarioAuthoredAllies") {
     data::ContentRepository content;
     REQUIRE(content.LoadFromDirectory(root));
 
-    const std::vector<std::string> activeParty = {"unit_missing_a", "unit_missing_b"};
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2"},
+        {"unit_missing_a", "unit_missing_b"},
+        {1, 1});
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
     REQUIRE(battle.has_value());
 
@@ -126,7 +156,10 @@ TEST_CASE("ActivePartyOverride_EnemiesRemainScenarioAuthored") {
     data::ContentRepository content;
     REQUIRE(content.LoadFromDirectory(root));
 
-    const std::vector<std::string> activeParty = {"unit_guard", "unit_medic"};
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2"},
+        {"unit_guard", "unit_medic"},
+        {3, 2});
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
     REQUIRE(battle.has_value());
 
@@ -142,7 +175,10 @@ TEST_CASE("ActivePartyOverride_PreservesOrderAndDuplicates") {
     data::ContentRepository content;
     REQUIRE(content.LoadFromDirectory(root));
 
-    const std::vector<std::string> activeParty = {"unit_guard", "unit_medic", "unit_guard"};
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2", "stk_3"},
+        {"unit_guard", "unit_medic", "unit_guard"},
+        {3, 2, 1});
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
     REQUIRE(battle.has_value());
 
@@ -158,13 +194,66 @@ TEST_CASE("ActivePartyGenericOnly_AllowsBattleWithNoPlayerCharacterAlly") {
     data::ContentRepository content;
     REQUIRE(content.LoadFromDirectory(root));
 
-    const std::vector<std::string> activeParty = {"unit_guard", "unit_medic"};
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2"},
+        {"unit_guard", "unit_medic"},
+        {3, 2});
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
     REQUIRE(battle.has_value());
 
     const auto allies = CollectUnitIdsBySide(battle->Units(), gameplay::battle::TeamSide::Allies);
     REQUIRE(allies == std::vector<std::string>{"unit_guard", "unit_medic"});
     REQUIRE(CountPlayerCharacterAllies(battle->Units()) == 0);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ActivePartyEntries_PreserveRosterStackIdAndQuantityToBattleLife") {
+    const auto root = BuildBattleFactoryTestContent("battle_factory_test_roster_identity_life");
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+
+    const auto activeParty = BuildActiveEntries(
+        {"stk_10", "stk_11"},
+        {"unit_guard", "unit_medic"},
+        {5, 2});
+    const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
+    REQUIRE(battle.has_value());
+
+    std::vector<std::string> allyStackIds;
+    std::vector<int> allyLife;
+    for (const auto& unit : battle->Units()) {
+        if (unit.side == gameplay::battle::TeamSide::Allies) {
+            allyStackIds.push_back(unit.rosterStackId);
+            allyLife.push_back(unit.life);
+        }
+    }
+
+    REQUIRE(allyStackIds == std::vector<std::string>{"stk_10", "stk_11"});
+    REQUIRE(allyLife == std::vector<int>{5, 2});
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("EnemyUnits_DoNotCarryRosterStackIdentity") {
+    const auto root = BuildBattleFactoryTestContent("battle_factory_test_enemy_no_roster_identity");
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+
+    const auto activeParty = BuildActiveEntries(
+        {"stk_1", "stk_2"},
+        {"unit_guard", "unit_medic"},
+        {3, 2});
+    const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(content, "test_scenario", activeParty, 7);
+    REQUIRE(battle.has_value());
+
+    for (const auto& unit : battle->Units()) {
+        if (unit.side == gameplay::battle::TeamSide::Enemies) {
+            REQUIRE(unit.rosterStackId.empty());
+        }
+    }
 
     std::filesystem::remove_all(root);
 }
