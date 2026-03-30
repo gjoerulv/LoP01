@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 
 #include "app/mappers/LocationModelMapper.h"
 #include "core/GameClock.h"
@@ -59,24 +60,53 @@ TEST_CASE("Location recruit prompt reflects weekly restock without requiring rec
     REQUIRE(session.RemainingRecruitStock(service->id, service->weeklyStock) == 0);
 
     app::mappers::LocationModelMapper mapper;
-    auto model = mapper.Map(content, session, session.Snapshot(), scene, "");
+    auto model = mapper.Map(content, session, session.Snapshot(), scene, "", std::nullopt);
     REQUIRE(model.interactPrompt.find("Stock: 0/3") != std::string::npos);
     REQUIRE_FALSE(model.interactPromptUsable);
 
     session.AddMinutes(core::GameClock::kMinutesPerSliceDay * 7);
 
-    model = mapper.Map(content, session, session.Snapshot(), scene, "");
+    model = mapper.Map(content, session, session.Snapshot(), scene, "", std::nullopt);
     REQUIRE(model.interactPrompt.find("Stock: 0/3") != std::string::npos);
 
     session.RefreshWeeklyRecruitStocks(content.LocationServices());
 
-    model = mapper.Map(content, session, session.Snapshot(), scene, "");
+    model = mapper.Map(content, session, session.Snapshot(), scene, "", std::nullopt);
     REQUIRE(model.interactPrompt.find("Stock: 3/3") != std::string::npos);
     REQUIRE(model.interactPromptUsable);
 
     REQUIRE(session.TryConsumeRecruitStock(service->id, service->weeklyStock));
-    model = mapper.Map(content, session, session.Snapshot(), scene, "");
+    model = mapper.Map(content, session, session.Snapshot(), scene, "", std::nullopt);
     REQUIRE(model.interactPrompt.find("Stock: 2/3") != std::string::npos);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("LocationModelMapper uses interact prompt override text and usability") {
+    const auto root = BuildLocationMapperTestContent();
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+
+    gameplay::GameSession session;
+    session.EnterLocationMode("survivor_recruit_post");
+
+    const auto* sceneDefinition = content.FindLocationSceneById("recruit_post_proto");
+    REQUIRE(sceneDefinition != nullptr);
+
+    gameplay::location::LocationScene scene;
+    scene.Reset(*sceneDefinition);
+
+    app::mappers::LocationModelMapper mapper;
+    const app::mappers::InteractPromptOverride override{ "Muster Party\n1 Add  2 Remove", false };
+    const auto overridden = mapper.Map(content, session, session.Snapshot(), scene, "", override);
+
+    REQUIRE(overridden.interactPrompt == "Muster Party\n1 Add  2 Remove");
+    REQUIRE_FALSE(overridden.interactPromptUsable);
+
+    const auto normal = mapper.Map(content, session, session.Snapshot(), scene, "", std::nullopt);
+    REQUIRE(normal.interactPrompt.find("Stock:") != std::string::npos);
+    REQUIRE(normal.interactPromptUsable);
 
     std::filesystem::remove_all(root);
 }

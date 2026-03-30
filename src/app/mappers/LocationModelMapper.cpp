@@ -105,7 +105,8 @@ namespace app::mappers
         const gameplay::GameSession& session,
         const gameplay::SessionSnapshot& snapshot,
         const gameplay::location::LocationScene& scene,
-        const std::string& statusText) const
+        const std::string& statusText,
+        const std::optional<InteractPromptOverride>& interactPromptOverride) const
     {
         LocationRenderModel model;
         const data::LocationDefinition* location = content.FindLocationById(snapshot.destinationId);
@@ -156,6 +157,12 @@ namespace app::mappers
         if (scene.HasActiveDialogue())
         {
             model.interactPrompt = "Choose dialogue option (1/2)";
+        }
+        else if (interactPromptOverride.has_value())
+        {
+            model.showInteractPrompt = true;
+            model.interactPrompt = interactPromptOverride->text;
+            model.interactPromptUsable = interactPromptOverride->usable;
         }
         else if (nearZone >= 0)
         {

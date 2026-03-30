@@ -340,6 +340,7 @@ int GameSession::ApplySameDayTravelPrepToTravelMinutes(const int baseTravelMinut
 
 void GameSession::ApplyWakePenalty() {
     gold_ = std::max(0, gold_ - 1000);
+    clock_.AdvanceMinutes(core::GameClock::kMinutesPerSliceDay);
     clock_.SetToWakePenaltyStart();
 }
 

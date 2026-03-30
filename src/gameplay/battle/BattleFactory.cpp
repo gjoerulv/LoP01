@@ -90,6 +90,7 @@ namespace gameplay::battle
     std::optional<BattleState> BattleFactory::CreateFromScenario(
         const data::ContentRepository& content,
         const std::string& scenarioId,
+        const std::vector<std::string>& activePartyUnitIds,
         const uint32_t seed)
     {
         const auto* scenario = content.FindBattleScenarioById(scenarioId);
@@ -98,10 +99,33 @@ namespace gameplay::battle
             return std::nullopt;
         }
 
-        std::vector<BattleUnit> units;
-        units.reserve(scenario->allies.size() + scenario->enemies.size());
+        std::vector<BattleUnit> resolvedActivePartyAllies;
+        resolvedActivePartyAllies.reserve(activePartyUnitIds.size());
+        for (const auto& unitId : activePartyUnitIds)
+        {
+            if (const auto* definition = content.FindUnitById(unitId))
+            {
+                resolvedActivePartyAllies.push_back(BuildBattleUnit(*definition, TeamSide::Allies, 0));
+            }
+        }
 
-        AppendUnits(units, scenario->allies, TeamSide::Allies, content);
+        const bool useActivePartyOverride = !resolvedActivePartyAllies.empty();
+
+        std::vector<BattleUnit> units;
+        const size_t allyCount = useActivePartyOverride
+            ? resolvedActivePartyAllies.size()
+            : scenario->allies.size();
+        units.reserve(allyCount + scenario->enemies.size());
+
+        if (useActivePartyOverride)
+        {
+            units.insert(units.end(), resolvedActivePartyAllies.begin(), resolvedActivePartyAllies.end());
+        }
+        else
+        {
+            AppendUnits(units, scenario->allies, TeamSide::Allies, content);
+        }
+
         AppendUnits(units, scenario->enemies, TeamSide::Enemies, content);
 
         BattleState state(seed == 0 ? scenario->seed : seed);

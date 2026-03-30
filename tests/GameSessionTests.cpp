@@ -49,14 +49,26 @@ TEST_CASE("GameSession rest advances to the next day start") {
     REQUIRE(snapshot.time == "06:00");
 }
 
-TEST_CASE("GameSession wake penalty sets wake time and reduces gold") {
+TEST_CASE("GameSession wake penalty advances to next day 11:00 and reduces gold") {
     gameplay::GameSession session;
+    const auto before = session.Snapshot();
 
     session.ApplyWakePenalty();
     const auto snapshot = session.Snapshot();
 
+    REQUIRE(snapshot.day == before.day + 1);
     REQUIRE(snapshot.time == "11:00");
     REQUIRE(snapshot.gold == 1500);
+}
+
+TEST_CASE("GameSession wake penalty does not change destination (fallback remains app-managed)") {
+    gameplay::GameSession session;
+    session.SetDestination("bridge_checkpoint");
+
+    session.ApplyWakePenalty();
+    const auto snapshot = session.Snapshot();
+
+    REQUIRE(snapshot.destinationId == "bridge_checkpoint");
 }
 
 TEST_CASE("GameSession wake penalty never drops gold below zero") {

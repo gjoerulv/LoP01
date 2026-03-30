@@ -54,6 +54,7 @@ target_link_libraries(ashvale_rendering PUBLIC raylib)
 
 add_executable(ashvale_slice
   src/app/App.cpp
+  src/app/MusteringInteraction.cpp
   src/app/main.cpp
   src/app/input/InputTranslator.cpp
   src/app/OverworldController.cpp
@@ -93,7 +94,9 @@ if (BUILD_TESTING)
   FetchContent_MakeAvailable(Catch2)
 
   add_executable(ashvale_logic_tests
+    tests/BattleFactoryTests.cpp
     src/app/BattleEventTextFormatter.cpp
+    src/app/MusteringInteraction.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/OverworldModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
@@ -102,6 +105,7 @@ if (BUILD_TESTING)
     tests/ContentRepositoryTests.cpp
     tests/GameClockTests.cpp
     tests/GameSessionTests.cpp
+    tests/MusteringInteractionTests.cpp
     tests/LocationModelMapperTests.cpp
     tests/LocationSceneTests.cpp
     tests/LocationServiceRulesTests.cpp

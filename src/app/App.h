@@ -6,6 +6,7 @@
 #include "app/OverworldController.h"
 #include "app/LocationController.h"
 #include "app/BattleController.h"
+#include "app/MusteringInteraction.h"
 #include "app/input/InputTranslator.h"
 #include "app/mappers/OverworldModelMapper.h"
 #include "app/mappers/LocationModelMapper.h"
@@ -54,6 +55,7 @@ namespace app {
         void UpdateOverworldMode(const input::InputState& input);
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
+        [[nodiscard]] MusteringCommand TranslateMusteringCommand(const input::InputState& input) const;
         void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
         bool ApplyResolvedLocationService(const data::LocationServiceDefinition& service);
@@ -78,6 +80,7 @@ namespace app {
         BattleControllerState battleControllerState_;
         LocationController locationController_;
         OverworldController overworldController_;
+        MusteringInteraction musteringInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
         mappers::BattleModelMapper battleModelMapper_;

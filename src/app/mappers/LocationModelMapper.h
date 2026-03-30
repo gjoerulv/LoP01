@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include "gameplay/GameSession.h"
@@ -9,6 +10,11 @@
 
 namespace app::mappers
 {
+    struct InteractPromptOverride {
+        std::string text;
+        bool usable = true;
+    };
+
     class LocationModelMapper
     {
     public:
@@ -17,6 +23,7 @@ namespace app::mappers
             const gameplay::GameSession& session,
             const gameplay::SessionSnapshot& snapshot,
             const gameplay::location::LocationScene& scene,
-            const std::string& statusText) const;
+            const std::string& statusText,
+            const std::optional<InteractPromptOverride>& interactPromptOverride = std::nullopt) const;
     };
 }
