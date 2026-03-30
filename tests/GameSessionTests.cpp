@@ -294,14 +294,125 @@ TEST_CASE("GameSession active party requires reserve availability and preserves 
 
     REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
     REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
-    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE_FALSE(session.TryAddUnitToActiveParty("unit_guard"));
     REQUIRE_FALSE(session.TryAddUnitToActiveParty("unit_guard"));
 
     const auto& active = session.ActivePartyUnitIds();
-    REQUIRE(active.size() == 3);
+    REQUIRE(active.size() == 2);
     REQUIRE(active[0] == "unit_guard");
     REQUIRE(active[1] == "unit_medic");
-    REQUIRE(active[2] == "unit_guard");
+}
+
+TEST_CASE("GameSession canonical stack model generates deterministic stack ids") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.NextStackIdCounter() == 1);
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.RosterStacks()[0].stackId == "stk_1");
+    REQUIRE(session.RosterStacks()[0].quantity == 2);
+    REQUIRE(session.NextStackIdCounter() == 2);
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.RosterStacks()[0].stackId == "stk_1");
+    REQUIRE(session.RosterStacks()[0].quantity == 3);
+    REQUIRE(session.NextStackIdCounter() == 2);
+
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(session.RosterStacks().size() == 2);
+    REQUIRE(session.RosterStacks()[1].stackId == "stk_2");
+    REQUIRE(session.NextStackIdCounter() == 3);
+}
+
+TEST_CASE("GameSession canonical active and reserve slot occupancy remains bounded") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 3));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 2));
+
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+    REQUIRE_FALSE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    int occupiedActive = 0;
+    for (const auto& stackId : session.ActiveSlotStackIds()) {
+        if (!stackId.empty()) {
+            ++occupiedActive;
+        }
+    }
+    REQUIRE(occupiedActive == 2);
+    REQUIRE(session.ActivePartyUnitIds().size() == 2);
+
+    int occupiedReserve = 0;
+    for (const auto& stackId : session.ReserveSlotStackIds()) {
+        if (!stackId.empty()) {
+            ++occupiedReserve;
+        }
+    }
+    REQUIRE(occupiedReserve >= 0);
+    REQUIRE(occupiedReserve <= 8);
+}
+
+TEST_CASE("GameSession removing final quantity clears depleted stack and slot immediately") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.ReserveSlotStackIds()[0] == "stk_1");
+
+    REQUIRE(session.TryRemoveOwnedUnit("unit_guard", 1));
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 0);
+    REQUIRE(session.RosterStacks().empty());
+    REQUIRE(session.ReserveSlotStackIds()[0].empty());
+}
+
+TEST_CASE("GameSession old-shaped projections are derived and remain consistent") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    const auto& owned = session.OwnedUnitCounts();
+    REQUIRE(owned.size() == 2);
+    REQUIRE(owned[0].unitId == "unit_guard");
+    REQUIRE(owned[0].count == 2);
+    REQUIRE(owned[1].unitId == "unit_medic");
+    REQUIRE(owned[1].count == 1);
+
+    const auto& active = session.ActivePartyUnitIds();
+    REQUIRE(active.size() == 1);
+    REQUIRE(active[0] == "unit_guard");
+    REQUIRE(session.ActivePartyAllocatedCount("unit_guard") == 2);
+    REQUIRE(session.ReserveUnitCount("unit_guard") == 0);
+}
+
+TEST_CASE("GameSession Phase2 mustering moves whole stacks without duplicate stack references") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.RosterStacks()[0].stackId == "stk_1");
+    REQUIRE(session.NextStackIdCounter() == 2);
+
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE_FALSE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.ActivePartyUnitIds().size() == 1);
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.NextStackIdCounter() == 2);
+
+    int activeRefs = 0;
+    for (const auto& stackId : session.ActiveSlotStackIds()) {
+        if (stackId == "stk_1") {
+            ++activeRefs;
+        }
+    }
+    REQUIRE(activeRefs == 1);
+
+    REQUIRE(session.TryRemoveActivePartyUnitAt(0));
+    REQUIRE(session.ActivePartyUnitIds().empty());
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 2);
 }
 
 TEST_CASE("GameSession removing owned units fails when active allocations would underflow") {
@@ -314,12 +425,10 @@ TEST_CASE("GameSession removing owned units fails when active allocations would 
     REQUIRE(session.AddOwnedUnit("unit_guard", 2));
     REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
 
-    REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", 2));
-    REQUIRE(session.TryRemoveOwnedUnit("unit_guard", 1));
-    REQUIRE(session.OwnedUnitCount("unit_guard") == 1);
-    REQUIRE(session.ActivePartyAllocatedCount("unit_guard") == 1);
-
     REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", 1));
+    REQUIRE_FALSE(session.TryRemoveOwnedUnit("unit_guard", 2));
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 2);
+    REQUIRE(session.ActivePartyAllocatedCount("unit_guard") == 2);
 }
 
 TEST_CASE("GameSession active party mutation APIs validate indices and do not break invariants") {
@@ -355,7 +464,7 @@ TEST_CASE("GameSession save and load roundtrips roster ownership and active part
     REQUIRE(source.AddOwnedUnit("unit_guard", 2));
     REQUIRE(source.TryAddUnitToActiveParty("unit_guard"));
     REQUIRE(source.TryAddUnitToActiveParty("unit_medic"));
-    REQUIRE(source.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE_FALSE(source.TryAddUnitToActiveParty("unit_guard"));
 
     const core::SaveData saveData = source.ToSaveData();
 
@@ -370,10 +479,9 @@ TEST_CASE("GameSession save and load roundtrips roster ownership and active part
     REQUIRE(owned[1].count == 1);
 
     const auto& active = loaded.ActivePartyUnitIds();
-    REQUIRE(active.size() == 3);
+    REQUIRE(active.size() == 2);
     REQUIRE(active[0] == "unit_guard");
     REQUIRE(active[1] == "unit_medic");
-    REQUIRE(active[2] == "unit_guard");
 }
 
 TEST_CASE("GameSession load sanitizes invalid or out-of-sync roster save data") {
@@ -408,4 +516,21 @@ TEST_CASE("GameSession load sanitizes invalid or out-of-sync roster save data") 
     REQUIRE(active[0] == "unit_guard");
     REQUIRE(active[1] == "unit_guard");
     REQUIRE(active[2] == "unit_guard");
+}
+
+TEST_CASE("GameSession recruit placement follows reserve then active merge policy") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.RosterStacks()[0].quantity == 2);
+
+    REQUIRE(session.TryRemoveActivePartyUnitAt(0));
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.RosterStacks().size() == 1);
+    REQUIRE(session.RosterStacks()[0].quantity == 3);
 }

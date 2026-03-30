@@ -45,6 +45,10 @@ namespace gameplay::location {
             return RecruitServiceApplyResult{false, status};
         }
 
+        if (!session.CanAddOwnedUnit(service.unitId, 1)) {
+            return RecruitServiceApplyResult{false, "No reserve slot available for a new recruit stack"};
+        }
+
         if (service.goldCost > 0 && !session.TrySpendGold(service.goldCost)) {
             const std::string status = !service.failureText.empty()
                 ? service.failureText
@@ -64,7 +68,7 @@ namespace gameplay::location {
         }
 
         if (!session.AddOwnedUnit(service.unitId, 1)) {
-            return RecruitServiceApplyResult{false, "Recruit failed: internal roster state error"};
+            return RecruitServiceApplyResult{false, "Recruit failed: roster placement changed unexpectedly"};
         }
 
         const int remainingAfter = session.RemainingRecruitStock(service.id, service.weeklyStock);

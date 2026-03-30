@@ -26,6 +26,12 @@ struct OwnedUnitCountState {
     int count = 0;
 };
 
+struct RosterStackState {
+    std::string stackId;
+    std::string unitId;
+    int quantity = 0;
+};
+
 struct SessionSnapshot {
     GameMode mode = GameMode::Title;
     int day = 1;
@@ -92,15 +98,25 @@ public:
     [[nodiscard]] int OwnedUnitCount(const std::string& unitId) const;
     [[nodiscard]] int ActivePartyAllocatedCount(const std::string& unitId) const;
     [[nodiscard]] int ReserveUnitCount(const std::string& unitId) const;
+
+    [[nodiscard]] const std::vector<RosterStackState>& RosterStacks() const;
+    [[nodiscard]] const std::vector<std::string>& ActiveSlotStackIds() const;
+    [[nodiscard]] const std::vector<std::string>& ReserveSlotStackIds() const;
+    [[nodiscard]] int NextStackIdCounter() const;
+
     [[nodiscard]] const std::vector<OwnedUnitCountState>& OwnedUnitCounts() const;
     [[nodiscard]] const std::vector<std::string>& ActivePartyUnitIds() const;
 
     [[nodiscard]] bool AddOwnedUnit(const std::string& unitId, int count = 1);
+    [[nodiscard]] bool CanAddOwnedUnit(const std::string& unitId, int count = 1) const;
     [[nodiscard]] bool TryRemoveOwnedUnit(const std::string& unitId, int count = 1);
     [[nodiscard]] bool TryAddUnitToActiveParty(const std::string& unitId);
+    [[nodiscard]] bool TryMoveReserveStackToActiveSlot(int reserveSlotIndex);
     [[nodiscard]] bool TryRemoveActivePartyUnitAt(int index);
     [[nodiscard]] bool TryMoveActivePartyUnit(int fromIndex, int toIndex);
     void ClearActiveParty();
+
+    [[nodiscard]] const RosterStackState* FindRosterStackById(const std::string& stackId) const;
 
     [[nodiscard]] SessionSnapshot Snapshot() const;
 
@@ -111,7 +127,21 @@ public:
     static GameMode FromString(const std::string& mode);
 
 private:
+    static constexpr int kActiveSlotCount = 3;
+    static constexpr int kReserveSlotCount = 8;
+
     void NormalizeRosterState();
+    void MarkRosterProjectionDirty();
+    void RebuildRosterProjectionCache() const;
+
+    [[nodiscard]] std::string GenerateNextStackId();
+    [[nodiscard]] RosterStackState* FindStackById(const std::string& stackId);
+    [[nodiscard]] const RosterStackState* FindStackById(const std::string& stackId) const;
+    [[nodiscard]] std::string FindCompatibleStackIdInSlots(
+        const std::vector<std::string>& slotStackIds,
+        const std::string& unitId) const;
+    [[nodiscard]] int FindFirstEmptySlotIndex(const std::vector<std::string>& slotStackIds) const;
+    void RemoveStackIfDepleted(const std::string& stackId);
 
     GameMode mode_;
     core::GameClock clock_;
@@ -123,9 +153,17 @@ private:
     int gold_;
     std::string regionId_;
     std::string destinationId_;
-    std::vector<OwnedUnitCountState> ownedUnitCounts_;
-    std::vector<std::string> activePartyUnitIds_;
-    int activePartyCapacity_ = 3;
+
+    std::vector<RosterStackState> rosterStacks_;
+    std::vector<std::string> activeSlotStackIds_;
+    std::vector<std::string> reserveSlotStackIds_;
+    int nextStackIdCounter_ = 1;
+
+    mutable bool rosterProjectionDirty_ = true;
+    mutable std::vector<OwnedUnitCountState> ownedUnitCountProjection_;
+    mutable std::vector<std::string> activePartyUnitIdProjection_;
+
+    int activePartyCapacity_ = kActiveSlotCount;
     quests::QuestState questState_;
     world::NodeWorldState nodeWorldState_;
 };

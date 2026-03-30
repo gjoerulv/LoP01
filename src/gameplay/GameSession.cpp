@@ -1,6 +1,7 @@
 #include "gameplay/GameSession.h"
 
 #include <algorithm>
+#include <map>
 
 namespace gameplay {
 
@@ -11,24 +12,35 @@ namespace
         return !entry.unitId.empty() && entry.count > 0;
     }
 
-    bool OwnedUnitIdLess(const OwnedUnitCountState& left, const OwnedUnitCountState& right) {
-        return left.unitId < right.unitId;
+    bool IsValidStackEntry(const RosterStackState& entry) {
+        return !entry.stackId.empty() && !entry.unitId.empty() && entry.quantity > 0;
     }
 
-    auto FindOwnedUnitIt(std::vector<OwnedUnitCountState>& owned, const std::string& unitId) {
-        return std::lower_bound(
-            owned.begin(),
-            owned.end(),
-            OwnedUnitCountState{unitId, 0},
-            OwnedUnitIdLess);
-    }
+    int ParseStackIdSuffix(const std::string& stackId) {
+        constexpr const char* kPrefix = "stk_";
+        constexpr size_t kPrefixSize = 4;
 
-    auto FindOwnedUnitIt(const std::vector<OwnedUnitCountState>& owned, const std::string& unitId) {
-        return std::lower_bound(
-            owned.begin(),
-            owned.end(),
-            OwnedUnitCountState{unitId, 0},
-            OwnedUnitIdLess);
+        if (stackId.size() <= kPrefixSize || stackId.rfind(kPrefix, 0) != 0) {
+            return -1;
+        }
+
+        const std::string suffix = stackId.substr(kPrefixSize);
+        if (suffix.empty()) {
+            return -1;
+        }
+
+        for (const char ch : suffix) {
+            if (ch < '0' || ch > '9') {
+                return -1;
+            }
+        }
+
+        try {
+            return std::stoi(suffix);
+        }
+        catch (...) {
+            return -1;
+        }
     }
 
     core::RecruitServiceState* FindRecruitServiceState(
@@ -82,7 +94,12 @@ namespace
 
 
 GameSession::GameSession()
-    : mode_(GameMode::Title), gold_(2500), regionId_("ashvale_heartland"), destinationId_("home_base") {}
+    : mode_(GameMode::Title),
+    gold_(2500),
+    regionId_("ashvale_heartland"),
+    destinationId_("home_base"),
+    activeSlotStackIds_(kActiveSlotCount, ""),
+    reserveSlotStackIds_(kReserveSlotCount, "") {}
 
 void GameSession::AdvanceMode() {
     switch (mode_) {
@@ -402,12 +419,14 @@ int GameSession::OwnedUnitCount(const std::string& unitId) const {
         return 0;
     }
 
-    const auto it = FindOwnedUnitIt(ownedUnitCounts_, unitId);
-    if (it == ownedUnitCounts_.end() || it->unitId != unitId) {
-        return 0;
+    RebuildRosterProjectionCache();
+    for (const auto& entry : ownedUnitCountProjection_) {
+        if (entry.unitId == unitId) {
+            return std::max(0, entry.count);
+        }
     }
 
-    return std::max(0, it->count);
+    return 0;
 }
 
 int GameSession::ActivePartyAllocatedCount(const std::string& unitId) const {
@@ -416,9 +435,10 @@ int GameSession::ActivePartyAllocatedCount(const std::string& unitId) const {
     }
 
     int allocated = 0;
-    for (const auto& activeId : activePartyUnitIds_) {
-        if (activeId == unitId) {
-            ++allocated;
+    for (const auto& stackId : activeSlotStackIds_) {
+        const auto* stack = FindStackById(stackId);
+        if (stack != nullptr && stack->unitId == unitId) {
+            allocated += std::max(0, stack->quantity);
         }
     }
 
@@ -426,32 +446,96 @@ int GameSession::ActivePartyAllocatedCount(const std::string& unitId) const {
 }
 
 int GameSession::ReserveUnitCount(const std::string& unitId) const {
-    const int owned = OwnedUnitCount(unitId);
-    const int allocated = ActivePartyAllocatedCount(unitId);
-    return std::max(0, owned - allocated);
+    if (unitId.empty()) {
+        return 0;
+    }
+
+    int reserve = 0;
+    for (const auto& stackId : reserveSlotStackIds_) {
+        const auto* stack = FindStackById(stackId);
+        if (stack != nullptr && stack->unitId == unitId) {
+            reserve += std::max(0, stack->quantity);
+        }
+    }
+
+    return reserve;
+}
+
+const std::vector<RosterStackState>& GameSession::RosterStacks() const {
+    return rosterStacks_;
+}
+
+const std::vector<std::string>& GameSession::ActiveSlotStackIds() const {
+    return activeSlotStackIds_;
+}
+
+const std::vector<std::string>& GameSession::ReserveSlotStackIds() const {
+    return reserveSlotStackIds_;
+}
+
+int GameSession::NextStackIdCounter() const {
+    return std::max(1, nextStackIdCounter_);
 }
 
 const std::vector<OwnedUnitCountState>& GameSession::OwnedUnitCounts() const {
-    return ownedUnitCounts_;
+    RebuildRosterProjectionCache();
+    return ownedUnitCountProjection_;
 }
 
 const std::vector<std::string>& GameSession::ActivePartyUnitIds() const {
-    return activePartyUnitIds_;
+    RebuildRosterProjectionCache();
+    return activePartyUnitIdProjection_;
 }
 
 bool GameSession::AddOwnedUnit(const std::string& unitId, const int count) {
+    if (!CanAddOwnedUnit(unitId, count)) {
+        return false;
+    }
+
+    const std::string compatibleReserveStackId = FindCompatibleStackIdInSlots(reserveSlotStackIds_, unitId);
+    if (!compatibleReserveStackId.empty()) {
+        if (auto* stack = FindStackById(compatibleReserveStackId)) {
+            stack->quantity += count;
+            MarkRosterProjectionDirty();
+            return true;
+        }
+    }
+
+    const std::string compatibleActiveStackId = FindCompatibleStackIdInSlots(activeSlotStackIds_, unitId);
+    if (!compatibleActiveStackId.empty()) {
+        if (auto* stack = FindStackById(compatibleActiveStackId)) {
+            stack->quantity += count;
+            MarkRosterProjectionDirty();
+            return true;
+        }
+    }
+
+    const int emptyReserveSlot = FindFirstEmptySlotIndex(reserveSlotStackIds_);
+    if (emptyReserveSlot < 0) {
+        return false;
+    }
+
+    const std::string stackId = GenerateNextStackId();
+    rosterStacks_.push_back(RosterStackState{stackId, unitId, count});
+    reserveSlotStackIds_[emptyReserveSlot] = stackId;
+    MarkRosterProjectionDirty();
+    return true;
+}
+
+bool GameSession::CanAddOwnedUnit(const std::string& unitId, const int count) const {
     if (unitId.empty() || count <= 0) {
         return false;
     }
 
-    auto it = FindOwnedUnitIt(ownedUnitCounts_, unitId);
-    if (it != ownedUnitCounts_.end() && it->unitId == unitId) {
-        it->count += count;
+    if (!FindCompatibleStackIdInSlots(reserveSlotStackIds_, unitId).empty()) {
         return true;
     }
 
-    ownedUnitCounts_.insert(it, OwnedUnitCountState{unitId, count});
-    return true;
+    if (!FindCompatibleStackIdInSlots(activeSlotStackIds_, unitId).empty()) {
+        return true;
+    }
+
+    return FindFirstEmptySlotIndex(reserveSlotStackIds_) >= 0;
 }
 
 bool GameSession::TryRemoveOwnedUnit(const std::string& unitId, const int count) {
@@ -459,22 +543,44 @@ bool GameSession::TryRemoveOwnedUnit(const std::string& unitId, const int count)
         return false;
     }
 
-    auto it = FindOwnedUnitIt(ownedUnitCounts_, unitId);
-    if (it == ownedUnitCounts_.end() || it->unitId != unitId) {
-        return false;
-    }
-
-    const int owned = std::max(0, it->count);
+    const int owned = OwnedUnitCount(unitId);
     const int activeAllocated = ActivePartyAllocatedCount(unitId);
     if (owned < count || owned - count < activeAllocated) {
         return false;
     }
 
-    it->count -= count;
-    if (it->count <= 0) {
-        ownedUnitCounts_.erase(it);
+    int reserveQuantity = 0;
+    for (const auto& stackId : reserveSlotStackIds_) {
+        const auto* stack = FindStackById(stackId);
+        if (stack != nullptr && stack->unitId == unitId) {
+            reserveQuantity += std::max(0, stack->quantity);
+        }
     }
 
+    if (reserveQuantity < count) {
+        return false;
+    }
+
+    int remainingToRemove = count;
+    for (const auto& slotStackId : reserveSlotStackIds_) {
+        if (remainingToRemove <= 0) {
+            break;
+        }
+
+        const std::string stackId = slotStackId;
+        auto* stack = FindStackById(stackId);
+        if (stack == nullptr || stack->unitId != unitId) {
+            continue;
+        }
+
+        const int removed = std::min(remainingToRemove, std::max(0, stack->quantity));
+        stack->quantity -= removed;
+        remainingToRemove -= removed;
+
+        RemoveStackIfDepleted(stackId);
+    }
+
+    MarkRosterProjectionDirty();
     return true;
 }
 
@@ -483,33 +589,95 @@ bool GameSession::TryAddUnitToActiveParty(const std::string& unitId) {
         return false;
     }
 
-    if (static_cast<int>(activePartyUnitIds_.size()) >= ActivePartyCapacity()) {
+    int reserveSlotIndex = -1;
+    for (int i = 0; i < static_cast<int>(reserveSlotStackIds_.size()); ++i) {
+        const auto* stack = FindStackById(reserveSlotStackIds_[i]);
+        if (stack != nullptr && stack->unitId == unitId && stack->quantity > 0) {
+            reserveSlotIndex = i;
+            break;
+        }
+    }
+
+    if (reserveSlotIndex < 0) {
         return false;
     }
 
-    if (ReserveUnitCount(unitId) <= 0) {
+    return TryMoveReserveStackToActiveSlot(reserveSlotIndex);
+}
+
+bool GameSession::TryMoveReserveStackToActiveSlot(const int reserveSlotIndex) {
+    if (reserveSlotIndex < 0 || reserveSlotIndex >= static_cast<int>(reserveSlotStackIds_.size())) {
         return false;
     }
 
-    activePartyUnitIds_.push_back(unitId);
+    const std::string stackId = reserveSlotStackIds_[reserveSlotIndex];
+    if (stackId.empty()) {
+        return false;
+    }
+
+    if (FindStackById(stackId) == nullptr) {
+        return false;
+    }
+
+    const int activeSlot = FindFirstEmptySlotIndex(activeSlotStackIds_);
+    if (activeSlot < 0) {
+        return false;
+    }
+
+    activeSlotStackIds_[activeSlot] = stackId;
+    reserveSlotStackIds_[reserveSlotIndex].clear();
+    MarkRosterProjectionDirty();
     return true;
 }
 
 bool GameSession::TryRemoveActivePartyUnitAt(const int index) {
-    if (index < 0 || index >= static_cast<int>(activePartyUnitIds_.size())) {
+    if (index < 0) {
         return false;
     }
 
-    activePartyUnitIds_.erase(activePartyUnitIds_.begin() + index);
+    std::vector<int> occupiedActiveSlots;
+    occupiedActiveSlots.reserve(activeSlotStackIds_.size());
+    for (int i = 0; i < static_cast<int>(activeSlotStackIds_.size()); ++i) {
+        if (!activeSlotStackIds_[i].empty()) {
+            occupiedActiveSlots.push_back(i);
+        }
+    }
+
+    if (index >= static_cast<int>(occupiedActiveSlots.size())) {
+        return false;
+    }
+
+    const int activeSlot = occupiedActiveSlots[index];
+    const std::string stackId = activeSlotStackIds_[activeSlot];
+    if (stackId.empty()) {
+        return false;
+    }
+
+    const int reserveSlot = FindFirstEmptySlotIndex(reserveSlotStackIds_);
+    if (reserveSlot < 0) {
+        return false;
+    }
+
+    reserveSlotStackIds_[reserveSlot] = stackId;
+    activeSlotStackIds_[activeSlot].clear();
+    MarkRosterProjectionDirty();
     return true;
 }
 
 bool GameSession::TryMoveActivePartyUnit(const int fromIndex, const int toIndex) {
-    if (fromIndex < 0 || fromIndex >= static_cast<int>(activePartyUnitIds_.size())) {
+    std::vector<std::string> orderedActive;
+    orderedActive.reserve(activeSlotStackIds_.size());
+    for (const auto& stackId : activeSlotStackIds_) {
+        if (!stackId.empty()) {
+            orderedActive.push_back(stackId);
+        }
+    }
+
+    if (fromIndex < 0 || fromIndex >= static_cast<int>(orderedActive.size())) {
         return false;
     }
 
-    if (toIndex < 0 || toIndex >= static_cast<int>(activePartyUnitIds_.size())) {
+    if (toIndex < 0 || toIndex >= static_cast<int>(orderedActive.size())) {
         return false;
     }
 
@@ -517,14 +685,29 @@ bool GameSession::TryMoveActivePartyUnit(const int fromIndex, const int toIndex)
         return true;
     }
 
-    const std::string moved = activePartyUnitIds_[fromIndex];
-    activePartyUnitIds_.erase(activePartyUnitIds_.begin() + fromIndex);
-    activePartyUnitIds_.insert(activePartyUnitIds_.begin() + toIndex, moved);
+    const std::string movedStackId = orderedActive[fromIndex];
+    orderedActive.erase(orderedActive.begin() + fromIndex);
+    orderedActive.insert(orderedActive.begin() + toIndex, movedStackId);
+
+    std::fill(activeSlotStackIds_.begin(), activeSlotStackIds_.end(), "");
+    for (int i = 0; i < static_cast<int>(orderedActive.size()) && i < static_cast<int>(activeSlotStackIds_.size()); ++i) {
+        activeSlotStackIds_[i] = orderedActive[i];
+    }
+
+    MarkRosterProjectionDirty();
     return true;
 }
 
 void GameSession::ClearActiveParty() {
-    activePartyUnitIds_.clear();
+    while (!ActivePartyUnitIds().empty()) {
+        if (!TryRemoveActivePartyUnitAt(0)) {
+            break;
+        }
+    }
+}
+
+const RosterStackState* GameSession::FindRosterStackById(const std::string& stackId) const {
+    return FindStackById(stackId);
 }
 
 SessionSnapshot GameSession::Snapshot() const {
@@ -540,9 +723,11 @@ SessionSnapshot GameSession::Snapshot() const {
 }
 
 core::SaveData GameSession::ToSaveData() const {
+    RebuildRosterProjectionCache();
+
     std::vector<core::OwnedUnitCountSaveState> ownedUnitCounts;
-    ownedUnitCounts.reserve(ownedUnitCounts_.size());
-    for (const auto& entry : ownedUnitCounts_) {
+    ownedUnitCounts.reserve(ownedUnitCountProjection_.size());
+    for (const auto& entry : ownedUnitCountProjection_) {
         ownedUnitCounts.push_back(core::OwnedUnitCountSaveState{entry.unitId, entry.count});
     }
 
@@ -561,7 +746,7 @@ core::SaveData GameSession::ToSaveData() const {
         travelPrepRemainingCharges_,
         travelPrepGrantedDay_,
         std::move(ownedUnitCounts),
-        activePartyUnitIds_
+        activePartyUnitIdProjection_
     };
 }
 
@@ -583,63 +768,239 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     travelPrepRemainingCharges_ = std::max(0, saveData.travelPrepRemainingCharges);
     travelPrepGrantedDay_ = std::max(0, saveData.travelPrepGrantedDay);
 
-    ownedUnitCounts_.clear();
-    ownedUnitCounts_.reserve(saveData.ownedUnitCounts.size());
+    rosterStacks_.clear();
+    std::fill(activeSlotStackIds_.begin(), activeSlotStackIds_.end(), "");
+    std::fill(reserveSlotStackIds_.begin(), reserveSlotStackIds_.end(), "");
+    nextStackIdCounter_ = 1;
+
+    std::map<std::string, int> normalizedOwned;
     for (const auto& entry : saveData.ownedUnitCounts) {
-        ownedUnitCounts_.push_back(OwnedUnitCountState{entry.unitId, entry.count});
+        if (entry.unitId.empty() || entry.count <= 0) {
+            continue;
+        }
+
+        normalizedOwned[entry.unitId] += entry.count;
     }
 
-    activePartyUnitIds_ = saveData.activePartyUnitIds;
+    int activeWriteIndex = 0;
+    for (const auto& unitId : saveData.activePartyUnitIds) {
+        if (activeWriteIndex >= kActiveSlotCount || unitId.empty()) {
+            continue;
+        }
+
+        auto ownedIt = normalizedOwned.find(unitId);
+        if (ownedIt == normalizedOwned.end() || ownedIt->second <= 0) {
+            continue;
+        }
+
+        const std::string stackId = GenerateNextStackId();
+        rosterStacks_.push_back(RosterStackState{stackId, unitId, 1});
+        activeSlotStackIds_[activeWriteIndex] = stackId;
+        ++activeWriteIndex;
+        --ownedIt->second;
+    }
+
+    int reserveWriteIndex = 0;
+    for (const auto& [unitId, count] : normalizedOwned) {
+        if (count <= 0) {
+            continue;
+        }
+
+        if (reserveWriteIndex >= kReserveSlotCount) {
+            break;
+        }
+
+        const std::string stackId = GenerateNextStackId();
+        rosterStacks_.push_back(RosterStackState{stackId, unitId, count});
+        reserveSlotStackIds_[reserveWriteIndex] = stackId;
+        ++reserveWriteIndex;
+    }
+
     NormalizeRosterState();
 }
 
 void GameSession::NormalizeRosterState() {
-    std::vector<OwnedUnitCountState> normalizedOwned;
-    normalizedOwned.reserve(ownedUnitCounts_.size());
-
-    for (const auto& entry : ownedUnitCounts_) {
-        if (!IsValidOwnedEntry(entry)) {
-            continue;
-        }
-
-        auto it = FindOwnedUnitIt(normalizedOwned, entry.unitId);
-        if (it != normalizedOwned.end() && it->unitId == entry.unitId) {
-            it->count += entry.count;
-        }
-        else {
-            normalizedOwned.insert(it, entry);
+    std::vector<RosterStackState> normalizedStacks;
+    normalizedStacks.reserve(rosterStacks_.size());
+    for (const auto& stack : rosterStacks_) {
+        if (IsValidStackEntry(stack)) {
+            normalizedStacks.push_back(stack);
         }
     }
+    rosterStacks_ = std::move(normalizedStacks);
 
-    ownedUnitCounts_ = std::move(normalizedOwned);
+    auto normalizeSlots = [&](std::vector<std::string>& slots, std::vector<std::string>& assigned) {
+        std::vector<std::string> normalized(slots.size(), "");
+        assigned.reserve(assigned.size() + slots.size());
 
-    std::vector<std::string> normalizedActive;
-    normalizedActive.reserve(activePartyUnitIds_.size());
-
-    for (const auto& unitId : activePartyUnitIds_) {
-        if (unitId.empty()) {
-            continue;
-        }
-
-        if (static_cast<int>(normalizedActive.size()) >= ActivePartyCapacity()) {
-            break;
-        }
-
-        int alreadyAllocated = 0;
-        for (const auto& allocatedId : normalizedActive) {
-            if (allocatedId == unitId) {
-                ++alreadyAllocated;
+        int write = 0;
+        for (const auto& stackId : slots) {
+            if (write >= static_cast<int>(normalized.size())) {
+                break;
             }
+
+            if (stackId.empty()) {
+                continue;
+            }
+
+            if (FindStackById(stackId) == nullptr) {
+                continue;
+            }
+
+            if (std::find(assigned.begin(), assigned.end(), stackId) != assigned.end()) {
+                continue;
+            }
+
+            normalized[write] = stackId;
+            assigned.push_back(stackId);
+            ++write;
         }
 
-        if (alreadyAllocated >= OwnedUnitCount(unitId)) {
+        slots = std::move(normalized);
+    };
+
+    std::vector<std::string> assignedStackIds;
+    assignedStackIds.reserve(activeSlotStackIds_.size() + reserveSlotStackIds_.size());
+    normalizeSlots(activeSlotStackIds_, assignedStackIds);
+    normalizeSlots(reserveSlotStackIds_, assignedStackIds);
+
+    int maxSuffix = 0;
+    for (const auto& stack : rosterStacks_) {
+        maxSuffix = std::max(maxSuffix, ParseStackIdSuffix(stack.stackId));
+    }
+
+    nextStackIdCounter_ = std::max(nextStackIdCounter_, maxSuffix + 1);
+    nextStackIdCounter_ = std::max(1, nextStackIdCounter_);
+
+    MarkRosterProjectionDirty();
+}
+
+void GameSession::MarkRosterProjectionDirty() {
+    rosterProjectionDirty_ = true;
+}
+
+void GameSession::RebuildRosterProjectionCache() const {
+    if (!rosterProjectionDirty_) {
+        return;
+    }
+
+    std::map<std::string, int> aggregated;
+    for (const auto& stack : rosterStacks_) {
+        if (!IsValidStackEntry(stack)) {
             continue;
         }
 
-        normalizedActive.push_back(unitId);
+        aggregated[stack.unitId] += stack.quantity;
     }
 
-    activePartyUnitIds_ = std::move(normalizedActive);
+    ownedUnitCountProjection_.clear();
+    ownedUnitCountProjection_.reserve(aggregated.size());
+    for (const auto& [unitId, count] : aggregated) {
+        if (IsValidOwnedEntry(OwnedUnitCountState{unitId, count})) {
+            ownedUnitCountProjection_.push_back(OwnedUnitCountState{unitId, count});
+        }
+    }
+
+    activePartyUnitIdProjection_.clear();
+    activePartyUnitIdProjection_.reserve(activeSlotStackIds_.size());
+    for (const auto& stackId : activeSlotStackIds_) {
+        if (const auto* stack = FindStackById(stackId)) {
+            activePartyUnitIdProjection_.push_back(stack->unitId);
+        }
+    }
+
+    rosterProjectionDirty_ = false;
+}
+
+std::string GameSession::GenerateNextStackId() {
+    const int suffix = std::max(1, nextStackIdCounter_);
+    nextStackIdCounter_ = suffix + 1;
+    return "stk_" + std::to_string(suffix);
+}
+
+RosterStackState* GameSession::FindStackById(const std::string& stackId) {
+    if (stackId.empty()) {
+        return nullptr;
+    }
+
+    for (auto& stack : rosterStacks_) {
+        if (stack.stackId == stackId) {
+            return &stack;
+        }
+    }
+
+    return nullptr;
+}
+
+const RosterStackState* GameSession::FindStackById(const std::string& stackId) const {
+    if (stackId.empty()) {
+        return nullptr;
+    }
+
+    for (const auto& stack : rosterStacks_) {
+        if (stack.stackId == stackId) {
+            return &stack;
+        }
+    }
+
+    return nullptr;
+}
+
+std::string GameSession::FindCompatibleStackIdInSlots(
+    const std::vector<std::string>& slotStackIds,
+    const std::string& unitId) const {
+    if (unitId.empty()) {
+        return "";
+    }
+
+    for (const auto& stackId : slotStackIds) {
+        const auto* stack = FindStackById(stackId);
+        if (stack != nullptr && stack->unitId == unitId && stack->quantity > 0) {
+            return stackId;
+        }
+    }
+
+    return "";
+}
+
+int GameSession::FindFirstEmptySlotIndex(const std::vector<std::string>& slotStackIds) const {
+    for (int i = 0; i < static_cast<int>(slotStackIds.size()); ++i) {
+        if (slotStackIds[i].empty()) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void GameSession::RemoveStackIfDepleted(const std::string& stackId) {
+    auto* stack = FindStackById(stackId);
+    if (stack == nullptr || stack->quantity > 0) {
+        return;
+    }
+
+    for (auto& activeSlot : activeSlotStackIds_) {
+        if (activeSlot == stackId) {
+            activeSlot.clear();
+        }
+    }
+
+    for (auto& reserveSlot : reserveSlotStackIds_) {
+        if (reserveSlot == stackId) {
+            reserveSlot.clear();
+        }
+    }
+
+    rosterStacks_.erase(
+        std::remove_if(
+            rosterStacks_.begin(),
+            rosterStacks_.end(),
+            [&](const RosterStackState& entry) {
+                return entry.stackId == stackId;
+            }),
+        rosterStacks_.end());
+
+    MarkRosterProjectionDirty();
 }
 
 std::string GameSession::ToString(const GameMode mode) {
