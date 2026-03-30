@@ -23,7 +23,14 @@ struct OwnedUnitCountSaveState {
     int count = 0;
 };
 
+struct RosterStackSaveState {
+    std::string stackId;
+    std::string unitId;
+    int quantity = 0;
+};
+
 struct SaveData {
+    int schemaVersion = 1;
     int day = 1;
     int minutesIntoSliceDay = 0;
     int gold = 0;
@@ -37,6 +44,13 @@ struct SaveData {
     int travelPrepDiscountMinutes = 0;
     int travelPrepRemainingCharges = 0;
     int travelPrepGrantedDay = 0;
+
+    bool hasCanonicalRoster = false;
+    std::vector<RosterStackSaveState> rosterStacks;
+    std::vector<std::string> activeSlotStackIds;
+    std::vector<std::string> reserveSlotStackIds;
+    int nextStackIdCounter = 1;
+
     std::vector<OwnedUnitCountSaveState> ownedUnitCounts;
     std::vector<std::string> activePartyUnitIds;
 };
