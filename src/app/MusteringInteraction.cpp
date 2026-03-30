@@ -91,8 +91,8 @@ MusteringApplyResult MusteringInteraction::ApplyCommand(
         const int reserveIndex = std::clamp(selectedReserveIndex_, 0, static_cast<int>(reserveCandidates.size()) - 1);
         const auto& selected = reserveCandidates[reserveIndex];
 
-        if (!session.TryAddUnitToActiveParty(selected.unitId)) {
-            result.statusText = "Could not add selected reserve unit";
+        if (!session.TryMoveReserveStackToActiveSlot(selected.reserveSlotIndex)) {
+            result.statusText = "Could not move selected reserve stack";
             return result;
         }
 
@@ -112,7 +112,7 @@ MusteringApplyResult MusteringInteraction::ApplyCommand(
         const int activeIndex = std::clamp(selectedActiveIndex_, 0, static_cast<int>(activeParty.size()) - 1);
         const std::string removedUnitId = activeParty[activeIndex];
         if (!session.TryRemoveActivePartyUnitAt(activeIndex)) {
-            result.statusText = "Could not remove selected active unit";
+            result.statusText = "No reserve slot available";
             return result;
         }
 
@@ -149,7 +149,7 @@ std::string MusteringInteraction::BuildPromptText(const gameplay::GameSession& s
     else {
         const int reserveIndex = std::clamp(selectedReserveIndex_, 0, static_cast<int>(reserveCandidates.size()) - 1);
         const auto& selectedReserve = reserveCandidates[reserveIndex];
-        reserveLine = "Reserve: " + selectedReserve.unitId + " x" + std::to_string(selectedReserve.reserveCount) +
+        reserveLine = "Reserve: " + selectedReserve.unitId + " x" + std::to_string(selectedReserve.quantity) +
             " (" + std::to_string(reserveIndex + 1) + "/" + std::to_string(reserveCandidates.size()) + ") [Left/Right]";
     }
 
@@ -170,13 +170,19 @@ std::vector<MusteringInteraction::ReserveCandidate> MusteringInteraction::BuildR
     const gameplay::GameSession& session) const {
     std::vector<ReserveCandidate> result;
 
-    for (const auto& owned : session.OwnedUnitCounts()) {
-        const int reserveCount = session.ReserveUnitCount(owned.unitId);
-        if (reserveCount <= 0) {
+    const auto& reserveSlots = session.ReserveSlotStackIds();
+    for (int slotIndex = 0; slotIndex < static_cast<int>(reserveSlots.size()); ++slotIndex) {
+        const auto& stackId = reserveSlots[slotIndex];
+        if (stackId.empty()) {
             continue;
         }
 
-        result.push_back(ReserveCandidate{owned.unitId, reserveCount});
+        const auto* stack = session.FindRosterStackById(stackId);
+        if (stack == nullptr || stack->quantity <= 0) {
+            continue;
+        }
+
+        result.push_back(ReserveCandidate{slotIndex, stack->stackId, stack->unitId, stack->quantity});
     }
 
     return result;

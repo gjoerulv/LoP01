@@ -36,8 +36,10 @@ public:
 
 private:
     struct ReserveCandidate {
+        int reserveSlotIndex = -1;
+        std::string stackId;
         std::string unitId;
-        int reserveCount = 0;
+        int quantity = 0;
     };
 
     [[nodiscard]] std::vector<ReserveCandidate> BuildReserveCandidates(const gameplay::GameSession& session) const;

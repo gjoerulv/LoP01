@@ -96,3 +96,38 @@ TEST_CASE("Recruit service flow preserves stock/gold/time and adds owned roster 
 
     std::filesystem::remove_all(root);
 }
+
+TEST_CASE("Recruit service leaves gold stock and time unchanged when roster placement fails") {
+    const auto root = BuildRecruitRulesTestContent();
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+
+    const auto* service = content.FindLocationService("survivor_recruit_post", "recruit_board");
+    REQUIRE(service != nullptr);
+
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("unit_fill_1", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_2", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_3", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_4", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_5", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_6", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_7", 1));
+    REQUIRE(session.AddOwnedUnit("unit_fill_8", 1));
+
+    const auto before = session.Snapshot();
+    const int stockBefore = session.RemainingRecruitStock(service->id, service->weeklyStock);
+    const int ownedBefore = session.OwnedUnitCount(service->unitId);
+
+    const auto result = gameplay::location::TryApplyRecruitService(session, content, *service);
+    REQUIRE_FALSE(result.success);
+
+    const auto after = session.Snapshot();
+    REQUIRE(after.gold == before.gold);
+    REQUIRE(after.minutesIntoSliceDay == before.minutesIntoSliceDay);
+    REQUIRE(session.RemainingRecruitStock(service->id, service->weeklyStock) == stockBefore);
+    REQUIRE(session.OwnedUnitCount(service->unitId) == ownedBefore);
+
+    std::filesystem::remove_all(root);
+}
