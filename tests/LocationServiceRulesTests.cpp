@@ -61,6 +61,16 @@ TEST_CASE("Recruit service is recognized by typed service kind") {
     REQUIRE_FALSE(gameplay::location::IsShopService(&service));
 }
 
+TEST_CASE("Muster service is recognized by typed service kind") {
+    data::LocationServiceDefinition service;
+    service.kind = data::LocationServiceKind::Muster;
+
+    REQUIRE(gameplay::location::IsMusterService(&service));
+    REQUIRE_FALSE(gameplay::location::IsRestService(&service));
+    REQUIRE_FALSE(gameplay::location::IsShopService(&service));
+    REQUIRE_FALSE(gameplay::location::IsRecruitService(&service));
+}
+
 TEST_CASE("Recruit service flow preserves stock/gold/time and adds owned roster unit") {
     const auto root = BuildRecruitRulesTestContent();
 

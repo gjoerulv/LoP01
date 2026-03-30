@@ -9,7 +9,8 @@ namespace data
         Unknown,
         Rest,
         Shop,
-        Recruit
+        Recruit,
+        Muster
     };
 
     inline LocationServiceKind LocationServiceKindFromString(const std::string& value)
@@ -17,6 +18,7 @@ namespace data
         if (value == "rest")    return LocationServiceKind::Rest;
         if (value == "shop")    return LocationServiceKind::Shop;
         if (value == "recruit") return LocationServiceKind::Recruit;
+        if (value == "muster")  return LocationServiceKind::Muster;
         return LocationServiceKind::Unknown;
     }
 

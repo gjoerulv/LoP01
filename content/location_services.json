@@ -37,6 +37,17 @@
       "daily_use_limit": 1,
       "travel_prep_discount_minutes": 20,
       "travel_prep_charges": 1
+    },
+    {
+      "id": "home_base_mustering",
+      "location_id": "home_base",
+      "zone_id": "muster_table",
+      "kind": "muster",
+      "prompt_text": "E: Muster Party",
+      "success_text": "",
+      "failure_text": "",
+      "gold_cost": 0,
+      "time_cost_minutes": 0
     },    
     {
       "id": "survivor_post_recruitment",

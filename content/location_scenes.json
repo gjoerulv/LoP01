@@ -370,6 +370,24 @@
           "dialogue_choices": []
         },
         {
+          "id": "muster_table",
+          "type": "shop",
+          "area": {
+            "x": 1020,
+            "y": 320,
+            "width": 80,
+            "height": 20
+          },
+          "prompt_text": "",
+          "result_text": "",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
           "id": "npc_old_man",
           "type": "npc",
           "area": {

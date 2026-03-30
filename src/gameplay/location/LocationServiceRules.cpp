@@ -17,6 +17,10 @@ namespace gameplay::location {
         return service != nullptr && service->kind == data::LocationServiceKind::Recruit;
     }
 
+    bool IsMusterService(const data::LocationServiceDefinition* service) {
+        return service != nullptr && service->kind == data::LocationServiceKind::Muster;
+    }
+
     RecruitServiceApplyResult TryApplyRecruitService(
         gameplay::GameSession& session,
         const data::ContentRepository& content,

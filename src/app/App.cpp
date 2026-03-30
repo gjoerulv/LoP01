@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cctype>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -78,6 +79,7 @@ void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(
         content_,
         scenarioId,
+        session_.ActivePartyUnitIds(),
         7);
 
     if (battle.has_value()) {
@@ -163,6 +165,7 @@ void App::ResetTransientModeState() {
     battleInitialized_ = false;
     locationInitialized_ = false;
     battleControllerState_ = {};
+    musteringInteraction_.Close();
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     observedDay_ = snapshot.day;
@@ -490,6 +493,38 @@ void App::OnDestinationArrived(const std::string& destinationId) {
     }
 }
 
+MusteringCommand App::TranslateMusteringCommand(const input::InputState& input) const {
+    if (input.interact) {
+        return MusteringCommand::Exit;
+    }
+
+    if (input.option1) {
+        return MusteringCommand::AddSelectedReserveToActive;
+    }
+
+    if (input.option2) {
+        return MusteringCommand::RemoveSelectedActive;
+    }
+
+    if (input.selectPrev) {
+        return MusteringCommand::SelectReservePrev;
+    }
+
+    if (input.selectNext) {
+        return MusteringCommand::SelectReserveNext;
+    }
+
+    if (input.targetPrev) {
+        return MusteringCommand::SelectActivePrev;
+    }
+
+    if (input.targetNext) {
+        return MusteringCommand::SelectActiveNext;
+    }
+
+    return MusteringCommand::None;
+}
+
 void App::UpdateLocationScene(const input::InputState& input, const float deltaTime) {
     const LocationUpdateResult result =
         locationController_.Update(input, deltaTime, locationScene_.HasActiveDialogue());
@@ -507,6 +542,20 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
             if (choice.has_value()) {
                 ApplyLocationOutcome(*choice);
             }
+        }
+
+        return;
+    }
+
+    if (musteringInteraction_.IsActive()) {
+        const MusteringCommand command = TranslateMusteringCommand(input);
+        const MusteringApplyResult musteringResult = musteringInteraction_.ApplyCommand(command, session_);
+        if (!musteringResult.statusText.empty()) {
+            statusMessage_ = musteringResult.statusText;
+        }
+
+        if (musteringResult.shouldExit) {
+            musteringInteraction_.Close();
         }
 
         return;
@@ -648,6 +697,12 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
         return result.success;
     }
 
+    if (gameplay::location::IsMusterService(&service)) {
+        musteringInteraction_.Open(session_);
+        statusMessage_ = "Opened Home Base mustering";
+        return true;
+    }
+
     statusMessage_ = "Unknown service";
     return false;
 }
@@ -681,6 +736,13 @@ void App::Draw() const {
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     const auto hudModel = hudModelMapper_.Map(content_, session_, snapshot, statusMessage_, session_.QuestProgress());
+    std::optional<mappers::InteractPromptOverride> locationPromptOverride;
+    if (snapshot.mode == gameplay::GameMode::LocationMode && musteringInteraction_.IsActive()) {
+        locationPromptOverride = mappers::InteractPromptOverride{
+            musteringInteraction_.BuildPromptText(session_),
+            true
+        };
+    }
     
     switch (snapshot.mode) {
     case gameplay::GameMode::Title: {
@@ -719,7 +781,8 @@ void App::Draw() const {
             session_,
             snapshot,
             locationScene_,
-            statusMessage_);
+            statusMessage_,
+            locationPromptOverride);
 
         locationRenderer_.Draw(context, model);
         break;
