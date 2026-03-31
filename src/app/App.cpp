@@ -39,6 +39,36 @@ std::vector<std::string> BuildBlockedTransitNodeIds(const std::vector<app::mappe
 App::App() {
     contentLoaded_ = content_.LoadFromDirectory("content");
     if (contentLoaded_) {
+        std::vector<std::string> leaderCapableUnitIds;
+        leaderCapableUnitIds.reserve(content_.Units().size());
+        std::string playerCharacterLeaderCapableUnitId;
+        for (const auto& unit : content_.Units()) {
+            if (unit.category == data::UnitDefinitionCategory::Leader || unit.category == data::UnitDefinitionCategory::Hero) {
+                leaderCapableUnitIds.push_back(unit.id);
+                if (playerCharacterLeaderCapableUnitId.empty() && unit.isPlayerCharacter) {
+                    playerCharacterLeaderCapableUnitId = unit.id;
+                }
+            }
+        }
+        session_.SetLeaderCapableUnitIds(std::move(leaderCapableUnitIds));
+
+        if (!playerCharacterLeaderCapableUnitId.empty()) {
+            bool playerCharacterInActiveParty = false;
+            for (const auto& unitId : session_.ActivePartyUnitIds()) {
+                if (unitId == playerCharacterLeaderCapableUnitId) {
+                    playerCharacterInActiveParty = true;
+                    break;
+                }
+            }
+
+            if (!playerCharacterInActiveParty) {
+                if (session_.OwnedUnitCount(playerCharacterLeaderCapableUnitId) <= 0) {
+                    session_.AddOwnedUnit(playerCharacterLeaderCapableUnitId, 1);
+                }
+                session_.TryAddUnitToActiveParty(playerCharacterLeaderCapableUnitId);
+            }
+        }
+
         session_.InitializeQuestState(content_.QuestDefinitions());
     }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
@@ -112,7 +142,16 @@ void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
         debugBattle_ = gameplay::battle::BattleState{};
         battleControllerState_ = {};
         battleInitialized_ = false;
-        statusMessage_ = "Failed to initialize battle scenario: " + scenarioId;
+
+        if (battleReturnMode_ == gameplay::GameMode::LocationMode) {
+            session_.EnterLocationMode(snapshot.destinationId);
+            statusMessage_ = "Failed to initialize battle scenario: " + scenarioId + " | Returned to location";
+        }
+        else {
+            session_.EnterOverworldMode();
+            statusMessage_ = "Failed to initialize battle scenario: " + scenarioId + " | Returned to overworld";
+        }
+
         battleStartStackIds_.clear();
     }
 
@@ -250,7 +289,16 @@ void App::ResolveBattleOutcomeIfNeeded() {
             continue;
         }
 
-        writeBackResults.push_back(gameplay::BattleStackLifeResult{unit.rosterStackId, std::max(0, unit.life)});
+        const bool shouldRemoveKoHeroAfterAlliedWin =
+            summary.alliesWon &&
+            unit.category == gameplay::battle::UnitCategory::Hero &&
+            !unit.isPlayerCharacter &&
+            unit.lostAfterBattle;
+
+        writeBackResults.push_back(gameplay::BattleStackLifeResult{
+            unit.rosterStackId,
+            shouldRemoveKoHeroAfterAlliedWin ? 0 : std::max(0, unit.life)
+            });
     }
 
     const bool writeBackOk = session_.ApplyBattleStackLifeResults(writeBackResults, battleStartStackIds_);

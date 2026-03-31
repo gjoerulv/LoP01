@@ -244,6 +244,18 @@ The battle module should support:
 
 Battle should stay deterministic apart from intentional RNG and should remain testable independently from rendering.
 
+### Leadership and party legality
+
+- the active battle party can field up to 5 units
+- the player team's active party must always contain a legal leader-capable unit
+- the player character is the default leader whenever present in the active party
+- enemy teams may or may not have a leader
+- when a team has a leader, the same leader-position and aura mechanics apply to both player and enemy teams
+- the assigned leader is a normal battle participant from turn 1
+- if the assigned leader falls in battle, the aura is removed immediately
+- non-player heroes can leave the party after battle if still KO'd
+- the player character is a special case and returns at 1 HP after a winning battle
+
 ## Service and economy vision
 
 Services should be meaningful because of **cost, stock, quantity, refresh cadence, and world context**, not because they are arbitrarily disabled.

@@ -37,6 +37,8 @@ BattleState::BattleState(const uint32_t seed) : random_(seed) {}
 bool BattleState::SetUnits(std::vector<BattleUnit> units) {
     int allies = 0;
     int enemies = 0;
+    int assignedAllyLeaders = 0;
+    int assignedEnemyLeaders = 0;
 
     for (auto& unit : units) {
         if (unit.side == TeamSide::Allies) {
@@ -51,25 +53,23 @@ bool BattleState::SetUnits(std::vector<BattleUnit> units) {
         unit.timeToAct = BaseDelayFromAgility(unit.stats.agility);
         unit.ko = !IsAlive(unit);
         unit.defending = false;
-        if (unit.category == UnitCategory::Leader) {
+        unit.inReserve = false;
+        if (unit.isAssignedLeader) {
             unit.stats.position = UnitPosition::Leader;
+        }
+
+        if (unit.isAssignedLeader) {
+            if (unit.side == TeamSide::Allies) {
+                ++assignedAllyLeaders;
+            }
+            else {
+                ++assignedEnemyLeaders;
+            }
         }
     }
 
-    for (auto& unit : units) {
-        if (unit.category != UnitCategory::Leader) {
-            continue;
-        }
-
-        bool hasNonLeader = false;
-        for (const auto& other : units) {
-            if (other.side == unit.side && other.category != UnitCategory::Leader && IsAlive(other)) {
-                hasNonLeader = true;
-                break;
-            }
-        }
-
-        unit.inReserve = hasNonLeader;
+    if (assignedAllyLeaders > 1 || assignedEnemyLeaders > 1) {
+        return false;
     }
 
     if (allies == 0 || enemies == 0 || allies > kMaxUnitsPerSide || enemies > kMaxUnitsPerSide) {
@@ -270,33 +270,16 @@ bool BattleState::ExecuteAction(const BattleActionType action, int targetIndex) 
 }
 
 bool BattleState::IsAliveAndActive(const BattleUnit& unit) const {
-    return IsAlive(unit) && !unit.inReserve;
+    return IsAlive(unit);
 }
 
 bool BattleState::IsActionTargetable(const BattleUnit& unit) const {
-    if (!IsAliveAndActive(unit)) {
-        return false;
-    }
-
-    if (unit.category != UnitCategory::Leader) {
-        return true;
-    }
-
-    for (const auto& other : units_) {
-        if (other.side != unit.side || &other == &unit) {
-            continue;
-        }
-        if (other.category != UnitCategory::Leader && IsAliveAndActive(other)) {
-            return false;
-        }
-    }
-
-    return true;
+    return IsAliveAndActive(unit);
 }
 
 int BattleState::FindLeaderIndex(const TeamSide side) const {
     for (int i = 0; i < static_cast<int>(units_.size()); ++i) {
-        if (units_[i].side == side && units_[i].category == UnitCategory::Leader) {
+        if (units_[i].side == side && units_[i].isAssignedLeader) {
             return i;
         }
     }
@@ -432,25 +415,6 @@ float BattleState::AgilityPenalty(const BattleUnit& attacker, const BattleUnit& 
 }
 
 void BattleState::AdvanceToNextTurn() {
-    for (auto& leader : units_) {
-        if (leader.category != UnitCategory::Leader || !leader.inReserve || !IsAlive(leader)) {
-            continue;
-        }
-
-        bool hasNonLeader = false;
-        for (const auto& other : units_) {
-            if (other.side == leader.side && other.category != UnitCategory::Leader && IsAliveAndActive(other)) {
-                hasNonLeader = true;
-                break;
-            }
-        }
-
-        if (!hasNonLeader) {
-            leader.inReserve = false;
-            leader.timeToAct = std::max(1, leader.timeToAct);
-        }
-    }
-
     activeUnitIndex_ = -1;
 
     std::vector<int> activeIndices;
@@ -491,7 +455,7 @@ void BattleState::ShiftPositions(const TeamSide side) {
     line.reserve(3);
 
     for (auto& unit : units_) {
-        if (unit.side == side && unit.category != UnitCategory::Leader && IsAliveAndActive(unit)) {
+        if (unit.side == side && !unit.isAssignedLeader && IsAliveAndActive(unit)) {
             line.push_back(&unit);
         }
     }

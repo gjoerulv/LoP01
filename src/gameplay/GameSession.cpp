@@ -415,6 +415,17 @@ int GameSession::ActivePartyCapacity() const {
     return std::max(0, activePartyCapacity_);
 }
 
+void GameSession::SetLeaderCapableUnitIds(std::vector<std::string> unitIds) {
+    std::set<std::string> normalized;
+    for (auto& unitId : unitIds) {
+        if (!unitId.empty()) {
+            normalized.insert(unitId);
+        }
+    }
+
+    leaderCapableUnitIds_ = std::move(normalized);
+}
+
 int GameSession::OwnedUnitCount(const std::string& unitId) const {
     if (unitId.empty()) {
         return 0;
@@ -654,6 +665,10 @@ bool GameSession::TryRemoveActivePartyUnitAt(const int index) {
         return false;
     }
 
+    if (!leaderCapableUnitIds_.empty() && ActiveLeaderCapableCountExcludingOrderedIndex(index) <= 0) {
+        return false;
+    }
+
     const int reserveSlot = FindFirstEmptySlotIndex(reserveSlotStackIds_);
     if (reserveSlot < 0) {
         return false;
@@ -663,6 +678,26 @@ bool GameSession::TryRemoveActivePartyUnitAt(const int index) {
     activeSlotStackIds_[activeSlot].clear();
     MarkRosterProjectionDirty();
     return true;
+}
+
+bool GameSession::WouldRemovingActivePartyUnitLeaveNoLeader(const int index) const {
+    if (index < 0 || leaderCapableUnitIds_.empty()) {
+        return false;
+    }
+
+    std::vector<int> occupiedActiveSlots;
+    occupiedActiveSlots.reserve(activeSlotStackIds_.size());
+    for (int i = 0; i < static_cast<int>(activeSlotStackIds_.size()); ++i) {
+        if (!activeSlotStackIds_[i].empty()) {
+            occupiedActiveSlots.push_back(i);
+        }
+    }
+
+    if (index >= static_cast<int>(occupiedActiveSlots.size())) {
+        return false;
+    }
+
+    return ActiveLeaderCapableCountExcludingOrderedIndex(index) <= 0;
 }
 
 bool GameSession::TryMoveActivePartyUnit(const int fromIndex, const int toIndex) {
@@ -853,7 +888,7 @@ SessionSnapshot GameSession::Snapshot() const {
 
 core::SaveData GameSession::ToSaveData() const {
     return core::SaveData{
-        2,
+        3,
         clock_.Day(),
         clock_.MinutesIntoSliceDay(),
         gold_,
@@ -927,6 +962,26 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
         loadedActiveSlots = saveData.activeSlotStackIds;
         loadedReserveSlots = saveData.reserveSlotStackIds;
         loadedNextCounter = std::max(1, saveData.nextStackIdCounter);
+
+        if (!leaderCapableUnitIds_.empty()) {
+            int activeLeaderCapableCount = 0;
+            for (const auto& stackId : loadedActiveSlots) {
+                if (stackId.empty()) {
+                    continue;
+                }
+
+                for (const auto& stack : loadedStacks) {
+                    if (stack.stackId == stackId && IsLeaderCapableUnitId(stack.unitId)) {
+                        ++activeLeaderCapableCount;
+                        break;
+                    }
+                }
+            }
+
+            if (activeLeaderCapableCount <= 0) {
+                return;
+            }
+        }
     }
     else {
         std::map<std::string, int> normalizedOwned;
@@ -997,6 +1052,38 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     reserveSlotStackIds_ = std::move(loadedReserveSlots);
     nextStackIdCounter_ = loadedNextCounter;
     MarkRosterProjectionDirty();
+}
+
+bool GameSession::IsLeaderCapableUnitId(const std::string& unitId) const {
+    if (unitId.empty()) {
+        return false;
+    }
+
+    return leaderCapableUnitIds_.find(unitId) != leaderCapableUnitIds_.end();
+}
+
+int GameSession::ActiveLeaderCapableCountExcludingOrderedIndex(const int excludedOrderedIndex) const {
+    int count = 0;
+    int orderedIndex = 0;
+
+    for (const auto& stackId : activeSlotStackIds_) {
+        if (stackId.empty()) {
+            continue;
+        }
+
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr) {
+            continue;
+        }
+
+        if (orderedIndex != excludedOrderedIndex && IsLeaderCapableUnitId(stack->unitId)) {
+            ++count;
+        }
+
+        ++orderedIndex;
+    }
+
+    return count;
 }
 
 void GameSession::NormalizeRosterState() {

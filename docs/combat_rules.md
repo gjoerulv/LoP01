@@ -9,19 +9,25 @@
 ## Unit categories
 
 ### Leader
-- Must be the player character or a hero unit
-- The leader's Attack, Defense, Magic and Resistance stats are directly added to the stats of all units on their team (including the leader).
-- The leader position is always "Leader" (furthest back).
-- As long as the leader's turn is active, the leader can choose to cast a spell or wait.
-- After the leader has cast a spell, the leader's Agility decidec when he/she can cast a spell again.
-- If all units of the leader is defeated the leaders enters battle
+- Leader-capable units are units with category `Leader` or `Hero`.
+- The player team must always have exactly one assigned leader in the active battle party.
+- Enemy teams may have zero or one assigned leader.
+- If a team has an assigned leader, that unit is a normal battle participant from turn 1.
+- The assigned leader occupies the `Leader` position (furthest back).
+- The assigned leader's Attack, Defense, Magic, and Resistance stats are directly added to the stats of all units on their team, including the leader, while the leader is alive.
+- The leader aura is removed immediately when the assigned leader reaches 0 HP.
+- The player character is the default assigned leader whenever present in the active battle party.
+- For the player team, moving the current leader out of the active party is illegal if it would leave the active party without a legal leader.
 
 ### Hero units
 - unique named characters
 - do not stack
 - have personality and story relevance
-- if reduced to 0 HP, they leave after battle unless they are revivied before battle ends
-- they can be rediscovered/recruited later if lost
+- are leader-capable
+- if reduced to 0 HP, they are KO'd
+- if a non-player hero is still KO'd when battle ends, they leave the party unless revived before battle ends
+- if the player character is still KO'd when battle ends but the team wins, the player character returns to the party at 1 HP
+- non-player heroes that leave the party can be rediscovered or re-recruited later
 
 ### Generic units
 - stackable
@@ -110,8 +116,12 @@ For generic stack units:
 ## Applying damage to heroes
 
 For hero units:
-- if HP reaches 0, the hero is KO'd
-- after battle, and still on KO status, remove the hero from the active party and flag them as lost
+- if HP reaches 0, the hero is KO'd and their battle participation ends for that battle
+- if the KO'd hero is the assigned leader, the leader aura is removed immediately
+- after battle, unresolved KO is handled by post-battle recovery rules:
+  - non-player heroes leave the party unless revived before battle ends
+  - the player character returns to the party at 1 HP if the team wins
+  - on defeat/loss, the normal defeat recovery flow applies
 
 ## Minimum prototype actions
 

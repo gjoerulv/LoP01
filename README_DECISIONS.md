@@ -222,6 +222,20 @@ Tradeoff:
 - This milestone should avoid overreaching into a full party-management UI, inventory/equipment systems, or cross-region roster transfer rules.
 - Battle-party integration should be strong enough to create consequence, but still remain explicit, testable, and slice-appropriate.
 
+### 19) Active battle party target size is 5
+
+Decision:
+- The intended active battle party capacity is 5 slots.
+- Both player and enemy teams can field up to 5 battle participants.
+- Earlier 3-slot assumptions should be treated as implementation history, not as design truth.
+
+Why:
+- Aligns the roster model, combat rules, and battle format.
+- Supports a clearer separation between active fielded units and carried substitutes.
+- Matches the intended long-term combat and party-management direction.
+
+Tradeoff:
+- Any remaining 3-slot assumptions in runtime logic, tests, or save migration should be treated as migration work rather than re-opened design decisions.
 
 ## Assumptions
 

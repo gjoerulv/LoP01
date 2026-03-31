@@ -62,6 +62,7 @@ struct BattleUnit {
     UnitCategory category = UnitCategory::Generic;
     UnitStats stats;
     bool isPlayerCharacter = false;
+    bool isAssignedLeader = false;
 
     int hp = 1;
     int mp = 0;
