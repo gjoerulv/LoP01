@@ -113,9 +113,13 @@ TEST_CASE("AddFails_WhenActivePartyFull") {
     REQUIRE(session.AddOwnedUnit("unit_medic", 1));
     REQUIRE(session.AddOwnedUnit("unit_scout", 1));
     REQUIRE(session.AddOwnedUnit("unit_lancer", 1));
+    REQUIRE(session.AddOwnedUnit("unit_arcanist", 1));
+    REQUIRE(session.AddOwnedUnit("unit_miner", 1));
     REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
     REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
     REQUIRE(session.TryAddUnitToActiveParty("unit_scout"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_lancer"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_arcanist"));
 
     app::MusteringInteraction mustering;
     mustering.Open(session);
@@ -123,7 +127,7 @@ TEST_CASE("AddFails_WhenActivePartyFull") {
     const auto result = mustering.ApplyCommand(app::MusteringCommand::AddSelectedReserveToActive, session);
     REQUIRE(result.consumed);
     REQUIRE(result.statusText == "Active party is full");
-    REQUIRE(session.ActivePartyUnitIds().size() == 3);
+    REQUIRE(session.ActivePartyUnitIds().size() == 5);
 }
 
 TEST_CASE("RemoveFails_WhenReserveFull") {
@@ -185,4 +189,23 @@ TEST_CASE("BuildPromptText_ReflectsSelectionAndCounts") {
     REQUIRE(prompt.find("Muster Party") != std::string::npos);
     REQUIRE(prompt.find("Reserve: unit_medic x1 (1/1)") != std::string::npos);
     REQUIRE(prompt.find("Active: unit_guard (1/1)") != std::string::npos);
+}
+
+TEST_CASE("RemoveSelectedActive_RejectsRemovingLastLeaderCapableUnit") {
+    gameplay::GameSession session;
+    session.SetLeaderCapableUnitIds({"hero_player", "hero_mira"});
+
+    REQUIRE(session.AddOwnedUnit("hero_mira", 1));
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_mira"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    app::MusteringInteraction mustering;
+    mustering.Open(session);
+
+    const auto result = mustering.ApplyCommand(app::MusteringCommand::RemoveSelectedActive, session);
+    REQUIRE(result.consumed);
+    REQUIRE(result.statusText == "Active party must keep at least one leader-capable unit");
+    REQUIRE(session.ActivePartyUnitIds().size() == 2);
+    REQUIRE(session.ActivePartyUnitIds()[0] == "hero_mira");
 }

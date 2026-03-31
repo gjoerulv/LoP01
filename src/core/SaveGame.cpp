@@ -15,6 +15,10 @@ using nlohmann::json;
 
 namespace {
 
+constexpr size_t kCanonicalActiveSlotsV2 = 3;
+constexpr size_t kCanonicalActiveSlotsV3 = 5;
+constexpr size_t kCanonicalReserveSlots = 8;
+
 int ParseStackIdSuffix(const std::string& stackId) {
     constexpr const char* kPrefix = "stk_";
     constexpr size_t kPrefixSize = 4;
@@ -104,8 +108,8 @@ void BuildCanonicalRosterFromLegacyFields(const json& j, SaveData& data) {
     }
 
     data.rosterStacks.clear();
-    data.activeSlotStackIds.assign(3, "");
-    data.reserveSlotStackIds.assign(8, "");
+    data.activeSlotStackIds.assign(kCanonicalActiveSlotsV3, "");
+    data.reserveSlotStackIds.assign(kCanonicalReserveSlots, "");
 
     int nextSuffix = 1;
     auto allocateStackId = [&]() {
@@ -114,7 +118,7 @@ void BuildCanonicalRosterFromLegacyFields(const json& j, SaveData& data) {
 
     int activeWriteIndex = 0;
     for (const auto& unitId : data.activePartyUnitIds) {
-        if (activeWriteIndex >= 3 || unitId.empty()) {
+        if (activeWriteIndex >= static_cast<int>(kCanonicalActiveSlotsV3) || unitId.empty()) {
             continue;
         }
 
@@ -136,7 +140,7 @@ void BuildCanonicalRosterFromLegacyFields(const json& j, SaveData& data) {
             continue;
         }
 
-        if (reserveWriteIndex >= 8) {
+        if (reserveWriteIndex >= static_cast<int>(kCanonicalReserveSlots)) {
             throw std::runtime_error("Legacy roster overflow");
         }
 
@@ -185,7 +189,21 @@ void ParseCanonicalRosterFromJson(const json& j, SaveData& data) {
         throw std::runtime_error("Invalid canonical slot ids");
     }
 
-    if (data.activeSlotStackIds.size() != 3 || data.reserveSlotStackIds.size() != 8) {
+    if (data.reserveSlotStackIds.size() != kCanonicalReserveSlots) {
+        throw std::runtime_error("Invalid canonical slot counts");
+    }
+
+    if (data.schemaVersion == 3) {
+        if (data.activeSlotStackIds.size() != kCanonicalActiveSlotsV3) {
+            throw std::runtime_error("Invalid canonical slot counts");
+        }
+    } else if (data.schemaVersion == 2) {
+        if (data.activeSlotStackIds.size() == kCanonicalActiveSlotsV2) {
+            data.activeSlotStackIds.resize(kCanonicalActiveSlotsV3, "");
+        } else {
+            throw std::runtime_error("Invalid canonical slot counts");
+        }
+    } else {
         throw std::runtime_error("Invalid canonical slot counts");
     }
 
@@ -280,7 +298,7 @@ void from_json(const json& j, DailyServiceState& data) {
 
 void to_json(json& j, const SaveData& data) {
     j = json{
-        {"schema_version", 2},
+        {"schema_version", data.schemaVersion},
         {"day", data.day},
         {"minutes_into_slice_day", data.minutesIntoSliceDay},
         {"gold", data.gold},

@@ -303,6 +303,106 @@ TEST_CASE("GameSession active party requires reserve availability and preserves 
     REQUIRE(active[1] == "unit_medic");
 }
 
+TEST_CASE("GameSession active party capacity is five slots") {
+    gameplay::GameSession session;
+
+    REQUIRE(session.ActivePartyCapacity() == 5);
+
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.AddOwnedUnit("unit_medic", 1));
+    REQUIRE(session.AddOwnedUnit("unit_scout", 1));
+    REQUIRE(session.AddOwnedUnit("unit_lancer", 1));
+    REQUIRE(session.AddOwnedUnit("unit_arcanist", 1));
+    REQUIRE(session.AddOwnedUnit("unit_miner", 1));
+
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_medic"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_scout"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_lancer"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_arcanist"));
+    REQUIRE_FALSE(session.TryAddUnitToActiveParty("unit_miner"));
+
+    const auto& active = session.ActivePartyUnitIds();
+    REQUIRE(active.size() == 5);
+    REQUIRE(active[0] == "unit_guard");
+    REQUIRE(active[1] == "unit_medic");
+    REQUIRE(active[2] == "unit_scout");
+    REQUIRE(active[3] == "unit_lancer");
+    REQUIRE(active[4] == "unit_arcanist");
+}
+
+TEST_CASE("GameSession rejects removing the last leader-capable active unit when leader rules are configured") {
+    gameplay::GameSession session;
+    session.SetLeaderCapableUnitIds({"hero_player", "hero_mira"});
+
+    REQUIRE(session.AddOwnedUnit("hero_mira", 1));
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_mira"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    REQUIRE(session.ActivePartyUnitIds().size() == 2);
+    REQUIRE(session.ActivePartyUnitIds()[0] == "hero_mira");
+
+    REQUIRE_FALSE(session.TryRemoveActivePartyUnitAt(0));
+    REQUIRE(session.ActivePartyUnitIds().size() == 2);
+    REQUIRE(session.ActivePartyUnitIds()[0] == "hero_mira");
+}
+
+TEST_CASE("GameSession allows removing a leader-capable active unit when another leader-capable remains") {
+    gameplay::GameSession session;
+    session.SetLeaderCapableUnitIds({"hero_player", "hero_mira"});
+
+    REQUIRE(session.AddOwnedUnit("hero_mira", 1));
+    REQUIRE(session.AddOwnedUnit("hero_player", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_mira"));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_player"));
+
+    REQUIRE(session.TryRemoveActivePartyUnitAt(0));
+    REQUIRE(session.ActivePartyUnitIds().size() == 1);
+    REQUIRE(session.ActivePartyUnitIds()[0] == "hero_player");
+}
+
+TEST_CASE("GameSession ApplySaveData rejects canonical active party with no leader-capable unit when leader rules are configured") {
+    gameplay::GameSession session;
+    session.SetLeaderCapableUnitIds({"hero_player", "hero_mira"});
+    REQUIRE(session.AddOwnedUnit("hero_player", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_player"));
+
+    const auto beforeSnapshot = session.Snapshot();
+    const auto beforeStacks = session.RosterStacks();
+    const auto beforeActiveSlots = session.ActiveSlotStackIds();
+    const auto beforeReserveSlots = session.ReserveSlotStackIds();
+    const int beforeCounter = session.NextStackIdCounter();
+
+    core::SaveData invalidLeaderless;
+    invalidLeaderless.schemaVersion = 3;
+    invalidLeaderless.mode = "overworld_mode";
+    invalidLeaderless.regionId = "ashvale_heartland";
+    invalidLeaderless.destinationId = "home_base";
+    invalidLeaderless.hasCanonicalRoster = true;
+    invalidLeaderless.rosterStacks = {
+        core::RosterStackSaveState{"stk_1", "unit_guard", 1}
+    };
+    invalidLeaderless.activeSlotStackIds = {"stk_1", "", "", "", ""};
+    invalidLeaderless.reserveSlotStackIds = {"", "", "", "", "", "", "", ""};
+    invalidLeaderless.nextStackIdCounter = 2;
+
+    session.ApplySaveData(invalidLeaderless);
+
+    REQUIRE(session.Snapshot().mode == beforeSnapshot.mode);
+    REQUIRE(session.Snapshot().day == beforeSnapshot.day);
+    REQUIRE(session.Snapshot().gold == beforeSnapshot.gold);
+    REQUIRE(session.RosterStacks().size() == beforeStacks.size());
+    for (size_t i = 0; i < beforeStacks.size(); ++i) {
+        REQUIRE(session.RosterStacks()[i].stackId == beforeStacks[i].stackId);
+        REQUIRE(session.RosterStacks()[i].unitId == beforeStacks[i].unitId);
+        REQUIRE(session.RosterStacks()[i].quantity == beforeStacks[i].quantity);
+    }
+    REQUIRE(session.ActiveSlotStackIds() == beforeActiveSlots);
+    REQUIRE(session.ReserveSlotStackIds() == beforeReserveSlots);
+    REQUIRE(session.NextStackIdCounter() == beforeCounter);
+}
+
 TEST_CASE("GameSession canonical stack model generates deterministic stack ids") {
     gameplay::GameSession session;
 
@@ -659,6 +759,40 @@ TEST_CASE("GameSession ApplyBattleStackLifeResults writes by stackId and removes
         }
     }
     REQUIRE_FALSE(removedStackStillReferenced);
+}
+
+TEST_CASE("GameSession ApplyBattleStackLifeResults removes KO non-player hero stack from party state when life is zero") {
+    gameplay::GameSession session;
+    REQUIRE(session.AddOwnedUnit("hero_mira", 1));
+    REQUIRE(session.AddOwnedUnit("unit_guard", 2));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_mira"));
+    REQUIRE(session.TryAddUnitToActiveParty("unit_guard"));
+
+    const auto entries = session.BuildActiveBattleStackEntries();
+    REQUIRE(entries.size() == 2);
+
+    std::string heroStackId;
+    for (const auto& entry : entries) {
+        if (entry.unitId == "hero_mira") {
+            heroStackId = entry.stackId;
+        }
+    }
+    REQUIRE_FALSE(heroStackId.empty());
+
+    const std::vector<std::string> expectedStackIds = {entries[0].stackId, entries[1].stackId};
+    const std::vector<gameplay::BattleStackLifeResult> results = {
+        gameplay::BattleStackLifeResult{entries[0].stackId, entries[0].unitId == "hero_mira" ? 0 : entries[0].quantity},
+        gameplay::BattleStackLifeResult{entries[1].stackId, entries[1].unitId == "hero_mira" ? 0 : entries[1].quantity}
+    };
+
+    REQUIRE(session.ApplyBattleStackLifeResults(results, expectedStackIds));
+
+    for (const auto& slotId : session.ActiveSlotStackIds()) {
+        REQUIRE(slotId != heroStackId);
+    }
+    for (const auto& slotId : session.ReserveSlotStackIds()) {
+        REQUIRE(slotId != heroStackId);
+    }
 }
 
 TEST_CASE("GameSession ApplyBattleStackLifeResults invalid payload fails atomically") {

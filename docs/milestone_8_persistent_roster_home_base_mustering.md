@@ -257,6 +257,25 @@ When in doubt, prefer:
 - predictable flow
 - persistent consequence over new feature count
 
+## Follow-up direction after the roster/save foundation
+
+The roster, mustering, battle-party, and save/load foundation now supports a more explicit combat-identity follow-up.
+
+The next foundational follow-up should clarify and implement:
+
+- active battle party target size of 5 slots
+- leader-capable units (`Hero` and `Leader`)
+- player-team legality requiring a leader in the active party
+- enemy teams optionally having a leader
+- symmetric leader/aura mechanics when a leader is present
+- player-character special recovery rules after a winning battle
+
+This follow-up should remain separate from:
+- UI/menu expansion
+- recruit quantity-selection UI
+- stack splitting UI
+- local mustering-table storage
+
 ## Summary
 
 Milestone 8 should make recruits real.

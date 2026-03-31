@@ -111,6 +111,11 @@ MusteringApplyResult MusteringInteraction::ApplyCommand(
 
         const int activeIndex = std::clamp(selectedActiveIndex_, 0, static_cast<int>(activeParty.size()) - 1);
         const std::string removedUnitId = activeParty[activeIndex];
+        if (session.WouldRemovingActivePartyUnitLeaveNoLeader(activeIndex)) {
+            result.statusText = "Active party must keep at least one leader-capable unit";
+            return result;
+        }
+
         if (!session.TryRemoveActivePartyUnitAt(activeIndex)) {
             result.statusText = "No reserve slot available";
             return result;

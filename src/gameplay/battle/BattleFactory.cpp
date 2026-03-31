@@ -6,6 +6,49 @@ namespace gameplay::battle
 {
     namespace
     {
+        bool IsLeaderCapable(const BattleUnit& unit)
+        {
+            return unit.category == UnitCategory::Leader || unit.category == UnitCategory::Hero;
+        }
+
+        bool AssignLeader(
+            std::vector<BattleUnit>& team,
+            const bool preferPlayerCharacter,
+            const bool requireLeader)
+        {
+            for (auto& unit : team) {
+                unit.isAssignedLeader = false;
+            }
+
+            int leaderIndex = -1;
+
+            if (preferPlayerCharacter) {
+                for (int i = 0; i < static_cast<int>(team.size()); ++i) {
+                    if (team[i].isPlayerCharacter && IsLeaderCapable(team[i])) {
+                        leaderIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (leaderIndex < 0) {
+                for (int i = 0; i < static_cast<int>(team.size()); ++i) {
+                    if (IsLeaderCapable(team[i])) {
+                        leaderIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (leaderIndex < 0) {
+                return !requireLeader;
+            }
+
+            team[leaderIndex].isAssignedLeader = true;
+            team[leaderIndex].stats.position = UnitPosition::Leader;
+            return true;
+        }
+
         UnitCategory ToBattleCategory(const data::UnitDefinitionCategory category)
         {
             switch (category)
@@ -124,22 +167,31 @@ namespace gameplay::battle
 
         const bool useActivePartyOverride = !resolvedActivePartyAllies.empty();
 
-        std::vector<BattleUnit> units;
-        const size_t allyCount = useActivePartyOverride
-            ? resolvedActivePartyAllies.size()
-            : scenario->allies.size();
-        units.reserve(allyCount + scenario->enemies.size());
-
+        std::vector<BattleUnit> allies;
         if (useActivePartyOverride)
         {
-            units.insert(units.end(), resolvedActivePartyAllies.begin(), resolvedActivePartyAllies.end());
+            allies = std::move(resolvedActivePartyAllies);
         }
         else
         {
-            AppendUnits(units, scenario->allies, TeamSide::Allies, content);
+            AppendUnits(allies, scenario->allies, TeamSide::Allies, content);
         }
 
-        AppendUnits(units, scenario->enemies, TeamSide::Enemies, content);
+        std::vector<BattleUnit> enemies;
+        AppendUnits(enemies, scenario->enemies, TeamSide::Enemies, content);
+
+        if (!AssignLeader(allies, true, true)) {
+            return std::nullopt;
+        }
+
+        if (!AssignLeader(enemies, false, false)) {
+            return std::nullopt;
+        }
+
+        std::vector<BattleUnit> units;
+        units.reserve(allies.size() + enemies.size());
+        units.insert(units.end(), allies.begin(), allies.end());
+        units.insert(units.end(), enemies.begin(), enemies.end());
 
         BattleState state(seed == 0 ? scenario->seed : seed);
         if (!state.SetUnits(std::move(units)))
