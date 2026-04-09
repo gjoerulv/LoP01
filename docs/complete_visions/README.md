@@ -8,6 +8,5 @@ Use these files instead:
 
 - `docs/game_vision.md` for the concise active slice vision
 - `docs/game_vision_complete.md` for the current north-star target state
-- `docs/milestone_7_services_economy_weekly_cadence.md` for the active next milestone direction
 
 If archived placeholder notes conflict with active docs or the codebase, treat the active docs and current codebase as authoritative.

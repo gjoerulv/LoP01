@@ -233,16 +233,108 @@ Shared prototype scenes are acceptable during slice development, but the finishe
 
 ## Battle vision
 
-Battles should remain true turn-based CTB and easy to read.
+Battles should remain true turn-based CTB, highly readable, and tactically deterministic.
+
+The battle layer should feel closer to a classic Final Fantasy-style formation battle than to a grid tactics game:
+- battle is static rather than free-movement
+- units act from formation positions instead of moving on a battlefield grid
+- target selection is free, but target distance within the formation affects turn-order pressure through agility penalties
+- the player should understand the tactical consequences of an action before committing it
 
 The battle module should support:
-- clear turn order communication
+- clear turn-order communication
 - meaningful turn-frequency manipulation
 - stack-based generic units plus hero units
-- readable consequences for defeat, KO, and recovery
+- strong role identity for units, heroes, and leaders
+- readable consequences for defeat, KO, recovery, and attrition
 - enough tactical depth to make route blockers and high-risk destinations feel significant
 
-Battle should stay deterministic apart from intentional RNG and should remain testable independently from rendering.
+Battle should stay deterministic apart from intentional damage variance and should remain testable independently from rendering.
+
+### Formation and targeting
+
+A battle party can field up to 5 units.
+
+Battle formation uses four position labels:
+- `Front`
+- `Middle`
+- `Back`
+- `Leader`
+
+The `Leader` position is one of the 5 battle slots, not an extra slot.
+
+Formation rules:
+- only hero units can occupy the `Leader` position
+- multiple units may share `Front`, `Middle`, or `Back`
+- units do not move freely during battle
+- changing position is a deliberate battle command that consumes the acting unit's turn
+- only hero units may switch into the `Leader` position
+- taking the `Leader` position swaps with the current leader rather than creating a second leader
+
+Targeting rules:
+- any unit may target any enemy unit
+- position does not directly block targeting or change damage by itself
+- position matters because the target's **effective row depth** influences agility penalty on attacks and similar actions
+- literal position labels remain visible to the player, but battle calculations use effective row depth rather than naïvely collapsing every gap in the formation
+
+The intended feel is that the player can always make the tactically interesting target choice, but distant targets should often cost turn-order efficiency.
+
+### Turn order, commands, and readability
+
+Turn order should behave like a readable CTB timeline:
+- the player should always understand who is acting next
+- the player should see how a chosen action changes the future turn order before confirming it
+- the game should prefer readable outcome previews over exposing raw internal timing math
+
+Battle commands should follow a classic JRPG structure:
+- baseline actions include `Attack`, `Defend`, and context-appropriate access to `Skill` and `Item`
+- only hero units can use items in battle
+- generic units may surface 0-2 direct skills on the main command layer when appropriate
+- `Wait` and manual position-change commands belong to a secondary command layer rather than the main baseline menu
+
+Readability expectations:
+- show turn-order impact before action confirmation
+- show min-max damage on selected targets
+- show min-max KO / kill outcome when relevant
+- make agility-penalty pressure understandable through clear UI cues rather than opaque math dumps
+
+### Leadership and party legality
+
+The player team's active battle party must always contain a legal leader-capable unit.
+In practice, that means a hero unit must be available to hold the `Leader` position.
+
+Leadership rules:
+- the player character is the default leader whenever present in the active party
+- the player may assign a different hero as leader outside battle
+- enemy teams may or may not have a leader
+- when a team has a leader, the same leader-position and aura mechanics apply to both player and enemy teams
+- the assigned leader is a normal battle participant from turn 1
+- if the assigned leader falls in battle, the aura is removed immediately
+- a living hero can manually take the `Leader` position later in the same battle to restore the aura immediately
+- leader reassignment is never automatic
+
+Leader aura is a baseline rule of the battle system rather than a temporary prototype.
+Passive skills and equipment may later extend, modify, or react to that baseline aura behavior.
+
+### Recovery, attrition, and persistence
+
+Battle outcomes should matter beyond the immediate encounter.
+
+The intended persistence model is asymmetric:
+- hero HP persists between battles unless restored by other means
+- generic units restore HP after battle, but stack-count loss persists
+- MP persists for all units
+- temporary battle-only buffs and debuffs are cleared after battle
+- some overworld-applied buffs may last for 1 battle, 1 day, or 1 week depending on their source
+
+KO and recovery rules:
+- a KO'd hero can be revived during battle
+- if a non-player hero is still KO'd when a battle ends, that hero leaves the party in a recovering state
+- the player character is a special case and returns at 1 HP after a winning battle if still KO'd
+- generic unit loss that remains at battle end is permanent unless the units were revived before the battle ended
+
+Enemy parties should follow the same broad persistence logic as the player side.
+This allows recurring enemy groups, persistent attrition, and authored enemy recovery behavior between days or after using world services.
 
 ### Leadership and party legality
 
