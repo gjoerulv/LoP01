@@ -1,102 +1,99 @@
 # Project-wide Copilot instructions
 
-You are working in a 2D single-player game project written in C++20 using raylib and CMake.
+Use these rules when working in this repository.
 
 ## High-level goals
 
-- Continue evolving the existing playable slice through small, complete milestones.
-- Prioritize maintainable gameplay code over clever abstractions.
-- Prefer deterministic, testable logic.
-- Keep rendering and UI simple while gameplay systems mature.
-- Keep the game responsive and performant.
-- Use placeholder assets and data-driven content.
+- Preserve a **small, explicit, maintainable vertical slice**.
+- Keep gameplay logic **deterministic, testable, and readable**.
+- Extend the game through **bounded milestones**, not broad speculative systems.
+- Prefer **clear architecture and content-driven rules** over generic frameworks.
+- Treat the repository and the active design docs as the source of truth.
 
 ## Design pillars
 
-- Overworld flow inspired by Heroes of Might and Magic 2/3
-- Town and dungeon exploration inspired by SNES-era Final Fantasy
-- True turn-based CTB combat inspired by Final Fantasy X
-- Cozy progression and restoration elements inspired by farming/life-sim games
-- Tone: fantasy + light dystopia + cozy restoration
+- strong scenario and region identity
+- readable tactical CTB combat
+- meaningful route / time / service planning
+- durable party consequence
+- restoration and safe-anchor fantasy
+- explicit, data-driven gameplay rules
 
 ## Technical rules
 
-- Use C++20.
-- Use raylib for graphics/input/audio.
-- Use CMake.
-- Prefer plain classes and clear ownership.
-- Avoid premature ECS or overengineering.
-- Keep gameplay systems separated:
-  - time/day system
-  - overworld system
-  - location system
-  - battle system
-  - content loading
-  - save/load
-  - quest/progression flow
-  - service/economy state
-  - roster/party management state
-- Keep core gameplay logic independent from rendering where practical.
-- Put balance values and content definitions in JSON, not hardcoded in gameplay logic.
-- Add tests for pure logic wherever feasible.
-- Use explicit raw time naming as `minutesIntoSliceDay` and avoid time-string parsing in gameplay rules.
-- Keep static authored content separate from mutable runtime state.
-- Favor RAII and clear ownership to avoid leaks.
-- Avoid unnecessary per-frame allocations, repeated content parsing, and blocking work in the main loop.
-- Do not mix input logic with rendering code.
+- Keep gameplay rules out of rendering and input layers.
+- Keep input polling / translation in `src/app`, not in renderers.
+- Keep renderers focused on drawing from view/state models.
+- Keep pure logic pure where practical.
+- Prefer explicit state and explicit transitions over hidden chaining.
+- Preserve clear ownership and leak-resistant C++ code.
+- Avoid unnecessary allocations and repeated parsing in the main loop.
+- Keep authored static content separate from runtime mutable state.
+- Prefer incremental schema evolution over ad hoc special cases.
 
 ## Combat system implementation
 
-- Follow `docs/combat_rules.md` exactly when implementing or changing combat systems.
-- Treat the current battle model as settled baseline unless a task explicitly reopens it.
-- Battle is static formation CTB, not free-movement combat.
-- Use effective row depth for battle calculations where the rules call for it.
-- Leaders are hero-only.
-- Keep formulas simple, readable, and testable.
-- Preserve readability-first combat UX: turn-order preview, min/max damage, and min/max KO preview where applicable.
+Battle assumptions now treated as settled unless the user explicitly reopens them:
+
+- battle is static formation CTB, not grid combat
+- teams field up to 5 active units
+- the Leader position is inside the 5, not an extra slot
+- only hero units can be leaders
+- targeting is free; row depth affects agility penalty rather than target legality
+- agility penalty uses the target's effective row depth
+- leader aura is a baseline hard rule
+- hero HP persists, generic stack HP resets, stack counts persist, and MP persists for all units
+- battle UI should favor readable turn-order preview and min/max outcome visibility over exposing hidden math
+
+Detailed combat rules live in `docs/combat_rules.md`.
 
 ## Working style
 
-- Before large changes, summarize the plan briefly.
-- For ambiguous requirements, choose the simplest implementation that preserves the intended gameplay.
-- Document non-obvious design decisions in `README_DECISIONS.md`.
-- When creating new systems, provide extension points but do not generalize prematurely.
-- Prefer small, complete milestones that build and run.
-- When work touches vision-level behavior, update the relevant docs alongside the code or note the required doc follow-up explicitly.
+- Make the smallest clean change that solves the task.
+- Prefer narrow, test-backed iterations over broad rewrites.
+- Call out doc/code mismatches explicitly.
+- If a design area is still ambiguous, tighten the docs/vision before implementing broad behavior.
+- Do not silently invent large systems when the vision is underspecified.
+- When changing durable behavior, update the relevant docs/tests in the same pass.
 
 ## Current bounded scope
 
-Keep the playable slice intentionally limited:
+The current codebase is still a bounded **single-region slice**.
 
-- 1 overworld region
-- a small set of destinations and authored locations
-- 1 home/base
-- a small roster and enemy-group pool appropriate for a vertical slice
-- a small quest/progression set
-- save/load
-- placeholder art
+That means:
+- do not assume the full World Map / cross-region rules are implemented
+- do not assume campaign carry-over is implemented
+- do not assume the final out-of-battle party-management UX exists yet
+- do not assume all long-term service/storage/recruitment rules already exist in runtime code
 
-Use content files and current code as the source of truth for exact counts and currently available content. Do not hardcode old milestone assumptions about roster totals, encounter counts, or service counts into new plans.
+However, the long-term terminology and design direction are now more settled and should be used consistently in planning/docs:
+- Campaign -> Scenario -> World Map -> Region -> node -> Location
+- use `Region` as the main design term instead of `overworld`
+- `traveling party` = active party + reserve
+- stored units are distinct from reserve
+- all traveling heroes cross regions; traveling generic units do not unless stored
+- region hero offerings reroll on region entry from heroes who are not traveling, stored, or temporarily unavailable
 
 ## Key docs to follow
 
-Always consult these docs when relevant:
+Read these before planning or making broad changes:
 
-- `README.md`
-- `README_DECISIONS.md`
-- `docs/game_vision.md`
-- `docs/game_vision_complete.md`
-- `docs/core_loop_rules.md`
-- `docs/combat_rules.md`
-- `docs/content_scope_v0.md`
-- `docs/technical_direction.md`
-- the active milestone doc, if one exists for the task at hand
+1. `README.md`
+2. `README_DECISIONS.md`
+3. `docs/game_vision_complete.md`
+4. `docs/combat_rules.md`
+5. milestone-specific doc/prompt if the task is tied to one
+6. `docs/technical_direction.md`
+7. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
 
-Archived milestone docs, archived prompts, and archived placeholder notes are history only unless a task explicitly asks to consult them.
+If those sources disagree:
+- prefer the **current codebase** for already implemented behavior
+- prefer the **most recently settled design docs** for long-term design intent
+- flag the mismatch explicitly rather than guessing
 
 ## Document precedence
 
-When documents overlap or conflict, use this order of authority:
+Use this order when there is ambiguity:
 
 1. current codebase for already implemented behavior
 2. explicit current-task requirements from the user
@@ -140,11 +137,7 @@ Assume the current baseline already includes:
 - player-character recovery to 1 HP on allied win if KO'd
 - KO non-player heroes leaving the party on allied win if not revived before battle end
 
-Use the following hierarchy as long-term project vocabulary and design direction:
-
-- campaign -> scenario -> world map -> overworld/region -> node -> location
-
-The current codebase is still a bounded single-region slice and does not yet implement the full world-map / cross-region travel layer.
+The current codebase is still a bounded single-region slice and does not yet implement the full World-Map / cross-region travel layer.
 
 ## Current planning posture
 
@@ -157,6 +150,7 @@ Until a new milestone is explicitly chosen:
 - do not reopen settled battle rules unless explicitly requested
 - prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
 - keep future milestone proposals tightly scoped to the current single-region vertical slice
+- when discussing future world-map/region/party systems, use the settled terminology and party/storage model rather than older region-local-party assumptions
 
 ## Avoid
 
@@ -169,4 +163,4 @@ Until a new milestone is explicitly chosen:
 - mixing input logic with rendering code
 - speculative campaign-scale systems that bypass the current slice
 
-When in doubt, prefer the smallest clean implementation that preserves the existing vertical-slice foundation and strengthens authored progression, consequence, and Home Base identity.
+When in doubt, prefer the smallest clean implementation that preserves the existing vertical-slice foundation and strengthens authored progression, consequence, and safe-anchor identity.
