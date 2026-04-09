@@ -35,6 +35,7 @@ You are working in a 2D single-player game project written in C++20 using raylib
   - save/load
   - quest/progression flow
   - service/economy state
+  - roster/party management state
 - Keep core gameplay logic independent from rendering where practical.
 - Put balance values and content definitions in JSON, not hardcoded in gameplay logic.
 - Add tests for pure logic wherever feasible.
@@ -46,8 +47,13 @@ You are working in a 2D single-player game project written in C++20 using raylib
 
 ## Combat system implementation
 
-- Follow `docs/combat_rules.md` exactly when implementing combat systems.
-- Keep formulas simple and testable.
+- Follow `docs/combat_rules.md` exactly when implementing or changing combat systems.
+- Treat the current battle model as settled baseline unless a task explicitly reopens it.
+- Battle is static formation CTB, not free-movement combat.
+- Use effective row depth for battle calculations where the rules call for it.
+- Leaders are hero-only.
+- Keep formulas simple, readable, and testable.
+- Preserve readability-first combat UX: turn-order preview, min/max damage, and min/max KO preview where applicable.
 
 ## Working style
 
@@ -56,22 +62,21 @@ You are working in a 2D single-player game project written in C++20 using raylib
 - Document non-obvious design decisions in `README_DECISIONS.md`.
 - When creating new systems, provide extension points but do not generalize prematurely.
 - Prefer small, complete milestones that build and run.
+- When work touches vision-level behavior, update the relevant docs alongside the code or note the required doc follow-up explicitly.
 
 ## Current bounded scope
 
 Keep the playable slice intentionally limited:
 
 - 1 overworld region
-- 10 to 20 destinations
-- 1 or 2 town-style locations
+- a small set of destinations and authored locations
 - 1 home/base
-- 1 to 3 dungeon-style locations
-- 3 heroes total
-- 8 generic unit types
-- 8 to 10 enemy groups
-- a small quest set
+- a small roster and enemy-group pool appropriate for a vertical slice
+- a small quest/progression set
 - save/load
 - placeholder art
+
+Use content files and current code as the source of truth for exact counts and currently available content. Do not hardcode old milestone assumptions about roster totals, encounter counts, or service counts into new plans.
 
 ## Key docs to follow
 
@@ -85,25 +90,29 @@ Always consult these docs when relevant:
 - `docs/combat_rules.md`
 - `docs/content_scope_v0.md`
 - `docs/technical_direction.md`
-- `docs/milestone_8_persistent_roster_home_base_mustering.md` when working on Milestone 8 tasks
+- the active milestone doc, if one exists for the task at hand
+
+Archived milestone docs, archived prompts, and archived placeholder notes are history only unless a task explicitly asks to consult them.
 
 ## Document precedence
 
 When documents overlap or conflict, use this order of authority:
 
-1. current codebase
-2. active milestone doc
-3. `README_DECISIONS.md`
-4. `docs/game_vision_complete.md`
-5. core rules / combat rules / technical direction
-6. `docs/content_scope_v0.md` as a bounded scope cap only
-7. archived docs/prompts and archived placeholder vision notes as history only
+1. current codebase for already implemented behavior
+2. explicit current-task requirements from the user
+3. active milestone doc for the task, if one exists
+4. `README_DECISIONS.md`
+5. `docs/game_vision_complete.md`
+6. `docs/core_loop_rules.md` and `docs/combat_rules.md`
+7. `docs/technical_direction.md`
+8. `docs/content_scope_v0.md` as a bounded-scope cap only
+9. archived docs/prompts as historical context only
 
 `docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
 
-## Current milestone baseline
+## Current baseline
 
-Milestone 7 is complete on the current branch.
+M8 is complete on the current branch.
 
 Assume the current baseline already includes:
 
@@ -120,6 +129,16 @@ Assume the current baseline already includes:
 - Recruit Post weekly recruit stock and refresh behavior
 - Supply Cart paid same-day travel prep fallback
 - app-layer service prompt formatting and UI-light readability improvements
+- canonical roster stack/slot model
+- persistent owned-roster plus active-party state
+- battle quantity persistence and battle write-back into roster state
+- active party size of 5, with Leader inside the 5
+- leader/aura baseline in place
+- player team requiring a legal leader
+- enemy teams optionally having a leader
+- player-character seeding into owned roster and active-party legality protections
+- player-character recovery to 1 HP on allied win if KO'd
+- KO non-player heroes leaving the party on allied win if not revived before battle end
 
 Use the following hierarchy as long-term project vocabulary and design direction:
 
@@ -127,34 +146,27 @@ Use the following hierarchy as long-term project vocabulary and design direction
 
 The current codebase is still a bounded single-region slice and does not yet implement the full world-map / cross-region travel layer.
 
-Do not introduce world-map travel systems, per-region party transfer systems, or broader campaign structure as part of Milestone 8 unless explicitly requested.
+## Current planning posture
 
-Preserve this baseline unless a change is clearly necessary.
+There is no new implementation milestone locked yet beyond M8.
 
-## Current milestone focus
+Until a new milestone is explicitly chosen:
 
-The active planning target is Milestone 8: persistent roster state, Home Base mustering, and battle-party consequence.
+- preserve the current post-M8 baseline
+- treat `docs/combat_rules.md` and `docs/game_vision_complete.md` as the authoritative design baseline for battle and high-level gameplay vision
+- do not reopen settled battle rules unless explicitly requested
+- prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
+- keep future milestone proposals tightly scoped to the current single-region vertical slice
 
-Priorities for the next milestone:
+## Avoid
 
-- preserve the existing `App` / `GameSession` and controller / mapper / renderer architecture
-- keep mode transitions explicit and easy to follow
-- make recruitment produce persistent gameplay state instead of only economic/message state
-- introduce a clear distinction between reserve roster state and active field-party state
-- make Home Base the primary mustering/reorganization anchor of the slice
-- make battle allies come from current active-party state where appropriate
-- keep new roster/progression state explicit, testable, and save/load friendly
-- keep UI additions lightweight and focused on state clarity rather than large presentation rewrites
-- maintain responsiveness, performance, and ownership clarity as systems deepen
-
-Avoid:
-
-- broad content expansion disconnected from the milestone
-- extra regions
-- major new combat mechanics
-- inventory/equipment systems unless explicitly required
-- generic service/event/party-management frameworks
+- broad content growth disconnected from the current milestone or task
+- extra regions or world-map systems unless explicitly requested
+- major combat redesign unless the task explicitly reopens battle rules
+- generic inventory/equipment/event/service frameworks before they are needed
 - large architectural rewrites
-- building the editor itself during this milestone
+- premature editor tooling
+- mixing input logic with rendering code
+- speculative campaign-scale systems that bypass the current slice
 
-When in doubt, prefer the smallest clean implementation that keeps the playable slice coherent and moves the game toward a stronger persistent roster and Home Base identity.
+When in doubt, prefer the smallest clean implementation that preserves the existing vertical-slice foundation and strengthens authored progression, consequence, and Home Base identity.

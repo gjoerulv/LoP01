@@ -203,30 +203,31 @@ Why:
 
 Tradeoff:
 - The service layer communicates state clearly, but recruit outcomes still stop short of becoming durable roster/party gameplay state.
-- That gap is intentionally the next milestone’s problem rather than something M7 solved halfway.
+- That gap was intentionally deferred to Milestone 8.
 
-### 18) Milestone 8 should turn recruits into persistent roster consequence
+### 18) Milestone 8 established persistent roster and active-party consequence
 
 Decision:
-- Milestone 8 should focus on persistent roster state, Home Base mustering, and active-party consequence.
-- Recruit actions should stop being merely economic/message events and should instead produce durable gameplay state.
-- Home Base should become the main place where reserve state and active-party state are organized.
-- The milestone should stay bounded to the current single-region slice and avoid depending on unresolved campaign/world-map structure.
+- Recruitment now produces durable roster state rather than only economic/message outcomes.
+- The game uses a canonical roster/slot model with owned counts, an active battle party, and reserve state.
+- Home Base is currently the primary mustering anchor for moving units between active and reserve state.
+- Save/load persists the canonical roster model and migrates older save shapes into the current structure.
 
 Why:
-- The largest remaining gap after Milestone 7 is that recruit services matter economically but not yet strategically in a durable way.
-- Turning recruitment into roster state creates a stronger strategy/RPG loop without requiring inventory systems, broad narrative systems, or multi-region design resolution.
-- Home Base gains clearer long-term identity if it is both a safe hub and the primary mustering anchor.
+- This turns recruitment into real strategy/RPG consequence.
+- It gives Home Base a stronger long-term role as more than a rest/service node.
+- It grounds future progression in persistent party state rather than transient recruit events.
 
 Tradeoff:
-- This milestone should avoid overreaching into a full party-management UI, inventory/equipment systems, or cross-region roster transfer rules.
-- Battle-party integration should be strong enough to create consequence, but still remain explicit, testable, and slice-appropriate.
+- The current mustering flow is a bounded slice implementation, not the final out-of-battle party-management UX.
+- Broader inventory/equipment/campaign roster design remains intentionally out of scope.
 
 ### 19) Active battle party target size is 5
 
 Decision:
 - The intended active battle party capacity is 5 slots.
 - Both player and enemy teams can field up to 5 battle participants.
+- The leader occupies one of those 5 slots rather than existing as an additional slot.
 - Earlier 3-slot assumptions should be treated as implementation history, not as design truth.
 
 Why:
@@ -236,6 +237,92 @@ Why:
 
 Tradeoff:
 - Any remaining 3-slot assumptions in runtime logic, tests, or save migration should be treated as migration work rather than re-opened design decisions.
+
+### 20) Battle remains static formation CTB rather than grid combat
+
+Decision:
+- Battle is true turn-based CTB with no free battlefield movement.
+- Units occupy abstract formation positions (`Front`, `Middle`, `Back`, and optional `Leader`) rather than tiles on a movement grid.
+- Position changes are explicit battle commands that consume the acting unit’s turn.
+- The detailed combat rules live in `docs/combat_rules.md`; this file only records the top-level design direction.
+
+Why:
+- Keeps combat readable, tactical, and content-friendly without introducing map-scale movement complexity.
+- Fits the intended FF-style battle feel more closely than grid tactics.
+- Keeps combat state explicit and easier to test.
+
+Tradeoff:
+- Positional tactics come from row choice, target selection, CTB timing, and skills rather than pathfinding or terrain.
+
+### 21) Effective row depth is the combat-facing positional rule
+
+Decision:
+- Stored position labels and combat-facing row depth are not always the same thing.
+- Agility penalty and range interaction use the target’s effective row depth, not only its literal stored label.
+- Gaps are allowed in the formation: a team may have living units in `Front` and `Back` with no `Middle`, and the `Back` units remain effectively `Back` while `Front` still exists.
+- When all living units in the nearest row are gone, the next surviving row becomes the new effective front for battle calculations.
+- The attacker’s own row does not directly affect agility penalty.
+
+Why:
+- Preserves player-readable formation labels while making targeting penalties depend on which enemy line is actually closest.
+- Matches the intended “how far does this unit need to reach?” battle feel.
+- Avoids fake row normalization that would erase intentional gaps.
+
+Tradeoff:
+- The rule is more precise than a naive label-only formula, so UI and docs must communicate it clearly.
+
+### 22) Leaders are hero-only and are manually managed
+
+Decision:
+- Only hero units can be assigned to the `Leader` position.
+- The player team must always have a legal leader somewhere in party state.
+- Enemy teams may have a leader but are not required to.
+- If a leader is KO’d, aura effects end immediately and no replacement is assigned automatically.
+- A living hero may manually take the `Leader` position later, and the aura reactivates immediately when that reassignment occurs.
+- Outside battle, leader choice belongs to broader party management rather than to the current mustering table flow.
+
+Why:
+- Reinforces the game’s hero-led, story-driven party identity.
+- Keeps aura behavior explicit and tactically legible.
+- Separates durable party leadership from the narrower Home Base mustering slice UI.
+
+Tradeoff:
+- The final out-of-battle party-management UX is not yet fully designed or named.
+- AI-controlled enemy teams must also follow the same manual leader-assignment rule when relevant.
+
+### 23) Combat is mostly deterministic and readability-first
+
+Decision:
+- Damage roll is the main source of randomness in battle.
+- Hit/miss, dodge, proc, and similar special outcomes should be deterministic when they exist.
+- Battle UI should expose the information needed for tactical planning: visible turn-order preview, min/max damage, and min/max KO preview.
+- The game should show resulting CTB order changes directly rather than surfacing hidden delay math.
+
+Why:
+- Supports tactical decision-making and player trust.
+- Keeps combat closer to readable CTB planning than to swing-heavy RPG randomness.
+- Lets position/range/skill choices feel deliberate rather than opaque.
+
+Tradeoff:
+- Some internal formulas may remain partially hidden as long as their effects are communicated clearly through previews.
+
+### 24) Attrition is asymmetric between heroes and generic stacks
+
+Decision:
+- Hero units and generic stacks do not recover the same way after battle.
+- Hero HP persists between battles unless restored by other means.
+- Generic stacks restore current HP to max after battle, but lost stack count persists.
+- MP persists for all units.
+- Temporary in-battle buffs/debuffs are removed after battle; overworld-applied effects use explicit durations such as one battle, one day, or one week.
+- Persistent enemy groups follow the same broad rules as the player’s party.
+
+Why:
+- Creates durable consequence without making every surviving generic stack track partial post-battle HP.
+- Gives heroes stronger individual identity and ongoing risk.
+- Supports persistent encounter state in the overworld.
+
+Tradeoff:
+- This asymmetry is less uniform than “everything fully heals” or “nothing heals,” but it better matches the intended strategy/RPG loop.
 
 ## Assumptions
 
@@ -248,3 +335,5 @@ Tradeoff:
 - Milestone 4 established mode-specific renderers (`Title`, `Overworld`, `Location`, `Battle`) plus shared HUD/debug overlay.
 - Milestone 5 established the first complete world-loop baseline.
 - Milestone 6 hardened route/world/node/quest coherence while preserving the explicit architecture.
+- Milestone 7 grounded Home Base/service/economy identity and weekly cadence.
+- Milestone 8 established persistent roster state, 5-slot active parties, leader legality, and durable battle-party consequence.

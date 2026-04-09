@@ -13,7 +13,7 @@ The project is being extended through small, maintainable milestones while keepi
 
 ## Current slice scope
 
-This is not the full game. The current slice is intentionally bounded to a single region and a small set of destinations, locations, encounters, quests, and placeholder presentation.
+This is not the full game. The current slice is intentionally bounded to a single region and a small set of destinations, locations, encounters, quests, services, roster interactions, and placeholder presentation.
 
 The current slice supports:
 
@@ -26,24 +26,30 @@ The current slice supports:
 - route-aware overworld travel with blocker-aware routing
 - lightweight persistent world state for cleared combat nodes
 - simple typed quest progression, including combat-node-clear triggers
+- persistent roster state with owned units, active party, and reserves
+- recruit and mustering behavior tied to persistent roster state
+- battle consequence written back into persistent party state
 - save/load for the current gameplay slice
 - placeholder content and presentation assets
 
 ## Current architecture baseline
 
-Milestones 5 and 6 established the current implementation baseline.
+Milestones 5 through 8 established the current implementation baseline.
 
 The current baseline includes:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
-- typed regions, locations, location scenes, battle scenarios, and quests
+- typed regions, locations, location scenes, battle scenarios, quests, services, and unit content
 - unified wake-penalty recovery flow for missed sleep and full defeat
 - explicit battle return routing
 - route-aware travel rules shared by preview and confirm
 - minimal persistent world state for cleared combat nodes
 - minimal typed quest progression tied to world actions
-- save/load for current slice state and lightweight world/progression state
+- persistent roster state with save/load support and migration from older slice formats
+- battle initialization from the active party rather than only static allied setup
+- battle result write-back into persistent roster and party state
+- leader / aura foundations integrated into the roster and battle model
 
 Future milestones should preserve this architecture unless a change is clearly justified.
 
@@ -72,6 +78,7 @@ Future milestones should preserve this architecture unless a change is clearly j
   - location runtime
   - overworld/world-state rules
   - quest runtime
+  - roster / party state
 
 - `src/rendering`
   - mode-specific renderers
@@ -85,7 +92,7 @@ Future milestones should preserve this architecture unless a change is clearly j
   - gameplay/presentation tests for the current slice; most are logic-focused, but the test target currently still links rendering
 
 - `docs`
-  - vision, technical direction, core-loop rules, combat rules, and milestone docs
+  - vision, technical direction, combat rules, and milestone-planning docs
 
 ## Gameplay and data architecture
 
@@ -126,6 +133,25 @@ Content files under `content/` define the current slice, including:
 
 These files provide the bounded playable-slice content used by the current milestone path. Future progression work should continue to extend content schemas and gameplay-facing runtime state rather than hardcoding milestone-specific behavior into presentation or app glue.
 
+## Battle baseline
+
+The current battle foundation is now a post-M8 baseline, not a prototype direction.
+
+Key battle assumptions:
+
+- battle is **static formation CTB**, not grid movement
+- a team can field up to **5 active units**
+- the **Leader** position is **one of the 5**, not an extra slot
+- only **hero units** can be assigned as leader
+- targeting is free; position affects **agility penalty**, not target legality
+- agility penalty uses the target's **effective row depth**, not only the stored row label
+- position changes are explicit turn-consuming actions
+- the leader aura is a baseline hard rule and reactivates immediately when leadership is reassigned
+- combat is intended to be highly readable and mostly deterministic, with randomness limited to damage roll
+- hero HP persists between battles, generic stack HP resets, generic stack count persists, and MP persists for all units
+
+For detailed battle rules, see `docs/combat_rules.md`.
+
 ## Current controls
 
 Controls are still prototype-level and may evolve, but the current slice supports:
@@ -145,65 +171,55 @@ Controls are still prototype-level and may evolve, but the current slice support
 
 ## Current milestone status
 
-Milestone 7 is complete and merged to `main`.
+Milestone 8 is complete and merged to `main`.
 
-Delivered Milestone 7 outcomes:
+Delivered Milestone 8 outcomes:
 
-- **Home Base**
-  - free rest
-  - free once-per-day travel preparation service
-- **Old Inn**
-  - paid rest with explicit cost communication
-- **Recruit Post**
-  - recruit offers with weekly stock and weekly refresh
-  - player-facing stock and refresh timing text
-- **Supply Cart**
-  - paid same-day travel prep fallback in the field
-- **Travel prep behavior**
-  - discounted travel preview before confirm
-  - explicit consumption messaging when used
-  - expires at day rollover if unused
-  - cannot stack while an unused prep charge is active
-- **Readability/UI-light improvements**
-  - week visibility in HUD
-  - active prep shown as buff icon(s)
-  - clearer multiline service tooltip structure
-- **Post-M7 hardening**
-  - service prompt text assembly moved out of gameplay rules and into the app layer
+- canonical persistent roster state for owned units, active party, and reserves
+- active party size increased to **5**
+- recruit flow migrated to persistent roster state
+- Home Base mustering integrated into persistent roster management
+- save/load migration for older slice state into canonical roster structures
+- battle initialization from the current active party
+- battle quantity persistence and roster write-back
+- leader / aura baseline integrated into battle legality and party state
+- player active party legality hardened so a legal leader is always available
+- player character seeded into owned + active party at startup
+- allied win handling updated so the player character recovers to 1 HP if KO'd
+- KO non-player heroes leave the party on allied win and can later be recovered through the game's hero-recovery systems
 
-Milestone 6 and Milestone 7 docs/prompts are retained as history only once archived.
+Milestone 6, 7, and 8 docs/prompts are retained as history once archived.
 
 ## Current gameplay baseline
 
-The current branch now includes this post-M7 baseline:
+The current branch now includes this post-M8 baseline:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
-- typed regions, locations, location scenes, battle scenarios, quests, and service definitions
+- typed regions, locations, location scenes, battle scenarios, quests, service definitions, and unit content
 - unified wake-penalty recovery flow
 - route-aware travel replacing placeholder index-distance travel
 - blocker-aware routing tied to lightweight persistent world state
 - minimal typed quest progression tied into the world loop
-- save/load for current slice state and lightweight world/progression/service state
 - content-driven service/economy behavior for rest, recruit stock, and travel prep
 - app-layer service prompt formatting and UI-light readability improvements
+- persistent roster state, mustering, and battle-party consequence
+- post-battle write-back of unit losses and hero recovery state
+- battle foundation aligned with `docs/combat_rules.md`
 
-## Milestone 8 direction
+## Current planning posture
 
-Milestone 8 should be a larger, meaningful step centered on **persistent roster state, Home Base mustering, and battle-party consequence**.
+The repo should now be treated as **post-M8 baseline**.
 
-Current Milestone 8 priorities:
+Planning for the next milestone should:
 
 - preserve the existing `App` / `GameSession` and controller / mapper / renderer architecture
 - keep gameplay logic separate from rendering/input
-- make recruitment create persistent gameplay state instead of only economic/message state
-- make Home Base matter as the primary mustering/recovery anchor of the slice
-- make battles use the current active party rather than relying only on static allied battle setup
-- keep the work bounded to the current single-region slice
-- avoid depending on unresolved campaign/world-map/multi-region decisions
+- treat `docs/game_vision_complete.md` and `docs/combat_rules.md` as source-of-truth design docs where they are explicit
+- tighten vision/docs first when a major system is still ambiguous
+- keep new work bounded to the current single-region slice unless a milestone explicitly expands scope
+- avoid depending on unresolved campaign/world-map/multi-region decisions unless the milestone is specifically about those decisions
 - maintain responsiveness, explicit ownership, leak resistance, and performance
-
-See `docs/game_vision_complete.md` and `docs/milestone_8_persistent_roster_home_base_mustering.md` for the active planning direction.
 
 ## Build
 
@@ -217,6 +233,5 @@ cmake --build build
 - Archived milestone docs and prompts are kept for history and should not be treated as active implementation guidance.
 - `docs/content_scope_v0.md` remains a scope cap, not a checklist of completed work.
 - The active long-term north-star doc is `docs/game_vision_complete.md`.
-- The active milestone-planning doc is `docs/milestone_8_persistent_roster_home_base_mustering.md`.
-- For the finished-direction hierarchy and terminology, see `docs/game_vision_complete.md`.
+- The active battle-rules doc is `docs/combat_rules.md`.
 - The current codebase is still a bounded slice and does not yet implement the full campaign/scenario/world-map structure.
