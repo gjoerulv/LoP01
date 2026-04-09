@@ -18,12 +18,12 @@ This is not the full game. The current slice is intentionally bounded to a singl
 The current slice supports:
 
 - a full app flow with title, opening, overworld selection, and gameplay
-- explicit mode transitions between overworld, location, and battle
-- content-driven overworld destinations and typed location definitions
+- explicit mode transitions between region travel, location, and battle
+- content-driven region destinations and typed location definitions
 - content-driven location scenes and battle scenario selection
 - turn-based CTB battle encounters
 - day/time progression and wake-up penalty rules
-- route-aware overworld travel with blocker-aware routing
+- route-aware regional travel with blocker-aware routing
 - lightweight persistent world state for cleared combat nodes
 - simple typed quest progression, including combat-node-clear triggers
 - persistent roster state with owned units, active party, and reserves
@@ -76,7 +76,7 @@ Future milestones should preserve this architecture unless a change is clearly j
   - gameplay state and rules
   - battle runtime
   - location runtime
-  - overworld/world-state rules
+  - region/world-state rules
   - quest runtime
   - roster / party state
 
@@ -152,6 +152,24 @@ Key battle assumptions:
 
 For detailed battle rules, see `docs/combat_rules.md`.
 
+## Settled long-term world and party direction
+
+The current codebase is still a bounded single-region slice, but the design direction is now clearer:
+
+- use **Campaign -> Scenario -> World Map -> Region -> Node -> Location** as the main world hierarchy
+- use **Region** as the long-term term instead of `overworld` when discussing design
+- treat the **World Map** as the scenario-level region-selection and information layer
+- treat the **traveling party** as **active party + reserve**
+- keep the **active party** capped at **5**
+- keep **reserve** capped at **7**
+- treat **stored units** as separate from reserve, with **7 slots per storage service**
+- let **all heroes** in the traveling party cross regions
+- make **traveling generic units** a region-crossing loss unless stored beforehand
+- keep stored units, recruit offerings, enemy attrition, and other authored state persistent within their region
+- reroll region hero offerings on region entry from heroes who are not traveling, stored, or temporarily unavailable
+
+These are settled vision decisions, not yet fully implemented baseline behavior.
+
 ## Current controls
 
 Controls are still prototype-level and may evolve, but the current slice supports:
@@ -218,7 +236,7 @@ Planning for the next milestone should:
 - treat `docs/game_vision_complete.md` and `docs/combat_rules.md` as source-of-truth design docs where they are explicit
 - tighten vision/docs first when a major system is still ambiguous
 - keep new work bounded to the current single-region slice unless a milestone explicitly expands scope
-- avoid depending on unresolved campaign/world-map/multi-region decisions unless the milestone is specifically about those decisions
+- avoid depending on unresolved systems, but do use the settled party/world-map terminology and direction when planning future work
 - maintain responsiveness, explicit ownership, leak resistance, and performance
 
 ## Build
@@ -234,4 +252,4 @@ cmake --build build
 - `docs/content_scope_v0.md` remains a scope cap, not a checklist of completed work.
 - The active long-term north-star doc is `docs/game_vision_complete.md`.
 - The active battle-rules doc is `docs/combat_rules.md`.
-- The current codebase is still a bounded slice and does not yet implement the full campaign/scenario/world-map structure.
+- The current codebase is still a bounded slice and does not yet implement the full campaign/scenario/World-Map/cross-region rule set.

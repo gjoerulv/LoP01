@@ -165,28 +165,25 @@ Why:
 - The game should feel responsive even while systems deepen.
 - Clear ownership and separation reduce leak risk and make performance issues easier to diagnose.
 
-### 16) Region travel rules remain the long-term scenario/world-map direction
+### 16) Scenario terminology should stay explicit and use Region as the main travel term
 
 Decision:
-- Use the following as long-term design direction for future scenario/world-map work:
-  - region travel happens through the scenario world map / region select layer
-  - the player may travel between regions only once per day, before 11:00
-  - region travel places the player character in the destination region at 11:00
-  - only the player character travels between regions
-  - each region preserves its own party state
+- Use the following long-term project vocabulary:
+  - campaign -> scenario -> World Map -> Region -> node -> location
+- Treat `overworld` as historical vocabulary for the same gameplay layer as `Region`.
+- A `World Map` is the scenario-level selection/info layer above all Regions.
+- A `Region` is the main travel space the player moves within by selecting destination nodes.
+- A `Location` is an entered place inside a Region.
+- A `Service` is a functional interaction available either inside a Location or directly in a Region.
 
 Why:
-- Keeps region switching strategically meaningful.
-- Supports authored regional identity and region-specific progression.
-- Allows scenarios to use multiple overworlds without flattening party state into one global pool.
-
-Current-slice note:
-- The current playable slice is still bounded to one region.
-- These rules are vocabulary and design direction, not fully implemented baseline behavior yet.
+- Keeps world-structure planning explicit instead of letting similar words drift into overlapping meanings.
+- Makes future world-map, region-travel, and editor work easier to reason about.
+- Avoids building long-term systems on fuzzy terminology.
 
 Tradeoff:
-- Cross-region party rules are more explicit and less intuitive than a single global party model.
-- This should remain content-driven and clearly communicated in UI when implemented.
+- Some current code and old docs still use `overworld` heavily.
+- Migration should prefer clarity over trying to preserve every old term.
 
 ### 17) Milestone 7 travel prep and service readability remain explicit and UI-light
 
@@ -205,22 +202,22 @@ Tradeoff:
 - The service layer communicates state clearly, but recruit outcomes still stop short of becoming durable roster/party gameplay state.
 - That gap was intentionally deferred to Milestone 8.
 
-### 18) Milestone 8 established persistent roster and active-party consequence
+### 18) Milestone 8 established persistent roster and party consequence, but not the final out-of-battle UX
 
 Decision:
 - Recruitment now produces durable roster state rather than only economic/message outcomes.
-- The game uses a canonical roster/slot model with owned counts, an active battle party, and reserve state.
-- Home Base is currently the primary mustering anchor for moving units between active and reserve state.
+- The game uses a canonical roster/slot model with active party, reserve, and battle write-back.
 - Save/load persists the canonical roster model and migrates older save shapes into the current structure.
+- The current Home Base mustering flow is a bounded slice implementation, not the final long-term party-management UX.
 
 Why:
 - This turns recruitment into real strategy/RPG consequence.
-- It gives Home Base a stronger long-term role as more than a rest/service node.
 - It grounds future progression in persistent party state rather than transient recruit events.
+- It leaves room for a broader future party-management/menu model without reopening the core persistence design.
 
 Tradeoff:
-- The current mustering flow is a bounded slice implementation, not the final out-of-battle party-management UX.
-- Broader inventory/equipment/campaign roster design remains intentionally out of scope.
+- The final out-of-battle party-management flow is broader than the current mustering table.
+- Storage/world-map/cross-region behavior remains mostly design-level direction today rather than implemented baseline.
 
 ### 19) Active battle party target size is 5
 
@@ -323,6 +320,81 @@ Why:
 
 Tradeoff:
 - This asymmetry is less uniform than “everything fully heals” or “nothing heals,” but it better matches the intended strategy/RPG loop.
+
+### 25) Party state should distinguish active, reserve, and stored units
+
+Decision:
+- `active party` means the current battle-legal fielded group, capped at 5.
+- `reserve` means traveling units not currently fielded in battle, capped at 7.
+- `traveling party` means active + reserve, for a total cap of 12.
+- `stored units` are separate from reserve and belong to a specific storage service, with 7 slots per storage.
+- Storage is neutral and can hold heroes or generic stacks.
+
+Why:
+- Keeps battle legality, travel consequence, and storage logistics distinct.
+- Gives the game a clear long-term roster model beyond the bounded current mustering flow.
+- Supports future storage/location gameplay without flattening everything into one global bag of units.
+
+Tradeoff:
+- The model is more structured than a single shared reserve pool.
+- UI and docs must explain the difference between reserve and stored units clearly.
+
+### 26) Cross-region travel should preserve heroes, not traveling generic units
+
+Decision:
+- All heroes in the traveling party cross regions with the player.
+- Generic units in the traveling party do not cross regions and are lost unless stored beforehand.
+- Stored units remain in their region and persist there.
+- The game must warn the player before confirming region travel that would discard traveling generic units.
+- Region-local persistent state continues to exist after the player leaves, including stored units, recruit offerings, enemy attrition, and other authored progression.
+
+Why:
+- Makes cross-region travel strategically meaningful.
+- Preserves strong hero continuity without making generic troop logistics trivial.
+- Gives storage services and local safe anchors real value.
+
+Tradeoff:
+- The rule is harsher than a fully global party model and must be communicated clearly.
+- It makes region-change planning a larger decision.
+
+### 27) Region travel belongs to the World Map and uses shortest valid path timing
+
+Decision:
+- The World Map can be opened any time outside battle while inside a scenario.
+- Region travel is initiated from the Region layer, not from inside a Location.
+- If the player is in a Location, they must return to the Region layer first.
+- If the player is in a dungeon, region travel is not allowed.
+- Region travel must begin before 11:00.
+- Travel action is disabled when travel is illegal, but the World Map remains available for information.
+- Travel time is the number of region steps along the shortest currently valid path through enterable adjacent regions.
+- Arrival always happens at 11:00 on the arrival day.
+- Each Region must define a safe arrival node that cannot contain or spawn enemies.
+
+Why:
+- Gives scenario/world-map travel a clear strategic identity.
+- Makes time costs readable and content-friendly without introducing additional travel-resource systems.
+- Supports both planning and authored region gating.
+
+Tradeoff:
+- The Region layer and World Map layer need to stay distinct in UI and design.
+- Region travel remains a future-facing system for the current single-region slice.
+
+### 28) Hero availability is scenario-based and rerolls on region entry
+
+Decision:
+- Scenarios define the effective hero pool, with a default pool available when the designer does not fully specify one.
+- When the player enters a Region, hero-recruit offerings for that Region reroll from all heroes who are not traveling, stored, or temporarily unavailable.
+- The same available hero may appear in only one hero-recruit service at a time within the Region.
+- Temporarily unavailable heroes return to the pool at the start of the next week.
+
+Why:
+- Keeps hero recruitment authored and scenario-specific without making it fully static.
+- Makes region entry and week transitions meaningful for hero availability.
+- Supports both authored custom heroes and reusable default heroes.
+
+Tradeoff:
+- Players can intentionally use region travel to reroll hero availability.
+- This behavior is acceptable and should be treated as part of the strategic layer rather than an exploit to remove.
 
 ## Assumptions
 

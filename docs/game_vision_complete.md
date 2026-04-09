@@ -8,18 +8,19 @@ It is intentionally more concrete than `docs/game_vision.md`, but it is still a 
 
 The player should feel like they are:
 - surviving a broken world one day at a time
-- rebuilding a forgotten town into a real safe haven
 - making meaningful route, risk, and time-management choices
-- gathering survivors, allies, resources, and story fragments
+- gathering survivors, allies, items, and story fragments
+- building a capable traveling party while deciding what to carry forward and what to leave behind
+- turning damaged or reclaimed places into real safe havens
 - growing from fragile routine into confident regional recovery
 
 The game should combine:
-- world-level scenario and region planning
-- destination-based overworld travel
+- scenario-level world-map planning
+- node-based regional travel
 - walkable location exploration
 - readable, tactical CTB battles
 - service and economy planning across days and weeks
-- story and restoration anchored around a meaningful home base
+- story and restoration anchored around meaningful places of safety
 
 ## Tone
 
@@ -36,63 +37,62 @@ It is not grimdark. Hope, routine, and rebuilding are part of the fantasy.
 
 Project Ashvale uses this structure:
 
-- A **campaign** is a chain or branching graph of scenarios with story progression.
-- A **scenario** is one self-contained playable chapter or map.
-- Each **scenario** contains exactly one **world map**.
-- A **world map** contains one or more **overworlds**.
-- An **overworld** is also called a **region** in gameplay language.
-- An **overworld/region** contains authored **nodes** connected by legal travel routes.
-- A **location** is an enterable place reached from an overworld node.
+- A **campaign** is a collection of connected scenarios. It may be linear or branching, and may or may not tell one continuous story.
+- A **scenario** is the top-level authored playable unit.
+- Each **scenario** contains exactly one **World Map**.
+- A **World Map** contains one or more **Regions**.
+- A **Region** is the main travel space inside a scenario.
+- A **Region** contains authored **nodes** connected by legal travel routes.
+- A **Location** is an enterable place reached from a region node.
+- A **Service** is a functional interaction available either directly in a region or inside a location.
 
 For practical use in the project:
-- **overworld** and **region** refer to the same gameplay layer
-- **world map** is the higher-level scenario map above all overworlds
-- **region select** is the interaction mode used on the world map to choose which overworld/region to travel to
+- use **Region** as the main term for the regional travel layer
+- treat **overworld** as older vocabulary for the same concept
+- use **World Map** for the higher-level scenario map above regions
+- use **region select** for the interaction mode used on the World Map
 
 The intended hierarchy is:
 
-**Campaign → Scenario → World Map → Overworld/Region → Node → Location**
-
-## Initial selection
-
-At the start of play, the player chooses either:
-- a **single scenario**
-- a **campaign**
-
-### Single scenario
-
-A single scenario is one self-contained playable map, similar in scope to playing a single map in Heroes of Might and Magic II or III.
-
-A single scenario contains:
-- exactly one **world map**
-- one or more **overworlds/regions**
-- nodes, locations, services, battles, and objectives within that scenario
-
-The player wins a single scenario by completing that scenario’s defined objectives.
+**Campaign -> Scenario -> World Map -> Region -> Node -> Location**
 
 ### Campaign
 
-A campaign is a structured sequence or branching graph of scenarios.
+A campaign is a collection of scenarios that may branch or reconnect.
 
 In a campaign:
-- each scenario leads to one or more follow-up scenarios
-- some transitions may branch based on story progression, choices, or scenario outcome
-- the player progresses through multiple scenarios until reaching a full campaign ending
+- the player wins by completing a connected path through 2 or more scenarios to a campaign ending
+- scenario transitions may branch based on victory condition, player choice, or authored rules
+- some transitions may offer multiple follow-up scenarios
 
-The player wins a campaign by completing a full path through the campaign to its conclusion.
+A campaign does not have to be one tightly continuous story. The important part is that its scenarios are connected and that the campaign itself has a winnable structure.
+
+### Scenario
+
+A scenario is the top-level authored play unit.
+
+A single scenario should feel like a complete playable experience even when it is part of a larger campaign.
+
+A scenario may define:
+- its regions and world-map structure
+- its hero pool and other recruitment rules
+- its services, enemies, quests, and victory conditions
+- what, if anything, carries over from a previous scenario
+- authored story/state choices that affect follow-up scenarios
 
 ### Campaign carry-over
 
 Carry-over between scenarios is content-defined per campaign or scenario transition.
 
 Depending on the scenario rules, carry-over may include:
-- the full party
-- only the player character
-- gold, units, or items
+- heroes
+- items and equipment
+- generic troops
+- gold
 - selected story flags
-- no gameplay progression carry-over except story progression
+- no gameplay carry-over except story continuity
 
-Even when gameplay state resets between scenarios, the story should continue forward and meaningful player choices should still be remembered.
+Only explicitly legal entities should carry over. Even when gameplay state resets between scenarios, remembered story choices should still persist when the campaign uses them.
 
 ## The big gameplay loops
 
@@ -102,73 +102,95 @@ The player:
 - travels to a destination
 - enters a location, service, or battle
 - spends time, gold, party durability, or other resources
-- gets information, items, recruits, or route access
+- gains information, items, recruits, or route access
 
 ### Day-to-day
 
 The player:
-- plans where to travel before 02:00 and before region-travel deadlines
-- chooses when to fight, rest, shop, recruit, or return home
+- plans where to travel before time cutoffs matter
+- chooses when to fight, rest, shop, recruit, store units, or return to safety
 - balances risk against recovery and progress
-- handles the consequences of missing rest or getting defeated
+- deals with the consequences of attrition, defeat, and hero unavailability
 
 ### Week-to-week
 
 The player:
-- plans around weekly service refresh and restock cycles
+- plans around weekly service refresh and hero-pool return timing
 - decides how to spend limited gold and recruit opportunities
-- gradually unlocks better routes, safer nodes, and stronger town functions
-- feels that the world and home base are slowly becoming more stable
+- gradually unlocks better routes, safer regions, and stronger locations
+- feels that the world and the player's safe anchors are becoming more stable
 
-## World vision
+## World Map vision
 
-Each scenario contains exactly one **world map**.
+Each scenario contains exactly one **World Map**.
 
-The world map is the top-level travel structure for the current scenario.
-Its purpose is to organize the scenario into multiple authored **overworlds/regions**.
+The World Map is the top-level strategic layer for the current scenario.
+Its purpose is to organize the scenario into multiple authored **Regions** and let the player understand the broader structure of the scenario.
 
-The world map:
-- contains the scenario’s starting overworld
-- contains other overworlds that may become available over time
-- defines the top-level regional structure of the scenario
-- allows the player to choose which overworld/region to travel to
-- acts as an information screen for regional planning
+The World Map:
+- contains the scenario's starting region
+- contains other regions that may become available over time
+- acts as the region-selection layer for cross-region travel
+- acts as an information screen for scenario-level planning
 
-The player is not physically “inside” the world map the same way they are inside an overworld or location.
-The world map is a strategic selection screen and information layer above overworld play.
+The player is not physically “inside” the World Map the same way they are inside a region or location.
+The World Map is a strategic selection and information layer above region play.
 
-### Region select rules
+### World Map rules
 
-The player can consult the world map at any time for information, including during non-travel planning contexts such as cutscenes or scenario overview moments.
+The World Map can be opened at any time **outside battle**, as long as the player is inside a scenario.
 
-However, actual travel between regions/overworlds follows strict rules:
-- the player can travel between overworlds only once per day
-- region travel must be initiated before **11:00**
-- region travel uses that day’s single region-travel allowance
-- after region travel is confirmed, the player character arrives in the destination region at **11:00**
-- if the current time is **11:00 or later**, region travel is not allowed until the next day
+The player can use it:
+- for information
+- for planning
+- for cross-region travel when travel is legal
 
-### Cross-region party state
+Travel action is disabled when travel is not legal.
 
-Only the player character travels between regions.
+Regions:
+- unlock gradually through authored scenario logic
+- may also become temporarily enterable or non-enterable through flags and world-state changes
+- do not use a built-in one-time-only travel rule, but scenario logic may emulate that behavior by changing region availability flags
 
-Each region preserves its own party state.
-This means that units, recruits, and other region-local party composition remain associated with the region where they were acquired or left.
+### Region travel rules
 
-Example:
-- in Region A, the player has 60 peasants and 1 hero unit
-- the player travels to Region B alone
-- in Region B, the player gathers 30 bandits
-- when the player travels back to Region A, the player regains the 60 peasants and 1 hero unit from Region A
-- the 30 bandits remain in Region B
+Cross-region travel follows these rules:
 
-This allows each region to retain its own strategic state instead of sharing one global party pool across the entire scenario.
+- region travel is initiated from the **region layer**, not from inside a location
+- if the player is inside a location, they must first return to the region layer
+- if the player is inside a dungeon, region travel is not allowed
+- region travel must begin before **11:00**
+- if the current time is **11:00 or later**, travel is disabled until the next day
+- travel costs **time only**
+- region travel does not consume gold or other generic resources
+- arrival always happens at **11:00** on the arrival day
+
+Distance uses the **shortest valid path** through enterable adjacent regions.
+
+Practical rule:
+- directly adjacent regions cost **1 day**
+- if there are 2 regions between the current region and the destination, travel time is **3 days**
+- all region steps count equally for travel time
+
+Travel is only possible when a valid contiguous path exists through currently enterable regions.
+
+### Region arrival
+
+Each region must define an **arrival node**.
+
+Arrival-node rules:
+- the arrival node is authored by the scenario designer
+- it may be any legal node type except an enemy-occupied node
+- enemies may not spawn on it
+- enemies may not travel onto it
+
+This guarantees that cross-region travel always resolves into a safe, predictable entry point.
 
 ### Region presentation
 
-Selecting a region on the world map should:
+Selecting a region on the World Map should:
 - highlight that region clearly by its borders
-- show an informative image or visual panel for the region
+- show an informative visual panel for the region
 - display useful information such as:
   - difficulty
   - terrain
@@ -178,31 +200,194 @@ Selecting a region on the world map should:
   - size or scale
   - other scenario-defined notes
 
-The world map should feel like a strategic planning view, not just a menu list.
+The World Map should feel like a strategic planning view, not just a menu list.
+
+## Party, roster, and storage vision
+
+### Active party, reserve, and traveling party
+
+Outside battle, **party** should mean the **active party**.
+
+The active party:
+- is the current battle-legal fielded group
+- has a maximum size of **5**
+- must always remain battle-legal
+- must always contain exactly one assigned leader
+
+The reserve:
+- travels with the player
+- has a maximum size of **7**
+- can be switched into the active party from the global party-management menu
+- does not directly field in battle unless moved into the active party first
+
+The **traveling party** means:
+
+**active party + reserve**
+
+So the maximum traveling-party size is **12**.
+
+### Stored units
+
+Stored units are different from reserve units.
+
+Stored units:
+- do not travel with the player
+- are assigned to a specific **storage service**
+- remain at that storage service until moved again
+- can include **heroes or generic stacks**
+- use a separate slot cap from the active party and reserve
+
+Each storage service:
+- is neutral and can store any unit type
+- has **7 slots**
+- persists in its parent region
+- is independent of other storage services, even within the same region
+
+A region may contain multiple storage services.
+
+### Global party-management rules
+
+There should be a broader out-of-battle party-management menu available outside battle.
+
+That menu should allow the player to:
+- inspect units
+- choose the active party
+- assign the leader
+- change active-party positions
+- equip items
+- consume items
+- heal units through item use or other legal actions
+- disband generic units
+- dismiss heroes when legal
+
+What it should **not** do:
+- move units into or out of storage from anywhere
+
+Storage transfer must happen at the storage service itself.
+
+### Position and leadership outside battle
+
+Active-party position is persistent.
+
+Rules:
+- battle starts with the active party's current positions
+- position changes made in battle persist afterward
+- the `Leader` position is persistent like other active-party positions
+- reserve units do not keep an active battle position while in reserve
+- when a reserve unit is moved into the active party, it normally receives the game's best default position for that unit
+- if a reserve or stored unit directly replaces an active unit, it inherits the replaced unit's position
+- the leader cannot be removed from the active party unless directly replaced by another legal leader-capable hero
+
+The player character is the default fallback leader, but the player may manually assign another active hero as leader outside battle.
+
+If the current leader becomes temporarily unavailable:
+- the game automatically assigns a legal fallback leader
+- this fallback is temporary until the player changes it manually
+
+### Generic stacks
+
+Generic units use stack behavior outside battle as well as in battle.
+
+Rules:
+- generic stacks of the same type merge automatically on recruitment when possible
+- the player may manually split or merge same-type generic stacks outside battle
+- partial stacks may be stored
+- splitting and merging require legal slot usage
+
+The intended feel is closer to Heroes of Might and Magic stack management than to individual generic-unit micromanagement.
+
+### Heroes
+
+Heroes are scenario-governed units, not generic abstract hires.
+
+Rules:
+- heroes come from a scenario-defined pool, with a default pool available when the scenario designer does not fully specify one
+- a scenario designer may also author specific custom heroes
+- a hero may only appear in one recruit service at a time
+- a hero who is already traveling, stored, or temporarily unavailable is not eligible for recruit rerolls
+- a hero may be dismissed when legal, but that does not remove them permanently from the scenario
+
+### Temporarily Unavailable heroes
+
+The internal design term for heroes who are not currently usable should be **Temporarily Unavailable**.
+
+A temporarily unavailable hero:
+- is removed from the active party
+- is removed from reserve
+- is removed from storage
+- is not recruitable
+- does not consume upkeep
+- returns to the scenario hero pool at the **start of the next week**
+
+This state can happen because:
+- the hero was still KO'd when a battle ended
+- the hero was voluntarily dismissed
+- another authored rule temporarily removes the hero
+
+The player-facing flavor text can vary by context, but the underlying gameplay state is the same.
+
+### Recruitment rules
+
+Recruitment is legal if at least one of the following is true:
+- there is a free active-party slot
+- there is a free reserve slot
+- there is an existing same-type generic stack in the active party or reserve that can receive the recruited units
+
+Recruit destination rules:
+- if there is a free active-party slot, the recruited unit goes to the first free active slot
+- otherwise, if there is a free reserve slot, the recruited unit goes to the first free reserve slot
+- otherwise, recruitment is illegal and nothing happens beyond player feedback
+
+Hero recruitment:
+- happens one hero at a time
+- allows the player to recruit one, many, or none from the current service list, as long as each pick is legal and affordable
+
+### Cross-region party state
+
+Cross-region travel does **not** preserve all traveling units equally.
+
+Rules:
+- all heroes in the traveling party cross regions with the player
+- generic units in the traveling party do **not**
+- generic traveling units are lost on region change unless the player stored them beforehand
+- the player must be warned clearly before confirming region travel that would discard generic traveling units
+- stored units remain in their original region and persist there
+
+When the player leaves a region, that region still remembers its persistent state, including:
+- stored units
+- recruit offerings
+- enemy attrition and enemy-party persistence
+- cleared or changed nodes
+- service state
+- other authored region-local progression
 
 ## Home base vision
 
-Home base is not just a starting node.
-It is the emotional and systemic center of the game.
+A “Home Base” is a kind of **Location** that functions as a meaningful safe anchor.
 
-Home base should eventually provide:
+It is not required that every region contain one.
+Some scenarios may contain strong safe-haven locations; others may intentionally deny the player a true home base.
+
+A Home Base may provide:
 - free rest
-- key story progression and survivor conversations
+- story progression and survivor conversations
 - restoration milestones
-- access to some stable baseline services
-- a clear sense of returning to safety after danger
+- baseline services
+- hero recovery support
+- storage
+- a strong emotional sense of safety and return
 
-Home base is where much of the story unfolds and where the player sees the clearest signs of recovery.
+Home Base is therefore a design role, not merely a fixed building type or guaranteed scenario feature.
 
-## Overworld vision
+## Region vision
 
-The overworld should remain node-and-route based rather than free-roaming.
+Regions should remain node-and-route based rather than free-roaming.
 
-An overworld is a regional travel map within a scenario’s world map.
+A region is a travel map within a scenario's World Map.
 
 Key principles:
 - nodes represent authored destinations with gameplay meaning
-- routes define the legal travel graph
+- routes define the legal travel graph inside a region
 - route access can change because of combat clears, blockers, quests, or future progression conditions
 - the player should understand why a path is open, blocked, distant, or unsafe
 - travel should feel like planning, not busywork
@@ -210,7 +395,8 @@ Key principles:
 Nodes can represent:
 - enterable locations
 - inns
-- recruit posts
+- recruit services
+- storage services
 - shops and service points
 - combat encounters
 - dungeons
@@ -219,15 +405,23 @@ Nodes can represent:
 
 ## Location vision
 
-Locations should eventually feel like authored spaces with identity, not just generic scene shells.
+Locations should feel like authored spaces with identity, not just generic scene shells.
+
+A Location:
+- is entered from a parent region
+- may contain zero or more services
+- may contain NPCs, story scenes, and quest interaction
+- may use one or many walkable screens
 
 Locations may contain:
 - service interactions
 - NPC dialogue and memory fragments
-- town-restoration context
+- restoration context
 - scene transitions
 - local time costs
 - safe interactions, risky interactions, or story interactions
+
+Services inside a location are performed through interaction with NPCs or fitting world objects.
 
 Shared prototype scenes are acceptable during slice development, but the finished game should support strong location identity through content.
 
@@ -246,7 +440,7 @@ The battle module should support:
 - meaningful turn-frequency manipulation
 - stack-based generic units plus hero units
 - strong role identity for units, heroes, and leaders
-- readable consequences for defeat, KO, recovery, and attrition
+- readable consequences for defeat, KO, temporary unavailability, and attrition
 - enough tactical depth to make route blockers and high-risk destinations feel significant
 
 Battle should stay deterministic apart from intentional damage variance and should remain testable independently from rendering.
@@ -276,8 +470,6 @@ Targeting rules:
 - position does not directly block targeting or change damage by itself
 - position matters because the target's **effective row depth** influences agility penalty on attacks and similar actions
 - literal position labels remain visible to the player, but battle calculations use effective row depth rather than naïvely collapsing every gap in the formation
-
-The intended feel is that the player can always make the tactically interesting target choice, but distant targets should often cost turn-order efficiency.
 
 ### Turn order, commands, and readability
 
@@ -329,7 +521,7 @@ The intended persistence model is asymmetric:
 
 KO and recovery rules:
 - a KO'd hero can be revived during battle
-- if a non-player hero is still KO'd when a battle ends, that hero leaves the party in a recovering state
+- if a non-player hero is still KO'd when a battle ends, that hero becomes temporarily unavailable
 - the player character is a special case and returns at 1 HP after a winning battle if still KO'd
 - generic unit loss that remains at battle end is permanent unless the units were revived before the battle ended
 
@@ -352,19 +544,31 @@ This allows recurring enemy groups, persistent attrition, and authored enemy rec
 
 Services should be meaningful because of **cost, stock, quantity, refresh cadence, and world context**, not because they are arbitrarily disabled.
 
-### Inns
+A **Service** is a functional interaction point.
+It may exist directly in a region or inside a location.
+
+### Inns and recovery services
 
 - inns are generally usable if present
 - resting at inns costs gold
-- home-base rest is free
-- the choice of where to sleep should matter economically and geographically
+- some safe-anchor locations may provide free or discounted recovery
+- a location may offer hero-restoration support, but that is authored service behavior, not a universal Home Base guarantee
 
-### Recruit posts
+### Recruitment services
 
-- recruit locations offer 1–3 recruitable unit types
+- generic-unit recruit services offer 1 or more recruitable unit types
 - each offer has a quantity limit
-- recruit quantities replenish on a weekly cadence
+- recruit quantities can replenish on a weekly cadence
+- hero-recruit services pull from the scenario hero pool
+- when the player enters a region, hero offerings for that region reroll from all heroes who are not traveling, stored, or temporarily unavailable
+- the same available hero may appear in only one service at a time within the region
 - stronger or rarer recruit points can become major regional objectives
+
+### Storage services
+
+- storage services hold a region-persistent 7-slot stored-unit container
+- interacting with a storage service should open a broader party/storage management view
+- that view should make it easy to move units between active party, reserve, and storage while respecting legality rules
 
 ### Shops and service points
 
@@ -382,7 +586,8 @@ Desired qualities:
 - typed objectives and events where possible
 - quests that react to meaningful world changes
 - story delivered through places, survivors, and restoration progress
-- clear short-term goals tied to the region and home base
+- clear short-term goals tied to the current region and its meaningful safe anchors
+- scenario-authored hero, location, and service behavior when that strengthens identity
 
 ## Scenario success and failure vision
 
@@ -414,11 +619,12 @@ This implies:
 
 The future editor should be able to reason about:
 - campaigns and scenario chains
-- world maps and overworlds/regions
-- nodes and links
+- World Maps and Regions
+- region nodes and links
 - locations and scenes
 - service definitions
-- recruit offers and stock
+- storage and recruitment services
+- hero pools and hero availability rules
 - quest content
 - battle scenarios and balance values
 - scenario victory and failure conditions
@@ -445,4 +651,4 @@ Project Ashvale is not aiming to be:
 - a network-first multiplayer game
 - a content-unbounded RPG at this stage
 
-The goal is a focused, maintainable strategy/RPG hybrid with strong place identity, service planning, restoration fantasy, and content-driven authored progression.
+The goal is a focused, maintainable strategy/RPG hybrid with strong place identity, service planning, party/logistics consequence, restoration fantasy, and content-driven authored progression.

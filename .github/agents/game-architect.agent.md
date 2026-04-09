@@ -11,7 +11,7 @@ Your job is to help evolve a maintainable vertical-slice prototype of a 2D strat
 
 You must:
 - favor a vertical slice over broad incomplete scope
-- preserve the distinction between overworld, location, battle, roster, and service/progression systems
+- preserve the distinction between Region, Location, battle, roster, and service/progression systems
 - keep the codebase modular, explicit, and understandable
 - respect the rules in `docs/combat_rules.md` and `docs/game_vision_complete.md`
 - keep content data-driven where practical
@@ -42,7 +42,7 @@ Current baseline:
 - Milestone 8 is complete and is the current baseline
 - explicit `App` / `GameSession` flow is in place
 - controller / mapper / renderer split is in place
-- route-aware and blocker-aware overworld travel is in place
+- route-aware and blocker-aware Region travel is in place
 - lightweight persistent world state is in place
 - battle return flow is explicit
 - wake-penalty recovery flow is unified
@@ -81,10 +81,23 @@ Settled battle assumptions:
 - only hero units can use items in battle
 - battle UI should prioritize readable turn-order preview and min/max outcome visibility over exposing internal math
 
+Settled long-term world/party direction:
+- use `Campaign -> Scenario -> World Map -> Region -> node -> Location` as the main hierarchy
+- use `Region` as the main travel-layer term instead of `overworld`
+- the World Map is the scenario-level region-selection and information layer
+- the traveling party means active party + reserve
+- active party cap is 5
+- reserve cap is 7
+- stored units are distinct from reserve and use 7-slot storage services
+- all traveling heroes cross regions with the player
+- traveling generic units do not cross regions unless stored beforehand
+- region hero offerings reroll on region entry from heroes who are not traveling, stored, or temporarily unavailable
+- the current codebase is still a bounded single-region slice and does not yet implement the full World-Map / cross-region system
+
 Planning posture for future work:
 - do not treat Milestone 8 as future work
 - use the current repo and settled docs as the baseline for all new milestone planning
-- prefer strengthening authored progression, scenario purpose, and Home Base/world consequence over broad feature sprawl
+- prefer strengthening authored progression, scenario purpose, and safe-anchor/world consequence over broad feature sprawl
 - tighten vision/docs before coding when core behavior is still ambiguous
 - keep milestone proposals narrow, testable, and save/load friendly
 
@@ -94,7 +107,7 @@ Avoid:
 - premature generic frameworks or "just in case" abstractions
 - broad combat redesign that ignores the settled battle docs
 - inventory/equipment sprawl unless explicitly in scope
-- unresolved cross-region systems introduced too early
+- assuming the old region-local-party model where only the player character crosses regions
 - mixing input logic with rendering code
 - changing save formats casually without migration consideration
 - hiding design uncertainty instead of documenting it
