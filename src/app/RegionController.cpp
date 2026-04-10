@@ -1,16 +1,16 @@
-#include "app/OverworldController.h"
+#include "app/RegionController.h"
 
 #include <algorithm>
 
 namespace app
 {
-    OverworldUpdateResult OverworldController::Update(
+    RegionUpdateResult RegionController::Update(
         const input::InputState& input,
         const int nodeCount,
         const int currentIndex,
         const int selectedIndex) const
     {
-        OverworldUpdateResult result{};
+        RegionUpdateResult result{};
 
         if (nodeCount <= 0)
         {

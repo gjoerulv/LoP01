@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "app/mappers/OverworldModelMapper.h"
+#include "app/mappers/RegionModelMapper.h"
 #include "data/ContentRepository.h"
 #include "gameplay/GameSession.h"
 
@@ -14,8 +14,8 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& content
     output << content;
 }
 
-std::filesystem::path BuildOverworldMapperTestContent() {
-    const std::filesystem::path root = "saves/overworld_mapper_test";
+std::filesystem::path BuildRegionMapperTestContent() {
+    const std::filesystem::path root = "saves/region_mapper_test";
     std::filesystem::create_directories(root);
 
     WriteTextFile(root / "regions.json", R"({"regions":[{"id":"ashvale_heartland","name":"Ashvale Heartland","unlocked":true,"nodes":[{"location_id":"home_base","x":0,"y":0,"discovered":true,"travel_available":true},{"location_id":"bridge_checkpoint","x":1,"y":0,"discovered":true,"travel_available":true},{"location_id":"clocktower_square","x":2,"y":0,"discovered":true,"travel_available":true}],"links":[["home_base","bridge_checkpoint"],["bridge_checkpoint","clocktower_square"]]}]})");
@@ -32,21 +32,21 @@ std::filesystem::path BuildOverworldMapperTestContent() {
 
 } // namespace
 
-TEST_CASE("OverworldModelMapper exposes cleared combat node text") {
-    const auto root = BuildOverworldMapperTestContent();
+TEST_CASE("RegionModelMapper exposes cleared combat node text") {
+    const auto root = BuildRegionMapperTestContent();
 
     data::ContentRepository repository;
     REQUIRE(repository.LoadFromDirectory(root));
 
     gameplay::SessionSnapshot snapshot;
-    snapshot.mode = gameplay::GameMode::OverworldMode;
+    snapshot.mode = gameplay::GameMode::RegionMode;
     snapshot.regionId = "ashvale_heartland";
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 0;
 
     gameplay::GameSession session;
 
-    app::mappers::OverworldModelMapper mapper;
+    app::mappers::RegionModelMapper mapper;
     const auto model = mapper.Map(repository, session, snapshot, 1, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Bridge Checkpoint");
@@ -56,21 +56,21 @@ TEST_CASE("OverworldModelMapper exposes cleared combat node text") {
     std::filesystem::remove_all(root);
 }
 
-TEST_CASE("OverworldModelMapper exposes uncleared blocker travel text") {
-    const auto root = BuildOverworldMapperTestContent();
+TEST_CASE("RegionModelMapper exposes uncleared blocker travel text") {
+    const auto root = BuildRegionMapperTestContent();
 
     data::ContentRepository repository;
     REQUIRE(repository.LoadFromDirectory(root));
 
     gameplay::SessionSnapshot snapshot;
-    snapshot.mode = gameplay::GameMode::OverworldMode;
+    snapshot.mode = gameplay::GameMode::RegionMode;
     snapshot.regionId = "ashvale_heartland";
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 0;
 
     gameplay::GameSession session;
 
-    app::mappers::OverworldModelMapper mapper;
+    app::mappers::RegionModelMapper mapper;
     const auto model = mapper.Map(repository, session, snapshot, 2, {});
 
     REQUIRE(model.selectedNodeLabel == "Clocktower Square");
@@ -79,21 +79,21 @@ TEST_CASE("OverworldModelMapper exposes uncleared blocker travel text") {
     std::filesystem::remove_all(root);
 }
 
-TEST_CASE("OverworldModelMapper exposes past-02:00 blocked reason text") {
-    const auto root = BuildOverworldMapperTestContent();
+TEST_CASE("RegionModelMapper exposes past-02:00 blocked reason text") {
+    const auto root = BuildRegionMapperTestContent();
 
     data::ContentRepository repository;
     REQUIRE(repository.LoadFromDirectory(root));
 
     gameplay::SessionSnapshot snapshot;
-    snapshot.mode = gameplay::GameMode::OverworldMode;
+    snapshot.mode = gameplay::GameMode::RegionMode;
     snapshot.regionId = "ashvale_heartland";
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 1180;
 
     gameplay::GameSession session;
 
-    app::mappers::OverworldModelMapper mapper;
+    app::mappers::RegionModelMapper mapper;
     const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Clocktower Square");
@@ -102,8 +102,8 @@ TEST_CASE("OverworldModelMapper exposes past-02:00 blocked reason text") {
     std::filesystem::remove_all(root);
 }
 
-TEST_CASE("OverworldModelMapper travel time preview reflects active supply prep discount") {
-    const auto root = BuildOverworldMapperTestContent();
+TEST_CASE("RegionModelMapper travel time preview reflects active supply prep discount") {
+    const auto root = BuildRegionMapperTestContent();
 
     data::ContentRepository repository;
     REQUIRE(repository.LoadFromDirectory(root));
@@ -112,12 +112,12 @@ TEST_CASE("OverworldModelMapper travel time preview reflects active supply prep 
     session.GrantSameDayTravelPrep(20, 1);
 
     gameplay::SessionSnapshot snapshot;
-    snapshot.mode = gameplay::GameMode::OverworldMode;
+    snapshot.mode = gameplay::GameMode::RegionMode;
     snapshot.regionId = "ashvale_heartland";
     snapshot.destinationId = "home_base";
     snapshot.minutesIntoSliceDay = 0;
 
-    app::mappers::OverworldModelMapper mapper;
+    app::mappers::RegionModelMapper mapper;
     const auto model = mapper.Map(repository, session, snapshot, 1, {"bridge_checkpoint"});
 
     REQUIRE(model.selectedNodeLabel == "Bridge Checkpoint");

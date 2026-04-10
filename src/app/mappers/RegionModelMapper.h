@@ -6,11 +6,11 @@
 #include "data/ContentRepository.h"
 #include "data/definitions/LocationDefinition.h"
 #include "gameplay/GameSession.h"
-#include "rendering/OverworldRenderer.h"
+#include "rendering/RegionRenderer.h"
 
 namespace app::mappers
 {
-    struct OverworldNodeMeta
+    struct RegionNodeMeta
     {
         std::string id;
         std::string label;
@@ -26,21 +26,21 @@ namespace app::mappers
         float y = 0.0f;
     };
 
-    class OverworldModelMapper
+    class RegionModelMapper
     {
     public:
-        [[nodiscard]] std::vector<OverworldNodeMeta> BuildNodes(
+        [[nodiscard]] std::vector<RegionNodeMeta> BuildNodes(
             const data::ContentRepository& content,
             const std::string& regionId,
             const std::vector<std::string>& clearedCombatNodeIds) const;
 
         [[nodiscard]] int FindNodeIndexById(
-            const std::vector<OverworldNodeMeta>& nodes,
+            const std::vector<RegionNodeMeta>& nodes,
             const std::string& id) const;
 
         [[nodiscard]] std::string FormatTravelTime(int minutes) const;
 
-        [[nodiscard]] ashvale::rendering::OverworldRenderModel Map(
+        [[nodiscard]] ashvale::rendering::RegionRenderModel Map(
             const data::ContentRepository& content,
             const gameplay::GameSession& session,
             const gameplay::SessionSnapshot& snapshot,

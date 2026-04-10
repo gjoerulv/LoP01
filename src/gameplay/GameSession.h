@@ -16,8 +16,8 @@ namespace gameplay {
 enum class GameMode {
     Title,
     OpeningSequence,
-    OverworldSelection,
-    OverworldMode,
+    WorldMapMode,
+    RegionMode,
     LocationMode,
     BattleMode
 };
@@ -65,7 +65,7 @@ public:
     [[nodiscard]] bool TrySpendGold(int amount);
 
     void EnterLocationMode(const std::string& locationId);
-    void EnterOverworldMode();
+    void EnterRegionMode();
     void ExitLocationMode();
     void EnterBattleMode();
     [[nodiscard]] bool IsInLocationMode() const;
@@ -95,7 +95,7 @@ public:
     void MarkCombatNodeCleared(const std::string& nodeId);
     [[nodiscard]] bool IsCombatNodeCleared(const std::string& nodeId) const;
     [[nodiscard]] const std::vector<std::string>& ClearedCombatNodeIds() const;
-    void ApplyOverworldCombatVictoryNodeClear(
+    void ApplyRegionCombatVictoryNodeClear(
         bool alliesWon,
         bool enemiesWon,
         GameMode battleReturnMode,

@@ -1,31 +1,31 @@
-#include "app/mappers/OverworldModelMapper.h"
+#include "app/mappers/RegionModelMapper.h"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-#include "gameplay/overworld/OverworldTravelRules.h"
+#include "gameplay/region/RegionTravelRules.h"
 
 namespace app::mappers
 {
     namespace
     {
-        using ashvale::rendering::OverworldNodeType;
-        using ashvale::rendering::OverworldNodeView;
-        using ashvale::rendering::OverworldRenderModel;
+        using ashvale::rendering::RegionNodeType;
+        using ashvale::rendering::RegionNodeView;
+        using ashvale::rendering::RegionRenderModel;
 
-        OverworldNodeType ToNodeType(const data::LocationType type)
+        RegionNodeType ToNodeType(const data::LocationType type)
         {
             switch (type)
             {
-            case data::LocationType::Home:    return OverworldNodeType::Home;
+            case data::LocationType::Home:    return RegionNodeType::Home;
             case data::LocationType::Town:
-            case data::LocationType::Inn:     return OverworldNodeType::Town;
-            case data::LocationType::Dungeon: return OverworldNodeType::Dungeon;
-            case data::LocationType::Service: return OverworldNodeType::Service;
-            case data::LocationType::Recruit: return OverworldNodeType::Recruit;
-            case data::LocationType::Combat:  return OverworldNodeType::Combat;
-            default:                          return OverworldNodeType::Unknown;
+            case data::LocationType::Inn:     return RegionNodeType::Town;
+            case data::LocationType::Dungeon: return RegionNodeType::Dungeon;
+            case data::LocationType::Service: return RegionNodeType::Service;
+            case data::LocationType::Recruit: return RegionNodeType::Recruit;
+            case data::LocationType::Combat:  return RegionNodeType::Combat;
+            default:                          return RegionNodeType::Unknown;
             }
         }
 
@@ -52,7 +52,7 @@ namespace app::mappers
             return std::ranges::find(clearedCombatNodeIds, nodeId) != clearedCombatNodeIds.end();
         }
 
-        std::vector<std::string> BuildBlockedTransitNodeIds(const std::vector<OverworldNodeMeta>& nodes)
+        std::vector<std::string> BuildBlockedTransitNodeIds(const std::vector<RegionNodeMeta>& nodes)
         {
             std::vector<std::string> blockedNodeIds;
             for (const auto& node : nodes)
@@ -67,12 +67,12 @@ namespace app::mappers
         }
     }
 
-    std::vector<OverworldNodeMeta> OverworldModelMapper::BuildNodes(
+    std::vector<RegionNodeMeta> RegionModelMapper::BuildNodes(
         const data::ContentRepository& content,
         const std::string& regionId,
         const std::vector<std::string>& clearedCombatNodeIds) const
     {
-        std::vector<OverworldNodeMeta> nodes;
+        std::vector<RegionNodeMeta> nodes;
 
         const data::RegionDefinition* region = ResolveRegion(content, regionId);
         if (region == nullptr) {
@@ -91,7 +91,7 @@ namespace app::mappers
                 location->type == data::LocationType::Combat &&
                 IsClearedCombatNode(clearedCombatNodeIds, location->id);
 
-            nodes.push_back(OverworldNodeMeta{
+            nodes.push_back(RegionNodeMeta{
                 location->id,
                 location->name,
                 location->type,
@@ -110,8 +110,8 @@ namespace app::mappers
         return nodes;
     }
 
-    int OverworldModelMapper::FindNodeIndexById(
-        const std::vector<OverworldNodeMeta>& nodes,
+    int RegionModelMapper::FindNodeIndexById(
+        const std::vector<RegionNodeMeta>& nodes,
         const std::string& id) const
     {
         for (int i = 0; i < static_cast<int>(nodes.size()); ++i)
@@ -125,7 +125,7 @@ namespace app::mappers
         return 0;
     }
 
-    std::string OverworldModelMapper::FormatTravelTime(const int minutes) const
+    std::string RegionModelMapper::FormatTravelTime(const int minutes) const
     {
         if (minutes < 60)
         {
@@ -142,14 +142,14 @@ namespace app::mappers
         return std::to_string(hours) + "h " + std::to_string(remainder) + "m";
     }
 
-    OverworldRenderModel OverworldModelMapper::Map(
+    RegionRenderModel RegionModelMapper::Map(
         const data::ContentRepository& content,
         const gameplay::GameSession& session,
         const gameplay::SessionSnapshot& snapshot,
         const int selectedNodeIndex,
         const std::vector<std::string>& clearedCombatNodeIds) const
     {
-        OverworldRenderModel model;
+        RegionRenderModel model;
 
         const data::RegionDefinition* region = ResolveRegion(content, snapshot.regionId);
         model.regionName = region != nullptr ? region->name : "Unknown Region";
@@ -165,7 +165,7 @@ namespace app::mappers
 
         for (int i = 0; i < static_cast<int>(nodes.size()); ++i)
         {
-            model.nodes.push_back(OverworldNodeView{
+            model.nodes.push_back(RegionNodeView{
                 nodes[i].id,
                 nodes[i].label,
                 Vector2{ nodes[i].x, nodes[i].y },
@@ -198,7 +198,7 @@ namespace app::mappers
         {
             const auto blockedTransitNodeIds = BuildBlockedTransitNodeIds(nodes);
             const std::vector<data::RegionLinkDefinition> emptyLinks;
-            const auto travel = gameplay::overworld::EvaluateTravel(
+            const auto travel = gameplay::region::EvaluateTravel(
                 snapshot.destinationId,
                 nodes[safeSelectedIndex].id,
                 nodes[safeSelectedIndex].travelAvailable,

@@ -1,4 +1,4 @@
-#include "gameplay/overworld/OverworldTravelRules.h"
+#include "gameplay/region/RegionTravelRules.h"
 
 #include <algorithm>
 #include <queue>
@@ -9,7 +9,7 @@
 
 #include "core/GameClock.h"
 
-namespace gameplay::overworld {
+namespace gameplay::region {
 
 namespace {
 
@@ -116,4 +116,4 @@ TravelEvaluation EvaluateTravel(
     return TravelEvaluation{ false, 0, 0, TravelBlockReason::NoRouteLink };
 }
 
-} // namespace gameplay::overworld
+} // namespace gameplay::region

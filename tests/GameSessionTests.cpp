@@ -16,8 +16,8 @@ TEST_CASE("GameSession explicit mode helpers enter expected gameplay modes") {
     session.EnterBattleMode();
     REQUIRE(session.Snapshot().mode == gameplay::GameMode::BattleMode);
 
-    session.EnterOverworldMode();
-    REQUIRE(session.Snapshot().mode == gameplay::GameMode::OverworldMode);
+    session.EnterRegionMode();
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::RegionMode);
 }
 
 TEST_CASE("GameSession advance mode keeps front-end flow order") {
@@ -29,10 +29,10 @@ TEST_CASE("GameSession advance mode keeps front-end flow order") {
     REQUIRE(session.Snapshot().mode == gameplay::GameMode::OpeningSequence);
 
     session.AdvanceMode();
-    REQUIRE(session.Snapshot().mode == gameplay::GameMode::OverworldSelection);
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::WorldMapMode);
 
     session.AdvanceMode();
-    REQUIRE(session.Snapshot().mode == gameplay::GameMode::OverworldMode);
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::RegionMode);
 }
 
 TEST_CASE("GameSession rest advances to the next day start") {
@@ -177,26 +177,26 @@ TEST_CASE("GameSession save and load restores completed quest progression") {
     REQUIRE(loaded.IsCombatNodeCleared("bridge_checkpoint"));
 }
 
-TEST_CASE("GameSession clears combat node only on allied overworld combat victory") {
+TEST_CASE("GameSession clears combat node only on allied region combat victory") {
     gameplay::GameSession session;
 
-    session.ApplyOverworldCombatVictoryNodeClear(
+    session.ApplyRegionCombatVictoryNodeClear(
         true,
         false,
-        gameplay::GameMode::OverworldMode,
+        gameplay::GameMode::RegionMode,
         "bridge_checkpoint",
         true);
 
     REQUIRE(session.IsCombatNodeCleared("bridge_checkpoint"));
 
-    session.ApplyOverworldCombatVictoryNodeClear(
+    session.ApplyRegionCombatVictoryNodeClear(
         false,
         true,
-        gameplay::GameMode::OverworldMode,
+        gameplay::GameMode::RegionMode,
         "orchard_pass",
         true);
 
-    session.ApplyOverworldCombatVictoryNodeClear(
+    session.ApplyRegionCombatVictoryNodeClear(
         true,
         false,
         gameplay::GameMode::LocationMode,

@@ -4,7 +4,7 @@
 
 namespace app
 {
-    struct OverworldUpdateResult
+    struct RegionUpdateResult
     {
         int selectedNodeIndex = 0;
         bool travelConfirmed = false;
@@ -12,10 +12,10 @@ namespace app
         bool requestDebugBattle = false;
     };
 
-    class OverworldController
+    class RegionController
     {
     public:
-        [[nodiscard]] OverworldUpdateResult Update(
+        [[nodiscard]] RegionUpdateResult Update(
             const input::InputState& input,
             int nodeCount,
             int currentIndex,

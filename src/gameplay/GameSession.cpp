@@ -108,19 +108,19 @@ void GameSession::AdvanceMode() {
         mode_ = GameMode::OpeningSequence;
         break;
     case GameMode::OpeningSequence:
-        mode_ = GameMode::OverworldSelection;
+        mode_ = GameMode::WorldMapMode;
         break;
-    case GameMode::OverworldSelection:
-        mode_ = GameMode::OverworldMode;
+    case GameMode::WorldMapMode:
+        mode_ = GameMode::RegionMode;
         break;
-    case GameMode::OverworldMode:
+    case GameMode::RegionMode:
         mode_ = GameMode::LocationMode;
         break;
     case GameMode::LocationMode:
         mode_ = GameMode::BattleMode;
         break;
     case GameMode::BattleMode:
-        mode_ = GameMode::OverworldMode;
+        mode_ = GameMode::RegionMode;
         break;
     }
 }
@@ -160,12 +160,12 @@ void GameSession::EnterLocationMode(const std::string& locationId) {
     mode_ = GameMode::LocationMode;
 }
 
-void GameSession::EnterOverworldMode() {
-    mode_ = GameMode::OverworldMode;
+void GameSession::EnterRegionMode() {
+    mode_ = GameMode::RegionMode;
 }
 
 void GameSession::ExitLocationMode() {
-    EnterOverworldMode();
+    EnterRegionMode();
 }
 
 void GameSession::EnterBattleMode() {
@@ -374,7 +374,7 @@ const std::vector<std::string>& GameSession::ClearedCombatNodeIds() const {
     return nodeWorldState_.ClearedCombatNodeIds();
 }
 
-void GameSession::ApplyOverworldCombatVictoryNodeClear(
+void GameSession::ApplyRegionCombatVictoryNodeClear(
     const bool alliesWon,
     const bool enemiesWon,
     const GameMode battleReturnMode,
@@ -384,7 +384,7 @@ void GameSession::ApplyOverworldCombatVictoryNodeClear(
         return;
     }
 
-    if (battleReturnMode != GameMode::OverworldMode) {
+    if (battleReturnMode != GameMode::RegionMode) {
         return;
     }
 
@@ -1276,9 +1276,9 @@ std::string GameSession::ToString(const GameMode mode) {
         return "title";
     case GameMode::OpeningSequence:
         return "opening_sequence";
-    case GameMode::OverworldSelection:
+    case GameMode::WorldMapMode:
         return "overworld_selection";
-    case GameMode::OverworldMode:
+    case GameMode::RegionMode:
         return "overworld_mode";
     case GameMode::LocationMode:
         return "location_mode";
@@ -1294,10 +1294,10 @@ GameMode GameSession::FromString(const std::string& mode) {
         return GameMode::OpeningSequence;
     }
     if (mode == "overworld_selection") {
-        return GameMode::OverworldSelection;
+        return GameMode::WorldMapMode;
     }
     if (mode == "overworld_mode") {
-        return GameMode::OverworldMode;
+        return GameMode::RegionMode;
     }
     if (mode == "location_mode") {
         return GameMode::LocationMode;

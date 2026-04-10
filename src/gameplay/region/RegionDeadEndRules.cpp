@@ -1,6 +1,6 @@
-#include "gameplay/overworld/OverworldDeadEndRules.h"
+#include "gameplay/region/RegionDeadEndRules.h"
 
-namespace gameplay::overworld {
+namespace gameplay::region {
 
 DeadEndWakePenaltyDecision EvaluateDeadEndWakePenalty(
     const int minutesIntoSliceDay,
@@ -32,4 +32,4 @@ DeadEndWakePenaltyDecision EvaluateDeadEndWakePenalty(
     return DeadEndWakePenaltyDecision{};
 }
 
-} // namespace gameplay::overworld
+} // namespace gameplay::region

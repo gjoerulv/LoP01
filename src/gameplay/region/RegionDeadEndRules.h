@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gameplay::overworld {
+namespace gameplay::region {
 
 enum class DeadEndWakePenaltyReason {
     None,
@@ -22,4 +22,4 @@ struct DeadEndWakePenaltyDecision {
     bool declinedUsableLocalAction,
     int cutoffMinutesIntoSliceDay);
 
-} // namespace gameplay::overworld
+} // namespace gameplay::region
