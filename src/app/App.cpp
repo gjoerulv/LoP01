@@ -63,9 +63,9 @@ App::App() {
 
             if (!playerCharacterInActiveParty) {
                 if (session_.OwnedUnitCount(playerCharacterLeaderCapableUnitId) <= 0) {
-                    session_.AddOwnedUnit(playerCharacterLeaderCapableUnitId, 1);
+                    static_cast<void>(session_.AddOwnedUnit(playerCharacterLeaderCapableUnitId, 1));
                 }
-                session_.TryAddUnitToActiveParty(playerCharacterLeaderCapableUnitId);
+                static_cast<void>(session_.TryAddUnitToActiveParty(playerCharacterLeaderCapableUnitId));
             }
         }
 
@@ -148,8 +148,8 @@ void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
             statusMessage_ = "Failed to initialize battle scenario: " + scenarioId + " | Returned to location";
         }
         else {
-            session_.EnterOverworldMode();
-            statusMessage_ = "Failed to initialize battle scenario: " + scenarioId + " | Returned to overworld";
+            session_.EnterRegionMode();
+            statusMessage_ = "Failed to initialize battle scenario: " + scenarioId + " | Returned to region";
         }
 
         battleStartStackIds_.clear();
