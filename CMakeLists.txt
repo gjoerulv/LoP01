@@ -29,8 +29,8 @@ add_library(ashvale_logic
   src/gameplay/battle/Battle.cpp
   src/gameplay/GameSession.cpp
   src/gameplay/world/NodeWorldState.cpp
-  src/gameplay/overworld/OverworldDeadEndRules.cpp
-  src/gameplay/overworld/OverworldTravelRules.cpp
+  src/gameplay/region/RegionDeadEndRules.cpp
+  src/gameplay/region/RegionTravelRules.cpp
   src/gameplay/location/LocationScene.cpp
   src/gameplay/location/LocationServiceRules.cpp
   src/gameplay/battle/BattleFactory.cpp
@@ -44,7 +44,7 @@ add_library(ashvale_rendering
   src/rendering/HudRenderer.cpp
   src/rendering/DebugOverlay.cpp
   src/rendering/TitleRenderer.cpp
-  src/rendering/OverworldRenderer.cpp
+  src/rendering/RegionRenderer.cpp
   src/rendering/LocationRenderer.cpp
   src/rendering/BattleRenderer.cpp
 )
@@ -57,11 +57,11 @@ add_executable(ashvale_slice
   src/app/MusteringInteraction.cpp
   src/app/main.cpp
   src/app/input/InputTranslator.cpp
-  src/app/OverworldController.cpp
+  src/app/RegionController.cpp
   src/app/LocationController.cpp
   src/app/BattleController.cpp
   src/app/mappers/HudModelMapper.cpp
-  src/app/mappers/OverworldModelMapper.cpp
+  src/app/mappers/RegionModelMapper.cpp
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
   src/app/BattleEventTextFormatter.cpp
@@ -98,7 +98,7 @@ if (BUILD_TESTING)
     src/app/BattleEventTextFormatter.cpp
     src/app/MusteringInteraction.cpp
     src/app/mappers/LocationModelMapper.cpp
-    src/app/mappers/OverworldModelMapper.cpp
+    src/app/mappers/RegionModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
@@ -110,9 +110,9 @@ if (BUILD_TESTING)
     tests/LocationSceneTests.cpp
     tests/LocationServiceRulesTests.cpp
     tests/NodeWorldStateTests.cpp
-    tests/OverworldDeadEndRulesTests.cpp
-    tests/OverworldModelMapperTests.cpp
-    tests/OverworldTravelRulesTests.cpp
+    tests/RegionDeadEndRulesTests.cpp
+    tests/RegionModelMapperTests.cpp
+    tests/RegionTravelRulesTests.cpp
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp    
     tests/LocationServicePromptFormatterTests.cpp

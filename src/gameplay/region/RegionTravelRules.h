@@ -5,7 +5,7 @@
 
 #include "data/definitions/RegionDefinition.h"
 
-namespace gameplay::overworld {
+namespace gameplay::region {
 
 enum class TravelBlockReason {
     None,
@@ -31,4 +31,4 @@ struct TravelEvaluation {
     const std::vector<std::string>& blockedTransitNodeIds = {},
     int perHopTravelMinutes = 15);
 
-} // namespace gameplay::overworld
+} // namespace gameplay::region

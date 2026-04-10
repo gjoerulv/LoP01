@@ -7,7 +7,7 @@
 
 namespace ashvale::rendering
 {
-    enum class OverworldNodeType
+    enum class RegionNodeType
     {
         Unknown,
         Home,
@@ -18,19 +18,19 @@ namespace ashvale::rendering
         Combat
     };
 
-    struct OverworldNodeView
+    struct RegionNodeView
     {
         std::string id;
         std::string label;
         Vector2 position{};
-        OverworldNodeType type = OverworldNodeType::Unknown;
+        RegionNodeType type = RegionNodeType::Unknown;
         bool discovered = true;
         bool enterable = true;
         bool current = false;
         bool selected = false;
     };
 
-    struct OverworldRenderModel
+    struct RegionRenderModel
     {
         std::string regionName;
         std::string hintText = "Left/Right select destination";
@@ -41,16 +41,16 @@ namespace ashvale::rendering
         std::string selectedNodeEnterable;
         std::string travelTimeText;
 
-        std::vector<OverworldNodeView> nodes;
+        std::vector<RegionNodeView> nodes;
         std::vector<std::array<int, 2>> links;
     };
 
-    class OverworldRenderer
+    class RegionRenderer
     {
     public:
-        void Draw(const RenderContext& context, const OverworldRenderModel& model) const;
+        void Draw(const RenderContext& context, const RegionRenderModel& model) const;
 
     private:
-        Color GetNodeColor(OverworldNodeType type, const UiTheme& theme) const;
+        Color GetNodeColor(RegionNodeType type, const UiTheme& theme) const;
     };
 }

@@ -1,24 +1,24 @@
-#include "OverworldRenderer.h"
+#include "RegionRenderer.h"
 
 #include <string>
 
 namespace ashvale::rendering
 {
-    Color OverworldRenderer::GetNodeColor(OverworldNodeType type, const UiTheme& theme) const
+    Color RegionRenderer::GetNodeColor(RegionNodeType type, const UiTheme& theme) const
     {
         switch (type)
         {
-        case OverworldNodeType::Home:    return theme.successColor;
-        case OverworldNodeType::Town:    return theme.selectionColor;
-        case OverworldNodeType::Dungeon: return theme.dangerColor;
-        case OverworldNodeType::Service: return theme.warningColor;
-        case OverworldNodeType::Recruit: return Color{ 255, 120, 210, 255 };
-        case OverworldNodeType::Combat:  return Color{ 230, 80, 80, 255 };
+        case RegionNodeType::Home:    return theme.successColor;
+        case RegionNodeType::Town:    return theme.selectionColor;
+        case RegionNodeType::Dungeon: return theme.dangerColor;
+        case RegionNodeType::Service: return theme.warningColor;
+        case RegionNodeType::Recruit: return Color{ 255, 120, 210, 255 };
+        case RegionNodeType::Combat:  return Color{ 230, 80, 80, 255 };
         default:                         return theme.textColor;
         }
     }
 
-    void OverworldRenderer::Draw(const RenderContext& context, const OverworldRenderModel& model) const
+    void RegionRenderer::Draw(const RenderContext& context, const RegionRenderModel& model) const
     {
         const int hudBottom = static_cast<int>(context.theme.hudHeight);
         const Rectangle mapRect{ 20.0f, static_cast<float>(hudBottom + 20), 860.0f, 620.0f };

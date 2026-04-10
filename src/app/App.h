@@ -3,12 +3,12 @@
 #include <string>
 #include <vector>
 
-#include "app/OverworldController.h"
+#include "app/RegionController.h"
 #include "app/LocationController.h"
 #include "app/BattleController.h"
 #include "app/MusteringInteraction.h"
 #include "app/input/InputTranslator.h"
-#include "app/mappers/OverworldModelMapper.h"
+#include "app/mappers/RegionModelMapper.h"
 #include "app/mappers/LocationModelMapper.h"
 #include "app/mappers/HudModelMapper.h"
 #include "app/mappers/BattleModelMapper.h"
@@ -22,7 +22,7 @@
 #include "rendering/DebugOverlay.h"
 #include "rendering/HudRenderer.h"
 #include "rendering/LocationRenderer.h"
-#include "rendering/OverworldRenderer.h"
+#include "rendering/RegionRenderer.h"
 #include "rendering/RenderContext.h"
 #include "rendering/TitleRenderer.h"
 
@@ -52,7 +52,7 @@ namespace app {
         [[nodiscard]] std::string ResolveSafeFallbackLocationId() const;
         [[nodiscard]] std::string ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const;
 
-        void UpdateOverworldMode(const input::InputState& input);
+        void UpdateRegionMode(const input::InputState& input);
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
         [[nodiscard]] MusteringCommand TranslateMusteringCommand(const input::InputState& input) const;
@@ -71,7 +71,7 @@ namespace app {
         ashvale::rendering::HudRenderer hudRenderer_;
         ashvale::rendering::DebugOverlay debugOverlayRenderer_;
         ashvale::rendering::TitleRenderer titleRenderer_;
-        ashvale::rendering::OverworldRenderer overworldRenderer_;
+        ashvale::rendering::RegionRenderer regionRenderer_;
         ashvale::rendering::LocationRenderer locationRenderer_;
         ashvale::rendering::BattleRenderer battleRenderer_;
 
@@ -79,13 +79,13 @@ namespace app {
         BattleController battleController_;
         BattleControllerState battleControllerState_;
         LocationController locationController_;
-        OverworldController overworldController_;
+        RegionController regionController_;
         MusteringInteraction musteringInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
         mappers::BattleModelMapper battleModelMapper_;
         mappers::LocationModelMapper locationModelMapper_;
-        mappers::OverworldModelMapper overworldModelMapper_;
+        mappers::RegionModelMapper regionModelMapper_;
 
         BattleEventTextFormatter battleEventTextFormatter_;        
 
@@ -94,10 +94,10 @@ namespace app {
         bool contentLoaded_ = false;
         bool debugOverlayVisible_ = false;
 
-        int overworldSelectedNodeIndex_ = 0;
+        int regionSelectedNodeIndex_ = 0;
         int observedDay_ = -1;
         bool restedThisDay_ = false;
-        gameplay::GameMode battleReturnMode_ = gameplay::GameMode::OverworldMode;
+        gameplay::GameMode battleReturnMode_ = gameplay::GameMode::RegionMode;
         std::vector<std::string> battleStartStackIds_;
 
         std::string statusMessage_;

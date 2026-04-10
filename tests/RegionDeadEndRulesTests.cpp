@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "gameplay/overworld/OverworldDeadEndRules.h"
+#include "gameplay/region/RegionDeadEndRules.h"
 
 TEST_CASE("Dead-end rule applies wake penalty when already past cutoff") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1201,
         false,
         true,
@@ -12,11 +12,11 @@ TEST_CASE("Dead-end rule applies wake penalty when already past cutoff") {
         1200);
 
     REQUIRE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::AlreadyPastCutoff);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::AlreadyPastCutoff);
 }
 
 TEST_CASE("Dead-end rule does not apply wake penalty when legal travel exists") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1190,
         true,
         true,
@@ -25,11 +25,11 @@ TEST_CASE("Dead-end rule does not apply wake penalty when legal travel exists") 
         1200);
 
     REQUIRE_FALSE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::None);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::None);
 }
 
 TEST_CASE("Dead-end rule allows usable local action before auto penalty") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1190,
         false,
         true,
@@ -38,11 +38,11 @@ TEST_CASE("Dead-end rule allows usable local action before auto penalty") {
         1200);
 
     REQUIRE_FALSE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::None);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::None);
 }
 
 TEST_CASE("Dead-end rule applies wake penalty when cutoff blocks remaining progress") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1190,
         false,
         true,
@@ -51,11 +51,11 @@ TEST_CASE("Dead-end rule applies wake penalty when cutoff blocks remaining progr
         1200);
 
     REQUIRE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::CutoffBlocksRemainingProgress);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::CutoffBlocksRemainingProgress);
 }
 
 TEST_CASE("Dead-end rule applies wake penalty after declining usable local action") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1190,
         false,
         true,
@@ -64,11 +64,11 @@ TEST_CASE("Dead-end rule applies wake penalty after declining usable local actio
         1200);
 
     REQUIRE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::CutoffBlocksProgressAfterDecliningLocalAction);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::CutoffBlocksProgressAfterDecliningLocalAction);
 }
 
 TEST_CASE("Dead-end rule does not auto apply for ordinary no-route dead end") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1190,
         false,
         false,
@@ -77,11 +77,11 @@ TEST_CASE("Dead-end rule does not auto apply for ordinary no-route dead end") {
         1200);
 
     REQUIRE_FALSE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::None);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::None);
 }
 
 TEST_CASE("Dead-end rule does not auto apply for declined local action when not cutoff-caused") {
-    const auto decision = gameplay::overworld::EvaluateDeadEndWakePenalty(
+    const auto decision = gameplay::region::EvaluateDeadEndWakePenalty(
         1190,
         false,
         false,
@@ -90,5 +90,5 @@ TEST_CASE("Dead-end rule does not auto apply for declined local action when not 
         1200);
 
     REQUIRE_FALSE(decision.shouldApplyWakePenalty);
-    REQUIRE(decision.reason == gameplay::overworld::DeadEndWakePenaltyReason::None);
+    REQUIRE(decision.reason == gameplay::region::DeadEndWakePenaltyReason::None);
 }
