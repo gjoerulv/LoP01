@@ -5,47 +5,72 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
 # UI instructions
 
 - Favor clarity and readability over flashy effects.
-- Use simple panels, lists, prompts, labels, timelines, and status strips.
+- Use simple panels, lists, prompts, labels, and status strips.
 - The UI should evoke retro strategy/RPG readability.
-- Show time, day, gold, and current place prominently.
-- Prefer current design terminology in user-facing UI and new code comments:
+- Show time, day, gold, current layer, and current place prominently when relevant.
+- Use current design terminology in UI and UI-facing comments:
   - **World Map** = scenario-level region selection layer
-  - **Region** = main travel layer inside a scenario
-  - **Location** = entered place inside a region
-- Be aware that some runtime or serialized legacy names may still use historical `overworld` terminology. Do not reintroduce old terminology in new user-facing UI unless required for backward compatibility.
+  - **Region** = main in-scenario travel space
+  - **Location** = entered place inside a Region
+  - **Service** = interaction available in a Region or Location
+- If older runtime or serialized names still use legacy `overworld` terminology, do not reintroduce that wording into new UI copy.
+
 - World Map UI should clearly show:
-  - available regions
-  - currently selected destination region
-  - whether the destination is reachable through a valid contiguous path
-  - travel time preview in days
-  - whether travel is currently allowed
-  - why travel is blocked when it is illegal
+  - current Region
+  - selectable destination Regions
+  - whether a Region is unlocked and enterable
+  - shortest-path travel day preview
+  - 1000 Energy travel requirement
+  - whether travel is currently legal
+  - warning text when travel would abandon traveling generic units
+
 - Region UI should clearly show:
-  - current node
-  - selected destination node
-  - travel time preview
-  - whether node travel is allowed
-  - whether a node enters a location, triggers battle, or provides a direct service
-  - whether a node appears cleared, blocked, unavailable, or dangerous when that state is known
-- When region travel would cause the loss of traveling generic units, the UI must communicate that risk clearly before the player confirms travel.
+  - selected node
+  - shortest-path travel preview
+  - Energy cost preview
+  - route quality / terrain impact when relevant
+  - whether travel is allowed
+  - whether a node is empty, blocked, occupied, contains a Location, or contains a direct Service
+  - whether a node is a protected arrival node
+  - whether a node appears cleared, blocked, occupied, or unavailable
+
+- Region UI should also clearly distinguish:
+  - direct Service node
+  - Location node
+  - blocker node
+  - enemy-team occupation
+  - storage gate
+- Do not imply a dedicated permanent combat-node type in the UI. A node may contain a hostile encounter and later become an empty travel node.
+
 - Location UI should clearly show:
   - location name
   - current interaction prompt
   - available services or actions
   - lightweight result/status text for interactions
   - service cost or remaining quantity when relevant
-- Storage/location management UI should emphasize the distinction between:
+  - whether the Location functions as a safe anchor
+- Remember that entering and exiting a Location does not cost time.
+
+- Party-management UI should clearly distinguish:
   - active party
   - reserve
   - stored units
   - temporarily unavailable heroes
+- When relevant, clearly communicate legality rules:
+  - active party must remain battle-legal
+  - leader replacement constraints
+  - storage-only actions must be performed at storage services
+
 - Battle UI must clearly show:
   - turn order
   - active unit
   - HP / MP / Life
   - action menu
   - target selection
-  - min/max damage and min/max KO preview when target selection is active
+  - min/max damage preview
+  - min/max KO / kill preview
+- Battle targeting UI should communicate agility penalty clearly, preferably without exposing unnecessary math.
+
 - Keep placeholder UI art minimal and functional.
 - Prefer communicating current slice rules clearly over adding decorative complexity.
-- Do not assume that service identity is best communicated through binary enabled/disabled text; cost, stock, refresh state, and legality are usually more valuable.
+- Do not assume that service identity is best communicated through binary enabled/disabled text; cost, stock, refresh state, legality, and access conditions are usually more valuable.

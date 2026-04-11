@@ -366,13 +366,16 @@ Decision:
 - If the player is in a dungeon, region travel is not allowed.
 - Region travel must begin before 11:00.
 - Travel action is disabled when travel is illegal, but the World Map remains available for information.
-- Travel time is the number of region steps along the shortest currently valid path through enterable adjacent regions.
+- Travel uses the shortest currently valid path through enterable adjacent Regions.
+- Travel time is the number of Region steps along that shortest valid path.
+- Region travel costs a flat 1000 Energy when travel begins, regardless of trip length.
 - Arrival always happens at 11:00 on the arrival day.
-- Each Region must define a safe arrival node that cannot contain or spawn enemies.
+- Each Region must define a safe arrival node. Arrival is a flag, not a separate node type.
+- Arrival nodes may also be Location or Service nodes, but enemies cannot spawn there or occupy them.
 
 Why:
 - Gives scenario/world-map travel a clear strategic identity.
-- Makes time costs readable and content-friendly without introducing additional travel-resource systems.
+- Makes time and Energy costs readable and content-friendly.
 - Supports both planning and authored region gating.
 
 Tradeoff:
@@ -396,6 +399,87 @@ Tradeoff:
 - Players can intentionally use region travel to reroll hero availability.
 - This behavior is acceptable and should be treated as part of the strategic layer rather than an exploit to remove.
 
+### 29) Regions use single-purpose nodes with authored structure and systemic rules on top
+
+Decision:
+- Regions are hand-authored node graphs rather than generated or template-assembled layouts.
+- Nodes are single-purpose at the structural level.
+- The main node categories are:
+  - empty travel node
+  - Location node
+  - single Service node
+  - blocker node
+- `arrival` is a flag on a node, not a separate node category.
+- There is no dedicated combat-node type.
+- Nodes that temporarily contain a pick-up resource, a one-time hostile encounter, or a one-time blocker become empty travel nodes once cleared.
+
+Why:
+- Keeps authored Region identity strong while still allowing reusable systemic rules.
+- Makes node semantics easier to reason about in content, code, and tooling.
+- Avoids a vague “everything node” model that would blur progression and traversal rules.
+
+Tradeoff:
+- Some apparently multi-purpose authored situations must be modeled as state changes over time rather than as one node with many simultaneous roles.
+
+### 30) Location and direct Service nodes should remain distinct concepts
+
+Decision:
+- A direct Service node is a quick functional interaction that happens on the Region layer.
+- A Location node enters Location Mode and may contain zero or more services, one or more screens, NPCs, quests, and dungeon-like authored content.
+- Dungeons are a type of Location rather than a separate top-level world-structure category.
+- Entering and exiting a Location costs no time.
+
+Why:
+- Keeps the Region layer readable and fast for simple interactions.
+- Preserves a clear reason for Locations to exist as explorable spaces rather than as glorified service buttons.
+- Lets towns, settlements, hideouts, and dungeons share one structural model.
+
+Tradeoff:
+- Some features that could technically work as either a direct Service or a Location need explicit authored choice rather than an automatic rule.
+
+### 31) Region travel inside a Region uses shortest valid path, route quality, and party Energy
+
+Decision:
+- The player can select any currently reachable node directly.
+- Travel within a Region uses the shortest valid path through connected nodes.
+- Traveling to the current node is not a meaningful move and should be treated as illegal/no-op.
+- Routes, not nodes, carry terrain/road quality.
+- Route quality affects both travel time and Energy cost.
+- Roads are the baseline route quality with no extra penalty.
+- The traveling party owns one shared Energy pool rather than units having individual movement values.
+- Starting daily Energy is:
+  - `1000 + (lowest traveling-party agility * 100) + leader passive bonus + leader item bonus`
+- Travel is illegal when the traveling party lacks enough Energy, but the destination may still be inspected.
+
+Why:
+- Preserves the feel of party-level movement points without tying travel to per-unit bookkeeping.
+- Lets route quality matter strategically without changing the node model.
+- Keeps traversal readable while still rewarding party composition, leadership, and authored route design.
+
+Tradeoff:
+- Energy, time, and route quality together make travel richer but also require UI/state communication to stay legible.
+
+### 32) Enemy teams are Region-layer traveling parties with shared systemic rules
+
+Decision:
+- Enemy teams are AI-controlled traveling parties that exist on the Region layer.
+- They follow the same broad party rules as the player: active party, reserve, heroes, generic units, Energy use, services, and battle consequence.
+- Enemy teams do not travel between Regions.
+- Enemy teams do not enter Locations, but they may occupy Location nodes and thereby block entry until defeated.
+- Enemy teams may occupy any legal non-arrival node they can reach.
+- Enemy teams may use direct Region services, including recruitment and rest.
+- Enemy teams do not suffer the player’s sleep/wake penalty model.
+- A direct storage Service on the Region layer acts as a defensible gate for its owning side.
+- If a storage gate is defeated, all units stored there are dismissed / become Temporarily Unavailable as appropriate.
+
+Why:
+- Makes the world feel active rather than waiting passively for the player.
+- Reuses the same broad strategic rules on both sides instead of inventing a separate enemy-world model.
+- Gives storage, node control, and region movement meaningful strategic risk.
+
+Tradeoff:
+- Enemy-team AI behavior can stay simple at first, but the systemic surface area is larger than stationary encounter-only world design.
+
 ## Assumptions
 
 - Region count remains one in the current slice.
@@ -404,7 +488,7 @@ Tradeoff:
 
 ## Historical notes (short)
 
-- Milestone 4 established mode-specific renderers (`Title`, `Overworld`, `Location`, `Battle`) plus shared HUD/debug overlay.
+- Milestone 4 established the first mode-specific renderers for title, Region-layer travel (historically named `Overworld` in runtime code), Location, and Battle plus a shared HUD/debug overlay.
 - Milestone 5 established the first complete world-loop baseline.
 - Milestone 6 hardened route/world/node/quest coherence while preserving the explicit architecture.
 - Milestone 7 grounded Home Base/service/economy identity and weekly cadence.

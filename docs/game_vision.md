@@ -7,14 +7,14 @@ Project Ashvale
 ## Elevator pitch
 
 A 2D single-player strategy/RPG hybrid that combines:
-- World Map-based travel between Regions inside a Scenario
+- HoMM-style World Map and Region travel
 - FF-style Location exploration
 - true turn-based CTB battles
-- party and roster logistics with lasting consequence
-- restoration, survivor support, and safe-anchor progression
+- cozy restoration, resource gathering, and survivor support
 - a soft dystopian fantasy tone
 
-For the fuller long-term direction and precise settled terminology, see `docs/game_vision_complete.md`.
+For the fuller north-star direction beyond the current slice, see `docs/game_vision_complete.md`.
+For project terminology, see `docs/terminology_map.md`.
 
 ## Tone and atmosphere
 
@@ -25,22 +25,22 @@ The mood should feel:
 - mysterious
 - lived-in
 - cozy in safe places
-- dystopian in occupied or unstable places
+- dystopian in occupied places
 
 This is not grimdark. Recovery, routine, and rebuilding matter.
 
 ## Terminology and hierarchy
 
-For the full terminology model, see `docs/game_vision_complete.md`.
+For precise terminology and long-term structure, see:
+- `docs/game_vision_complete.md`
+- `docs/terminology_map.md`
 
 Short version:
-- campaign -> scenario -> world map -> region -> node -> location -> service
-- use **Region** for the main travel layer inside a Scenario
-- use **World Map** for the higher-level scenario map used to select Regions
-- use **Location** for entered places inside a Region
-- use **Service** for an interaction available inside a Location or directly on a Region node
-
-Legacy runtime/content names may still use older `overworld` wording in some places. Design language should prefer the terms above.
+- campaign -> scenario -> World Map -> Region -> node -> Location
+- Region is the main travel space inside a scenario
+- World Map is the higher-level scenario planning and Region-selection layer
+- Location is an entered place inside a Region
+- Service is a functional interaction that may exist directly in a Region or inside a Location
 
 ## Story setup
 
@@ -50,42 +50,42 @@ An old man is the only visible survivor. He explains that the country has largel
 
 Ghostly remnants of former townspeople can be discovered and interacted with. These encounters reveal memories, town functions, and clues about what was lost.
 
-The player starts in a small safe anchor. Beneath the house is a mine used for training, danger, and resources.
+The player starts in a home-like safe anchor. Beneath that first refuge is a mine used for training, danger, and resources.
 
 ## Core fantasy
 
 The player should feel like they are:
 - surviving day by day
-- rebuilding a forgotten refuge
+- rebuilding a forgotten home
 - gathering allies
 - slowly making the world livable again
-- balancing time, risk, travel, and long-term progress
+- balancing time, risk, Energy, and long-term progress
 
 ## Primary inspirations
 
-- Heroes of Might and Magic 2/3: map structure, travel choices, visitable places, stack logistics
+- Heroes of Might and Magic 2/3: World Map structure, Region travel, visitable places, and movement-pressure decisions
 - SNES Final Fantasy: towns, dungeons, menus, character flavor
 - Final Fantasy X: CTB battle pacing and readable turn-order planning
-- restoration/progression games: safe places, recovery, routine, and meaningful rebuilding
+- Stardew-like progression: restoration, routine, resource use, cozy structure
 
 ## Current playable-slice focus
 
 The current playable slice should prove the core loop of:
-- moving through a Region between meaningful destination nodes
-- entering Locations and using Services
-- managing an active party, reserve, and longer-term roster consequence
-- CTB battles with clear persistent outcomes
-- day/time pressure, sleep, and wake-up penalty
-- early restoration/progression through quests, services, and survivor-facing progress
+- Region travel between nodes
+- Location exploration and interactions
+- CTB battles with clear consequences
+- day/time pressure, sleep, wake-up penalty, and travel planning
+- early restoration/progression through simple quests and Services
+- a bounded roster loop with active party, reserve, and battle consequence
 
 The slice should stay intentionally bounded and data-driven.
 
 ## Non-goals for the current playable slice
 
 - full narrative arc
-- huge campaign scope
+- huge world
 - final art quality
-- advanced enemy AI
+- advanced enemy-team AI
 - hundreds of items
 - full-scale farming systems
 - designer-facing editor tooling
@@ -94,10 +94,10 @@ The slice should stay intentionally bounded and data-driven.
 ## Longer-term direction
 
 These are important future directions, but they should be approached only after the single-player slice is stronger:
-- richer Region and World Map progression across a full Scenario
-- stronger restoration and safe-anchor progression
-- deeper party, storage, and hero-availability logistics across Regions
 - a designer-facing tool for editing content, events, Locations, Services, and balance data
+- richer restoration and safe-anchor progression loops
+- weekly Service/economy cadence
+- World Map and cross-Region progression beyond the current bounded slice
 - multiplayer/networking only if the core single-player loop later proves strong enough to justify it
 
 These should inform structure, but they should not drive premature architecture today. The near-term priority is still a strong, maintainable, data-driven single-player playable slice.

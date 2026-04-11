@@ -1,58 +1,90 @@
 ---
-applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,src/app/mappers/**/*.h"
+applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h"
 ---
 
-# Rendering and presentation instructions
+# Rendering instructions
 
-- The game should not rely on a single always-visible debug text screen.
-- Each major mode should have its own readable presentation:
-  - title
-  - World Map
-  - Region
-  - location
-  - battle
-- Shared HUD elements should be factored into reusable rendering helpers.
-- Debug information should be available through a toggleable overlay, not as the default main layout.
-- Placeholder visuals are acceptable, but they must remain spatially readable and game-like.
-- Prioritize clear layout, interaction prompts, and state readability over decorative effects.
-- Prefer consistent screen composition:
-  - top or corner HUD
-  - main play area
-  - bottom or side action/dialogue panel
-- Use strong visual distinction between:
-  - current selection
-  - active unit
-  - interactable object
-  - disabled or unavailable action
-  - cost/stock/refresh state when services become deeper
-  - legal versus illegal travel action
-  - active party, reserve, stored units, and temporarily unavailable heroes when those states are shown
-- Rendering and mapper code should not own gameplay rules.
-- Prefer renderer/view classes that consume session state or mapped render models.
-- UI text should help explain state changes such as:
-  - where the player is
-  - what they can do here
-  - whether travel is available or blocked
-  - whether a node/service has already been used or cleared
-  - what a service costs or has left in stock
-  - when region travel would discard traveling generic units
-- Keep battle UI deterministic and readable.
-- Keep Region navigation understandable at a glance.
-- Keep World Map navigation understandable at a glance.
-- Show blocked travel as blocked, not merely absent, when the player benefits from understanding why it is unavailable.
-- Region rendering should clearly distinguish:
-  - travel nodes
-  - location-entry nodes
-  - service nodes that exist directly in the Region layer
-  - the current node
-  - the destination preview when travel is being considered
-- World Map rendering should clearly distinguish:
-  - current region
-  - enterable regions
-  - locked or non-enterable regions
-  - shortest-path destination preview when relevant
-- Battle rendering should support readable tactical previews, including turn-order preview and min/max damage or KO ranges where the design requires them.
-- Runtime may still contain legacy names such as `Overworld*` in older content, save strings, theme names, or compatibility layers. In rendering work, prefer the current design terminology:
-  - World Map for scenario-level region selection
-  - Region for the in-scenario travel layer
-- Keep renderer work lightweight; do not introduce expensive per-frame work just for presentation polish.
+- Keep rendering code presentation-focused.
+- Rendering should not own gameplay rules, legality checks, or progression decisions.
+- Favor readable, layered visuals over decorative complexity.
+
+## Terminology
+
+Use current design terminology in rendering code comments and UI-facing presentation:
+
+- **World Map** = scenario-level region selection layer
+- **Region** = main in-scenario travel space
+- **Location** = entered place inside a Region
+- **Service** = interaction available in a Region or Location
+
+If runtime types, content keys, or serialized values still use legacy `overworld` terminology, do not treat that wording as current design truth. Preserve compatibility where needed, but prefer current terminology in new rendering work.
+
+## Layer responsibilities
+
+### World Map rendering
+World Map rendering should focus on:
+- region outlines and labels
+- current Region highlight
+- unlocked / locked / non-enterable Region states
+- selected destination Region
+- shortest-path day preview
+- 1000 Energy travel requirement
+- travel legality / disabled travel messaging
+- warnings when region travel would abandon traveling generic units
+
+### Region rendering
+Region rendering should focus on:
+- node graph readability
+- route readability
+- current node and selected node
+- shortest-path preview to the selected node
+- route terrain / road readability when relevant
+- Energy cost preview
+- blocked / occupied / cleared state readability
+- arrival-node readability
+- direct Service node readability
+- Location node readability
+- storage-gate readability
+
+Do not render the Region layer as if there is a dedicated permanent combat-node type. A node may contain a hostile encounter and later become an empty travel node.
+
+### Location rendering
+Location rendering should focus on:
+- entered-place identity
+- walkable scene readability
+- NPC interaction prompts
+- service interaction prompts
+- location result / status messaging
+- safe-anchor readability when relevant
+
+Remember that entering and exiting a Location does not cost time.
+
+### Battle rendering
+Battle rendering should focus on:
+- active unit clarity
+- target clarity
+- turn-order readability
+- row / leader readability
+- min/max damage preview
+- min/max KO / kill preview
+- status / buff / debuff readability
+- legality and selection feedback without exposing unnecessary internal math
+
+## State distinctions that must render clearly when shown
+
+When the relevant screen exposes roster or world-state information, clearly distinguish:
+- active party
+- reserve
+- stored units
+- temporarily unavailable heroes
+- enemy-team occupation
+- protected arrival node
+- storage gate ownership / threat state when relevant
+
+## Visual guidance
+
+- Prefer strong silhouettes and readable contrast over detailed clutter.
+- Keep node and route presentation easy to parse at a glance.
+- Use color, icons, labels, and small state markers to communicate legality and access conditions.
+- Avoid baking rule assumptions into visuals that are not guaranteed by design.
+- When a node changes state after clearing, render the new state explicitly rather than implying the old state persists.

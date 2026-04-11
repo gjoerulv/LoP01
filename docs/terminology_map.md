@@ -1,200 +1,292 @@
 # Terminology Map
 
-This document maps **current design terminology** to **legacy runtime/content terminology** still present in the codebase.
+This document defines the current intended project terminology and explains how it maps to any older runtime, content, or serialized names that may still appear in the repository.
 
-Use this file when reading older code, tests, content, save strings, or archived design docs.
+Use this file as the terminology source of truth when design docs, AI guidance, source code, content files, and serialized values do not all use the same names.
 
-## Purpose
+This is a terminology and interpretation document. It is **not** the full design specification.
 
-Project Ashvale has gone through a terminology cleanup.
-Some older names still exist in runtime symbols, serialized values, JSON keys, UI theme fields, and archived milestone docs.
+Current design truth lives primarily in:
 
-This file defines the **current intended vocabulary** and explains how it relates to older names.
-
-## Source-of-truth guidance
-
-When terminology disagrees:
-
-1. Prefer the meanings in this file and the current live design docs.
-2. Treat older `Overworld*` naming in source as legacy runtime vocabulary unless the task is explicitly a terminology migration.
-3. Preserve legacy serialized strings and schema keys unless the task explicitly includes compatibility-safe migration.
-
-## Current design terminology
-
-### Campaign
-A collection of connected scenarios. A campaign may be linear or branching. Winning a campaign requires winning multiple connected scenarios.
-
-### Scenario
-The top-level authored playable unit. A scenario may stand alone or be part of a campaign.
-
-### World Map
-The scenario-level map used to inspect and select **Regions**.
-
-- Every scenario has exactly one World Map.
-- The World Map can be opened any time outside battle while inside a scenario.
-- Region travel is initiated from the World Map, but only when region travel is currently legal.
-
-### Region
-The main travel layer inside a scenario.
-
-- A scenario contains one or more Regions.
-- `Region` is the preferred design term for what older code/docs often called `overworld`.
-- The player is always in exactly one active Region while playing a scenario.
-
-### Node
-A travel destination inside a Region.
-
-Examples:
-- location-entry nodes
-- battle nodes
-- service nodes
-- arrival nodes
-- travel/transit nodes
-
-### Location
-An enterable place reached from a parent Region.
-
-A Location may:
-- contain one or more screens
-- include NPCs, interactions, quests, and dialogue
-- contain zero or more Services
-
-### Service
-A functional interaction available either directly in a Region or inside a Location.
-
-Examples:
-- healing/rest
-- recruitment
-- storage
-- item supply
-- buffs
-
-### Traveling party
-The units currently moving with the player across the scenario.
-
-Traveling party = **Active party + Reserve**.
-
-### Active party
-The current battle-legal fielded party.
-
-- up to 5 units
-- always exactly 1 assigned leader
-- may contain fewer than 5 units if still legal
-
-### Reserve
-Traveling non-active units.
-
-- capped at 7
-- travels with the player
-- can be swapped into the active party outside battle
-
-### Stored units
-Units assigned to a specific storage service.
-
-- each storage service has its own independent 7-slot storage
-- stored units persist in that Region
-- stored units do not travel with the player unless manually withdrawn first
-
-### Temporarily Unavailable
-A hero state meaning the hero is currently removed from active, reserve, and storage and is not currently recruitable.
-
-This state covers heroes who are, for design purposes:
-- recovering after battle loss
-- voluntarily dismissed
-- otherwise temporarily removed from the roster
-
-The player-facing narrative text may vary, but the underlying state is the same.
-
-## Legacy runtime and content terminology
-
-The following mappings should be used when reading the current codebase.
-
-### `overworld` (legacy) -> `Region`
-Older code and docs often use `overworld` for the in-scenario travel layer.
-In current design terminology, this should usually be read as **Region**.
-
-Examples:
-- `OverworldController` -> historical runtime name for what is now conceptually the Region controller
-- `OverworldRenderer` -> historical runtime name for what is now conceptually the Region renderer
-- `gameplay::overworld` -> historical namespace for Region-layer gameplay logic
-
-### `OverworldSelection` / `overworld_selection` (legacy) -> `World Map` / `WorldMapMode`
-Older code/save strings may use `overworld selection` for the scenario-level region selection layer.
-
-Interpretation:
-- design/UI term: **World Map**
-- runtime mode term: **WorldMapMode**
-- legacy serialized string: `overworld_selection`
-
-### `OverworldMode` / `overworld_mode` (legacy) -> `Region` / `RegionMode`
-Older code/save strings may use `overworld mode` for the active regional travel layer.
-
-Interpretation:
-- design/UI term: **Region**
-- runtime mode term: **RegionMode**
-- legacy serialized string: `overworld_mode`
-
-### `overworld_destination` (legacy content key) -> Region destination/node key
-Some content/schema still uses `overworld_destination`.
-Treat it as legacy content vocabulary for a Region-layer destination/node reference unless and until the content schema is intentionally migrated.
-
-### `Exit To Overworld` / `Exited to overworld` (legacy strings)
-Treat these as older user-facing strings referring to returning to the parent **Region**.
-
-## Leadership terminology
-
-### Current design intent
-Only **hero units** can be assigned as leader.
-
-### Current runtime legacy
-Some current source/content still uses a separate `Leader` category.
-
-Treat this as a **legacy runtime/content model**, not the preferred long-term design vocabulary.
-
-Important guidance:
-- do not expand the old separate `Leader` category in new design work
-- do not assume the long-term design wants non-hero leaders
-- keep current behavior stable unless the task explicitly includes a bounded leader-category refactor
-
-## World structure rules tied to terminology
-
-### Region travel
-- Region travel is chosen on the **World Map**.
-- Travel must begin before 11:00.
-- Travel is disabled when illegal, but the World Map can still be viewed.
-- Region travel requires a valid contiguous shortest path through enterable Regions.
-- Arrival always occurs at 11:00 on the destination Region's designated arrival node.
-
-### Cross-region persistence
-- Heroes in the traveling party cross Regions with the player.
-- Generic units in the traveling party do not; they are lost on Region change unless stored beforehand.
-- Stored units remain in their storage service in that Region.
-
-## Naming guidance for future work
-
-When writing new docs, comments, prompts, or user-facing text:
-
-- prefer **World Map** over `overworld selection`
-- prefer **Region** over `overworld`
-- prefer **Location** for entered places
-- prefer **Service** for functional interaction points
-- prefer **Traveling party** for `active + reserve`
-- prefer **Temporarily Unavailable** for the hero state that returns to the pool later
-
-When changing code:
-
-- avoid broad symbol renames unless the task explicitly includes terminology migration
-- preserve save compatibility and schema compatibility unless migration is part of the task
-- call out any place where a legacy runtime name still exists but the design term has changed
-
-## Historical docs
-
-Archived milestone docs may use older terminology and older assumptions.
-Treat them as project history, not current design truth.
-
-Current design truth should come from the latest live docs such as:
 - `docs/game_vision_complete.md`
 - `docs/combat_rules.md`
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`
-- current instruction files under `.github/instructions/`
+
+---
+
+## 1. World structure terms
+
+### Campaign
+A **Campaign** is a collection of connected Scenarios.
+
+- A Campaign may or may not have a shared story.
+- A Campaign may branch.
+- Winning a Campaign requires winning the relevant connected Scenarios defined by that Campaign.
+
+### Scenario
+A **Scenario** is the top-level authored play unit.
+
+- A Scenario may stand alone.
+- A Scenario may also be one chapter of a larger Campaign.
+- A Scenario may inherit selected data from a previous Scenario in a Campaign.
+
+### World Map
+The **World Map** is the scenario-level Region selection layer.
+
+Use **World Map** when referring to:
+- opening the scenario map
+- inspecting other Regions
+- initiating Region-to-Region travel
+
+### Region
+A **Region** is the main in-scenario travel space.
+
+Use **Region** when referring to:
+- the node graph the player currently moves on
+- node-to-node travel
+- region-layer Services
+- enemy-team movement and occupation
+- current in-scenario world-state
+
+### Location
+A **Location** is an entered place inside a Region.
+
+A Location may contain:
+- NPCs
+- quests
+- multiple screens
+- zero or more Services
+- dungeon-like content
+- safe-anchor behavior
+
+### Service
+A **Service** is a functional interaction available either:
+- directly in a Region
+- or inside a Location
+
+Examples may include:
+- recruitment
+- storage
+- recovery
+- supply
+- other authored interactions
+
+---
+
+## 2. Region structure terms
+
+### Node
+A **node** is a single-purpose travel point inside a Region graph.
+
+Current intended node categories are:
+- **empty / travel node**
+- **Location node**
+- **single Service node**
+- **blocker node**
+
+There is **no dedicated permanent combat-node type** in the current design.
+
+### Route
+A **route** is the connection between nodes inside a Region.
+
+A route has authored quality such as:
+- road
+- rough terrain
+- snow
+- desert
+- meadow
+- other authored terrain / route types
+
+Route quality affects:
+- travel time
+- Energy cost
+
+### Arrival node
+An **arrival node** is a flag on a node, not a separate node category.
+
+- Each Region must have an arrival node.
+- An arrival node may also be a Location node or single Service node.
+- Arrival nodes are protected from enemy spawning and enemy occupation.
+
+### Safe anchor
+A **safe anchor** is a Location that provides:
+- free rest
+- guaranteed rest
+
+A safe anchor is not a universal mandatory structure for every Region or Scenario.
+
+### Dungeon
+A **dungeon** is a type of Location.
+
+Enemy teams do not enter Locations, including dungeons.
+
+---
+
+## 3. Party and roster terms
+
+### Active party
+The **active party** is the current battle-legal party.
+
+- up to 5 units
+- exactly one assigned leader
+- the units used directly in battle
+
+### Reserve
+The **reserve** is the traveling non-active roster.
+
+- up to 7 units
+- travels with the player
+- may be switched into the active party outside battle
+
+### Traveling party
+The **traveling party** is:
+
+- the active party
+- plus the reserve
+
+This is the roster that:
+- moves with the player inside a Region
+- crosses between Regions
+- determines the team's shared Energy
+
+### Stored units
+**Stored units** are units assigned to a specific storage Service.
+
+- each storage Service has its own independent storage
+- each storage has up to 7 slots
+- stored units do not travel with the player
+- stored units persist in the Region where they are stored
+
+### Temporarily Unavailable
+**Temporarily Unavailable** is the current design term for heroes who have been removed from the roster and are not yet back in the available hero pool.
+
+A Temporarily Unavailable hero is:
+- not active
+- not in reserve
+- not stored
+- not recruitable until returned to the relevant pool
+
+This term is preferred over older narrow wording such as "recovering" when the state may result from either injury or voluntary dismissal.
+
+---
+
+## 4. Enemy-team terms
+
+### Enemy team
+An **enemy team** is an AI-controlled traveling party on the Region layer.
+
+An enemy team:
+- moves within a Region
+- does not travel between Regions
+- does not enter Locations
+- may contain heroes and generic units
+- may use direct Region Services
+- may occupy nodes
+- may attack the player
+- may attack direct storage gates
+
+Enemy teams only act while the player is in the same Region.
+
+### Stationary hostile encounter
+A **stationary hostile encounter** is not the same thing as an enemy team.
+
+It is temporary hostile content that may exist on an otherwise normal node.
+Once cleared, that node becomes an empty travel node.
+
+---
+
+## 5. Energy terms
+
+### Energy
+**Energy** is a shared travel resource belonging to the traveling party.
+
+Units do **not** have individual Energy.
+
+Current intended daily starting Energy is:
+
+`1000 + (lowest traveling-party agility × 100) + leader passive bonus + leader item bonus`
+
+Energy may be restored by:
+- rest
+- items
+- events
+- Services
+
+### World Map travel Energy
+Region-to-Region travel on the World Map requires:
+- **1000 Energy**
+- paid once when travel begins
+
+---
+
+## 6. Legacy runtime and content names
+
+Some older names may still appear in source files, content files, tests, comments, or serialized values.
+
+These names should be interpreted through the current design terminology rather than treated as design truth.
+
+### `overworld`
+Legacy design/runtime/content term that should now usually be interpreted as:
+
+- **Region**, when referring to the in-scenario travel layer
+- sometimes **World Map**, when referring to the higher-level selection layer
+
+Always use context.
+
+### `overworld_mode`
+Legacy serialized or older runtime-facing term corresponding to:
+
+- **Region**
+- current runtime mode naming may use **RegionMode**
+
+### `overworld_selection`
+Legacy serialized or older runtime-facing term corresponding to:
+
+- **World Map**
+- current runtime mode naming may use **WorldMapMode**
+
+### `overworld_destination`
+Legacy content key used in some data files.
+
+Interpret this as:
+- destination on the Region layer
+- usually a Region node or older Region travel destination field depending on context
+
+Do not treat the key name itself as current design terminology.
+
+---
+
+## 7. Leader terminology note
+
+### Current design intent
+Current design intent is:
+
+- only **hero units** may be leaders
+
+### Legacy runtime mismatch
+Some current runtime/content structures may still contain a separate legacy `Leader` category, such as:
+- `UnitCategory::Leader`
+- `UnitDefinitionCategory::Leader`
+- content values like `"category": "leader"`
+
+Treat that as a legacy implementation detail unless the task is specifically about refactoring that model.
+
+Do **not** expand the old separate-leader-category model in new design work unless the design changes explicitly.
+
+---
+
+## 8. Guidance for future work
+
+When writing docs, code comments, prompts, plans, or design notes:
+
+- prefer **World Map** over `overworld_selection`
+- prefer **Region** over `overworld` for the in-scenario travel layer
+- prefer **Location** for entered places inside a Region
+- prefer **Service** for functional interactions
+- prefer **traveling party**, **stored units**, and **Temporarily Unavailable** over older or narrower wording when those are the correct concepts
+
+When source/runtime compatibility requires older names to remain in place:
+- preserve compatibility deliberately
+- document the mismatch if it could confuse future work
+- do not assume legacy names define current design intent
