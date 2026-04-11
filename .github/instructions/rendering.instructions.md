@@ -7,7 +7,8 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
 - The game should not rely on a single always-visible debug text screen.
 - Each major mode should have its own readable presentation:
   - title
-  - overworld
+  - World Map
+  - Region
   - location
   - battle
 - Shared HUD elements should be factored into reusable rendering helpers.
@@ -24,6 +25,8 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
   - interactable object
   - disabled or unavailable action
   - cost/stock/refresh state when services become deeper
+  - legal versus illegal travel action
+  - active party, reserve, stored units, and temporarily unavailable heroes when those states are shown
 - Rendering and mapper code should not own gameplay rules.
 - Prefer renderer/view classes that consume session state or mapped render models.
 - UI text should help explain state changes such as:
@@ -32,6 +35,24 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
   - whether travel is available or blocked
   - whether a node/service has already been used or cleared
   - what a service costs or has left in stock
+  - when region travel would discard traveling generic units
 - Keep battle UI deterministic and readable.
-- Keep overworld navigation understandable at a glance.
+- Keep Region navigation understandable at a glance.
+- Keep World Map navigation understandable at a glance.
+- Show blocked travel as blocked, not merely absent, when the player benefits from understanding why it is unavailable.
+- Region rendering should clearly distinguish:
+  - travel nodes
+  - location-entry nodes
+  - service nodes that exist directly in the Region layer
+  - the current node
+  - the destination preview when travel is being considered
+- World Map rendering should clearly distinguish:
+  - current region
+  - enterable regions
+  - locked or non-enterable regions
+  - shortest-path destination preview when relevant
+- Battle rendering should support readable tactical previews, including turn-order preview and min/max damage or KO ranges where the design requires them.
+- Runtime may still contain legacy names such as `Overworld*` in older content, save strings, theme names, or compatibility layers. In rendering work, prefer the current design terminology:
+  - World Map for scenario-level region selection
+  - Region for the in-scenario travel layer
 - Keep renderer work lightweight; do not introduce expensive per-frame work just for presentation polish.

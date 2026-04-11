@@ -7,13 +7,14 @@ Project Ashvale
 ## Elevator pitch
 
 A 2D single-player strategy/RPG hybrid that combines:
-- HoMM-style destination-based overworld travel
-- FF-style location exploration
+- World Map-based travel between Regions inside a Scenario
+- FF-style Location exploration
 - true turn-based CTB battles
-- cozy town restoration and resource gathering
+- party and roster logistics with lasting consequence
+- restoration, survivor support, and safe-anchor progression
 - a soft dystopian fantasy tone
 
-For the fuller north-star direction beyond the current slice, see `docs/game_vision_complete.md`.
+For the fuller long-term direction and precise settled terminology, see `docs/game_vision_complete.md`.
 
 ## Tone and atmosphere
 
@@ -24,18 +25,22 @@ The mood should feel:
 - mysterious
 - lived-in
 - cozy in safe places
-- dystopian in occupied places
+- dystopian in occupied or unstable places
 
 This is not grimdark. Recovery, routine, and rebuilding matter.
 
 ## Terminology and hierarchy
 
-For precise terminology and long-term structure, see `docs/game_vision_complete.md`.
+For the full terminology model, see `docs/game_vision_complete.md`.
 
 Short version:
-- campaign -> scenario -> world map -> overworld/region -> node -> location
-- overworld and region refer to the same gameplay layer
-- world map is the higher-level scenario planning layer above overworld play
+- campaign -> scenario -> world map -> region -> node -> location -> service
+- use **Region** for the main travel layer inside a Scenario
+- use **World Map** for the higher-level scenario map used to select Regions
+- use **Location** for entered places inside a Region
+- use **Service** for an interaction available inside a Location or directly on a Region node
+
+Legacy runtime/content names may still use older `overworld` wording in some places. Design language should prefer the terms above.
 
 ## Story setup
 
@@ -45,39 +50,40 @@ An old man is the only visible survivor. He explains that the country has largel
 
 Ghostly remnants of former townspeople can be discovered and interacted with. These encounters reveal memories, town functions, and clues about what was lost.
 
-The player starts in their home/base. Beneath the house is a mine used for training, danger, and resources.
+The player starts in a small safe anchor. Beneath the house is a mine used for training, danger, and resources.
 
 ## Core fantasy
 
 The player should feel like they are:
 - surviving day by day
-- rebuilding a forgotten home
+- rebuilding a forgotten refuge
 - gathering allies
 - slowly making the world livable again
-- balancing time, risk, and long-term progress
+- balancing time, risk, travel, and long-term progress
 
 ## Primary inspirations
 
-- Heroes of Might and Magic 2/3: overworld structure and visitable places
+- Heroes of Might and Magic 2/3: map structure, travel choices, visitable places, stack logistics
 - SNES Final Fantasy: towns, dungeons, menus, character flavor
-- Final Fantasy X: CTB battle pacing
-- Stardew-like progression: restoration, routine, resource use, cozy structure
+- Final Fantasy X: CTB battle pacing and readable turn-order planning
+- restoration/progression games: safe places, recovery, routine, and meaningful rebuilding
 
 ## Current playable-slice focus
 
 The current playable slice should prove the core loop of:
-- overworld travel between destinations
-- location exploration and interactions
-- CTB battles with clear consequences
+- moving through a Region between meaningful destination nodes
+- entering Locations and using Services
+- managing an active party, reserve, and longer-term roster consequence
+- CTB battles with clear persistent outcomes
 - day/time pressure, sleep, and wake-up penalty
-- early restoration/progression through simple quests and services
+- early restoration/progression through quests, services, and survivor-facing progress
 
 The slice should stay intentionally bounded and data-driven.
 
 ## Non-goals for the current playable slice
 
 - full narrative arc
-- huge world
+- huge campaign scope
 - final art quality
 - advanced enemy AI
 - hundreds of items
@@ -88,9 +94,10 @@ The slice should stay intentionally bounded and data-driven.
 ## Longer-term direction
 
 These are important future directions, but they should be approached only after the single-player slice is stronger:
-- a designer-facing tool for editing content, events, locations, services, and balance data
-- richer home-base progression and restoration loops
-- weekly service/economy cadence
+- richer Region and World Map progression across a full Scenario
+- stronger restoration and safe-anchor progression
+- deeper party, storage, and hero-availability logistics across Regions
+- a designer-facing tool for editing content, events, Locations, Services, and balance data
 - multiplayer/networking only if the core single-player loop later proves strong enough to justify it
 
 These should inform structure, but they should not drive premature architecture today. The near-term priority is still a strong, maintainable, data-driven single-player playable slice.

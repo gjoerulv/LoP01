@@ -101,6 +101,12 @@ Planning posture for future work:
 - tighten vision/docs before coding when core behavior is still ambiguous
 - keep milestone proposals narrow, testable, and save/load friendly
 
+## Terminology authority
+
+Use `docs/terminology_map.md` as the terminology source of truth.
+When the repository still contains older names such as `overworld`, `overworld_mode`, `overworld_selection`, or other legacy labels, do not assume those names reflect the current design. Use `docs/terminology_map.md` to interpret the intended meaning before proposing architecture, refactors, or milestone plans.
+
+
 Avoid:
 - broad content growth disconnected from the current milestone
 - large renderer rewrites

@@ -5,27 +5,47 @@ applyTo: "src/rendering/**/*.cpp,src/rendering/**/*.h,src/app/mappers/**/*.cpp,s
 # UI instructions
 
 - Favor clarity and readability over flashy effects.
-- Use simple panels, lists, prompts, labels, and status strips.
+- Use simple panels, lists, prompts, labels, timelines, and status strips.
 - The UI should evoke retro strategy/RPG readability.
 - Show time, day, gold, and current place prominently.
-- Overworld UI should clearly show:
-  - selected destination
+- Prefer current design terminology in user-facing UI and new code comments:
+  - **World Map** = scenario-level region selection layer
+  - **Region** = main travel layer inside a scenario
+  - **Location** = entered place inside a region
+- Be aware that some runtime or serialized legacy names may still use historical `overworld` terminology. Do not reintroduce old terminology in new user-facing UI unless required for backward compatibility.
+- World Map UI should clearly show:
+  - available regions
+  - currently selected destination region
+  - whether the destination is reachable through a valid contiguous path
+  - travel time preview in days
+  - whether travel is currently allowed
+  - why travel is blocked when it is illegal
+- Region UI should clearly show:
+  - current node
+  - selected destination node
   - travel time preview
-  - whether travel is allowed
-  - whether a destination enters location mode or battle
-  - whether a node appears cleared, blocked, or unavailable
+  - whether node travel is allowed
+  - whether a node enters a location, triggers battle, or provides a direct service
+  - whether a node appears cleared, blocked, unavailable, or dangerous when that state is known
+- When region travel would cause the loss of traveling generic units, the UI must communicate that risk clearly before the player confirms travel.
 - Location UI should clearly show:
   - location name
   - current interaction prompt
   - available services or actions
   - lightweight result/status text for interactions
   - service cost or remaining quantity when relevant
+- Storage/location management UI should emphasize the distinction between:
+  - active party
+  - reserve
+  - stored units
+  - temporarily unavailable heroes
 - Battle UI must clearly show:
   - turn order
   - active unit
   - HP / MP / Life
   - action menu
   - target selection
+  - min/max damage and min/max KO preview when target selection is active
 - Keep placeholder UI art minimal and functional.
 - Prefer communicating current slice rules clearly over adding decorative complexity.
-- Do not assume that service identity is best communicated through binary enabled/disabled text; cost, stock, and refresh state are usually more valuable.
+- Do not assume that service identity is best communicated through binary enabled/disabled text; cost, stock, refresh state, and legality are usually more valuable.
