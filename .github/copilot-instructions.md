@@ -10,6 +10,13 @@ Use these rules when working in this repository.
 - Prefer **clear architecture and content-driven rules** over generic frameworks.
 - Treat the repository and the active design docs as the source of truth.
 
+## Terminology source of truth
+
+Before making terminology-sensitive changes, read `docs/terminology_map.md`.
+
+That file defines the current intended design terms and explains how they map to any legacy runtime, content, or serialized names still present in the repository. Prefer the terminology in `docs/terminology_map.md` for design discussion, documentation updates, and new work unless the task is explicitly a legacy-compatibility change.
+
+
 ## Design pillars
 
 - strong scenario and region identity

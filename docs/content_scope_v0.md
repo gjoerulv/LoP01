@@ -8,27 +8,27 @@ For current implementation work, use the active milestone doc.
 
 ## Region count
 
-The current playable slice uses exactly 1 overworld region.
+The current playable slice uses exactly 1 Region.
 
-## Overworld destinations
+## Region nodes
 
-Target 10 to 20 destinations:
-- home/base
+Target 10 to 20 Region nodes, such as:
+- safe anchor / home-base node
 - abandoned town center
 - inn
-- shop/recruit point
+- shop or recruit node
 - mine entrance
-- dungeon/ruin
+- dungeon or ruin entrance
 - service node
-- optional threat/combat node
-- combat locations blocking path to other destinations
+- optional threat / combat node
+- combat nodes blocking access to other destinations
 
 ## Locations
 
 Implement:
-- 1 or 2 town-style locations per overworld region
-- 1 to 3 dungeon-style locations per overworld region
-- 1 home/base interior per overworld region
+- 1 or 2 town-style Locations per Region
+- 1 to 3 dungeon-style Locations per Region
+- 1 safe-anchor or home-base-style Location per Region
 
 ## Party content
 
@@ -41,8 +41,8 @@ Implement:
 
 The bounded slice is expected to include:
 - time/day progression
-- travel time
-- location time costs
+- Region travel time
+- Location time costs
 - sleeping
 - wake-up penalty
 - battle module
@@ -51,3 +51,11 @@ The bounded slice is expected to include:
 - save/load
 - opening story sequence
 - 2 simple quests
+
+## Terminology note
+
+Current runtime/content may still contain some legacy names such as `overworld_destination`.
+In current design terminology:
+- `Region` is the main in-scenario travel space
+- `World Map` is the higher-level scenario map used to select Regions
+- `Location` is an entered place inside a Region

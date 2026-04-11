@@ -56,6 +56,13 @@ The intended hierarchy is:
 
 **Campaign -> Scenario -> World Map -> Region -> Node -> Location**
 
+## Terminology reference
+
+For the canonical meanings of current project terms, see `docs/terminology_map.md`.
+
+That document defines the intended design terminology used in this vision document and also explains how older runtime or content names should be interpreted when they differ from the current design language.
+
+
 ### Campaign
 
 A campaign is a collection of scenarios that may branch or reconnect.
