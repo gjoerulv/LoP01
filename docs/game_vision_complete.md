@@ -50,18 +50,11 @@ For practical use in the project:
 - use **Region** as the main term for the regional travel layer
 - treat **overworld** as older vocabulary for the same concept
 - use **World Map** for the higher-level scenario map above regions
-- use **region select** for the interaction mode used on the World Map
+- avoid introducing new design terminology that duplicates **World Map** or **Region** when those terms already fit
 
 The intended hierarchy is:
 
 **Campaign -> Scenario -> World Map -> Region -> Node -> Location**
-
-## Terminology reference
-
-For the canonical meanings of current project terms, see `docs/terminology_map.md`.
-
-That document defines the intended design terminology used in this vision document and also explains how older runtime or content names should be interpreted when they differ from the current design language.
-
 
 ### Campaign
 
@@ -163,35 +156,39 @@ Regions:
 
 Cross-region travel follows these rules:
 
-- region travel is initiated from the **region layer**, not from inside a location
-- if the player is inside a location, they must first return to the region layer
+- region travel is initiated from the **Region** layer, not from inside a Location
+- if the player is inside a Location, they must first return to the Region layer
 - if the player is inside a dungeon, region travel is not allowed
+- the World Map may still be opened for information when travel is illegal, but the travel action is disabled
 - region travel must begin before **11:00**
 - if the current time is **11:00 or later**, travel is disabled until the next day
-- travel costs **time only**
+- region travel costs **1000 Energy** when travel begins
+- that Energy cost is paid once, even when the trip takes multiple days
+- region travel also costs **time** based on Region distance
 - region travel does not consume gold or other generic resources
 - arrival always happens at **11:00** on the arrival day
 
-Distance uses the **shortest valid path** through enterable adjacent regions.
+Distance uses the **shortest valid path** through enterable adjacent Regions.
 
 Practical rule:
-- directly adjacent regions cost **1 day**
-- if there are 2 regions between the current region and the destination, travel time is **3 days**
-- all region steps count equally for travel time
+- directly adjacent Regions cost **1 day**
+- if there are 2 Regions between the current Region and the destination, travel time is **3 days**
+- all Region steps count equally for travel time
+- travel is only possible when a valid contiguous path exists through currently enterable Regions
 
-Travel is only possible when a valid contiguous path exists through currently enterable regions.
 
 ### Region arrival
 
-Each region must define an **arrival node**.
+Each Region must define an **arrival node**.
 
 Arrival-node rules:
 - the arrival node is authored by the scenario designer
-- it may be any legal node type except an enemy-occupied node
+- arrival is a flag, not a standalone node type
+- an arrival node may also be a legal **Location node** or **single Service node**
 - enemies may not spawn on it
-- enemies may not travel onto it
+- enemy teams may not occupy it
+- the arrival node must always resolve into a safe, predictable entry point for cross-region travel
 
-This guarantees that cross-region travel always resolves into a safe, predictable entry point.
 
 ### Region presentation
 
@@ -372,11 +369,13 @@ When the player leaves a region, that region still remembers its persistent stat
 
 A “Home Base” is a kind of **Location** that functions as a meaningful safe anchor.
 
-It is not required that every region contain one.
-Some scenarios may contain strong safe-haven locations; others may intentionally deny the player a true home base.
+It is not required that every Region contain one.
+Some scenarios may contain strong safe-haven Locations; others may intentionally deny the player a true home base.
 
-A Home Base may provide:
-- free rest
+What makes a Location a safe anchor is simple and systemic:
+- it provides **free guaranteed rest**
+
+A Home Base may also provide additional authored value such as:
 - story progression and survivor conversations
 - restoration milestones
 - baseline services
@@ -386,51 +385,143 @@ A Home Base may provide:
 
 Home Base is therefore a design role, not merely a fixed building type or guaranteed scenario feature.
 
+
 ## Region vision
 
-Regions should remain node-and-route based rather than free-roaming.
+Regions should remain **node-and-route based** rather than free-roaming.
 
-A region is a travel map within a scenario's World Map.
+A Region is an authored travel graph inside a scenario's World Map. The structure should be authored, while reusable systemic rules operate on top of it.
 
 Key principles:
 - nodes represent authored destinations with gameplay meaning
-- routes define the legal travel graph inside a region
-- route access can change because of combat clears, blockers, quests, or future progression conditions
-- the player should understand why a path is open, blocked, distant, or unsafe
+- routes define the legal travel graph inside a Region
+- route access can change because of clears, blockers, quests, occupation, or future progression conditions
+- the player should understand why a path is open, blocked, distant, expensive, or unsafe
 - travel should feel like planning, not busywork
 
-Nodes can represent:
-- enterable locations
-- inns
-- recruit services
-- storage services
-- shops and service points
-- combat encounters
-- dungeons
-- single-use bonuses or resources
-- blocker nodes guarding deeper routes
+### Region node model
+
+Use a **single-purpose node model**.
+
+Core node categories are:
+- **empty/travel node**
+- **Location node**
+- **single Service node**
+- **blocker node**
+
+Additional rules:
+- there is **no dedicated combat-node type**
+- **arrival** is a flag, not a node type
+- an empty/travel node may temporarily contain a single pickup/resource or a single stationary hostile encounter
+- once that pickup is taken or that hostile encounter is cleared, the node becomes an ordinary empty/travel node
+- blocker nodes that are cleared permanently also become ordinary empty/travel nodes unless they are authored to require payment or permission every time
+
+### Routes and Region travel inside a Region
+
+Inside a Region:
+- the player may select any reachable node directly
+- the game uses the **shortest valid path** for travel resolution
+- same-node selection is not a meaningful move and has no travel effect
+- blocked nodes remain visible even when unusable
+
+Routes have authored terrain quality.
+
+A route is either:
+- a **road**, which applies no route penalty
+- or a terrain quality such as rough snow, desert, meadow, or other authored terrain
+
+Route quality affects both:
+- travel **time** inside the Region
+- travel **Energy** cost inside the Region
+
+### Energy
+
+Energy belongs to the **traveling party**, not to individual units.
+
+Starting Energy each day is:
+
+**1000 + (lowest traveling-party agility × 100) + leader passive bonus + leader item bonus**
+
+Where:
+- “lowest traveling-party agility” means the agility value of the slowest unit in the current traveling party
+- the traveling party means **active party + reserve**
+- leader bonuses apply only when the traveling party currently has a leader
+- enemy teams may not always have a leader, so equivalent leader bonuses may be absent for them
+
+Energy may be restored by:
+- resting
+- services
+- items
+- authored events
+
+The traveling party may also use a rest action that:
+- takes **3 hours**
+- restores **300 Energy**
+
+A move is illegal when the traveling party does not have enough Energy to complete it. The destination should still be inspectable even when travel is currently illegal.
+
+### Enemy teams
+
+A Region may contain one or more **enemy teams**.
+
+An enemy team is an AI traveling party that follows the same broad party rules as the player side:
+- it can contain heroes and generic units
+- it moves on the Region graph
+- it can attack and be attacked by the player's traveling party
+- it can use direct Region services
+- it can recruit heroes and generic units through legal Region services
+- it can rest
+- it can fight stationary hostile encounters
+- it does **not** travel between Regions
+- it does **not** enter Locations
+- it only acts while the player is currently in the same Region
+
+Enemy teams may occupy legal Region nodes. If a hostile team occupies a node, the opposing side must defeat that team before using or entering what is on that node.
+
 
 ## Location vision
 
 Locations should feel like authored spaces with identity, not just generic scene shells.
 
 A Location:
-- is entered from a parent region
-- may contain zero or more services
+- is entered from a parent Region
+- may contain zero or more Services
 - may contain NPCs, story scenes, and quest interaction
 - may use one or many walkable screens
+- may represent a town, settlement, guild, hideout, ruin, dungeon, or other authored place
 
 Locations may contain:
 - service interactions
 - NPC dialogue and memory fragments
 - restoration context
 - scene transitions
-- local time costs
 - safe interactions, risky interactions, or story interactions
+- combat content, including dungeon-like fights and bosses, when authored
 
-Services inside a location are performed through interaction with NPCs or fitting world objects.
+Rules:
+- entering a Location costs **no time**
+- exiting a Location costs **no time**
+- a dungeon is a kind of Location, not a separate top-level structural layer
+- enemy teams do **not** enter Locations
+- however, an enemy team may occupy the Location node in the parent Region
+- if a hostile team occupies a Location node, the opposing side must defeat that team before entering the Location
+
+### Direct Services vs Locations
+
+Use a **single Service node** for quick functional interaction on the Region layer.
+
+Use a **Location** when the place should support one or more of the following:
+- exploration
+- multiple Services
+- NPC interaction
+- multiple screens
+- stronger authored identity
+- dungeon-like traversal or combat structure
+
+Services inside a Location are performed through interaction with NPCs or fitting world objects.
 
 Shared prototype scenes are acceptable during slice development, but the finished game should support strong location identity through content.
+
 
 ## Battle vision
 
@@ -552,7 +643,7 @@ This allows recurring enemy groups, persistent attrition, and authored enemy rec
 Services should be meaningful because of **cost, stock, quantity, refresh cadence, and world context**, not because they are arbitrarily disabled.
 
 A **Service** is a functional interaction point.
-It may exist directly in a region or inside a location.
+It may exist directly in a Region or inside a Location. Direct Region Services are meant for quick functional interaction; Locations are for richer authored spaces that may contain zero or more Services.
 
 ### Inns and recovery services
 
@@ -573,9 +664,14 @@ It may exist directly in a region or inside a location.
 
 ### Storage services
 
-- storage services hold a region-persistent 7-slot stored-unit container
+- storage services hold a Region-persistent 7-slot stored-unit container
+- storage may exist inside a Location or as a direct Region Service
 - interacting with a storage service should open a broader party/storage management view
 - that view should make it easy to move units between active party, reserve, and storage while respecting legality rules
+- a direct Region storage service behaves as a defensible gate for its owning side
+- if an enemy team attacks a direct storage service while the player is absent, only the units stored there defend it
+- if that defense fails, all units stored there are dismissed or otherwise removed from that storage according to the hero/generic loss rules
+
 
 ### Shops and service points
 

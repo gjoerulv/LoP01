@@ -11,22 +11,30 @@ This repository contains a **playable vertical slice** of a 2D single-player str
 
 The project is being extended through small, maintainable milestones while keeping gameplay logic deterministic, explicit, testable, performant, and data-driven.
 
+## Terminology note
+
+The current design terminology is defined in `docs/terminology_map.md`.
+
+Use that document as the source of truth for terms such as **World Map**, **Region**, **Location**, **Service**, **Traveling party**, **Stored units**, and **Temporarily Unavailable**.
+
+Some runtime, content, and serialized names may still use older terms such as `overworld`, `overworld_mode`, or `overworld_selection` for compatibility or historical reasons. When there is a mismatch, prefer the terminology in `docs/terminology_map.md` for design and planning.
+
 ## Current slice scope
 
-This is not the full game. The current slice is intentionally bounded to a single **Region** and a small set of destinations, Locations, encounters, quests, services, roster interactions, and placeholder presentation.
+This is not the full game. The current slice is intentionally bounded to a single Region and a small set of nodes, Locations, encounters, quests, Services, roster interactions, and placeholder presentation.
 
 The current slice supports:
 
-- a full app flow with title, opening, World Map, and gameplay
+- a full app flow with title, opening, World Map selection, and gameplay
 - explicit mode transitions between Region travel, Location, and battle
-- content-driven Region destinations and typed Location definitions
-- content-driven Location scenes and battle-scenario selection
+- content-driven Region nodes and typed Location definitions
+- content-driven Location scenes and battle scenario selection
 - turn-based CTB battle encounters
 - day/time progression and wake-up penalty rules
-- route-aware regional travel with blocker-aware routing
-- lightweight persistent world state for cleared combat nodes
+- route-aware Region travel with blocker-aware routing
+- lightweight persistent world state for cleared node encounters
 - simple typed quest progression, including combat-node-clear triggers
-- persistent roster state with owned units, active party, and reserve
+- persistent roster state with owned units, active party, and reserves
 - recruit and mustering behavior tied to persistent roster state
 - battle consequence written back into persistent party state
 - save/load for the current gameplay slice
@@ -40,11 +48,11 @@ The current baseline includes:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
-- typed Regions, Locations, Location scenes, battle scenarios, quests, services, and unit content
+- typed Regions, nodes, Locations, Location scenes, battle scenarios, quests, Services, and unit content
 - unified wake-penalty recovery flow for missed sleep and full defeat
-- explicit battle-return routing
+- explicit battle return routing
 - route-aware travel rules shared by preview and confirm
-- minimal persistent world state for cleared combat nodes
+- minimal persistent world state for cleared node encounters
 - minimal typed quest progression tied to world actions
 - persistent roster state with save/load support and migration from older slice formats
 - battle initialization from the active party rather than only static allied setup
@@ -75,7 +83,7 @@ Future milestones should preserve this architecture unless a change is clearly j
   - `GameSession`
   - gameplay state and rules
   - battle runtime
-  - Location runtime
+  - location runtime
   - Region/world-state rules
   - quest runtime
   - roster / party state
@@ -92,7 +100,7 @@ Future milestones should preserve this architecture unless a change is clearly j
   - gameplay/presentation tests for the current slice; most are logic-focused, but the test target currently still links rendering
 
 - `docs`
-  - vision, technical direction, combat rules, and milestone-planning docs
+  - vision, technical direction, combat rules, terminology, and milestone-planning docs
 
 ## Gameplay and data architecture
 
@@ -107,18 +115,18 @@ Future milestones should preserve this architecture unless a change is clearly j
 
 ### Gameplay modes
 
-The current playable slice includes these primary modes:
+The current playable slice includes these primary runtime modes:
 
 - `title`
 - `opening_sequence`
 - `WorldMapMode`
 - `RegionMode`
-- `LocationMode`
-- `BattleMode`
+- `location_mode`
+- `battle_mode`
+
+For save compatibility, some serialized state may still use older strings such as `overworld_selection` and `overworld_mode`. In design terms, prefer **World Map** and **Region**.
 
 Mode transitions should remain explicit and easy to follow. Prefer clear mode-entry helpers over generic chained advancement.
-
-Note: some save/content compatibility strings still use older legacy names such as `overworld_selection` and `overworld_mode`. Those should be treated as legacy serialized/runtime-compatibility terms rather than active design terminology.
 
 ### Data-driven content
 
@@ -144,7 +152,7 @@ Key battle assumptions:
 - battle is **static formation CTB**, not grid movement
 - a team can field up to **5 active units**
 - the **Leader** position is **one of the 5**, not an extra slot
-- the long-term design intent is that only **hero units** can be assigned as leader
+- only **hero units** can be assigned as leader
 - targeting is free; position affects **agility penalty**, not target legality
 - agility penalty uses the target's **effective row depth**, not only the stored row label
 - position changes are explicit turn-consuming actions
@@ -159,12 +167,12 @@ For detailed battle rules, see `docs/combat_rules.md`.
 The current codebase is still a bounded single-Region slice, but the design direction is now clearer:
 
 - use **Campaign -> Scenario -> World Map -> Region -> Node -> Location** as the main world hierarchy
-- use **Region** as the design term for the in-scenario travel layer
+- use **Region** as the long-term term instead of `overworld` when discussing design
 - treat the **World Map** as the scenario-level Region-selection and information layer
 - treat the **traveling party** as **active party + reserve**
 - keep the **active party** capped at **5**
 - keep **reserve** capped at **7**
-- treat **stored units** as separate from reserve, with **7 slots per storage service**
+- treat **stored units** as separate from reserve, with **7 slots per storage Service**
 - let **all heroes** in the traveling party cross Regions
 - make **traveling generic units** a Region-crossing loss unless stored beforehand
 - keep stored units, recruit offerings, enemy attrition, and other authored state persistent within their Region
@@ -195,7 +203,7 @@ Milestone 8 is complete and merged to `main`.
 
 Delivered Milestone 8 outcomes:
 
-- canonical persistent roster state for owned units, active party, and reserve
+- canonical persistent roster state for owned units, active party, and reserves
 - active party size increased to **5**
 - recruit flow migrated to persistent roster state
 - Home Base mustering integrated into persistent roster management
@@ -203,7 +211,7 @@ Delivered Milestone 8 outcomes:
 - battle initialization from the current active party
 - battle quantity persistence and roster write-back
 - leader / aura baseline integrated into battle legality and party state
-- player active-party legality hardened so a legal leader is always available
+- player active party legality hardened so a legal leader is always available
 - player character seeded into owned + active party at startup
 - allied win handling updated so the player character recovers to 1 HP if KO'd
 - KO non-player heroes leave the party on allied win and can later be recovered through the game's hero-recovery systems
@@ -216,39 +224,31 @@ The current branch now includes this post-M8 baseline:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
-- typed Regions, Locations, Location scenes, battle scenarios, quests, service definitions, and unit content
+- typed Regions, nodes, Locations, Location scenes, battle scenarios, quests, Service definitions, and unit content
 - unified wake-penalty recovery flow
 - route-aware travel replacing placeholder index-distance travel
 - blocker-aware routing tied to lightweight persistent world state
 - minimal typed quest progression tied into the world loop
-- content-driven service/economy behavior for rest, recruit stock, and travel prep
-- app-layer service prompt formatting and UI-light readability improvements
+- content-driven Service/economy behavior for rest, recruit stock, and travel prep
+- app-layer Service prompt formatting and UI-light readability improvements
 - persistent roster state, mustering, and battle-party consequence
 - post-battle write-back of unit losses and hero recovery state
 - battle foundation aligned with `docs/combat_rules.md`
 
 ## Current planning posture
 
-The repo should now be treated as a **post-M8 baseline**.
+The repo should now be treated as **post-M8 baseline**.
 
 Planning for the next milestone should:
 
 - preserve the existing `App` / `GameSession` and controller / mapper / renderer architecture
 - keep gameplay logic separate from rendering/input
 - treat `docs/game_vision_complete.md` and `docs/combat_rules.md` as source-of-truth design docs where they are explicit
+- use `docs/terminology_map.md` as the terminology source of truth when older runtime or content names still exist
 - tighten vision/docs first when a major system is still ambiguous
 - keep new work bounded to the current single-Region slice unless a milestone explicitly expands scope
-- avoid depending on unresolved systems, but do use the settled party/world terminology and direction when planning future work
+- avoid depending on unresolved systems, but do use the settled party/world-map terminology and direction when planning future work
 - maintain responsiveness, explicit ownership, leak resistance, and performance
-
-## Terminology note
-
-The current design terminology is defined in `docs/terminology_map.md`.
-
-Use that document as the source of truth for terms such as **World Map**, **Region**, **Location**, **Service**, **Traveling party**, **Stored units**, and **Temporarily Unavailable**.
-
-Note that some legacy runtime, content, and serialized names may still use older terms such as `overworld`, `overworld_mode`, or `overworld_selection`. When there is a mismatch, prefer the terminology in `docs/terminology_map.md` for design and planning.
-
 
 ## Build
 
@@ -263,4 +263,5 @@ cmake --build build
 - `docs/content_scope_v0.md` remains a scope cap, not a checklist of completed work.
 - The active long-term north-star doc is `docs/game_vision_complete.md`.
 - The active battle-rules doc is `docs/combat_rules.md`.
+- The active terminology doc is `docs/terminology_map.md`.
 - The current codebase is still a bounded slice and does not yet implement the full campaign/scenario/World-Map/cross-Region rule set.
