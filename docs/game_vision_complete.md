@@ -1,757 +1,552 @@
-# Complete Game Vision
+# Game Vision Complete
 
-This document is the current north-star description for the **finished direction** of Project Ashvale.
+This document describes the current intended long-term vision for Project Ashvale.
 
-It is intentionally more concrete than `docs/game_vision.md`, but it is still a design guide rather than a promise that every feature is near-term. Active milestone docs and the current codebase remain the source of truth for immediate implementation work.
+For terminology, see `docs/terminology_map.md`.
 
-## Core player fantasy
+Detailed systemic rules live primarily in:
+- `docs/combat_rules.md`
+- `docs/core_loop_rules.md`
+- `README_DECISIONS.md`
+
+This file stays at the **vision** level. It explains the intended shape of the game and the major layers of play without restating every exact rule and formula.
+
+---
+
+## 1. Core fantasy
+
+Project Ashvale is a turn-based strategy/RPG about surviving, organizing a traveling force, and pushing through hostile territory while building enough strength, allies, and positional advantage to win a Scenario.
+
+The intended experience combines:
+- authored world structure
+- readable tactical combat
+- meaningful roster consequence
+- travel and logistics pressure
+- enemy-team competition on the Region layer
+- strong scenario identity
 
 The player should feel like they are:
-- surviving a broken world one day at a time
-- making meaningful route, risk, and time-management choices
-- gathering survivors, allies, items, and story fragments
-- building a capable traveling party while deciding what to carry forward and what to leave behind
-- turning damaged or reclaimed places into real safe havens
-- growing from fragile routine into confident regional recovery
+- moving through dangerous territory
+- making meaningful travel and roster decisions
+- interacting with authored places and factions
+- competing with other active forces in the world
+- recovering from setbacks rather than merely resetting after them
 
-The game should combine:
-- scenario-level world-map planning
-- node-based regional travel
-- walkable location exploration
-- readable, tactical CTB battles
-- service and economy planning across days and weeks
-- story and restoration anchored around meaningful places of safety
+---
 
-## Tone
-
-Ashvale should feel:
-- melancholic
-- mysterious
-- intimate rather than epic
-- safe and cozy in reclaimed spaces
-- uneasy and dystopian in occupied or damaged spaces
-
-It is not grimdark. Hope, routine, and rebuilding are part of the fantasy.
-
-## Terminology and hierarchy
-
-Project Ashvale uses this structure:
-
-- A **campaign** is a collection of connected scenarios. It may be linear or branching, and may or may not tell one continuous story.
-- A **scenario** is the top-level authored playable unit.
-- Each **scenario** contains exactly one **World Map**.
-- A **World Map** contains one or more **Regions**.
-- A **Region** is the main travel space inside a scenario.
-- A **Region** contains authored **nodes** connected by legal travel routes.
-- A **Location** is an enterable place reached from a region node.
-- A **Service** is a functional interaction available either directly in a region or inside a location.
-
-For practical use in the project:
-- use **Region** as the main term for the regional travel layer
-- treat **overworld** as older vocabulary for the same concept
-- use **World Map** for the higher-level scenario map above regions
-- avoid introducing new design terminology that duplicates **World Map** or **Region** when those terms already fit
-
-The intended hierarchy is:
-
-**Campaign -> Scenario -> World Map -> Region -> Node -> Location**
+## 2. World structure
 
 ### Campaign
+A **Campaign** is a collection of connected Scenarios.
 
-A campaign is a collection of scenarios that may branch or reconnect.
-
-In a campaign:
-- the player wins by completing a connected path through 2 or more scenarios to a campaign ending
-- scenario transitions may branch based on victory condition, player choice, or authored rules
-- some transitions may offer multiple follow-up scenarios
-
-A campaign does not have to be one tightly continuous story. The important part is that its scenarios are connected and that the campaign itself has a winnable structure.
+A Campaign may:
+- tell a coherent story
+- branch
+- carry selected data from one Scenario to another
+- allow different follow-up Scenarios based on victory conditions or player choices
 
 ### Scenario
+A **Scenario** is the top-level authored play unit.
 
-A scenario is the top-level authored play unit.
+A Scenario should feel complete on its own, even when it is also one chapter inside a larger Campaign.
 
-A single scenario should feel like a complete playable experience even when it is part of a larger campaign.
+### World Map
+Each Scenario has a **World Map**.
 
-A scenario may define:
-- its regions and world-map structure
-- its hero pool and other recruitment rules
-- its services, enemies, quests, and victory conditions
-- what, if anything, carries over from a previous scenario
-- authored story/state choices that affect follow-up scenarios
+The World Map is the layer where the player:
+- inspects Regions
+- sees which Regions are unlocked and enterable
+- initiates Region-to-Region travel
 
-### Campaign carry-over
+World Map travel is strategic and time-consuming. It is not free repositioning.
 
-Carry-over between scenarios is content-defined per campaign or scenario transition.
+### Region
+A **Region** is the main in-scenario travel space.
 
-Depending on the scenario rules, carry-over may include:
-- heroes
-- items and equipment
-- generic troops
-- gold
-- selected story flags
-- no gameplay carry-over except story continuity
+A Region is:
+- an authored node graph
+- explored and traversed by the traveling party
+- the place where route quality, Energy, enemy teams, node ownership, and occupation matter
 
-Only explicitly legal entities should carry over. Even when gameplay state resets between scenarios, remembered story choices should still persist when the campaign uses them.
+The player is always in exactly one Region at a time.
 
-## The big gameplay loops
+### Location
+A **Location** is an entered place inside a Region.
 
-### Minute-to-minute
+Locations can represent:
+- towns
+- settlements
+- hideouts
+- dungeons
+- special sites
+- other authored places
 
-The player:
-- travels to a destination
-- enters a location, service, or battle
-- spends time, gold, party durability, or other resources
-- gains information, items, recruits, or route access
+A Location may contain:
+- NPCs
+- multiple screens
+- multiple Services
+- quests
+- story events
+- combat encounters
+- safe-anchor functionality
 
-### Day-to-day
+### Service
+A **Service** is a functional interaction available either:
+- directly on the Region layer
+- or inside a Location
 
-The player:
-- plans where to travel before time cutoffs matter
-- chooses when to fight, rest, shop, recruit, store units, or return to safety
-- balances risk against recovery and progress
-- deals with the consequences of attrition, defeat, and hero unavailability
+Services should feel like authored world functionality rather than generic menu abstractions.
 
-### Week-to-week
+---
 
-The player:
-- plans around weekly service refresh and hero-pool return timing
-- decides how to spend limited gold and recruit opportunities
-- gradually unlocks better routes, safer regions, and stronger locations
-- feels that the world and the player's safe anchors are becoming more stable
+## 3. Region structure vision
 
-## World Map vision
+Regions use a **single-purpose node model**.
 
-Each scenario contains exactly one **World Map**.
+The main node categories are:
 
-The World Map is the top-level strategic layer for the current scenario.
-Its purpose is to organize the scenario into multiple authored **Regions** and let the player understand the broader structure of the scenario.
-
-The World Map:
-- contains the scenario's starting region
-- contains other regions that may become available over time
-- acts as the region-selection layer for cross-region travel
-- acts as an information screen for scenario-level planning
-
-The player is not physically “inside” the World Map the same way they are inside a region or location.
-The World Map is a strategic selection and information layer above region play.
-
-### World Map rules
-
-The World Map can be opened at any time **outside battle**, as long as the player is inside a scenario.
-
-The player can use it:
-- for information
-- for planning
-- for cross-region travel when travel is legal
-
-Travel action is disabled when travel is not legal.
-
-Regions:
-- unlock gradually through authored scenario logic
-- may also become temporarily enterable or non-enterable through flags and world-state changes
-- do not use a built-in one-time-only travel rule, but scenario logic may emulate that behavior by changing region availability flags
-
-### Region travel rules
-
-Cross-region travel follows these rules:
-
-- region travel is initiated from the **Region** layer, not from inside a Location
-- if the player is inside a Location, they must first return to the Region layer
-- if the player is inside a dungeon, region travel is not allowed
-- the World Map may still be opened for information when travel is illegal, but the travel action is disabled
-- region travel must begin before **11:00**
-- if the current time is **11:00 or later**, travel is disabled until the next day
-- region travel costs **1000 Energy** when travel begins
-- that Energy cost is paid once, even when the trip takes multiple days
-- region travel also costs **time** based on Region distance
-- region travel does not consume gold or other generic resources
-- arrival always happens at **11:00** on the arrival day
-
-Distance uses the **shortest valid path** through enterable adjacent Regions.
-
-Practical rule:
-- directly adjacent Regions cost **1 day**
-- if there are 2 Regions between the current Region and the destination, travel time is **3 days**
-- all Region steps count equally for travel time
-- travel is only possible when a valid contiguous path exists through currently enterable Regions
-
-
-### Region arrival
-
-Each Region must define an **arrival node**.
-
-Arrival-node rules:
-- the arrival node is authored by the scenario designer
-- arrival is a flag, not a standalone node type
-- an arrival node may also be a legal **Location node** or **single Service node**
-- enemies may not spawn on it
-- enemy teams may not occupy it
-- the arrival node must always resolve into a safe, predictable entry point for cross-region travel
-
-
-### Region presentation
-
-Selecting a region on the World Map should:
-- highlight that region clearly by its borders
-- show an informative visual panel for the region
-- display useful information such as:
-  - difficulty
-  - terrain
-  - expected resources
-  - regional identity
-  - story or quest relevance
-  - size or scale
-  - other scenario-defined notes
-
-The World Map should feel like a strategic planning view, not just a menu list.
-
-## Party, roster, and storage vision
-
-### Active party, reserve, and traveling party
-
-Outside battle, **party** should mean the **active party**.
-
-The active party:
-- is the current battle-legal fielded group
-- has a maximum size of **5**
-- must always remain battle-legal
-- must always contain exactly one assigned leader
-
-The reserve:
-- travels with the player
-- has a maximum size of **7**
-- can be switched into the active party from the global party-management menu
-- does not directly field in battle unless moved into the active party first
-
-The **traveling party** means:
-
-**active party + reserve**
-
-So the maximum traveling-party size is **12**.
-
-### Stored units
-
-Stored units are different from reserve units.
-
-Stored units:
-- do not travel with the player
-- are assigned to a specific **storage service**
-- remain at that storage service until moved again
-- can include **heroes or generic stacks**
-- use a separate slot cap from the active party and reserve
-
-Each storage service:
-- is neutral and can store any unit type
-- has **7 slots**
-- persists in its parent region
-- is independent of other storage services, even within the same region
-
-A region may contain multiple storage services.
-
-### Global party-management rules
-
-There should be a broader out-of-battle party-management menu available outside battle.
-
-That menu should allow the player to:
-- inspect units
-- choose the active party
-- assign the leader
-- change active-party positions
-- equip items
-- consume items
-- heal units through item use or other legal actions
-- disband generic units
-- dismiss heroes when legal
-
-What it should **not** do:
-- move units into or out of storage from anywhere
-
-Storage transfer must happen at the storage service itself.
-
-### Position and leadership outside battle
-
-Active-party position is persistent.
-
-Rules:
-- battle starts with the active party's current positions
-- position changes made in battle persist afterward
-- the `Leader` position is persistent like other active-party positions
-- reserve units do not keep an active battle position while in reserve
-- when a reserve unit is moved into the active party, it normally receives the game's best default position for that unit
-- if a reserve or stored unit directly replaces an active unit, it inherits the replaced unit's position
-- the leader cannot be removed from the active party unless directly replaced by another legal leader-capable hero
-
-The player character is the default fallback leader, but the player may manually assign another active hero as leader outside battle.
-
-If the current leader becomes temporarily unavailable:
-- the game automatically assigns a legal fallback leader
-- this fallback is temporary until the player changes it manually
-
-### Generic stacks
-
-Generic units use stack behavior outside battle as well as in battle.
-
-Rules:
-- generic stacks of the same type merge automatically on recruitment when possible
-- the player may manually split or merge same-type generic stacks outside battle
-- partial stacks may be stored
-- splitting and merging require legal slot usage
-
-The intended feel is closer to Heroes of Might and Magic stack management than to individual generic-unit micromanagement.
-
-### Heroes
-
-Heroes are scenario-governed units, not generic abstract hires.
-
-Rules:
-- heroes come from a scenario-defined pool, with a default pool available when the scenario designer does not fully specify one
-- a scenario designer may also author specific custom heroes
-- a hero may only appear in one recruit service at a time
-- a hero who is already traveling, stored, or temporarily unavailable is not eligible for recruit rerolls
-- a hero may be dismissed when legal, but that does not remove them permanently from the scenario
-
-### Temporarily Unavailable heroes
-
-The internal design term for heroes who are not currently usable should be **Temporarily Unavailable**.
-
-A temporarily unavailable hero:
-- is removed from the active party
-- is removed from reserve
-- is removed from storage
-- is not recruitable
-- does not consume upkeep
-- returns to the scenario hero pool at the **start of the next week**
-
-This state can happen because:
-- the hero was still KO'd when a battle ended
-- the hero was voluntarily dismissed
-- another authored rule temporarily removes the hero
-
-The player-facing flavor text can vary by context, but the underlying gameplay state is the same.
-
-### Recruitment rules
-
-Recruitment is legal if at least one of the following is true:
-- there is a free active-party slot
-- there is a free reserve slot
-- there is an existing same-type generic stack in the active party or reserve that can receive the recruited units
-
-Recruit destination rules:
-- if there is a free active-party slot, the recruited unit goes to the first free active slot
-- otherwise, if there is a free reserve slot, the recruited unit goes to the first free reserve slot
-- otherwise, recruitment is illegal and nothing happens beyond player feedback
-
-Hero recruitment:
-- happens one hero at a time
-- allows the player to recruit one, many, or none from the current service list, as long as each pick is legal and affordable
-
-### Cross-region party state
-
-Cross-region travel does **not** preserve all traveling units equally.
-
-Rules:
-- all heroes in the traveling party cross regions with the player
-- generic units in the traveling party do **not**
-- generic traveling units are lost on region change unless the player stored them beforehand
-- the player must be warned clearly before confirming region travel that would discard generic traveling units
-- stored units remain in their original region and persist there
-
-When the player leaves a region, that region still remembers its persistent state, including:
-- stored units
-- recruit offerings
-- enemy attrition and enemy-party persistence
-- cleared or changed nodes
-- service state
-- other authored region-local progression
-
-## Home base vision
-
-A “Home Base” is a kind of **Location** that functions as a meaningful safe anchor.
-
-It is not required that every Region contain one.
-Some scenarios may contain strong safe-haven Locations; others may intentionally deny the player a true home base.
-
-What makes a Location a safe anchor is simple and systemic:
-- it provides **free guaranteed rest**
-
-A Home Base may also provide additional authored value such as:
-- story progression and survivor conversations
-- restoration milestones
-- baseline services
-- hero recovery support
-- storage
-- a strong emotional sense of safety and return
-
-Home Base is therefore a design role, not merely a fixed building type or guaranteed scenario feature.
-
-
-## Region vision
-
-Regions should remain **node-and-route based** rather than free-roaming.
-
-A Region is an authored travel graph inside a scenario's World Map. The structure should be authored, while reusable systemic rules operate on top of it.
-
-Key principles:
-- nodes represent authored destinations with gameplay meaning
-- routes define the legal travel graph inside a Region
-- route access can change because of clears, blockers, quests, occupation, or future progression conditions
-- the player should understand why a path is open, blocked, distant, expensive, or unsafe
-- travel should feel like planning, not busywork
-
-### Region node model
-
-Use a **single-purpose node model**.
-
-Core node categories are:
-- **empty/travel node**
+- **empty / travel node**
 - **Location node**
 - **single Service node**
 - **blocker node**
 
-Additional rules:
-- there is **no dedicated combat-node type**
-- **arrival** is a flag, not a node type
-- an empty/travel node may temporarily contain a single pickup/resource or a single stationary hostile encounter
-- once that pickup is taken or that hostile encounter is cleared, the node becomes an ordinary empty/travel node
-- blocker nodes that are cleared permanently also become ordinary empty/travel nodes unless they are authored to require payment or permission every time
+There is no dedicated permanent combat-node type in the intended design.
 
-### Routes and Region travel inside a Region
+Instead:
+- a normal node may contain one-time hostile content
+- a normal node may contain a one-time item or resource
+- once that content is cleared, the node becomes an ordinary empty travel node
 
-Inside a Region:
-- the player may select any reachable node directly
-- the game uses the **shortest valid path** for travel resolution
-- same-node selection is not a meaningful move and has no travel effect
-- blocked nodes remain visible even when unusable
+This keeps the Region layer understandable and content-driven.
 
-Routes have authored terrain quality.
+### Arrival nodes
+Each Region has a protected **arrival node**.
 
-A route is either:
-- a **road**, which applies no route penalty
-- or a terrain quality such as rough snow, desert, meadow, or other authored terrain
+Arrival is a flag rather than a separate node category.
 
-Route quality affects both:
-- travel **time** inside the Region
-- travel **Energy** cost inside the Region
+An arrival node may also be:
+- a Location node
+- or a single Service node
 
-### Energy
+But arrival nodes are protected from enemy spawning and enemy occupation.
 
-Energy belongs to the **traveling party**, not to individual units.
+### Routes
+Routes between nodes are authored and matter.
 
-Starting Energy each day is:
+Route quality should communicate:
+- speed
+- difficulty
+- travel friction
 
-**1000 + (lowest traveling-party agility × 100) + leader passive bonus + leader item bonus**
+Roads are the baseline. Rough terrain increases travel burden.
 
-Where:
-- “lowest traveling-party agility” means the agility value of the slowest unit in the current traveling party
-- the traveling party means **active party + reserve**
-- leader bonuses apply only when the traveling party currently has a leader
-- enemy teams may not always have a leader, so equivalent leader bonuses may be absent for them
+### Location nodes vs direct Service nodes
+The intended distinction is:
 
-Energy may be restored by:
-- resting
-- services
-- items
-- authored events
+- **direct Service node** = quick functional interaction on the Region layer
+- **Location** = entered authored place with richer content, NPCs, multiple Services, or dungeon-like structure
 
-The traveling party may also use a rest action that:
-- takes **3 hours**
-- restores **300 Energy**
+That distinction should remain clear in future design and implementation.
 
-A move is illegal when the traveling party does not have enough Energy to complete it. The destination should still be inspectable even when travel is currently illegal.
+---
 
-### Enemy teams
+## 4. Travel, time, and Energy
 
-A Region may contain one or more **enemy teams**.
+The player manages a **traveling party** and a shared **Energy** pool.
 
-An enemy team is an AI traveling party that follows the same broad party rules as the player side:
-- it can contain heroes and generic units
-- it moves on the Region graph
-- it can attack and be attacked by the player's traveling party
-- it can use direct Region services
-- it can recruit heroes and generic units through legal Region services
-- it can rest
-- it can fight stationary hostile encounters
-- it does **not** travel between Regions
-- it does **not** enter Locations
-- it only acts while the player is currently in the same Region
+Travel should feel constrained in a readable, strategy-friendly way:
+- time matters
+- route quality matters
+- Energy matters
+- party composition matters
 
-Enemy teams may occupy legal Region nodes. If a hostile team occupies a node, the opposing side must defeat that team before using or entering what is on that node.
+### Region travel
+Inside a Region, travel should be:
+- shortest-path based
+- node-to-node
+- legible
+- meaningfully affected by route quality
 
+### World Map travel
+Travel between Regions should feel like a deliberate strategic commitment.
 
-## Location vision
+It should:
+- cost time
+- cost Energy
+- move the player to a protected arrival node in the destination Region
+- force the player to think about what they are leaving behind
 
-Locations should feel like authored spaces with identity, not just generic scene shells.
+### Location entry
+Entering and exiting a Location should not itself cost time.
 
-A Location:
-- is entered from a parent Region
-- may contain zero or more Services
-- may contain NPCs, story scenes, and quest interaction
-- may use one or many walkable screens
-- may represent a town, settlement, guild, hideout, ruin, dungeon, or other authored place
+This keeps Locations usable as authored spaces without making basic interaction feel overly cumbersome.
 
-Locations may contain:
-- service interactions
-- NPC dialogue and memory fragments
-- restoration context
-- scene transitions
-- safe interactions, risky interactions, or story interactions
-- combat content, including dungeon-like fights and bosses, when authored
+### Rest and recovery
+Rest, Services, items, and events should all matter as part of travel endurance.
 
-Rules:
-- entering a Location costs **no time**
-- exiting a Location costs **no time**
-- a dungeon is a kind of Location, not a separate top-level structural layer
-- enemy teams do **not** enter Locations
-- however, an enemy team may occupy the Location node in the parent Region
-- if a hostile team occupies a Location node, the opposing side must defeat that team before entering the Location
+A safe anchor should feel meaningfully safer than a hostile or unstable Region.
 
-### Direct Services vs Locations
+---
 
-Use a **single Service node** for quick functional interaction on the Region layer.
+## 5. Party, reserve, storage, and loss
 
-Use a **Location** when the place should support one or more of the following:
-- exploration
-- multiple Services
+### Active party
+The **active party** is the battle-legal force used directly in combat.
+
+It should be:
+- small
+- curated
+- strategically meaningful
+
+### Reserve
+The **reserve** travels with the player and expands tactical and roster options without directly entering every battle.
+
+### Traveling party
+The **traveling party** is the player’s active party plus reserve.
+
+It determines:
+- travel presence in the world
+- cross-Region hero transfer
+- Energy computation
+- vulnerability to Region-travel consequences
+
+### Stored units
+Stored units are tied to a specific storage Service and do not travel with the player.
+
+Storage should create meaningful logistical decisions:
+- what to carry
+- what to leave behind
+- what to defend
+- what to risk
+
+### Cross-Region consequence
+Heroes in the traveling party travel between Regions.
+
+Generic units in the traveling party do not survive Region change unless stored first.
+
+This is an intentional strategic pressure point. Region travel should feel consequential.
+
+### Temporarily Unavailable heroes
+Heroes removed from the roster should usually enter a **Temporarily Unavailable** state rather than simply disappearing from design logic.
+
+That state should support:
+- battle loss consequence
+- dismissal consequence
+- later re-entry into the hero pool
+- competition with other teams for hero availability
+
+---
+
+## 6. Battle vision
+
+Battle is a static formation-based CTB system.
+
+The intended feel is:
+- readable
+- mostly deterministic
+- tactically meaningful
+- fast enough to repeat
+- deep enough that party composition matters
+
+### Formation
+Battle uses:
+- Front
+- Middle
+- Back
+- Leader
+
+The active party has up to 5 units, with the leader occupying one of those slots.
+
+### Leadership
+Only hero units may be leaders in the intended design.
+
+Leader choice matters both:
+- because of aura and bonuses
+- and because it shapes the identity of the active party
+
+### Position
+Position is tactically meaningful, but battle does not use free movement on a grid.
+
+Position changes are deliberate actions, not free battlefield drift.
+
+### Readability
+The player should see enough information to make tactical decisions confidently:
+- turn order
+- target previews
+- min/max damage
+- min/max KO / kill result
+- clear legality and penalty feedback
+
+Detailed battle rules live in `docs/combat_rules.md`.
+
+---
+
+## 7. Enemy teams and world competition
+
+One of the defining parts of the long-term vision is that the player is not alone on the Region layer.
+
+Enemy teams are AI-controlled traveling parties that:
+- move through Regions
+- compete for resources, recruits, and position
+- attack or avoid the player based on behavior profile
+- occupy important nodes
+- defend or destroy key Services
+- sabotage other teams when it helps them win
+
+This is a major part of the game’s identity.
+
+The world should feel contested, not static.
+
+### Authored setup, systemic behavior
+Enemy teams should be:
+- **authored in setup**
+- **systemic in behavior**
+
+A designer should be able to define:
+- team color
+- starting node
+- template
+- alliances
+- patrol radius
+- personality
+- aggression
+
+From there, the game should handle their movement and decision-making under shared world rules.
+
+### Team colors and alliances
+Teams are identified by color.
+
+Teams are either:
+- allies
+- or enemies
+
+There is no permanent middle state.
+
+Alliance changes are authored events, not soft drifting diplomacy.
+
+### Shared world rules
+Enemy teams should use the same broad systemic world rules as the player where practical:
+- Energy
+- movement legality
+- service use
+- recruitment competition
+- hero-pool competition
+- storage loss
+- leaderless teams where allowed
+
+### Personality and aggression
+Enemy behavior should be shaped by:
+- broad personality
+- aggression threshold
+- patrol constraints
+- authored objectives
+
+Baseline personalities are:
+- Warrior
+- Builder
+- Explorer
+
+Baseline aggression levels range from:
+- Berserk
+- to Pacifist
+
+This allows enemy teams to feel distinct without requiring unique hardcoded AI for every Scenario.
+
+### Auto-resolve-first design
+On the Region layer, battles involving the player should first produce an auto-resolve outcome that the player may either:
+- accept
+- or replay manually
+
+AI-vs-AI battles should auto-resolve without interrupting play directly.
+
+This supports a game with multiple active teams and many possible collisions without making pacing collapse.
+
+---
+
+## 8. Sabotage, ownership, and strategic denial
+
+Enemy-team competition is not limited to direct battle.
+
+The intended vision includes strategic denial and sabotage such as:
+- blocking access to important nodes
+- occupying Locations
+- denying resources
+- draining recruit pools
+- attacking storage gates
+- destroying destroyable Region Services
+- contesting owned nodes such as mines
+- using sanctuaries or chokepoints to create positional pressure
+
+This makes the Region layer feel alive and contested.
+
+### Ownership
+Some nodes and Services may be owned by a team.
+
+Ownership matters because it creates:
+- resource flow
+- territorial pressure
+- reasons to defend infrastructure
+- reasons to raid or sabotage
+
+Ownership should transfer immediately when captured.
+
+### Mines and income nodes
+Mines and similar owned-resource nodes should act as strategic assets.
+
+They should be:
+- capturable
+- contestable
+- optionally guarded
+- worth defending
+- meaningful to sabotage indirectly
+
+### Service destruction and restoration
+Destroyable Region Services add a useful layer of strategic warfare.
+
+Destruction should feel like:
+- targeted denial
+- deliberate Energy and time expenditure
+- a way to reshape pressure in a Region
+
+Restoration should feel like:
+- committing resources to rebuild local support
+- setting recovery in motion rather than instantly repairing the world
+
+### Sanctuary
+Sanctuary is an important special case.
+
+A sanctuary is a Region Service node where combat cannot be initiated.
+
+This creates:
+- protected waiting spaces
+- route tension
+- strategic occupation pressure
+- temporary safety without requiring a full Location
+
+### Storage gates
+Direct storage nodes are not just inventory abstractions.
+
+They are:
+- logistical anchors
+- defensible assets
+- tempting sabotage targets
+- a place where stored units can be meaningfully lost if not defended
+
+---
+
+## 9. Hero availability beyond ordinary recruitment
+
+The vision includes more than standard hero tavern/guild recruitment.
+
+### Shared hero pool
+Heroes should come from a shared scenario-defined pool, possibly with authored overrides.
+
+This allows:
+- competition between teams
+- hero disappearance and later return
+- scenario identity
+- meaningful roster churn
+
+### Sealed / Frozen Heroes
+Some heroes may appear in special one-time Region Services where they are trapped, sealed, or frozen.
+
+Freeing such a hero should feel like:
+- a time-and-Energy investment
+- a meaningful prize
+- an authored moment in the world
+- a direct roster expansion opportunity if the team has room
+
+These nodes should become ordinary travel space after the hero is freed.
+
+---
+
+## 10. Locations, dungeons, and safe anchors
+
+### Locations
+Locations are where authored place identity can flourish.
+
+They should justify entry through:
 - NPC interaction
-- multiple screens
-- stronger authored identity
-- dungeon-like traversal or combat structure
+- multiple Services
+- story scenes
+- more textured presentation
+- dungeon or settlement identity
 
-Services inside a Location are performed through interaction with NPCs or fitting world objects.
+### Dungeons
+Dungeons are a type of Location.
 
-Shared prototype scenes are acceptable during slice development, but the finished game should support strong location identity through content.
+They should feel like entered authored spaces, not simply tougher nodes on the Region layer.
 
+### Safe anchors
+Not every Region needs a safe haven.
 
-## Battle vision
+A safe anchor is simply a Location that provides free guaranteed rest.
 
-Battles should remain true turn-based CTB, highly readable, and tactically deterministic.
+That keeps the definition sharp and systemic while allowing wide authored variety.
 
-The battle layer should feel closer to a classic Final Fantasy-style formation battle than to a grid tactics game:
-- battle is static rather than free-movement
-- units act from formation positions instead of moving on a battlefield grid
-- target selection is free, but target distance within the formation affects turn-order pressure through agility penalties
-- the player should understand the tactical consequences of an action before committing it
+“Home Base” is better understood as a scenario-authored safe-anchor concept, not as a universal mandatory structure.
 
-The battle module should support:
-- clear turn-order communication
-- meaningful turn-frequency manipulation
-- stack-based generic units plus hero units
-- strong role identity for units, heroes, and leaders
-- readable consequences for defeat, KO, temporary unavailability, and attrition
-- enough tactical depth to make route blockers and high-risk destinations feel significant
+---
 
-Battle should stay deterministic apart from intentional damage variance and should remain testable independently from rendering.
+## 11. Fog of war and information
 
-### Formation and targeting
+The world should not be fully transparent at all times.
 
-A battle party can field up to 5 units.
+The player should:
+- see known and currently revealed parts of a Region
+- infer danger from enemy motion and ownership pressure
+- discover more through movement and exploration
 
-Battle formation uses four position labels:
-- `Front`
-- `Middle`
-- `Back`
-- `Leader`
+Enemy movement and AI-vs-AI outcomes should only be visible where the Region is revealed.
 
-The `Leader` position is one of the 5 battle slots, not an extra slot.
+This supports both:
+- strategic uncertainty
+- and a stronger sense that other teams are acting in the world whether or not the player sees every detail
 
-Formation rules:
-- only hero units can occupy the `Leader` position
-- multiple units may share `Front`, `Middle`, or `Back`
-- units do not move freely during battle
-- changing position is a deliberate battle command that consumes the acting unit's turn
-- only hero units may switch into the `Leader` position
-- taking the `Leader` position swaps with the current leader rather than creating a second leader
+---
 
-Targeting rules:
-- any unit may target any enemy unit
-- position does not directly block targeting or change damage by itself
-- position matters because the target's **effective row depth** influences agility penalty on attacks and similar actions
-- literal position labels remain visible to the player, but battle calculations use effective row depth rather than naïvely collapsing every gap in the formation
+## 12. Scenario identity and authored control
 
-### Turn order, commands, and readability
+Even though the game has strong systemic behavior, Regions and Scenarios should still feel authored.
 
-Turn order should behave like a readable CTB timeline:
-- the player should always understand who is acting next
-- the player should see how a chosen action changes the future turn order before confirming it
-- the game should prefer readable outcome previews over exposing raw internal timing math
+A designer should be able to shape:
+- world structure
+- team setup
+- alliances
+- unlock progression
+- available heroes
+- service distribution
+- ownership opportunities
+- sabotage pressure
+- safe anchors
+- story triggers
+- branching outcomes
 
-Battle commands should follow a classic JRPG structure:
-- baseline actions include `Attack`, `Defend`, and context-appropriate access to `Skill` and `Item`
-- only hero units can use items in battle
-- generic units may surface 0-2 direct skills on the main command layer when appropriate
-- `Wait` and manual position-change commands belong to a secondary command layer rather than the main baseline menu
+The systems should create interaction, but the Scenario should still feel intentional.
 
-Readability expectations:
-- show turn-order impact before action confirmation
-- show min-max damage on selected targets
-- show min-max KO / kill outcome when relevant
-- make agility-penalty pressure understandable through clear UI cues rather than opaque math dumps
+---
 
-### Leadership and party legality
+## 13. Implementation posture
 
-The player team's active battle party must always contain a legal leader-capable unit.
-In practice, that means a hero unit must be available to hold the `Leader` position.
+The intended long-term direction is:
 
-Leadership rules:
-- the player character is the default leader whenever present in the active party
-- the player may assign a different hero as leader outside battle
-- enemy teams may or may not have a leader
-- when a team has a leader, the same leader-position and aura mechanics apply to both player and enemy teams
-- the assigned leader is a normal battle participant from turn 1
-- if the assigned leader falls in battle, the aura is removed immediately
-- a living hero can manually take the `Leader` position later in the same battle to restore the aura immediately
-- leader reassignment is never automatic
+- authored world structure
+- reusable systemic rules
+- readable tactical feedback
+- low ambiguity in terminology
+- content-driven expansion
 
-Leader aura is a baseline rule of the battle system rather than a temporary prototype.
-Passive skills and equipment may later extend, modify, or react to that baseline aura behavior.
+The source may still contain some legacy names or intermediate runtime structures. Those should not override the current design language.
 
-### Recovery, attrition, and persistence
+Use:
+- **World Map**
+- **Region**
+- **Location**
+- **Service**
+- **Traveling party**
+- **Stored units**
+- **Temporarily Unavailable**
 
-Battle outcomes should matter beyond the immediate encounter.
+as the current design terminology.
 
-The intended persistence model is asymmetric:
-- hero HP persists between battles unless restored by other means
-- generic units restore HP after battle, but stack-count loss persists
-- MP persists for all units
-- temporary battle-only buffs and debuffs are cleared after battle
-- some overworld-applied buffs may last for 1 battle, 1 day, or 1 week depending on their source
-
-KO and recovery rules:
-- a KO'd hero can be revived during battle
-- if a non-player hero is still KO'd when a battle ends, that hero becomes temporarily unavailable
-- the player character is a special case and returns at 1 HP after a winning battle if still KO'd
-- generic unit loss that remains at battle end is permanent unless the units were revived before the battle ended
-
-Enemy parties should follow the same broad persistence logic as the player side.
-This allows recurring enemy groups, persistent attrition, and authored enemy recovery behavior between days or after using world services.
-
-### Leadership and party legality
-
-- the active battle party can field up to 5 units
-- the player team's active party must always contain a legal leader-capable unit
-- the player character is the default leader whenever present in the active party
-- enemy teams may or may not have a leader
-- when a team has a leader, the same leader-position and aura mechanics apply to both player and enemy teams
-- the assigned leader is a normal battle participant from turn 1
-- if the assigned leader falls in battle, the aura is removed immediately
-- non-player heroes can leave the party after battle if still KO'd
-- the player character is a special case and returns at 1 HP after a winning battle
-
-## Service and economy vision
-
-Services should be meaningful because of **cost, stock, quantity, refresh cadence, and world context**, not because they are arbitrarily disabled.
-
-A **Service** is a functional interaction point.
-It may exist directly in a Region or inside a Location. Direct Region Services are meant for quick functional interaction; Locations are for richer authored spaces that may contain zero or more Services.
-
-### Inns and recovery services
-
-- inns are generally usable if present
-- resting at inns costs gold
-- some safe-anchor locations may provide free or discounted recovery
-- a location may offer hero-restoration support, but that is authored service behavior, not a universal Home Base guarantee
-
-### Recruitment services
-
-- generic-unit recruit services offer 1 or more recruitable unit types
-- each offer has a quantity limit
-- recruit quantities can replenish on a weekly cadence
-- hero-recruit services pull from the scenario hero pool
-- when the player enters a region, hero offerings for that region reroll from all heroes who are not traveling, stored, or temporarily unavailable
-- the same available hero may appear in only one service at a time within the region
-- stronger or rarer recruit points can become major regional objectives
-
-### Storage services
-
-- storage services hold a Region-persistent 7-slot stored-unit container
-- storage may exist inside a Location or as a direct Region Service
-- interacting with a storage service should open a broader party/storage management view
-- that view should make it easy to move units between active party, reserve, and storage while respecting legality rules
-- a direct Region storage service behaves as a defensible gate for its owning side
-- if an enemy team attacks a direct storage service while the player is absent, only the units stored there defend it
-- if that defense fails, all units stored there are dismissed or otherwise removed from that storage according to the hero/generic loss rules
-
-
-### Shops and service points
-
-- shops should be content-driven and have identity
-- stock may be finite, simple, or refreshed on a cadence depending on the service
-- the important distinction is what they offer and what they cost, not whether they are globally enabled or disabled
-
-## Quest and story vision
-
-Quests should remain understandable and content-driven.
-
-Longer-term, quests may expand beyond the current minimal slice, but the game should still avoid a bloated scripting-first design.
-
-Desired qualities:
-- typed objectives and events where possible
-- quests that react to meaningful world changes
-- story delivered through places, survivors, and restoration progress
-- clear short-term goals tied to the current region and its meaningful safe anchors
-- scenario-authored hero, location, and service behavior when that strengthens identity
-
-## Scenario success and failure vision
-
-Scenario victory and failure conditions are content-defined.
-
-By default, scenarios are expected to use a forgiving in-game time limit, but scenarios may also define more specific loss conditions such as:
-- failing to complete objectives before a certain day
-- losing a required hero
-- allowing an enemy hero or force to reach a critical destination
-- failing to protect a key town, survivor group, or route
-
-This part of the design is still flexible and may evolve, but the intended direction is:
-- victory and failure should be scenario-authored
-- time pressure should usually be meaningful without becoming oppressive
-- campaign progression should still preserve story continuity and remembered player choices
-
-## Content and editor vision
-
-The game should remain strongly content-driven.
-
-Longer-term, designers should be able to create, update, and delete content through dedicated tooling rather than hand-editing code.
-
-This implies:
-- stable ids
-- explicit content schemas
-- authored content kept separate from runtime mutable state
-- gameplay systems that consume typed content definitions cleanly
-- minimal hidden logic baked only into rendering or input code
-
-The future editor should be able to reason about:
-- campaigns and scenario chains
-- World Maps and Regions
-- region nodes and links
-- locations and scenes
-- service definitions
-- storage and recruitment services
-- hero pools and hero availability rules
-- quest content
-- battle scenarios and balance values
-- scenario victory and failure conditions
-
-## Technical guardrails
-
-Even as scope expands, these constraints remain important:
-- separation of concerns stays strong
-- input logic does not belong in rendering code
-- gameplay rules do not belong in renderer code
-- the game should stay responsive and performant
-- ownership should remain explicit and leak-resistant
-- avoid blocking or heavy repeated work in the main loop
-- prefer testable pure logic for rules and simulation
-- content loading and runtime state should remain cleanly separated
-- future editor support should influence schema design, not force gameplay code into editor-shaped architecture
-
-## What the game is not trying to be
-
-Project Ashvale is not aiming to be:
-- an open-world action game
-- a giant simulation sandbox
-- an ECS-driven tech demo
-- a network-first multiplayer game
-- a content-unbounded RPG at this stage
-
-The goal is a focused, maintainable strategy/RPG hybrid with strong place identity, service planning, party/logistics consequence, restoration fantasy, and content-driven authored progression.
+PvP may exist later as a separate mode, but it should not currently drive the main single-player vision.

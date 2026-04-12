@@ -45,7 +45,7 @@ A **Region** is the main in-scenario travel space.
 Use **Region** when referring to:
 - the node graph the player currently moves on
 - node-to-node travel
-- region-layer Services
+- Region-layer Services
 - enemy-team movement and occupation
 - current in-scenario world-state
 
@@ -70,6 +70,10 @@ Examples may include:
 - storage
 - recovery
 - supply
+- sanctuary
+- trader
+- mine / owned-resource interaction
+- Sealed / Frozen Hero interaction
 - other authored interactions
 
 ---
@@ -121,6 +125,29 @@ A **dungeon** is a type of Location.
 
 Enemy teams do not enter Locations, including dungeons.
 
+### Sanctuary
+A **sanctuary** is a single Service node on the Region layer where combat cannot be initiated.
+
+- Teams occupying a sanctuary cannot be attacked there.
+- Sanctuary is not a blocker-node type.
+- Sanctuary may still be destroyable if flagged as destroyable.
+
+### Mine
+A **mine** is an owned or capturable Region-layer resource node / Service that generates resources over time.
+
+- A mine may be free or guarded.
+- A mine may be captured by teams.
+- A mine does not inherently block movement.
+- A mine may have stationed units.
+
+### Sealed / Frozen Hero service
+A **Sealed Hero** or **Frozen Hero** service is a one-time Region Service that frees a hero from a special **Sealed** state.
+
+- Freeing the hero costs time and Energy.
+- The action is illegal if the acting team has no room for the hero.
+- The freed hero joins the acting team using normal hero-placement rules.
+- After use, the node becomes an empty travel node.
+
 ---
 
 ## 3. Party and roster terms
@@ -169,9 +196,48 @@ A Temporarily Unavailable hero is:
 
 This term is preferred over older narrow wording such as "recovering" when the state may result from either injury or voluntary dismissal.
 
+### Sealed
+**Sealed** is a distinct hero state used for heroes trapped in one-time Sealed / Frozen Hero services.
+
+A Sealed hero:
+- is not currently owned by any team
+- is not currently available in ordinary hero recruitment
+- may be freed by a legal team through the service that contains them
+
 ---
 
-## 4. Enemy-team terms
+## 4. Team, ownership, and enemy-world terms
+
+### Team color
+A **team color** is the primary identifier for a team in world-layer logic.
+
+- The player team also has a color.
+- The game supports up to 8 total teams in a Region, including the player.
+
+### Allied
+**Allied** teams may share a node and do not attack one another by default.
+
+Allied does **not** automatically grant:
+- shared ownership
+- shared service-use rights
+- shared recruit ownership
+- shared storage ownership
+
+### Enemy
+**Enemy** teams are teams that may attack each other and contest control directly.
+
+There is no intermediate diplomacy state between allied and enemy.
+
+### Ownership
+**Ownership** means that a node or Service belongs to a specific team for control purposes.
+
+Ownership matters for things like:
+- mines
+- storage gates
+- destroyable Region Services
+- other authored owned assets
+
+Ownership transfers immediately when captured.
 
 ### Enemy team
 An **enemy team** is an AI-controlled traveling party on the Region layer.
@@ -185,13 +251,40 @@ An enemy team:
 - may occupy nodes
 - may attack the player
 - may attack direct storage gates
+- may capture owned nodes and Services
+- may destroy destroyable Region Services
 
 Enemy teams only act while the player is in the same Region.
 
-### Stationary hostile encounter
-A **stationary hostile encounter** is not the same thing as an enemy team.
+### Enemy-team personality
+An **enemy-team personality** is the broad behavioral profile that shapes systemic priorities.
 
-It is temporary hostile content that may exist on an otherwise normal node.
+Baseline personalities are:
+- **Warrior**
+- **Builder**
+- **Explorer**
+
+### Aggression level
+An **aggression level** describes how willing an AI team is to initiate fights.
+
+Baseline aggression levels are:
+- **Berserk**
+- **Reckless**
+- **Opportunistic**
+- **Careful**
+- **Coward**
+- **Pacifist**
+
+### Patrol radius
+A **patrol radius** is an authored movement constraint for an enemy team.
+
+If patrol is enabled, the team stays within its allowed radius unless specific later rules override it.
+
+### Stationary hostile encounter
+A **stationary hostile encounter** is temporary neutral hostile content on a node.
+
+It is not a colored team and not an owned faction asset.
+
 Once cleared, that node becomes an empty travel node.
 
 ---
@@ -217,6 +310,16 @@ Energy may be restored by:
 Region-to-Region travel on the World Map requires:
 - **1000 Energy**
 - paid once when travel begins
+
+### Service destruction cost
+Destroying a destroyable Region Service costs:
+- **1000 Energy**
+- **1 hour**
+
+### Sealed / Frozen Hero freeing cost
+Freeing a Sealed / Frozen Hero costs:
+- **500 Energy**
+- **1 hour**
 
 ---
 
@@ -284,7 +387,9 @@ When writing docs, code comments, prompts, plans, or design notes:
 - prefer **Region** over `overworld` for the in-scenario travel layer
 - prefer **Location** for entered places inside a Region
 - prefer **Service** for functional interactions
-- prefer **traveling party**, **stored units**, and **Temporarily Unavailable** over older or narrower wording when those are the correct concepts
+- prefer **traveling party**, **stored units**, **Temporarily Unavailable**, and **Sealed** when those are the correct concepts
+- treat enemy-team behavior as **authored setup + systemic behavior**
+- treat ownership, sabotage, sanctuary, and service destruction as Region-layer concepts unless explicitly designed otherwise
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately
