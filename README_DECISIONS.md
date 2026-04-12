@@ -5,491 +5,487 @@
 ### 1) Keep architecture explicit and small
 
 Decision:
-- Use a small, explicit gameplay state machine (`GameSession`) with a thin app shell (`App`).
-- Preserve the current controller/mapper/renderer split with shared HUD and debug overlay.
+- Use a small, explicit state-machine scaffold with a thin app shell.
+- Preserve the current controller / mapper / renderer split.
+- Keep shared HUD and debug overlays small and readable.
 
 Why:
-- Avoids overengineering while keeping the slice extendable.
+- Avoids overengineering while keeping the project extendable.
 - Keeps gameplay flow readable and testable.
+- Makes AI-assisted iteration safer.
 
-### 2) Keep pure gameplay logic separate from raylib glue
+### 2) Keep pure gameplay logic separate from rendering and input
 
 Decision:
-- Core loop logic (`GameClock`, `GameSession`, quest state, save data shaping) remains testable without raylib.
-- Rendering/input integration stays in `src/app` and `src/rendering`.
+- Keep gameplay rules and state transitions out of rendering code and raylib glue.
+- Prefer pure gameplay modules for rules, legality, progression, travel, and combat outcomes.
+- Treat rendering as presentation and app code as orchestration.
 
 Why:
-- Supports deterministic tests and faster iteration.
+- Makes the project easier to test.
+- Reduces accidental coupling.
+- Helps future milestone work remain incremental.
 
-### 3) Keep content data-driven with typed gameplay-facing models
+### 3) Use current design terminology as the source of truth
 
 Decision:
-- JSON remains the source of truth.
-- Typed definitions are used where needed (`locations`, `battle scenarios`, `quests`) for safer gameplay integration.
+- Use current design terms consistently:
+  - **World Map**
+  - **Region**
+  - **Location**
+  - **Service**
+  - **Traveling party**
+  - **Stored units**
+  - **Temporarily Unavailable**
+- Treat `docs/terminology_map.md` as the terminology source of truth.
+- Treat older runtime/content names as legacy compatibility language, not design truth.
 
 Why:
-- Preserves content iteration speed while reducing runtime shape ambiguity.
+- Prevents confusion between current design and older implementation history.
+- Helps future agent work avoid reintroducing outdated terms.
 
-### 4) Slice day model is explicit and rule-aligned
+### 4) Keep battle as static formation CTB
 
 Decision:
-- Slice day is modeled as a 20-hour cycle (`06:00 -> 02:00`) with rollover.
+- Battle is static formation-based CTB, not free battlefield movement.
+- Positions are:
+  - Front
+  - Middle
+  - Back
+  - Leader
+- Position changes are explicit actions that consume the acting unit’s turn.
 
 Why:
-- Encodes core-loop time pressure directly in a simple, testable form.
+- Supports readable, deterministic-feeling tactics.
+- Keeps the battle model clean and content-driven.
 
-### 5) Rest flow is interaction-driven in Milestone 5
+### 5) Keep the leader inside the active 5-unit party
 
 Decision:
-- Rest is triggered by location-scene interaction outcomes, not by location type alone.
-- Current slice trigger is `inn_door`.
+- The active party size is 5.
+- The leader occupies one of those 5 slots.
+- Only hero units may be leaders in intended design.
+- The player team must always have a legal leader.
+- Enemy teams may be leaderless.
 
 Why:
-- Matches scene-level service intent (a town can contain multiple interaction types).
+- Keeps roster, battle, and leadership rules coherent.
+- Makes leader choice strategically meaningful without inflating party size.
 
-Tradeoff:
-- This is an intentional slice simplification, not a final generalized service framework.
-
-### 6) Wake-penalty recovery is unified
+### 6) Keep battle readable and mostly deterministic
 
 Decision:
-- Missed sleep and full defeat share one wake-penalty recovery flow.
-- Penalty application remains centralized in `GameSession::ApplyWakePenalty()`.
-- Recovery placement uses an explicit slice fallback policy, not nearest-location search.
+- Only damage roll randomness is core by default.
+- Show turn order, target preview, min/max damage, and min/max KO preview.
+- Prefer deterministic passives and effects over hidden proc-heavy randomness.
 
 Why:
-- Keeps consequences consistent and transition logic readable.
+- Supports tactical planning.
+- Keeps combat legible and fair.
 
-### 7) Battle return routing is explicit
+### 7) Keep roster structure as active + reserve + stored
 
 Decision:
-- Pre-battle outer mode is captured on battle entry.
-- Allied victory returns to the surrounding loop (`LocationMode` or `OverworldMode`).
-- Enemy victory routes through wake-penalty recovery.
+- **Active party** = current battle-legal party, up to 5.
+- **Reserve** = traveling non-active roster, up to 7.
+- **Stored units** = units assigned to a specific storage Service, up to 7 per storage.
+- **Traveling party** = active + reserve.
 
 Why:
-- Prevents brittle mode chaining and keeps return behavior deterministic.
+- Gives clear logistics and party-management structure.
+- Supports strategic travel decisions without overcomplicating the model.
 
-### 8) Milestone 5 quest progression model is minimal by design
+### 8) Keep cross-Region travel costly and consequential
 
 Decision:
-- Quests use a minimal typed model loaded from `quests.json`.
-- Slice quests currently start immediately `InProgress`.
-- Progression is completion-oriented for this slice.
+- Region-to-Region travel happens from the **World Map**.
+- It requires **1000 Energy** paid once when travel begins.
+- It consumes days based on shortest valid Region path distance.
+- It must begin before 11:00.
+- Heroes in the traveling party travel between Regions.
+- Generic units in the traveling party do not survive Region change unless stored first.
 
 Why:
-- Delivers visible progression with low complexity in the bounded playable loop.
+- Makes Region travel strategic.
+- Forces real roster and logistics decisions.
+- Prevents Regions from feeling like free menus.
 
-Tradeoff:
-- No acceptance flow, branching, rewards, or scripting yet.
-
-### 9) Save/load scope is minimal for Milestone 5
+### 9) Keep Energy as a shared traveling-party resource
 
 Decision:
-- Save/load persists completed quest ids for milestone quest state.
-- Existing session fields continue to restore current time/day/gold/mode/region/destination state.
-- No speculative future-facing persistence was added.
+- Energy belongs to the traveling party, not to individual units.
+- Daily starting Energy is:
+  - `1000 + (lowest traveling-party agility × 100) + leader passive bonus + leader item bonus`
+- Energy is restored by rest, Services, items, and events.
+- Rest is a deliberate travel action:
+  - 3 hours
+  - 300 Energy
 
 Why:
-- Persists only what is required for current playable-slice resume behavior.
+- Creates a clear HoMM-like movement resource without per-unit bookkeeping.
+- Makes party composition matter outside battle.
 
-### 10) Battle status text uses event stream as single source
+### 10) Keep Regions as authored node graphs with systemic rules on top
 
 Decision:
-- Deprecated `LastActionText` / `lastActionText_` path was removed.
-- Battle status text is derived from `BattleEvent` summaries.
+- A Region is an authored node graph.
+- The world rules layered on top are systemic:
+  - movement
+  - route quality
+  - Energy cost
+  - node occupation
+  - enemy-team behavior
+  - ownership
+  - service use
+- Keep this “authored structure + systemic rules” model.
 
 Why:
-- Avoids duplicate outcome state and keeps combat UI text consistent.
+- Gives Scenarios strong authored identity.
+- Still allows replayable and emergent world pressure.
 
-### 11) Milestone 6 prioritizes world identity over feature breadth
-
-Decision:
-- Milestone 6 focuses on making the existing world model behave more coherently before adding broader feature scope.
-- Location-valid rest should be determined by the current location, not only by shared prototype scene layout.
-- Overworld travel should move toward route-aware rules using the existing content structure.
-- Persistent world state should remain minimal and slice-driven.
-
-Why:
-- The current architecture is already strong enough to extend without major restructuring.
-- The biggest gap in the current slice is world-behavior coherence, not missing subsystems.
-- This improves game feel and content credibility without destabilizing the codebase.
-
-Tradeoff:
-- Some content and presentation remain placeholder while rules are tightened.
-- Milestone 6 intentionally favors correctness/coherence over broad new content.
-
-### 12) Static content and runtime state should stay separate
+### 11) Use a single-purpose node model
 
 Decision:
-- Static authored data in `content/*.json` should describe the designed world, services, and balance inputs.
-- Runtime state such as cleared nodes, quantities, stock, or weekly refresh state should live in gameplay/session/save layers, not by mutating authored content definitions.
-
-Why:
-- Keeps content schemas editor-friendly.
-- Prevents accidental blending of design data with mutable runtime state.
-- Makes future tooling and save/load behavior much easier to reason about.
-
-### 13) Milestone 7 favored visible service/economy progress
-
-Decision:
-- Milestone 7 focused on home base identity, service economy, recruit availability, and weekly cadence.
-- Service work in that milestone modeled cost, stock, quantity, and refresh rather than expanding “valid/invalid service gating” as a general pattern.
-
-Why:
-- The slice needed a more visible sense of game identity, not only coherence hardening.
-- Inns, recruit posts, and travel-prep services mattered more as economic/service systems than as binary usable/unusable interactions.
-
-Tradeoff:
-- Milestone 7 broadened runtime state and service communication before recruits became full persistent party state.
-- That was acceptable for M7 because the milestone’s goal was service/economy grounding first, not yet durable roster consequence.
-
-### 14) Content schemas should remain friendly to future editor tooling
-
-Decision:
-- Prefer stable ids, explicit typed fields, and content schemas that can be created/updated/deleted by future designer-facing tools.
-- Avoid burying content semantics in code-only conditionals when they can live in data.
-
-Why:
-- The long-term plan includes an editor for designers.
-- Stable, typed content schemas reduce migration pain when tooling is introduced.
-
-### 15) Responsiveness, performance, and ownership clarity are non-negotiable
-
-Decision:
-- Keep input handling out of rendering code and keep rendering out of gameplay rules/controllers.
-- Favor RAII and clear ownership to avoid leaks.
-- Avoid unnecessary per-frame allocations, repeated content parsing, and blocking work in the main loop.
-
-Why:
-- The game should feel responsive even while systems deepen.
-- Clear ownership and separation reduce leak risk and make performance issues easier to diagnose.
-
-### 16) Scenario terminology should stay explicit and use Region as the main travel term
-
-Decision:
-- Use the following long-term project vocabulary:
-  - campaign -> scenario -> World Map -> Region -> node -> location
-- Treat `overworld` as historical vocabulary for the same gameplay layer as `Region`.
-- A `World Map` is the scenario-level selection/info layer above all Regions.
-- A `Region` is the main travel space the player moves within by selecting destination nodes.
-- A `Location` is an entered place inside a Region.
-- A `Service` is a functional interaction available either inside a Location or directly in a Region.
-
-Why:
-- Keeps world-structure planning explicit instead of letting similar words drift into overlapping meanings.
-- Makes future world-map, region-travel, and editor work easier to reason about.
-- Avoids building long-term systems on fuzzy terminology.
-
-Tradeoff:
-- Some current code and old docs still use `overworld` heavily.
-- Migration should prefer clarity over trying to preserve every old term.
-
-### 17) Milestone 7 travel prep and service readability remain explicit and UI-light
-
-Decision:
-- Travel prep remains one shared same-day travel effect granted by authored services (Home Base prep and Supply Cart prep).
-- Active prep does not stack with another unused prep charge.
-- Unused prep expires at day rollover.
-- Service tooltips use a consistent multiline structure (explanation, cost/effect, reset timing).
-- HUD remains compact and persistent-state focused, with week visibility and active prep icon visibility.
-
-Why:
-- Delivers visible service/economy clarity without introducing an inventory system, generic buff framework, or large UI rewrite.
-- Keeps the implementation aligned with the explicit `App` / `GameSession` / controller / mapper / renderer architecture.
-
-Tradeoff:
-- The service layer communicates state clearly, but recruit outcomes still stop short of becoming durable roster/party gameplay state.
-- That gap was intentionally deferred to Milestone 8.
-
-### 18) Milestone 8 established persistent roster and party consequence, but not the final out-of-battle UX
-
-Decision:
-- Recruitment now produces durable roster state rather than only economic/message outcomes.
-- The game uses a canonical roster/slot model with active party, reserve, and battle write-back.
-- Save/load persists the canonical roster model and migrates older save shapes into the current structure.
-- The current Home Base mustering flow is a bounded slice implementation, not the final long-term party-management UX.
-
-Why:
-- This turns recruitment into real strategy/RPG consequence.
-- It grounds future progression in persistent party state rather than transient recruit events.
-- It leaves room for a broader future party-management/menu model without reopening the core persistence design.
-
-Tradeoff:
-- The final out-of-battle party-management flow is broader than the current mustering table.
-- Storage/world-map/cross-region behavior remains mostly design-level direction today rather than implemented baseline.
-
-### 19) Active battle party target size is 5
-
-Decision:
-- The intended active battle party capacity is 5 slots.
-- Both player and enemy teams can field up to 5 battle participants.
-- The leader occupies one of those 5 slots rather than existing as an additional slot.
-- Earlier 3-slot assumptions should be treated as implementation history, not as design truth.
-
-Why:
-- Aligns the roster model, combat rules, and battle format.
-- Supports a clearer separation between active fielded units and carried substitutes.
-- Matches the intended long-term combat and party-management direction.
-
-Tradeoff:
-- Any remaining 3-slot assumptions in runtime logic, tests, or save migration should be treated as migration work rather than re-opened design decisions.
-
-### 20) Battle remains static formation CTB rather than grid combat
-
-Decision:
-- Battle is true turn-based CTB with no free battlefield movement.
-- Units occupy abstract formation positions (`Front`, `Middle`, `Back`, and optional `Leader`) rather than tiles on a movement grid.
-- Position changes are explicit battle commands that consume the acting unit’s turn.
-- The detailed combat rules live in `docs/combat_rules.md`; this file only records the top-level design direction.
-
-Why:
-- Keeps combat readable, tactical, and content-friendly without introducing map-scale movement complexity.
-- Fits the intended FF-style battle feel more closely than grid tactics.
-- Keeps combat state explicit and easier to test.
-
-Tradeoff:
-- Positional tactics come from row choice, target selection, CTB timing, and skills rather than pathfinding or terrain.
-
-### 21) Effective row depth is the combat-facing positional rule
-
-Decision:
-- Stored position labels and combat-facing row depth are not always the same thing.
-- Agility penalty and range interaction use the target’s effective row depth, not only its literal stored label.
-- Gaps are allowed in the formation: a team may have living units in `Front` and `Back` with no `Middle`, and the `Back` units remain effectively `Back` while `Front` still exists.
-- When all living units in the nearest row are gone, the next surviving row becomes the new effective front for battle calculations.
-- The attacker’s own row does not directly affect agility penalty.
-
-Why:
-- Preserves player-readable formation labels while making targeting penalties depend on which enemy line is actually closest.
-- Matches the intended “how far does this unit need to reach?” battle feel.
-- Avoids fake row normalization that would erase intentional gaps.
-
-Tradeoff:
-- The rule is more precise than a naive label-only formula, so UI and docs must communicate it clearly.
-
-### 22) Leaders are hero-only and are manually managed
-
-Decision:
-- Only hero units can be assigned to the `Leader` position.
-- The player team must always have a legal leader somewhere in party state.
-- Enemy teams may have a leader but are not required to.
-- If a leader is KO’d, aura effects end immediately and no replacement is assigned automatically.
-- A living hero may manually take the `Leader` position later, and the aura reactivates immediately when that reassignment occurs.
-- Outside battle, leader choice belongs to broader party management rather than to the current mustering table flow.
-
-Why:
-- Reinforces the game’s hero-led, story-driven party identity.
-- Keeps aura behavior explicit and tactically legible.
-- Separates durable party leadership from the narrower Home Base mustering slice UI.
-
-Tradeoff:
-- The final out-of-battle party-management UX is not yet fully designed or named.
-- AI-controlled enemy teams must also follow the same manual leader-assignment rule when relevant.
-
-### 23) Combat is mostly deterministic and readability-first
-
-Decision:
-- Damage roll is the main source of randomness in battle.
-- Hit/miss, dodge, proc, and similar special outcomes should be deterministic when they exist.
-- Battle UI should expose the information needed for tactical planning: visible turn-order preview, min/max damage, and min/max KO preview.
-- The game should show resulting CTB order changes directly rather than surfacing hidden delay math.
-
-Why:
-- Supports tactical decision-making and player trust.
-- Keeps combat closer to readable CTB planning than to swing-heavy RPG randomness.
-- Lets position/range/skill choices feel deliberate rather than opaque.
-
-Tradeoff:
-- Some internal formulas may remain partially hidden as long as their effects are communicated clearly through previews.
-
-### 24) Attrition is asymmetric between heroes and generic stacks
-
-Decision:
-- Hero units and generic stacks do not recover the same way after battle.
-- Hero HP persists between battles unless restored by other means.
-- Generic stacks restore current HP to max after battle, but lost stack count persists.
-- MP persists for all units.
-- Temporary in-battle buffs/debuffs are removed after battle; overworld-applied effects use explicit durations such as one battle, one day, or one week.
-- Persistent enemy groups follow the same broad rules as the player’s party.
-
-Why:
-- Creates durable consequence without making every surviving generic stack track partial post-battle HP.
-- Gives heroes stronger individual identity and ongoing risk.
-- Supports persistent encounter state in the overworld.
-
-Tradeoff:
-- This asymmetry is less uniform than “everything fully heals” or “nothing heals,” but it better matches the intended strategy/RPG loop.
-
-### 25) Party state should distinguish active, reserve, and stored units
-
-Decision:
-- `active party` means the current battle-legal fielded group, capped at 5.
-- `reserve` means traveling units not currently fielded in battle, capped at 7.
-- `traveling party` means active + reserve, for a total cap of 12.
-- `stored units` are separate from reserve and belong to a specific storage service, with 7 slots per storage.
-- Storage is neutral and can hold heroes or generic stacks.
-
-Why:
-- Keeps battle legality, travel consequence, and storage logistics distinct.
-- Gives the game a clear long-term roster model beyond the bounded current mustering flow.
-- Supports future storage/location gameplay without flattening everything into one global bag of units.
-
-Tradeoff:
-- The model is more structured than a single shared reserve pool.
-- UI and docs must explain the difference between reserve and stored units clearly.
-
-### 26) Cross-region travel should preserve heroes, not traveling generic units
-
-Decision:
-- All heroes in the traveling party cross regions with the player.
-- Generic units in the traveling party do not cross regions and are lost unless stored beforehand.
-- Stored units remain in their region and persist there.
-- The game must warn the player before confirming region travel that would discard traveling generic units.
-- Region-local persistent state continues to exist after the player leaves, including stored units, recruit offerings, enemy attrition, and other authored progression.
-
-Why:
-- Makes cross-region travel strategically meaningful.
-- Preserves strong hero continuity without making generic troop logistics trivial.
-- Gives storage services and local safe anchors real value.
-
-Tradeoff:
-- The rule is harsher than a fully global party model and must be communicated clearly.
-- It makes region-change planning a larger decision.
-
-### 27) Region travel belongs to the World Map and uses shortest valid path timing
-
-Decision:
-- The World Map can be opened any time outside battle while inside a scenario.
-- Region travel is initiated from the Region layer, not from inside a Location.
-- If the player is in a Location, they must return to the Region layer first.
-- If the player is in a dungeon, region travel is not allowed.
-- Region travel must begin before 11:00.
-- Travel action is disabled when travel is illegal, but the World Map remains available for information.
-- Travel uses the shortest currently valid path through enterable adjacent Regions.
-- Travel time is the number of Region steps along that shortest valid path.
-- Region travel costs a flat 1000 Energy when travel begins, regardless of trip length.
-- Arrival always happens at 11:00 on the arrival day.
-- Each Region must define a safe arrival node. Arrival is a flag, not a separate node type.
-- Arrival nodes may also be Location or Service nodes, but enemies cannot spawn there or occupy them.
-
-Why:
-- Gives scenario/world-map travel a clear strategic identity.
-- Makes time and Energy costs readable and content-friendly.
-- Supports both planning and authored region gating.
-
-Tradeoff:
-- The Region layer and World Map layer need to stay distinct in UI and design.
-- Region travel remains a future-facing system for the current single-region slice.
-
-### 28) Hero availability is scenario-based and rerolls on region entry
-
-Decision:
-- Scenarios define the effective hero pool, with a default pool available when the designer does not fully specify one.
-- When the player enters a Region, hero-recruit offerings for that Region reroll from all heroes who are not traveling, stored, or temporarily unavailable.
-- The same available hero may appear in only one hero-recruit service at a time within the Region.
-- Temporarily unavailable heroes return to the pool at the start of the next week.
-
-Why:
-- Keeps hero recruitment authored and scenario-specific without making it fully static.
-- Makes region entry and week transitions meaningful for hero availability.
-- Supports both authored custom heroes and reusable default heroes.
-
-Tradeoff:
-- Players can intentionally use region travel to reroll hero availability.
-- This behavior is acceptable and should be treated as part of the strategic layer rather than an exploit to remove.
-
-### 29) Regions use single-purpose nodes with authored structure and systemic rules on top
-
-Decision:
-- Regions are hand-authored node graphs rather than generated or template-assembled layouts.
-- Nodes are single-purpose at the structural level.
-- The main node categories are:
-  - empty travel node
+- Region nodes are single-purpose.
+- Main node categories are:
+  - empty / travel node
   - Location node
   - single Service node
   - blocker node
-- `arrival` is a flag on a node, not a separate node category.
-- There is no dedicated combat-node type.
-- Nodes that temporarily contain a pick-up resource, a one-time hostile encounter, or a one-time blocker become empty travel nodes once cleared.
+- There is no dedicated permanent combat-node type.
+- Temporary hostile content, temporary resource content, and one-time blockers collapse into empty travel nodes after clearing.
+- Arrival is a flag, not a node type.
 
 Why:
-- Keeps authored Region identity strong while still allowing reusable systemic rules.
-- Makes node semantics easier to reason about in content, code, and tooling.
-- Avoids a vague “everything node” model that would blur progression and traversal rules.
+- Keeps Region structure understandable.
+- Prevents node design from becoming muddy or over-combined.
 
-Tradeoff:
-- Some apparently multi-purpose authored situations must be modeled as state changes over time rather than as one node with many simultaneous roles.
-
-### 30) Location and direct Service nodes should remain distinct concepts
+### 12) Keep Location and direct Service distinct
 
 Decision:
-- A direct Service node is a quick functional interaction that happens on the Region layer.
-- A Location node enters Location Mode and may contain zero or more services, one or more screens, NPCs, quests, and dungeon-like authored content.
-- Dungeons are a type of Location rather than a separate top-level world-structure category.
-- Entering and exiting a Location costs no time.
+- **Direct Service node** = quick functional interaction on the Region layer.
+- **Location** = entered authored place with NPCs, screens, multiple Services, or dungeon-like content.
+- Dungeons are a type of Location.
+- Entering and exiting a Location does not cost time.
 
 Why:
-- Keeps the Region layer readable and fast for simple interactions.
-- Preserves a clear reason for Locations to exist as explorable spaces rather than as glorified service buttons.
-- Lets towns, settlements, hideouts, and dungeons share one structural model.
+- Preserves a clear difference between strategic map play and authored place exploration.
+- Avoids bloating the Region layer with pseudo-locations.
 
-Tradeoff:
-- Some features that could technically work as either a direct Service or a Location need explicit authored choice rather than an automatic rule.
-
-### 31) Region travel inside a Region uses shortest valid path, route quality, and party Energy
+### 13) Define safe anchor narrowly
 
 Decision:
-- The player can select any currently reachable node directly.
-- Travel within a Region uses the shortest valid path through connected nodes.
-- Traveling to the current node is not a meaningful move and should be treated as illegal/no-op.
-- Routes, not nodes, carry terrain/road quality.
-- Route quality affects both travel time and Energy cost.
-- Roads are the baseline route quality with no extra penalty.
-- The traveling party owns one shared Energy pool rather than units having individual movement values.
-- Starting daily Energy is:
-  - `1000 + (lowest traveling-party agility * 100) + leader passive bonus + leader item bonus`
-- Travel is illegal when the traveling party lacks enough Energy, but the destination may still be inspected.
+- A Location is a **safe anchor** if it provides:
+  - free rest
+  - guaranteed rest
+- Nothing else is required.
 
 Why:
-- Preserves the feel of party-level movement points without tying travel to per-unit bookkeeping.
-- Lets route quality matter strategically without changing the node model.
-- Keeps traversal readable while still rewarding party composition, leadership, and authored route design.
+- Keeps the concept sharp.
+- Avoids turning “Home Base” into a fuzzy universal category.
+- Supports authored variety across Scenarios.
 
-Tradeoff:
-- Energy, time, and route quality together make travel richer but also require UI/state communication to stay legible.
-
-### 32) Enemy teams are Region-layer traveling parties with shared systemic rules
+### 14) Protect arrival nodes
 
 Decision:
-- Enemy teams are AI-controlled traveling parties that exist on the Region layer.
-- They follow the same broad party rules as the player: active party, reserve, heroes, generic units, Energy use, services, and battle consequence.
-- Enemy teams do not travel between Regions.
-- Enemy teams do not enter Locations, but they may occupy Location nodes and thereby block entry until defeated.
-- Enemy teams may occupy any legal non-arrival node they can reach.
-- Enemy teams may use direct Region services, including recruitment and rest.
-- Enemy teams do not suffer the player’s sleep/wake penalty model.
-- A direct storage Service on the Region layer acts as a defensible gate for its owning side.
-- If a storage gate is defeated, all units stored there are dismissed / become Temporarily Unavailable as appropriate.
+- Every Region must have an arrival node.
+- Arrival nodes may also be Location or single Service nodes.
+- Enemies may not:
+  - spawn there
+  - occupy there
+  - block arrival there
 
 Why:
-- Makes the world feel active rather than waiting passively for the player.
-- Reuses the same broad strategic rules on both sides instead of inventing a separate enemy-world model.
-- Gives storage, node control, and region movement meaningful strategic risk.
+- Makes Region travel reliable.
+- Prevents frustrating arrival traps.
 
-Tradeoff:
-- Enemy-team AI behavior can stay simple at first, but the systemic surface area is larger than stationary encounter-only world design.
+### 15) Keep enemy teams as authored setups with systemic behavior
 
-## Assumptions
+Decision:
+- Enemy teams are AI-controlled traveling parties on the Region layer.
+- Designers author:
+  - team color
+  - starting node
+  - template
+  - alliances
+  - patrol radius
+  - personality
+  - aggression level
+- The game system then handles:
+  - movement
+  - occupation
+  - service use
+  - recruitment
+  - sabotage
+  - attacks
+  - world competition
 
-- Region count remains one in the current slice.
-- Placeholder content names/values are non-final.
-- Current milestone prioritizes complete loop behavior over broader content expansion.
+Why:
+- Gives strong authored control without hardcoding each team’s full behavior.
+- Fits the broader Region design philosophy.
 
-## Historical notes (short)
+### 16) Use fixed enemy action order and one-action enemy phases
 
-- Milestone 4 established the first mode-specific renderers for title, Region-layer travel (historically named `Overworld` in runtime code), Location, and Battle plus a shared HUD/debug overlay.
-- Milestone 5 established the first complete world-loop baseline.
-- Milestone 6 hardened route/world/node/quest coherence while preserving the explicit architecture.
-- Milestone 7 grounded Home Base/service/economy identity and weekly cadence.
-- Milestone 8 established persistent roster state, 5-slot active parties, leader legality, and durable battle-party consequence.
+Decision:
+- After each player action that costs time, eligible enemy teams in the same Region act.
+- Enemy action order is fixed by team color.
+- Each eligible enemy team gets exactly one action in that phase.
+- Enemy actions do not advance the real game clock.
+- Enemy cooldowns, such as rest, are measured against the real game clock.
+
+Why:
+- Keeps the simulation understandable.
+- Prevents runaway enemy activity after longer player actions.
+- Supports deterministic-feeling world behavior.
+
+### 17) Keep enemy teams under the same broad world rules where practical
+
+Decision:
+- Enemy teams use the same broad rules for:
+  - Energy
+  - movement legality
+  - recruitment competition
+  - hero-pool competition
+  - service use where applicable
+- Enemy teams do not:
+  - travel between Regions
+  - enter Locations
+  - suffer sleep / wake-up penalties
+
+Why:
+- Makes the world feel fair and systemic.
+- Preserves a useful distinction between player-specific and AI-specific rules.
+
+### 18) Use personality + aggression + patrol as the main AI behavior knobs
+
+Decision:
+- Baseline AI personalities:
+  - Warrior
+  - Builder
+  - Explorer
+- Baseline aggression levels:
+  - Berserk
+  - Reckless
+  - Opportunistic
+  - Careful
+  - Coward
+  - Pacifist
+- Patrol radius is an authored movement constraint.
+
+Why:
+- Gives enough expressiveness for varied enemy behavior.
+- Avoids prematurely overcomplicating the AI model.
+
+### 19) Keep team relations binary: ally or enemy
+
+Decision:
+- Teams are either allies or enemies.
+- There is no middle diplomacy state.
+- Team relations may change only through authored events.
+
+Why:
+- Keeps world simulation and ownership rules simpler.
+- Makes Scenario-authored political shifts more legible.
+
+### 20) Let allied teams share nodes, but not ownership
+
+Decision:
+- Allied teams may share a node.
+- Allied teams do not automatically share:
+  - node ownership
+  - service ownership
+  - service-use rights
+  - recruit ownership
+  - storage ownership
+
+Why:
+- Keeps alliances useful but competitive.
+- Prevents ownership systems from becoming muddy.
+
+### 21) Resolve shared-node combat one battle at a time
+
+Decision:
+- When multiple allied teams share a node and a hostile team attacks:
+  - resolve one battle at a time
+  - attacker chooses target order
+  - attacker only enters the node if all remaining hostile teams there are defeated or allied
+- Otherwise the attacker remains on the previous node.
+
+Why:
+- Keeps multi-team nodes tractable.
+- Avoids inventing multi-party battle rules too early.
+
+### 22) Keep stationary hostile encounters neutral
+
+Decision:
+- Temporary hostile node encounters are always neutral.
+- They are not owned by a colored team.
+- Once cleared, the node becomes an empty travel node.
+
+Why:
+- Separates world-neutral danger from team-owned territorial conflict.
+
+### 23) Support sabotage and denial as core Region-layer strategy
+
+Decision:
+- Region-layer competition includes:
+  - attacking teams
+  - occupying nodes
+  - blocking access
+  - denying recruits
+  - capturing mines and owned assets
+  - attacking storage gates
+  - destroying destroyable Region Services
+- Sabotage is not a separate rules layer; it is part of trying to win the Scenario.
+
+Why:
+- Makes the Region layer feel alive and contested.
+- Gives enemy teams meaningful strategic pressure beyond direct battle.
+
+### 24) Keep service destruction a Region-layer rule only
+
+Decision:
+- Only Region Services are part of the default systemic destruction model.
+- Services inside entered Locations are not systemically destroyable by default.
+- A destroyable Region Service may be destroyed only by the occupying team, unless a special ranged destroy effect explicitly overrides that.
+- Destruction costs:
+  - 1000 Energy
+  - 1 hour
+
+Why:
+- Keeps sabotage readable and bounded.
+- Prevents Location content from becoming too fragile by default.
+
+### 25) Queue service restoration until the next day
+
+Decision:
+- Restoring a service costs resources, but no Energy.
+- Restoration does not complete immediately.
+- The service is flagged for restoration and is restored automatically at the start of the next day.
+- Queued restoration may be cancelled by destroying the service again before the next day begins.
+
+Why:
+- Makes restoration feel like local rebuilding, not magical instant repair.
+- Adds interesting pressure around service denial.
+
+### 26) Keep sanctuary as protected non-combat Region service
+
+Decision:
+- Sanctuary is a single Service node.
+- Combat may not be initiated on a sanctuary node.
+- Any team occupying a sanctuary node may not be attacked there.
+- Sanctuary may still be destroyable if flagged as destroyable.
+
+Why:
+- Creates meaningful protected spaces on the Region layer.
+- Adds route tension and positional play without requiring a full Location.
+
+### 27) Treat storage gates as strategic assets, not passive storage menus
+
+Decision:
+- Direct Region storage nodes are defensible gates.
+- Stored units are the defenders if attacked while no traveling party is present.
+- If a traveling party is present, its active party defends.
+- If the storage is lost, all stored units are dismissed.
+- Stored heroes become Temporarily Unavailable through the normal pipeline.
+
+Why:
+- Makes storage a real strategic choice.
+- Gives the world meaningful logistical vulnerability.
+
+### 28) Keep ownership transfer immediate
+
+Decision:
+- Ownership of owned nodes or Services transfers immediately after capture.
+- Current intended ownership examples include:
+  - storage gates
+  - mines
+  - other authored owned Region assets
+
+Why:
+- Keeps control readable.
+- Supports fast-changing strategic pressure.
+
+### 29) Keep mines as capturable daily-resource assets
+
+Decision:
+- Mines and similar nodes generate resources over time.
+- They may be free or guarded.
+- Guarded mines require defeating their guardians to take control.
+- Teams may station units there.
+- Mines do not inherently block movement.
+
+Why:
+- Adds persistent strategic objectives to Regions.
+- Supports territorial competition without overcomplicating node categories.
+
+### 30) Keep recruitment and hero availability globally competitive inside a Scenario
+
+Decision:
+- Generic-unit recruitment pools belong to the Service itself and may accumulate up to 4 weeks of growth.
+- Hero-recruit Services draw from the shared Scenario hero pool.
+- If any team recruits a hero, that hero becomes unavailable to all other teams until lost and returned to the pool.
+
+Why:
+- Makes recruitment a real competitive layer.
+- Reinforces that other teams are active participants in the world.
+
+### 31) Support Sealed / Frozen Hero services as one-time roster rewards
+
+Decision:
+- A Sealed Hero / Frozen Hero service is a one-time Region Service that frees a hero in a special Sealed state.
+- Freeing costs:
+  - 500 Energy
+  - 1 hour
+- The move is illegal if the acting team does not have room for the hero.
+- The freed hero joins using the same placement rules as normal hero recruitment.
+- The node becomes an empty travel node afterward.
+
+Why:
+- Adds authored hero-discovery moments to the Region layer.
+- Supports Scenario identity and competitive hero access.
+
+### 32) Keep player-involved Region battles as auto-resolve-first
+
+Decision:
+- Region-layer battles involving the player first produce an auto-resolve result.
+- The player may accept it or replay the battle manually.
+- The player may retry from the original pre-battle state.
+
+Why:
+- Keeps multi-team world play from becoming too slow.
+- Preserves tactical control when the player wants it.
+
+### 33) Keep AI-vs-AI battles auto-resolved and information-limited
+
+Decision:
+- AI-vs-AI battles are always auto-resolved.
+- Their results are not shown directly to the player.
+- Enemy movement and AI-vs-AI outcomes are visible only in revealed parts of the Region.
+
+Why:
+- Supports fog of war.
+- Keeps pacing manageable.
+
+### 34) Keep defeat and hero-loss rules symmetric where possible
+
+Decision:
+- Enemy teams follow the same broad hero availability rules as the player side.
+- Heroes are not permanently tied to one team.
+- If a team loses a hero, that hero may later return to the shared pool through the normal Temporarily Unavailable rules.
+- Enemy teams may remain leaderless if allowed.
+- The single-player player character remains a special exception and never permanently disappears from play.
+
+Why:
+- Keeps the simulation coherent.
+- Prevents separate hero economies from forming for player and AI unless explicitly designed later.
+
+### 35) Keep PvP separate from the main single-player design path for now
+
+Decision:
+- PvP may exist later as a separate mode.
+- It should not currently drive the main single-player architecture or design wording unless a task explicitly focuses on PvP.
+
+Why:
+- Keeps current design work focused.
+- Avoids mixing alternate timing and battle-flow assumptions into the main loop too early.

@@ -301,6 +301,10 @@ Examples may include:
 - recruitment
 - recovery
 - supply
+- sanctuary
+- trader
+- mines and other owned-resource services
+- sealed / frozen hero services
 - other authored Services
 
 ### Locations
@@ -329,7 +333,41 @@ Enemy teams do not enter Locations, including dungeons.
 
 ---
 
-## 11. Enemy teams
+## 11. Team colors, alliances, and hostility
+
+Each team is assigned a color.
+
+- The player team also has a color.
+- The game supports up to **8 teams total** in a Region, including the player.
+- Teams are either:
+  - **allies**
+  - or **enemies**
+
+There is no intermediate diplomacy state.
+
+Alliance and hostility may change only through authored events such as:
+- quest outcomes
+- story triggers
+- special node events
+
+### Allied behavior
+Allied teams may:
+- share the same node
+- avoid fighting each other
+- cooperate indirectly through movement and pressure
+
+Allied teams do **not** automatically share:
+- node ownership
+- service ownership
+- service-use rights
+- recruit ownership
+- storage ownership
+
+An alliance does not eliminate competition.
+
+---
+
+## 12. Enemy teams
 
 Enemy teams are AI-controlled traveling parties that operate on the Region layer.
 
@@ -347,33 +385,298 @@ An enemy team:
 
 Enemy teams only act while the player is in the same Region.
 
+### Enemy-team setup
+Enemy-team setup is authored.
+
+A designer may define:
+- team color
+- starting node
+- template
+- alliances
+- patrol radius
+- personality
+- aggression level
+- other authored constraints
+
+Behavior after setup is systemic.
+
+### Enemy-team Energy
+Enemy teams have their own Energy pools.
+
+They use the same broad Energy rules as the player:
+- same daily starting-Energy formula
+- same leader-bonus logic where applicable
+- same restoration logic where applicable
+
+Enemy legality is always checked against the **real game clock**.
+
+### Enemy-team action cadence
+Enemy teams act **after each player action that costs time**, but only:
+
+- in **Region Mode**
+- for teams in the **same Region**
+
+Each eligible enemy team gets **one action only** per such enemy phase.
+
+### Enemy-team action order
+Enemy action order is **fixed by team color**.
+
+In single-player:
+- the human team is always first in line
+- enemy teams then follow fixed color order
+
+If multiple human-controlled teams exist, the game still follows strict color order.
+
+### Enemy-team action budget
+One enemy-team action may be:
+
+- movement
+- attack
+- recruit
+- rest
+- service use
+- service destruction
+- other legal Region-layer action
+
+One action may not exceed what would consume **1 hour** for that team.
+
+Enemy actions do **not** advance the real game clock.
+
+### Enemy-team rest cooldown
+If an enemy team performs an action that requires a cooldown, such as resting, that cooldown is measured against the **real game clock**.
+
+Example:
+- resting imposes a **3-hour** wait before that team may act again
+- this wait expires based on cumulative player-spent real time
+
+### Enemy-team goals
+Enemy-team behavior is driven by systemic priorities shaped by authored personality and aggression.
+
+The three baseline personalities are:
+
+- **Warrior**
+- **Builder**
+- **Explorer**
+
+General goal space includes:
+- victory
+- survival
+- attacking weak hostile teams
+- recruiting
+- gathering resources
+- blocking access to important nodes
+- camping on strategic nodes
+- exploring
+
+Typical emphasis by personality:
+- **Warrior** prioritizes combat pressure and winning fights
+- **Builder** prioritizes recruits and resource growth over aggression
+- **Explorer** prioritizes revealing and traversing the Region over camping and blocking
+
+### Enemy-team aggression levels
+Aggression level defines how willing an AI team is to take a fight.
+
+Baseline levels are:
+
+- **Berserk** — anything goes
+- **Reckless** — fights most battles
+- **Opportunistic** — fights when victory appears at least roughly even
+- **Careful** — fights only when likely to win
+- **Coward** — fights only with overwhelming advantage
+- **Pacifist** — never initiates attacks
+
+### Patrol radius
+An enemy team may also have an authored patrol rule.
+
+- If patrol is enabled, the team is constrained by its patrol radius
+- A patrol radius of **0** effectively makes the team stand still unless other rules override that
+
 ### Enemy-team actions
 Enemy teams may:
 
 - move across Region nodes
 - occupy nodes
-- attack the player
-- be attacked by the player
+- attack hostile teams
+- be attacked by hostile teams
 - use direct Region Services
 - rest
 - recruit heroes and generic units
 - pick up resources
 - fight stationary hostile encounters
 - attack direct-storage gates
+- destroy destroyable Region services
+- capture owned nodes such as mines and storage gates
 
 Enemy teams do not use Location Services because they do not enter Locations.
 
-### Occupation
-If an enemy team occupies a node, the opposing side must defeat that team to use the node.
+---
 
-This includes Location nodes:
-- if an enemy team occupies a Location node, the Location is inaccessible until that team is defeated
+## 13. Combat engagement on the Region layer
 
-Enemy teams may remain parked on a node indefinitely if the AI decides to do so.
+### Attack reach rule
+A team may attack any hostile team whose occupied node it can legally reach within its current action budget.
+
+### Stationary hostile encounters
+Stationary hostile encounters are always **neutral**.
+
+They are not owned by a colored team.
+
+### Shared-node combat
+If multiple allied teams share a node and a hostile team attacks that node:
+
+- combat is resolved **one battle at a time**
+- the attacker selects which hostile target on that node to fight first
+
+After a battle ends:
+- the attacker may stop
+- or continue attacking another hostile team on that node if still legal
+
+A team only enters or occupies the target node if all hostile teams remaining on that node have been defeated or are allied.
+
+Otherwise the attacker remains on its previous node.
+
+### Player-involved battle flow
+For battles involving the player:
+
+- the game first computes an **auto-resolve** result
+- the player may accept that result
+- or choose to play the battle manually instead
+
+When a player-involved battle ends, the result screen is shown.
+
+The player may choose to retry the battle from the original pre-battle state.
+
+### AI-versus-AI battle flow
+AI-versus-AI battles are always auto-resolved.
+
+Their results are not shown directly to the player.
+
+AI movement and AI-vs-AI outcomes are only visible where the Region has been revealed to the player.
 
 ---
 
-## 12. Storage gates
+## 14. Node occupation and access
+
+If a hostile team occupies a node, the opposing side must defeat that team to use the node.
+
+This includes:
+
+- Service nodes
+- blocker nodes
+- storage gates
+- Location nodes
+
+### Location-node occupation
+If a hostile team occupies a Location node:
+
+- the Location is inaccessible until that team is defeated
+
+Enemy teams themselves still do not enter the Location.
+
+### Protected arrival nodes
+Even though arrival is only a flag, arrival nodes are protected.
+
+Enemy teams may not:
+- occupy them
+- spawn there
+- block arrival there
+
+---
+
+## 15. Ownership, capture, and competitive control
+
+Some nodes or Services may be owned by a specific team.
+
+Ownership transfers **immediately** when captured.
+
+### Owned examples
+Current intended owned-node / owned-service examples include:
+
+- storage gates
+- mines and similar daily-resource Services
+- other authored owned Services or nodes
+
+### Mines
+Mines are resource-generating nodes.
+
+- They may be free to capture
+- They may be guarded by neutral hostile encounters
+- A team may station units there
+- They do not block movement by themselves
+
+To take a guarded mine:
+- the attacker must defeat its guardians first
+
+### Ownership and allies
+Allies do not automatically gain ownership benefits from allied control.
+
+An allied team may share a node, but that does not grant automatic use of the node's owned functionality.
+
+---
+
+## 16. Sanctuary and protected non-combat spaces
+
+A **sanctuary** is a single Service node.
+
+### Sanctuary rule
+No fight may be initiated on a sanctuary node.
+
+Any team occupying a sanctuary node cannot be attacked while there.
+
+This naturally makes sanctuary occupation able to impede hostile passage, even though sanctuary is not formally a blocker-node type.
+
+### Sanctuary ownership and allies
+Allied teams may still share a sanctuary node.
+
+Sanctuary protection does not create additional allied ownership rights beyond normal alliance rules.
+
+### Sanctuary destruction
+A sanctuary may still be destroyed if it is flagged as destroyable.
+
+General service-destruction rules still apply.
+
+---
+
+## 17. Service destruction and restoration
+
+Only **Region Services** may be destroyed as a systemic rule.
+
+Services inside entered Locations are not part of this default systemic destruction model.
+
+### Destroyable flag
+A Service may only be destroyed if it has a **destroyable** flag.
+
+### Who may destroy a service
+A service may be destroyed only by the **occupying team**, regardless of ownership.
+
+Destroyable services may be destroyed:
+- by their owner
+- by an enemy occupier
+- by another occupying team when legal
+
+### Destroy-from-distance exception
+Special items or skills may destroy a service from a distance if explicitly authored to do so.
+
+In that case:
+- normal occupancy may not matter
+- but guarded services may not be destroyed until their guardians are defeated
+
+### Destruction cost
+Destroying a service costs:
+
+- **1000 Energy**
+- **1 hour**
+
+### Restoration
+Restoring a service costs resources, but no Energy.
+
+The service is then flagged to be restored and is automatically restored at the start of the next day.
+
+This queued restoration may be cancelled by destroying the service again before the next day begins.
+
+---
+
+## 18. Storage gates
 
 Storage may exist either:
 
@@ -400,16 +703,62 @@ If the defender loses the storage battle:
 - all units in that storage are dismissed
 - stored heroes become Temporarily Unavailable through the normal dismissal pipeline
 
-Only enemy teams may attack storage gates as a systemic rule.
+Only enemy teams may attack storage gates as a default systemic rule.
 
 ---
 
-## 13. Temporarily Unavailable heroes
+## 19. Recruitment and competition
+
+Recruitment services are shared competitive resources.
+
+### Generic-unit recruitment
+A recruitment Service grows over time according to its authored growth rules.
+
+Teams may recruit:
+- all available units
+- none
+- or any affordable subset
+
+The pool belongs to the Service itself, not to any particular team.
+
+A recruitment Service may hold up to **4 weeks** worth of growth.
+
+### Hero recruitment
+Hero-recruit Services draw from the shared Scenario hero pool.
+
+If any team recruits a hero:
+
+- that hero becomes unavailable to all other teams
+- until that hero is later lost and returned to the pool through the normal rules
+
+Enemy teams use the same hero-pool logic as the player.
+
+### Sealed / Frozen Hero services
+A Sealed Hero or Frozen Hero service is a one-time Region Service that frees a hero who is currently in a special **Sealed** state.
+
+Freeing a sealed hero:
+
+- costs **500 Energy**
+- costs **1 hour**
+- is illegal if the acting team does not have room for the hero
+
+When freed, the hero immediately joins the freeing team using the same placement rules as normal hero recruitment:
+
+- first free active slot if available
+- otherwise first free reserve slot
+- otherwise illegal
+
+After the hero is freed, that node becomes an empty travel node.
+
+---
+
+## 20. Temporarily Unavailable heroes
 
 A hero becomes **Temporarily Unavailable** when removed from the roster through rules such as:
 
 - being lost at the end of battle
 - being dismissed voluntarily
+- being lost through storage destruction
 - other authored causes
 
 A Temporarily Unavailable hero is:
@@ -421,9 +770,35 @@ A Temporarily Unavailable hero is:
 
 By default, Temporarily Unavailable heroes return to the relevant hero pool at the start of the next week.
 
+These hero rules apply equally across teams, except that the single-player player character has the special rule that they never permanently disappear from play.
+
 ---
 
-## 14. Node clearing outcomes
+## 21. Enemy-team defeat, persistence, and replacement
+
+When an enemy team is defeated:
+
+- it is removed permanently from the Region
+
+Authored events may later spawn a new AI team if desired.
+
+### Enemy-team identity
+Enemy teams may be:
+- default template-based teams
+- scenario-authored specific teams
+- or a mixture of both
+
+A template may define things such as:
+- typical stack ranges
+- possible hero leader
+- baseline composition
+- baseline behavior identity
+
+Default naming may be tied to team color unless a Scenario overrides it.
+
+---
+
+## 22. Node clearing outcomes
 
 When temporary node content is cleared, the node becomes an empty travel node.
 
@@ -434,9 +809,11 @@ This applies to:
 
 Nodes are not destroyed. Their state changes.
 
+More drastic node destruction or structural world changes should happen only through authored events.
+
 ---
 
-## 15. Agent / implementation guidance
+## 23. Agent / implementation guidance
 
 For future implementation and planning:
 
@@ -450,4 +827,7 @@ For future implementation and planning:
   - **Temporarily Unavailable**
 - Do not reintroduce older `overworld` terminology into design-facing work unless required for legacy compatibility.
 - Treat Regions as authored node graphs with systemic rules layered on top.
+- Treat enemy teams as authored setups with systemic behavior.
 - Do not introduce a dedicated permanent combat-node abstraction unless the design changes later.
+- Do not assume allied control grants shared ownership or shared service rights.
+- Keep PvP as a separate future mode unless a task explicitly focuses on it.
