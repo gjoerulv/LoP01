@@ -460,7 +460,177 @@ These nodes should become ordinary travel space after the hero is freed.
 
 ---
 
-## 10. Locations, dungeons, and safe anchors
+## 10. Quest services, events, and scenario progression
+
+The long-term progression model should not treat all authored progression as “quests.”
+
+Instead, the design should clearly separate:
+
+- **quest**
+- **objective**
+- **victory condition**
+- **event**
+- **guidance**
+
+### Quest services
+A quest service is a specific authored map service that offers optional tasks to eligible teams.
+
+The intended feel is closer to a world structure than to a universal RPG journal abstraction:
+- a service exists at a place
+- a team discovers it by reaching it
+- the service exposes one currently available quest at a time
+- returning to that service matters
+- the service may block, gate, toll, or simply offer optional work
+
+A quest itself is a **single task**. Longer authored arcs should usually be expressed as:
+- quest chains inside one quest service
+- events
+- or scenario-level guidance layered over the world
+
+Quest services should support:
+- starting message
+- progress message
+- completion message
+- optional portrait / image support
+- optional reward-like outcomes through event actions
+- competition between teams when more than one team is eligible to complete them
+
+Turn-in should remain intentional. If a team returns with a completed quest requirement, the completion message may present a **Yes / No** choice rather than forcing immediate completion.
+
+### Events as the universal progression engine
+The broader progression model should be **event-driven**.
+
+Events are the general world-state mechanism for:
+- changing alliances
+- updating guidance
+- unlocking Regions
+- spawning or removing teams
+- changing ownership
+- destroying or restoring Services
+- giving or removing resources, troops, or skills
+- starting fights
+- declaring victory or defeat
+- updating story flags
+- triggering other authored changes
+
+This means quests are not the universal progression system.  
+They are one authored structure built on top of the event system.
+
+The intended split is:
+
+- **quest** = a single authored task
+- **objective** = a typed requirement used by a quest or victory condition
+- **event** = a trigger / condition / effect structure that changes world state
+
+### Eligibility and condition
+The design should keep these concepts distinct:
+
+- **eligibility** = who is allowed to participate or trigger
+- **condition** = whether the actual requirement has been satisfied
+
+This matters across:
+- quest services
+- manual events
+- automatic events
+- victory conditions
+- defeat conditions
+
+### Manual and automatic events
+Events should support both:
+- **manual triggers**, such as entering a node or using a service
+- **automatic triggers**, such as day-based checks or condition checks at day start
+
+Manual events should be one-shot by default unless explicitly marked repeatable.
+
+Automatic events should be able to drive the world forward without requiring direct player interaction every time.
+
+### Neutral encounters as progression hooks
+Neutral hostile encounters on the Region layer are not only obstacles.
+
+They may also act as progression hooks by triggering event-action chains when defeated, if the designer chooses to author them that way.
+
+---
+
+## 11. Victory, defeat, journal, and guidance
+
+### Victory conditions
+Victory conditions are **scenario-level rules**, not quests.
+
+A Scenario may have one or more victory conditions, and only **one** needs to be satisfied for a team to win.
+
+This allows:
+- multiple possible win routes
+- competitive wins between teams
+- authored “intended path” structures that may still be bypassed if a true victory condition is met directly
+
+The default intended fallback victory condition is:
+- defeat all enemy teams
+
+But stronger Scenario design should usually define more authored win structures than that.
+
+### Defeat conditions
+Defeat conditions are also **scenario-level rules**, separate from quests.
+
+If any defeat condition becomes true, that team loses.
+
+This allows Scenarios to express stakes such as:
+- losing a key hero
+- missing a time limit
+- losing an allied team
+- losing a critical Location or Service
+- being beaten to victory by another team
+
+### Guidance is not the same as victory
+The player should have multiple layers of information:
+
+- **Adventure menu** = formal victory and defeat rules
+- **Quest log / journal** = discovered quest-service tasks and their states
+- **Guidance text** = event-driven directional hinting
+
+Guidance should:
+- be persistent until replaced
+- be hidable
+- help the player understand the intended next step
+- not override the actual rule structure of the Scenario
+
+This is important because the intended path may be different from the true shortest path to victory.
+
+### Failed quests
+Failed quest-service tasks should remain visible in a failed section of the player’s log.
+
+That preserves world memory and makes competitive loss or invalidated opportunities feel understandable rather than silently erased.
+
+---
+
+## 12. Campaign transitions and carry-over
+
+Campaign transitions should be authored **per transition**, not governed by one broad global carry-over rule.
+
+The intended model is:
+- every scenario transition chooses what may carry over
+- carry-over comes from an explicit allowed list
+- different branches may preserve different things
+
+Candidate carry-over categories include:
+- heroes
+- generic troops from the traveling party
+- items
+- resources
+- story flags
+- hero level and attributes
+- hero skills
+- hero passive skills
+- equipment / artifacts
+
+This supports both:
+- highly continuous campaigns
+- and more authored, controlled chapter transitions
+
+Story flags should be a first-class carry-over concept because they are essential to branching narrative and authored continuity.
+
+---
+
+## 13. Locations, dungeons, and safe anchors
 
 ### Locations
 Locations are where authored place identity can flourish.
@@ -488,7 +658,7 @@ That keeps the definition sharp and systemic while allowing wide authored variet
 
 ---
 
-## 11. Fog of war and information
+## 14. Fog of war and information
 
 The world should not be fully transparent at all times.
 
@@ -505,7 +675,7 @@ This supports both:
 
 ---
 
-## 12. Scenario identity and authored control
+## 15. Scenario identity and authored control
 
 Even though the game has strong systemic behavior, Regions and Scenarios should still feel authored.
 
@@ -526,7 +696,7 @@ The systems should create interaction, but the Scenario should still feel intent
 
 ---
 
-## 13. Implementation posture
+## 16. Implementation posture
 
 The intended long-term direction is:
 

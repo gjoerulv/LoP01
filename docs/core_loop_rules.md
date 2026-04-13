@@ -17,7 +17,7 @@ At a high level, play loops through these layers:
 2. **Region**
    - Move the traveling party across a node graph.
    - Spend time and Energy to travel.
-   - Interact with Services, Locations, blockers, resources, enemy teams, and hostile encounters.
+   - Interact with Services, Locations, blockers, resources, enemy teams, hostile encounters, quest services, and event nodes.
 
 3. **Location**
    - Walk around an entered place.
@@ -27,6 +27,10 @@ At a high level, play loops through these layers:
 4. **Battle**
    - Resolve combat using the active party against hostile forces.
    - Battle outcome feeds back into the traveling party, roster state, and world state.
+
+5. **Progression**
+   - Events, quest services, victory conditions, defeat conditions, and guidance advance or reshape the Scenario.
+   - The player is not required to follow the intended guidance chain if a true victory condition is satisfied directly.
 
 ---
 
@@ -305,6 +309,7 @@ Examples may include:
 - trader
 - mines and other owned-resource services
 - sealed / frozen hero services
+- quest services
 - other authored Services
 
 ### Locations
@@ -436,6 +441,7 @@ One enemy-team action may be:
 - rest
 - service use
 - service destruction
+- quest-service use when eligible
 - other legal Region-layer action
 
 One action may not exceed what would consume **1 hour** for that team.
@@ -506,6 +512,7 @@ Enemy teams may:
 - attack direct-storage gates
 - destroy destroyable Region services
 - capture owned nodes such as mines and storage gates
+- use eligible quest services
 
 Enemy teams do not use Location Services because they do not enter Locations.
 
@@ -520,6 +527,8 @@ A team may attack any hostile team whose occupied node it can legally reach with
 Stationary hostile encounters are always **neutral**.
 
 They are not owned by a colored team.
+
+Defeating a neutral hostile encounter on the Region layer may also trigger an event-action chain if that encounter is authored to do so.
 
 ### Shared-node combat
 If multiple allied teams share a node and a hostile team attacks that node:
@@ -752,7 +761,417 @@ After the hero is freed, that node becomes an empty travel node.
 
 ---
 
-## 20. Temporarily Unavailable heroes
+## 20. Quest, objective, event, and progression structure
+
+### Core terms
+Use the following distinction:
+
+- **Quest** = a single authored task that a team may pursue
+- **Objective** = a typed requirement used by a quest or a victory condition
+- **Victory condition** = what ends the Scenario successfully
+- **Progression trigger** = any trigger that changes world state, whether or not it belongs to a quest
+- **Event** = the general trigger / condition / effect system that changes world state
+
+Quest logic is only one part of the broader progression system.
+
+Events are the primary systemic progression engine.
+
+### Eligibility vs condition
+Keep these concepts separate:
+
+- **Eligibility** = who is allowed to participate or trigger
+- **Condition** = whether the actual quest, event, or victory requirement is satisfied
+
+This distinction applies across:
+- quest services
+- manual events
+- automatic events
+- victory conditions
+- defeat conditions
+
+---
+
+## 21. Quest services
+
+A **quest service** is a specific authored Service structure on the map.
+
+It may contain:
+- zero quests
+- one quest
+- several quests arranged as a chain
+
+A quest service exposes at most **one currently available quest** from that chain at a time.
+
+### Quest chain
+A **quest chain** is an ordered list of quests inside one quest service.
+
+When the current quest is completed and turned in:
+- it is flagged as completed
+- the next quest in the chain may become available immediately through that same service
+
+### Turn-in structure
+All quest-service quests are turn-in quests.
+
+A team must return to the quest service to complete the quest formally and receive its event actions.
+
+When a team returns and satisfies the quest's completion condition, the completion message is shown with a **Yes / No** choice:
+
+- **Yes** completes the quest and triggers its event-action chain immediately
+- **No** leaves the quest unfinished for now
+
+### Quest-service messages
+Each quest-service quest has the following message structure:
+
+- **Starting message**
+- **Progress message**
+- **Completion message**
+
+Optional portrait-style images may be attached to these messages.
+
+Message behavior:
+- if a team visits the quest service for the first time and the quest is not yet completed, that team sees the **Starting message**
+- if that team returns later and has not met completion conditions, it sees the **Progress message**
+- if the team meets completion conditions on its first visit, the **Completion message** follows immediately after the **Starting message**
+
+### Quest-service variants
+Quest services may be designed in different ways:
+
+- disappearing after completion
+- persistent but blocking for teams that have not completed them
+- persistent and non-blocking after completion
+- repeatable guard/toll style
+
+### Repeatable quest guards
+Only blocker-style quest-guard services are intended to be repeatable.
+
+For repeatable quest guards:
+- the same condition repeats
+- the same message repeats
+- the same event actions repeat
+- repeatability is a deliberate authored choice, not the default
+
+### Participation eligibility
+A quest service may be usable by:
+- all teams
+- or a selected subset of teams
+
+Typical eligibility filters include:
+- time window
+- team color whitelist
+- human-only
+- AI-only
+- combinations of the above
+
+A team must be eligible both:
+- to participate in the quest service
+- and to satisfy the quest’s completion condition
+
+### Quest-service competition
+Any eligible team may complete a quest service before another.
+
+Unless it is a repeatable blocker-style quest guard:
+- once completed, that quest is gone permanently
+- other teams cannot complete it later
+
+This means enemy teams may complete or invalidate player-relevant quests.
+
+---
+
+## 22. Quest states and player-facing quest log
+
+### Technical quest state
+In the technical sense, a quest-service quest is primarily either:
+
+- **completed**
+- or **not completed**
+
+Player-facing visibility is a separate concern.
+
+### Player-facing quest-log states
+For the player, a quest-service quest may appear as:
+
+- **Undiscovered**
+- **Visible in log**
+- **Completed**
+- **Failed**
+
+### Discovery
+Quest-service quests do not really “start” in the broader systemic sense.
+
+They already exist in the world.
+
+A quest appears in the player's quest log once the player discovers the quest service and sees the quest.
+
+### Failed quests
+Failed quests remain visible in a **failed section** of the player's quest log.
+
+A quest may fail because:
+- another eligible team completed it first
+- its completion conditions became impossible
+- other authored failure logic declared it failed
+
+### Quest-log behavior
+The quest log should:
+- show what needs to be done
+- show where the quest service is on the map
+- allow jumping to the service if the player is in the same Region
+
+The quest log is distinct from both:
+- the formal victory/defeat menu
+- the guidance-text system
+
+---
+
+## 23. Objective structure
+
+### Strong typing
+Objective types should remain **strongly typed and finite**.
+
+Avoid turning objectives into an open-ended condition language.
+
+### Single-task quests
+A quest is a **single task** technically.
+
+A quest does not contain multiple objectives in the long-term system.
+
+If a designer wants a larger arc, that should generally be expressed as:
+- a quest chain
+- events
+- or victory/guidance structure layered on top
+
+### Valid quest-style requirements
+Examples of valid quest-service requirements include:
+- bring X amount of resource
+- defeat a specific team
+- be a specific team
+- have a specific hero
+- defeat a specific neutral enemy troop
+- satisfy some other explicitly typed objective
+
+---
+
+## 24. Events
+
+Events are the primary systemic progression engine.
+
+An event is defined by:
+- **eligibility**
+- **conditions**
+- an optional **message**
+- an optional **image**
+- a chain of **event actions**
+
+Event actions apply **immediately** when the event triggers.
+
+### Event actions
+Event actions are broader than ordinary rewards.
+
+They may include things like:
+- start a fight
+- give resources
+- recover a team
+- grant hero experience
+- grant skills
+- remove skills
+- kill a specific unit
+- give troops
+- change alliances
+- change ownership
+- unlock Regions
+- spawn or remove teams
+- destroy or restore Services
+- trigger victory
+- trigger defeat
+- set story flags
+- update guidance
+
+The exact action list should remain explicit and typed.
+
+### Manual events
+A **manual event** is triggered when an eligible team manually enters or uses a node or Service tied to that event.
+
+Eligibility may check:
+- team color
+- human / AI
+- time window
+- required hero in traveling party
+- combinations of the above
+
+Manual events are **one-shot by default**.
+
+A manual event may be marked repeatable if the designer wants it to trigger every time an eligible team enters the node.
+
+### Automatic events
+Automatic events have two main subtypes.
+
+#### Day-based automatic events
+These run automatically on a specific day number and may optionally repeat every `Y` days after that.
+
+#### Condition-based automatic events
+These check automatically at the start of the day whether certain conditions are true.
+
+Typical conditions may include:
+- team has item X
+- team has hero Y
+- story flag Z is set
+- other typed checks
+
+Condition-based automatic events may be:
+- one-shot
+- or repeatable while their conditions remain true
+
+### Events and quest services
+Quest completion at a quest service should be understood as triggering the quest’s event actions.
+
+Quest services are therefore a specialized structure layered on top of the general event system.
+
+---
+
+## 25. Victory conditions
+
+Victory conditions are **scenario-level rules**, separate from the quest system.
+
+A victory condition may still depend on:
+- completing a quest service
+- defeating a specific team
+- defeating a specific neutral enemy
+- owning something
+- or any other explicitly supported typed requirement
+
+### Win structure
+A Scenario may have **one or more** victory conditions.
+
+Only **one** victory condition needs to be satisfied for that team to win the Scenario.
+
+This is an **OR** structure.
+
+### Default victory rule
+If the designer does not define another victory condition, the default intended victory rule is:
+
+- **defeat all enemy teams**
+
+If there are no enemy teams and no other victory conditions, the Scenario is effectively poorly designed, since it would resolve immediately.
+
+### Shared victory competition
+Victory conditions may be shared by multiple teams.
+
+If a team satisfies a valid victory condition first, that team wins.
+
+### Victory event
+Winning the Scenario triggers a **victory event** for the winning team.
+
+Victory event actions resolve immediately.
+
+### Guidance can be bypassed
+Authored guidance, quest chains, and story-like progression may be bypassed if a true victory condition is satisfied directly.
+
+Example:
+- if defeating the dragon is the real victory condition, a team that defeats the dragon immediately wins, even if the intended guidance chain suggested talking to Jon and finding the legendary sword first
+
+This is intentional.
+
+---
+
+## 26. Defeat conditions
+
+Defeat conditions are **scenario-level loss rules**, separate from quests.
+
+### Loss structure
+If **any** defeat condition becomes true, that team loses.
+
+This is an **OR** structure.
+
+### Typical defeat conditions
+Examples include:
+- fail to win within a time frame
+- lose a specific hero
+- lose allied team(s)
+- have a certain Service destroyed
+- let an enemy reach a Location
+- let another team win first
+- other authored loss rules
+
+A Scenario may also have no special defeat condition beyond ordinary inability to win.
+
+---
+
+## 27. Guidance, journal, and player information
+
+Keep these systems distinct.
+
+### Adventure menu
+The **adventure menu** should clearly state:
+- victory conditions
+- defeat conditions
+
+This is the formal rule view for the Scenario.
+
+### Quest log / journal
+The **quest log / journal** tracks discovered quest-service tasks and their player-facing states.
+
+It should update when:
+- a quest is discovered
+- a quest is completed
+- a quest fails
+- other authored quest-service progress changes occur
+
+### Guidance text
+**Guidance text** is a separate event-driven hint layer.
+
+It should:
+- display directional text and optional icons
+- persist until changed by another triggered event
+- be hidable by the player
+- guide play without replacing the formal victory/defeat menu
+
+Guidance text is not the same thing as the actual victory structure.
+
+---
+
+## 28. Campaign transitions and carry-over
+
+Campaign transitions are authored **per transition**, not controlled by one global campaign-wide carry-over rule.
+
+### Carry-over model
+Carry-over is chosen from an explicit allowed list for each scenario transition.
+
+A transition may carry over:
+- all
+- none
+- or a selected subset of legal categories
+
+### Typical carry-over candidates
+Candidates include:
+- heroes
+- generic troops from the traveling party
+- items
+- resources
+- story flags
+- hero level and attributes
+- hero skills
+- hero passive skills
+- equipment / artifacts
+
+### Hero carry-over rules
+Only heroes that:
+- are allowed by that transition
+- and are in the traveling party
+
+may carry over.
+
+Hero-related carry-over should be separately controllable for:
+- level + attributes
+- skills
+- passive skills
+
+These are distinct transition flags.
+
+### Story flags
+Story flags should always be available as campaign carry-over data.
+
+---
+
+## 29. Temporarily Unavailable heroes
 
 A hero becomes **Temporarily Unavailable** when removed from the roster through rules such as:
 
@@ -772,9 +1191,11 @@ By default, Temporarily Unavailable heroes return to the relevant hero pool at t
 
 These hero rules apply equally across teams, except that the single-player player character has the special rule that they never permanently disappear from play.
 
+Quest-critical hero loss does not necessarily make a quest permanently impossible if that hero can later be recruited again.
+
 ---
 
-## 21. Enemy-team defeat, persistence, and replacement
+## 30. Enemy-team defeat, persistence, and replacement
 
 When an enemy team is defeated:
 
@@ -798,7 +1219,7 @@ Default naming may be tied to team color unless a Scenario overrides it.
 
 ---
 
-## 22. Node clearing outcomes
+## 31. Node clearing outcomes
 
 When temporary node content is cleared, the node becomes an empty travel node.
 
@@ -806,6 +1227,7 @@ This applies to:
 - one-time hostile encounters
 - one-time resource / item pickups
 - one-time blockers
+- one-time Sealed / Frozen Hero services after the hero is freed
 
 Nodes are not destroyed. Their state changes.
 
@@ -813,7 +1235,7 @@ More drastic node destruction or structural world changes should happen only thr
 
 ---
 
-## 23. Agent / implementation guidance
+## 32. Agent / implementation guidance
 
 For future implementation and planning:
 
@@ -828,6 +1250,10 @@ For future implementation and planning:
 - Do not reintroduce older `overworld` terminology into design-facing work unless required for legacy compatibility.
 - Treat Regions as authored node graphs with systemic rules layered on top.
 - Treat enemy teams as authored setups with systemic behavior.
+- Treat **events** as the universal progression engine.
+- Treat **quest services** as one specific authored structure built on top of events and typed objectives.
+- Keep **victory conditions** and **defeat conditions** separate from the quest system.
+- Keep **eligibility** and **condition** as separate concepts.
 - Do not introduce a dedicated permanent combat-node abstraction unless the design changes later.
 - Do not assume allied control grants shared ownership or shared service rights.
 - Keep PvP as a separate future mode unless a task explicitly focuses on it.
