@@ -2,12 +2,17 @@
 
 This document is the battle-system source of truth for Ashvale's current vision.
 
-It defines the intended battle model, baseline formulas, persistence rules, and UI expectations. Balance values may still be tuned later, but the core structure in this file should be treated as the design baseline.
+It defines the intended battle model, baseline formulas, persistence rules, and battle-facing UI expectations. Balance values may still be tuned later, but the core structure in this file should be treated as the design baseline.
+
+For broader systemic context, see:
+- `docs/core_loop_rules.md`
+- `docs/game_vision_complete.md`
+- `docs/terminology_map.md`
 
 ## Battle format
 
 - Battles are true turn-based CTB battles.
-- The same battle module is used by both overworld and location encounters.
+- The same battle module is used by both **Region-layer** and **Location** encounters.
 - Each side can field up to 5 units.
 - There are no rounds.
 - Battle should remain readable, tactical, and mostly deterministic.
@@ -36,12 +41,12 @@ It defines the intended battle model, baseline formulas, persistence rules, and 
 - Hero units are unique named characters.
 - Hero units do not stack.
 - Hero units have personality and story relevance.
-- Only hero units are leader-capable.
+- Only hero units are leader-capable in current intended design.
 - If reduced to 0 HP, a hero is KO'd.
 - A KO'd hero can be revived during battle.
-- If a non-player hero is still KO'd when battle ends, that hero leaves the party and is treated as recovering.
+- If a non-player hero is still KO'd when battle ends, that hero leaves the party and becomes **Temporarily Unavailable** through the broader world rules.
 - If the player character is still KO'd when battle ends but the allied team wins, the player character returns to the party at 1 HP.
-- Heroes that leave the party are not considered permanently dead. They may be recovered or re-recruited later through scenario content and hero-recruitment services.
+- Heroes that leave the party are not considered permanently dead. They may later return through the game's shared hero-availability systems.
 
 ### Generic units
 
@@ -242,212 +247,239 @@ These formulas are the current baseline and should be treated as real design rul
 
 `statDelta = attacker.Magic - defender.Resistance`
 
-3. Convert delta into multiplier using the same rule as physical damage:
-
-- if `statDelta > 0`, increase damage by 10% per point
-- if `statDelta < 0`, decrease damage by 5% per point
-- cap the total adjustment at `+200%` maximum and `-90%` minimum
+3. Convert delta into multiplier using the same baseline curve and caps as physical damage:
+- +10% per positive point
+- -5% per negative point
+- clamp to `0.10` minimum and `3.00` maximum
 
 4. Final magic damage:
 
 `finalMagicDamage = max(1, floor(baseMagic * damageMultiplier))`
 
-### Damage randomness and reliability
+### Elements and specific resistances
 
-- Damage roll variance is the default source of RNG in battle.
-- Hit/miss, dodge, crit-like effects, status application, and similar mechanics should default to deterministic rules if added.
-- Example: a passive that dodges the first physical attack each turn is acceptable because it is deterministic.
+- Baseline magic is reduced by `Resistance`.
+- Specific enemies may also have elemental strengths, weaknesses, or immunities.
+- These are explicit content-driven modifiers layered on top of the baseline formula.
 
-## Applying damage to generic stacks
+## CTB and action economy
 
-For generic stack units:
+### CTB baseline
 
-- damage reduces current HP on the current active body
-- if current HP reaches 0, lose 1 Life
-- excess damage bleeds into the next body in the stack
-- one action can remove multiple lives if damage is high enough
-- if Life reaches 0, the stack is defeated and removed unless revived before battle ends
+- CTB is turn-based with no rounds.
+- `Agility` determines how quickly a unit receives turns.
+- The player should always see one clear turn-order bar.
+- The game does not need to expose hidden internal delay math, but it should show the resulting turn-order changes immediately when selecting actions.
 
-### Generic stack persistence after battle
+### Basic action structure
 
-- current HP is restored to full for surviving generic stacks after battle
-- lost Life persists
-- MP persists
-- temporary battle-only effects are removed
+The intended command structure is FF-style, not the old `Skill 1 / Skill 2` placeholder model.
 
-## Applying damage to heroes
-
-For hero units:
-
-- if HP reaches 0, the hero is KO'd
-- a KO'd hero takes no further actions unless revived
-- if the KO'd hero is the assigned leader, the leader aura is removed immediately
-
-### Hero persistence after battle
-
-- surviving hero HP persists after battle
-- hero MP persists after battle
-- temporary battle-only effects are removed
-- if a non-player hero is still KO'd when battle ends, that hero leaves the party and is treated as recovering
-- if the player character is still KO'd when battle ends but the allied team wins, the player character returns at 1 HP
-
-## Revive rules
-
-- Revive is intended to be rare and costly.
-- Revive may come from skills or items.
-- Both heroes and generic stacks may be revived in battle.
-- Reviving a generic stack can restore lost Life if the revive effect is strong enough.
-- Revive can also top up a partially damaged stack.
-- Any unit or stack still unresolved at battle end follows normal post-battle persistence rules.
-
-## Actions and battle command structure
-
-### Baseline actions
-
-Every unit should support the battle flow expected from an FF-style command menu.
-
-Baseline concepts:
-
-- `Attack`
-- `Defend`
-- `Skill`
-- `Item`
-- `Wait`
-- `Position`
-
-### Hero command structure
-
-Hero units use the standard battle menu structure:
+The long-term baseline action model is:
 
 - `Attack`
 - `Defend`
 - `Skill`
 - `Item`
 
-Where relevant:
+With additional contextual direct-skill shortcuts for units that have very few skills.
 
-- `Skill` opens a submenu of available skills
-- `Item` opens a submenu of available items
-- only hero units may use items in battle
+#### Hero command baseline
+Heroes use the full command structure:
+- `Attack`
+- `Defend`
+- `Skill`
+- `Item`
 
-### Generic command structure
+Only hero units may use items in battle.
 
-Generic units may have zero or more skills.
+#### Generic-unit command baseline
+Generic units may have:
+- no skills
+- one skill
+- two skills
+- more than two skills
 
-- If a generic unit has no skills, its main menu may simply show its directly available baseline actions.
-- If a generic unit has 1 or 2 skills, those skills should appear directly on the main menu instead of using a nested `Skill` command.
-- If a generic unit has more than 2 skills, it should use a nested `Skill` command.
-- Generic units do not use items.
+If a generic unit has:
+- 0 skills: show only the relevant baseline commands
+- 1 skill: surface that skill directly on the main menu
+- 2 skills: surface both directly on the main menu
+- more than 2 skills: use a `Skill` submenu
 
-### Secondary command menu
+### Secondary menu
 
-In addition to the visible main command menu, battle should support a secondary command menu for positional utility.
-
-This secondary menu contains:
+There is also a secondary hidden battle menu for:
 
 - `Wait`
-- legal position-change commands for the acting unit
+- row-change commands
+- `Leader` swap command where legal
 
-Examples:
+This is a contextual battle menu, not a separate strategic system.
 
-- a unit currently in `Front` might see `Middle ->` and `Back ->`
-- a non-leader hero may also see `Leader ->` if legal
-- the current leader does not get another `Leader` option while already assigned as leader
-
-### Skill categories
-
-Skills may include:
-
-- direct damage
-- utility
-- buff
-- debuff
-- healing
-- revive
-- stealing
-- position manipulation
-- CTB manipulation
-
-## Wait, Defend, and status duration
+## Wait and Defend
 
 ### Wait
 
-- `Wait` consumes the acting unit's turn.
-- `Wait` doubles the unit's base Agility until that unit's next turn.
-- When that next turn begins, the temporary Wait agility bonus is removed immediately.
-- Wait can be chained repeatedly.
+`Wait` consumes the unit's turn and applies:
+
+- `2x` the unit's base Agility
+- lasting until that unit's next turn
+- removed immediately when that next turn begins
+
+This may be chained repeatedly.
 
 ### Defend
 
-`Defend` is currently a provisional baseline pending a later balance pass.
+`Defend` consumes the unit's turn and applies:
 
-Current baseline:
+- `+5 Defense`
+- physical-only mitigation
+- lasting until that unit's next turn
+- removed immediately when that next turn begins
 
-- `Defend` consumes the acting unit's turn.
-- `Defend` grants `+5 Defense`.
-- This only affects physical damage.
-- The effect lasts until that unit's next turn.
-- When that next turn begins, the temporary Defense bonus is removed immediately.
-- `Defend` does not directly change CTB timing.
+This is a provisional baseline pending later balance passes.
 
-### Buff and debuff duration
+## Status duration and timing
 
 - There are no rounds.
-- If an in-battle effect lasts for `X turns`, it counts down on the **affected unit's own turns**.
-- Effects applied in battle are removed when battle ends unless a specific rule says otherwise.
+- Status duration is tracked by **the affected unit's own turns**.
+- A duration such as “lasts X turns” means:
+  - it counts down on that unit's own future turns
+  - not on global actions
+  - not on the caster's turns unless a specific later effect says otherwise
 
-### Overworld-applied buffs
+This applies to:
+- buffs
+- debuffs
+- haste / slow
+- defend-style temporary effects
+- deterministic dodge windows
+- other duration-based combat effects
 
-Overworld or service buffs may have explicit non-battle durations such as:
+## Randomness and reliability
 
-- `1 battle`
-- `1 day`
-- `1 week`
+### Baseline philosophy
 
-These durations should be handled by the broader world-state rules, not by battle-round logic.
+Combat should be:
 
-## CTB requirements and readability
+- mostly deterministic
+- legible
+- strategically calculable
+- closer to chess-like CTB planning than to swingy proc-heavy chaos
 
-- Battle UI must show upcoming turn order.
-- Turn order must always reflect the real current CTB state.
-- If the player previews an action that changes turn order, the turn-order display should update immediately.
-- If the player cancels or changes the selection, the preview should update immediately to match the current choice.
-- If a unit is defeated, revived, repositioned, hasted, slowed, or otherwise affects CTB, the turn-order display should update immediately.
-- The game should not expose low-level delay math directly if the visible turn-order bar already communicates the outcome clearly.
+### Baseline randomness
 
-### Damage and KO preview
+The only normal baseline randomness is:
 
-When selecting a target, the player should see as much tactical information as is practical, including:
+- damage roll variance between `MinDamage` and `MaxDamage`
 
-- min-max damage preview
-- min-max KO / kill preview
-- resulting turn-order preview
+### Not baseline-random by default
 
-If min and max are identical, the UI may show a single value instead of a range.
+The following are **not** random by default:
 
-## Persistent enemy attrition
+- hit chance
+- dodge chance
+- crit chance
+- status proc chance
+- revive chance
+- resistance proc chance
 
-Persistent enemy teams follow the same broad durability rules as the player's team.
+If these effects exist, they should generally be implemented as deterministic passives, triggers, or explicit skill logic unless the design later chooses a rare exception.
 
-This means persistent enemy groups may retain:
+## Persistence after battle
 
-- lost generic stack count
-- lost hero participants that are still unresolved or recovering
-- spent MP
-- surviving hero HP state
+### Hero persistence
 
-Persistent enemy groups do **not** retain:
+Heroes:
+- keep current HP between battles
+- keep current MP between battles
+- lose in-battle temporary buffs/debuffs when battle ends
+- may leave the roster if still KO'd at battle end according to broader world rules
 
-- temporary battle-only buffs or debuffs
+### Generic persistence
 
-Enemy groups may also recover through broader world rules, such as resting across days or occupying healing services, if the scenario simulation supports that behavior.
+Generic units:
+- keep lost `Life` count between battles
+- restore current body HP to max after battle
+- keep MP between battles
+- lose in-battle temporary buffs/debuffs when battle ends
 
-## Win/loss conditions
+### Overworld / world-applied buffs
+World-applied buffs from services, items, or events may last for:
+- 1 battle
+- 1 day
+- 1 week
 
-### Win
+Those are broader world-system durations, not ordinary in-battle status durations.
 
-- all enemy units are removed or otherwise defeated according to battle rules
+## Revival
 
-### Loss
+### Baseline revival philosophy
 
-- all allied units are removed or incapacitated
+Revival is:
+- valid
+- relatively rare
+- costly
+- not supposed to be the default answer to battle mistakes
+
+### Hero revival
+
+- A KO'd hero may be revived during battle.
+- If revived during battle, the hero remains in the fight normally.
+- If still KO'd when battle ends, broader world rules apply.
+
+### Generic revival
+
+- Lost generic `Life` may be revived during battle.
+- A revive effect may restore:
+  - a fully wiped stack
+  - a partially damaged stack
+- The amount restored depends on the power of the revive effect.
+
+Stack count not restored before battle ends remains lost.
+
+## Battle UI expectations
+
+Battle UI should clearly show:
+
+- active unit
+- target selection
+- turn order
+- HP / MP / Life
+- action menu
+- target legality
+- row / leader readability
+- min/max damage preview
+- min/max KO / kill preview
+
+### Min/max preview rule
+
+When selecting a target:
+
+- show min/max damage
+- show min/max KO / kill result
+- if min and max are identical, show a single value instead of a range
+
+This applies to both physical and magic actions.
+
+### Turn-order readability
+
+- Show the resulting turn-order change immediately when the player highlights an action or target.
+- Do not require exposing internal CTB formulas.
+- Showing the actual reordered turn timeline is enough.
+
+### Penalty readability
+
+Agility-penalty feedback should be clearly visible during target selection, preferably through cursor or target-state cues rather than heavy formula text.
+
+## Out-of-battle battle setup implications
+
+Although this file is battle-specific, battle assumes these broader truths:
+
+- active-party leadership exists before battle begins
+- leader assignment can also be changed outside battle
+- active positions persist while units remain in the active party
+- if an active unit is removed to reserve and later returned, it normally gets recalculated to a best position unless directly replacing another unit
+- battle outcome writes back into persistent roster state
+
+Those broader rules are defined in `docs/core_loop_rules.md` and `docs/game_vision_complete.md`.

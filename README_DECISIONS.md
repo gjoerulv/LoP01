@@ -137,6 +137,7 @@ Decision:
   - enemy-team behavior
   - ownership
   - service use
+  - event-driven progression
 - Keep this “authored structure + systemic rules” model.
 
 Why:
@@ -321,9 +322,11 @@ Decision:
 - Temporary hostile node encounters are always neutral.
 - They are not owned by a colored team.
 - Once cleared, the node becomes an empty travel node.
+- Defeating one may also trigger an event-action chain if authored to do so.
 
 Why:
 - Separates world-neutral danger from team-owned territorial conflict.
+- Makes neutral encounters usable as progression hooks.
 
 ### 23) Support sabotage and denial as core Region-layer strategy
 
@@ -480,7 +483,202 @@ Why:
 - Keeps the simulation coherent.
 - Prevents separate hero economies from forming for player and AI unless explicitly designed later.
 
-### 35) Keep PvP separate from the main single-player design path for now
+### 35) Treat events as the universal progression engine
+
+Decision:
+- Use **events** as the core trigger / condition / effect system for Scenario progression.
+- Quests, guidance, alliance changes, Region unlocks, node/world-state changes, victories, defeats, and many authored consequences should be expressible through typed event actions.
+
+Why:
+- Gives one coherent progression backbone.
+- Prevents scenario logic from being split across too many unrelated systems.
+
+### 36) Keep quests as one specific authored service structure, not the universal progression model
+
+Decision:
+- A **quest** is a single authored task.
+- A **quest service** is a map service that exposes at most one currently available quest from a chain at a time.
+- Quest chains are ordered lists of quests inside one quest service.
+- Quest-service quests are always turn-in quests.
+- Quests are optional by default unless a victory condition depends on them.
+
+Why:
+- Keeps quests concrete and readable.
+- Avoids overloading the quest system with all progression logic.
+
+### 37) Separate quest, objective, victory condition, and event as distinct concepts
+
+Decision:
+- **Quest** = a single authored task
+- **Objective** = a typed requirement used by a quest or victory condition
+- **Victory condition** = a Scenario-level win rule
+- **Defeat condition** = a Scenario-level loss rule
+- **Event** = the trigger / condition / effect system that changes world state
+
+Why:
+- Reduces terminology confusion.
+- Gives the progression model cleaner boundaries.
+
+### 38) Keep eligibility and condition as separate concepts
+
+Decision:
+- **Eligibility** determines who is allowed to participate or trigger.
+- **Condition** determines whether the actual quest, event, or victory requirement is satisfied.
+
+Why:
+- Makes quest services and events much easier to reason about.
+- Prevents “who may interact” from being confused with “what must be true.”
+
+### 39) Keep quest-service messages and turn-in choices explicit
+
+Decision:
+- Quest-service quests use:
+  - Starting message
+  - Progress message
+  - Completion message
+- The completion message includes a **Yes / No** choice.
+- **Yes** completes the quest and triggers its event-action chain.
+- **No** leaves the quest unfinished for now.
+
+Why:
+- Makes turn-in an explicit player/team choice.
+- Supports more deliberate pacing and quest handling.
+
+### 40) Keep quest services competitive between teams
+
+Decision:
+- Any eligible team may complete a quest service before another.
+- Unless the quest service is a repeatable blocker/toll-style quest guard, a completed quest is gone permanently.
+- This means enemy teams may invalidate player-relevant quests by completing them first.
+
+Why:
+- Makes Scenarios feel contested.
+- Prevents quest content from behaving like private single-player scripting unless explicitly authored that way.
+
+### 41) Keep repeatable quest guards as an intentional authored special case
+
+Decision:
+- Only blocker-style quest guards are repeatable by default design.
+- Repeatable quest guards repeat:
+  - the same condition
+  - the same message
+  - the same event actions
+- This is a deliberate authored choice and may function like a toll or farm.
+
+Why:
+- Keeps ordinary quest services finite.
+- Preserves a useful HoMM-like guard/toll structure.
+
+### 42) Keep player-facing quest states simple
+
+Decision:
+- Technical quest state is primarily completed or not completed.
+- Player-facing quest-log states are:
+  - Undiscovered
+  - Visible in log
+  - Completed
+  - Failed
+- Failed quests remain visible in a failed section of the log.
+
+Why:
+- Keeps system logic simple while still giving the player useful status feedback.
+
+### 43) Keep objective types strongly typed and finite
+
+Decision:
+- Quest and victory requirements should use an explicit typed list of conditions.
+- Avoid turning objectives into a free-form condition language.
+
+Why:
+- Makes content safer to author.
+- Keeps AI-agent work more predictable.
+
+### 44) Keep victory conditions outside the quest system
+
+Decision:
+- Victory conditions are Scenario-level rules, not quests.
+- A victory condition may depend on a quest service, but it is still structurally separate.
+- A Scenario may have one or more victory conditions.
+- Only one victory condition needs to be satisfied to win.
+
+Why:
+- Keeps win logic clear.
+- Prevents quest framing from over-defining Scenario structure.
+
+### 45) Keep defeat conditions outside the quest system and OR-based
+
+Decision:
+- Defeat conditions are Scenario-level loss rules.
+- If any defeat condition becomes true, that team loses.
+- A Scenario may have no special defeat conditions, or several.
+
+Why:
+- Makes failure rules easy to reason about.
+- Keeps defeat logic parallel with victory logic.
+
+### 46) Allow authored guidance to be bypassed by true victory
+
+Decision:
+- Guidance text, quest chains, and intended story paths may be bypassed if a real victory condition is satisfied directly.
+
+Why:
+- Keeps Scenario design flexible.
+- Supports emergent or skillful wins without requiring players to follow all intended breadcrumbs.
+
+### 47) Keep guidance, journal, and formal victory/defeat info separate
+
+Decision:
+- **Adventure menu** = formal victory and defeat conditions
+- **Quest log / journal** = discovered quest-service tasks and status
+- **Guidance text** = event-driven directional hint layer that persists until changed
+
+Why:
+- Gives the player three distinct information channels with different purposes.
+- Prevents objective clarity from depending on only one UI surface.
+
+### 48) Keep event actions immediate
+
+Decision:
+- When an event triggers, its event-action chain resolves immediately unless a specific action itself explicitly schedules future behavior.
+
+Why:
+- Makes progression consequences readable.
+- Keeps cause and effect clear.
+
+### 49) Keep manual and automatic events as the two main event families
+
+Decision:
+- **Manual events** are triggered by an eligible team entering or using a specific node or service.
+- **Automatic events** trigger either:
+  - on specified days
+  - or when typed conditions are checked at the start of the day
+- Manual events are one-shot by default unless explicitly marked repeatable.
+
+Why:
+- Provides a clean event taxonomy.
+- Covers most authored scenario needs without overcomplication.
+
+### 50) Keep campaign carry-over authored per transition
+
+Decision:
+- Carry-over is authored per Scenario transition from a fixed allowed list.
+- Candidate carry-over types include:
+  - heroes
+  - generic troops from the traveling party
+  - items
+  - resources
+  - story flags
+  - hero level + attributes
+  - hero skills
+  - hero passive skills
+  - equipment / artifacts
+- Story flags are always valid carry-over data.
+
+Why:
+- Keeps campaigns flexible.
+- Prevents one rigid carry-over rule from constraining all future campaigns.
+
+### 51) Keep PvP separate from the main single-player design path for now
 
 Decision:
 - PvP may exist later as a separate mode.

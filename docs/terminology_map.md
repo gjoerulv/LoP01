@@ -74,6 +74,7 @@ Examples may include:
 - trader
 - mine / owned-resource interaction
 - Sealed / Frozen Hero interaction
+- quest interaction
 - other authored interactions
 
 ---
@@ -147,6 +148,15 @@ A **Sealed Hero** or **Frozen Hero** service is a one-time Region Service that f
 - The action is illegal if the acting team has no room for the hero.
 - The freed hero joins the acting team using normal hero-placement rules.
 - After use, the node becomes an empty travel node.
+
+### Quest service
+A **quest service** is a specific authored Service structure that exposes quests on the map.
+
+A quest service:
+- may contain zero, one, or several quests
+- exposes at most one currently available quest from its chain at a time
+- always resolves through turn-in
+- may be blocking, non-blocking, disappearing, or repeatable in the blocker/toll case
 
 ---
 
@@ -235,6 +245,7 @@ Ownership matters for things like:
 - mines
 - storage gates
 - destroyable Region Services
+- quest-service competition in some scenarios
 - other authored owned assets
 
 Ownership transfers immediately when captured.
@@ -253,6 +264,7 @@ An enemy team:
 - may attack direct storage gates
 - may capture owned nodes and Services
 - may destroy destroyable Region Services
+- may use eligible quest services
 
 Enemy teams only act while the player is in the same Region.
 
@@ -289,7 +301,111 @@ Once cleared, that node becomes an empty travel node.
 
 ---
 
-## 5. Energy terms
+## 5. Progression and scenario terms
+
+### Quest
+A **quest** is a single authored task that a team may pursue.
+
+A quest is not the same thing as a full scenario progression model.
+
+### Objective
+An **objective** is a typed requirement used by:
+- a quest
+- a victory condition
+- sometimes other authored progression checks
+
+### Quest chain
+A **quest chain** is an ordered list of quests inside one quest service.
+
+Only one quest in that chain is currently available at a time.
+
+### Event
+An **event** is the general trigger / condition / effect system that changes world state.
+
+Events are the primary systemic progression engine.
+
+### Event actions
+**Event actions** are the typed effects that fire when an event or quest turn-in resolves.
+
+These may include:
+- starting a fight
+- granting resources
+- recovering a team
+- granting experience
+- granting or removing skills
+- killing a unit
+- granting troops
+- changing alliances
+- changing ownership
+- unlocking Regions
+- spawning or removing teams
+- destroying or restoring Services
+- triggering victory
+- triggering defeat
+- setting story flags
+- updating guidance
+
+Use **event actions** as the system term rather than “reward” when the effect is broader than a simple benefit.
+
+### Eligibility
+**Eligibility** defines who is allowed to participate in or trigger something.
+
+Typical eligibility checks include:
+- team color
+- human / AI
+- time window
+- required hero present
+- combinations of the above
+
+### Condition
+**Condition** defines whether the actual quest, event, victory, or defeat requirement is satisfied.
+
+Eligibility and condition are separate concepts.
+
+### Victory condition
+A **victory condition** is a Scenario-level win rule.
+
+- Victory conditions are separate from the quest system.
+- A Scenario may have one or more victory conditions.
+- Satisfying any one victory condition is enough to win.
+
+### Defeat condition
+A **defeat condition** is a Scenario-level loss rule.
+
+- Defeat conditions are separate from the quest system.
+- If any defeat condition becomes true, that team loses.
+
+### Guidance text
+**Guidance text** is an event-driven directional hint layer.
+
+It is:
+- separate from the quest log
+- separate from formal victory / defeat conditions
+- persistent until changed by another event
+- hidable by the player
+
+### Adventure menu
+The **adventure menu** is the formal player-facing view of:
+- victory conditions
+- defeat conditions
+
+### Quest log / journal
+The **quest log** or **journal** is the player-facing log of discovered quest-service tasks and their visible states.
+
+Typical visible states are:
+- **Undiscovered**
+- **Visible in log**
+- **Completed**
+- **Failed**
+
+### Carry-over
+**Carry-over** is the set of selected state elements passed from one Scenario to another in a Campaign.
+
+Carry-over is authored per transition from an explicit allowed list.
+
+---
+
+## 6. Energy terms
 
 ### Energy
 **Energy** is a shared travel resource belonging to the traveling party.
@@ -323,7 +439,7 @@ Freeing a Sealed / Frozen Hero costs:
 
 ---
 
-## 6. Legacy runtime and content names
+## 7. Legacy runtime and content names
 
 Some older names may still appear in source files, content files, tests, comments, or serialized values.
 
@@ -360,7 +476,7 @@ Do not treat the key name itself as current design terminology.
 
 ---
 
-## 7. Leader terminology note
+## 8. Leader terminology note
 
 ### Current design intent
 Current design intent is:
@@ -379,7 +495,7 @@ Do **not** expand the old separate-leader-category model in new design work unle
 
 ---
 
-## 8. Guidance for future work
+## 9. Guidance for future work
 
 When writing docs, code comments, prompts, plans, or design notes:
 
@@ -389,6 +505,10 @@ When writing docs, code comments, prompts, plans, or design notes:
 - prefer **Service** for functional interactions
 - prefer **traveling party**, **stored units**, **Temporarily Unavailable**, and **Sealed** when those are the correct concepts
 - treat enemy-team behavior as **authored setup + systemic behavior**
+- treat **events** as the universal progression engine
+- treat **quest services** as a specific authored structure, not the whole progression system
+- treat **victory conditions** and **defeat conditions** as Scenario-level rules outside the quest system
+- keep **eligibility** and **condition** as separate concepts
 - treat ownership, sabotage, sanctuary, and service destruction as Region-layer concepts unless explicitly designed otherwise
 
 When source/runtime compatibility requires older names to remain in place:

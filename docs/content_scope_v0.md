@@ -1,61 +1,203 @@
-# Vertical Slice Content Scope
+# Content Scope v0
 
-This document defines the bounded content scope for the current playable slice.
-The `v0` name is historical. Treat this document as a scope cap, not as a milestone checklist or a statement that every item is already fully implemented.
+This document defines the intended bounded content scope for the current playable slice.
 
-For long-term direction, use `docs/game_vision_complete.md`.
-For current implementation work, use the active milestone doc.
+It is a **scope cap**, not the full long-term vision.  
+For current design truth, see:
 
-## Region count
+- `docs/game_vision_complete.md`
+- `docs/core_loop_rules.md`
+- `docs/combat_rules.md`
+- `README_DECISIONS.md`
+- `docs/terminology_map.md`
 
-The current playable slice uses exactly 1 Region.
+## Scope goal
 
-## Region nodes
+The purpose of v0 scope is to keep the game:
 
-Target 10 to 20 Region nodes, such as:
-- safe anchor / home-base node
-- abandoned town center
-- inn
-- shop or recruit node
-- mine entrance
-- dungeon or ruin entrance
-- service node
-- optional threat / combat node
-- combat nodes blocking access to other destinations
+- playable
+- testable
+- content-driven
+- small enough to reason about
+- rich enough to support meaningful iteration
 
-## Locations
+The current slice should prove the game’s main loop, not deliver the full game.
 
-Implement:
-- 1 or 2 town-style Locations per Region
-- 1 to 3 dungeon-style Locations per Region
-- 1 safe-anchor or home-base-style Location per Region
+## World scope
 
-## Party content
+### Scenario scope
+The slice should assume:
 
-- 1 player character
-- 3 hero characters total
-- 8 generic unit types
-- 8 to 10 enemy groups
+- **1 Scenario**
+- **1 World Map**
+- **1 Region**
 
-## Systems
+Even though the long-term design now supports multiple Regions, branching Campaigns, team competition, and more advanced Scenario progression, the bounded v0 slice should still stay small.
 
-The bounded slice is expected to include:
-- time/day progression
-- Region travel time
-- Location time costs
-- sleeping
-- wake-up penalty
-- battle module
-- recruitment
-- shop
-- save/load
-- opening story sequence
-- 2 simple quests
+### Region scope
+The slice should support:
 
-## Terminology note
+- 1 authored Region graph
+- a small set of connected nodes
+- a protected arrival node
+- a few route-quality variations
+- a few meaningful node roles
 
-Current runtime/content may still contain some legacy names such as `overworld_destination`.
-In current design terminology:
-- `Region` is the main in-scenario travel space
-- `World Map` is the higher-level scenario map used to select Regions
-- `Location` is an entered place inside a Region
+Suggested Region-node distribution:
+- several empty / travel nodes
+- a few Location nodes
+- a few single Service nodes
+- a few blockers
+- a few temporary hostile or temporary resource interactions on normal nodes
+
+The slice should **not** assume or require a dedicated combat-node type.
+
+## Location scope
+
+The slice should include only a small number of entered Locations.
+
+Suggested target:
+- **2 to 4 Locations**
+
+Each Location may contain:
+- one or more screens
+- a few interactables
+- a few Services
+- some authored flavor or story content
+
+At least one Location should demonstrate:
+- safe-anchor behavior
+
+At least one Location may demonstrate:
+- dungeon-like structure
+
+Entering and exiting a Location should not itself cost time.
+
+## Service scope
+
+The slice should use a small but representative set of Services.
+
+Suggested v0 service coverage:
+- rest / recovery
+- generic-unit recruitment
+- hero recruitment
+- storage
+- quest service
+- one owned-resource service such as a mine
+- one special authored service such as Sealed / Frozen Hero or sanctuary
+
+The slice does **not** need every long-term service type at once.
+
+## Battle scope
+
+The slice should include enough battle content to prove:
+
+- static formation CTB
+- leader legality
+- aura baseline
+- persistence of hero and generic-unit consequences
+- active party integration
+- battle write-back into roster state
+
+Suggested battle-content scope:
+- a few allied units
+- a few enemy templates
+- a few hostile encounters
+- a few battle scenarios
+- at least one hero-led enemy force
+- at least one neutral hostile encounter
+
+## Party and roster scope
+
+The slice should include enough roster content to prove:
+
+- active party
+- reserve
+- storage
+- recruit flow
+- mustering / party reorganization
+- hero persistence and temporary unavailability
+- generic stack loss and later replenishment
+
+The slice does **not** need the full long-term range of party-management UI or every possible service interaction yet.
+
+## Enemy-team scope
+
+The current v0 slice may still keep enemy-team simulation modest, but content and architecture should not block the now-settled long-term design.
+
+Suggested v0 enemy-team scope:
+- 1 to 3 enemy teams in the Region
+- simple authored personalities / aggression setups
+- node occupation
+- basic movement
+- at least one case of team competition for resources, ownership, or access
+
+The slice does not need every sabotage behavior fully surfaced at once, but should not contradict that direction.
+
+## Progression scope
+
+The slice should prove the progression model in a small form.
+
+Suggested v0 coverage:
+- a few events
+- at least one quest service
+- at least one quest chain
+- visible guidance text updates
+- at least one explicit victory condition
+- at least one explicit defeat condition
+- at least one event-driven world-state change
+
+The slice should not reduce progression to only “reach node” or “clear combat node” logic anymore.
+
+## Recommended bounded target
+
+A good current v0 target is something roughly like:
+
+- 1 Scenario
+- 1 World Map
+- 1 Region
+- 8 to 15 nodes
+- 2 to 4 Locations
+- 5 to 8 meaningful Services across Region + Locations
+- 1 safe anchor
+- 1 storage service
+- 1 quest service
+- 1 hero-recruit service
+- 1 generic-unit recruit service
+- 1 owned-resource service
+- 1 to 3 enemy teams
+- a handful of temporary hostile encounters
+- a handful of battle scenarios
+- a few quests / events / victory-defeat rules
+
+This is intentionally small enough to iterate on safely.
+
+## Out of scope for v0
+
+The following are intentionally not required for the bounded v0 slice:
+
+- multi-Region scenario content
+- full Campaign branching implementation
+- full PvP support
+- complete endgame economy
+- every long-term service type
+- every sabotage behavior
+- complete AI sophistication
+- exhaustive faction / diplomacy variety
+- fully realized story presentation
+- full UI polish across all systems
+
+The slice should leave room for those later without pretending to implement them now.
+
+## Design principle
+
+v0 should prove that the game can support:
+
+- tactical battle
+- travel and logistics pressure
+- meaningful roster consequence
+- authored places
+- contested Region play
+- event-driven progression
+
+without letting the current slice bloat faster than it can be tested and maintained.
