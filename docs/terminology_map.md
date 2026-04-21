@@ -71,7 +71,7 @@ Examples may include:
 - recovery
 - supply
 - sanctuary
-- trader
+- trader interaction
 - mine / owned-resource interaction
 - Sealed / Frozen Hero interaction
 - quest interaction
@@ -133,13 +133,19 @@ A **sanctuary** is a single Service node on the Region layer where combat cannot
 - Sanctuary is not a blocker-node type.
 - Sanctuary may still be destroyable if flagged as destroyable.
 
+### Owned resource service
+An **owned resource service** is a capturable Region-layer service that generates resources over time for its owning team.
+
+Mines are the baseline example of an owned resource service.
+
 ### Mine
-A **mine** is an owned or capturable Region-layer resource node / Service that generates resources over time.
+A **mine** is an owned resource service that generates resources daily.
 
 - A mine may be free or guarded.
 - A mine may be captured by teams.
 - A mine does not inherently block movement.
 - A mine may have stationed units.
+- Stationed units affect defense, not production.
 
 ### Sealed / Frozen Hero service
 A **Sealed Hero** or **Frozen Hero** service is a one-time Region Service that frees a hero from a special **Sealed** state.
@@ -160,7 +166,7 @@ A quest service:
 
 ---
 
-## 3. Party and roster terms
+## 3. Party, roster, and inventory terms
 
 ### Active party
 The **active party** is the current battle-legal party.
@@ -213,6 +219,29 @@ A Sealed hero:
 - is not currently owned by any team
 - is not currently available in ordinary hero recruitment
 - may be freed by a legal team through the service that contains them
+
+### Item inventory
+The **item inventory** is the shared team inventory for non-artifact items.
+
+This includes things such as:
+- consumables
+- stackable utility / trigger items
+- seeds
+- ingredients
+- food
+
+### Artifact inventory
+The **artifact inventory** is the shared team inventory for unequipped artifacts.
+
+Artifacts are not stored in the general item inventory.
+
+### Equipped artifact slots
+Heroes equip artifacts into:
+- **1 Attack slot**
+- **1 Defense slot**
+- **3 Misc slots**
+
+Generic units do not equip artifacts.
 
 ---
 
@@ -405,7 +434,131 @@ Carry-over is authored per transition from an explicit allowed list.
 
 ---
 
-## 6. Energy terms
+## 6. Economy and resource terms
+
+### Resources
+The baseline resource set is:
+
+- **Gold**
+- **Wood**
+- **Stone**
+- **Steel**
+- **Fiber**
+- **Clay**
+- **Gems**
+
+Resources belong to the team globally within a Scenario and are shared across Regions.
+
+### Gold
+**Gold** is structurally a normal resource, but it acts as the main universal currency and is usually gathered at a much higher scale than the other resources.
+
+### Trading Post
+A **Trading Post** is a specialized trader service used for:
+- exchanging resources for other resources
+- exchanging resources for gold and vice versa according to the defined trade model
+- sending resources to other teams
+
+It does not combine all other merchant functions into one service.
+
+### Market
+A **Market** is a specialized trader service used for:
+- buying items for gold
+- selling items for gold
+
+Item stock is authored and restocks weekly.
+
+### Freelancer’s Guild
+A **Freelancer’s Guild** is a specialized service used for selling generic units for gold.
+
+Teams may sell full stacks or partial stacks.
+
+### Black Market
+A **Black Market** is a specialized service used for buying artifacts for gold.
+
+Its stock is authored and does not restock by default.
+
+### Gold trade
+**Gold trade** is the gold-based exchange model used by Trading Posts.
+
+It is separate from the resource-for-resource barter model.
+
+### Barter
+**Barter** is the resource-for-resource exchange model used by Trading Posts.
+
+It is not required to be derived through gold and may use its own punitive default exchange table.
+
+### Base value
+A **base value** is the underlying gold reference value used for resource pricing.
+
+Current default base values are:
+- Wood / Stone = 100 gold
+- Steel / Fiber / Clay = 200 gold
+- Gems = 500 gold
+
+### Consumable
+A **consumable** is an item used directly for battle, field use, or both.
+
+A team may hold at most one identical consumable type at a time.
+
+### Utility / trigger item
+A **utility item** or **trigger item** is a non-consumable item used mainly for quests, events, or authored conditions.
+
+These stack to 999 per identical type by default.
+
+### Seed
+A **seed** is a plantable item used through farming services.
+
+Seeds are a distinct item subtype with later agricultural and ingredient use.
+
+### Ingredient
+An **ingredient** is an item used to produce food.
+
+Farmed outputs may become ingredients.
+
+### Food
+**Food** is an item subtype that only heroes consume.
+
+Food may:
+- recover HP/MP
+- apply temporary buffs
+- support longer-duration non-battle effects
+
+### Artifact
+An **artifact** is the game's equippable gear layer.
+
+Artifacts are:
+- hero-only
+- slot-based
+- stored in the artifact inventory when unequipped
+- potentially stackable by identical type in inventory
+- sometimes combinable into stronger artifacts
+
+There is no broader separate “equipment” system outside artifacts.
+
+### Artifact combination
+**Artifact combination** is the irreversible process of consuming specific artifacts to create a stronger artifact through a dedicated service.
+
+### Battle spoils
+**Battle spoils** are the economic gains from defeating another team in battle.
+
+By default, this includes:
+- all defeated-team items
+- all defeated-team artifacts
+- 1/4 of defeated-team non-gold resources
+
+### Escape
+**Escape** is a battle outcome where only the leader escapes.
+
+The escaping team survives, but loses its active party except the leader and later respawns at its latest resting place or spawn point.
+
+### Surrender
+**Surrender** is a battle outcome where a team offers gold to the opponent in order to retreat with its full team intact.
+
+The surrendered team later respawns under the normal surrender rules.
+
+---
+
+## 7. Energy terms
 
 ### Energy
 **Energy** is a shared travel resource belonging to the traveling party.
@@ -439,7 +592,7 @@ Freeing a Sealed / Frozen Hero costs:
 
 ---
 
-## 7. Legacy runtime and content names
+## 8. Legacy runtime and content names
 
 Some older names may still appear in source files, content files, tests, comments, or serialized values.
 
@@ -476,7 +629,7 @@ Do not treat the key name itself as current design terminology.
 
 ---
 
-## 8. Leader terminology note
+## 9. Leader terminology note
 
 ### Current design intent
 Current design intent is:
@@ -495,7 +648,7 @@ Do **not** expand the old separate-leader-category model in new design work unle
 
 ---
 
-## 9. Guidance for future work
+## 10. Guidance for future work
 
 When writing docs, code comments, prompts, plans, or design notes:
 
@@ -510,6 +663,8 @@ When writing docs, code comments, prompts, plans, or design notes:
 - treat **victory conditions** and **defeat conditions** as Scenario-level rules outside the quest system
 - keep **eligibility** and **condition** as separate concepts
 - treat ownership, sabotage, sanctuary, and service destruction as Region-layer concepts unless explicitly designed otherwise
+- treat **artifacts** as the hero equipment layer and **items** as the shared non-artifact inventory layer
+- treat **gold trade** and **barter** as related but separate Trading Post systems
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately

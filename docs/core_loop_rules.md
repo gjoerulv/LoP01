@@ -611,7 +611,20 @@ Mines are resource-generating nodes.
 - They may be free to capture
 - They may be guarded by neutral hostile encounters
 - A team may station units there
+- Stationed units affect defense only, not production
 - They do not block movement by themselves
+- For now, mines are the main baseline example of an **owned resource service**
+
+Default daily payouts at the start of the day are:
+
+- Gold mine = **1000 Gold**
+- Wood source = **2 Wood**
+- Stone source = **2 Stone**
+- Steel / Fiber / Clay / Gem source = **1** of its resource
+
+Scenario content may override these defaults.
+
+Mines may be destroyed and later restored under the normal destroyable-region-service rules when authored to allow it.
 
 To take a guarded mine:
 - the attacker must defeat its guardians first
@@ -716,7 +729,354 @@ Only enemy teams may attack storage gates as a default systemic rule.
 
 ---
 
-## 19. Recruitment and competition
+
+## 19. Resources, currencies, items, and artifacts
+
+### Team-owned resources
+Resources belong to the current team globally.
+
+They are:
+- shared across all Regions inside the same Scenario
+- not tied to individual units
+- not tied to specific storage locations
+- eligible for scenario-transition carry-over only when the relevant transition allows it
+
+The baseline resource types are:
+
+- **Gold**
+- **Wood**
+- **Stone**
+- **Steel**
+- **Fiber**
+- **Clay**
+- **Gems**
+
+Gold is still a normal resource type, but in practice it is gathered at a much higher rate than the others.
+
+Resources are primarily used for:
+- recruitment
+- service use where applicable
+- restoring destroyed Region Services
+- building Services or structures in Locations
+- quest conditions and turn-ins
+- event conditions and event actions
+- victory / defeat conditions where authored
+
+### Team inventories
+The team should maintain separate shared inventories for:
+
+- ordinary **items**
+- **artifacts**
+
+These are shared team inventories, not individual hero bags.
+
+#### General items
+General items are stored in the item inventory.
+
+They include:
+- consumables
+- ordinary non-consumable items
+- quest-like items
+- seeds
+- ingredients
+- food
+
+##### Consumables
+Consumables are usable items intended for battle, field use, or both.
+
+Rules:
+- only **one** of each consumable type may be held at a time
+- trying to add a duplicate consumable is illegal
+- only heroes may use items during battle
+- consumables are gone immediately when used
+
+##### Other items
+Other non-consumable items may exist primarily for:
+- quests
+- event conditions
+- delivery requirements
+- authored story logic
+
+These stack up to **999** per item type and occupy one shared inventory entry per type.
+
+##### Seeds and ingredients
+Seeds are a special item type used by farming services.
+
+- seeds may be planted at farming services in Regions or Locations where authored
+- planted growth may later be affected by fertilization
+- the eventual outcome depends on seed type and fertilization use
+
+Ingredients are used to make food.
+
+##### Food
+Food is a consumable-like item category used only by heroes.
+
+Food may:
+- recover HP / MP
+- grant temporary buffs
+- grant duration-based world or battle advantages
+
+Food use is a team-inventory action, but its actual consumption applies only to heroes.
+
+#### Artifacts
+Artifacts are the game's equippable gear system. There is no separate general “equipment” category beyond artifacts.
+
+Artifacts:
+- are stored in a separate shared artifact inventory
+- may stack up to **999** copies per artifact type
+- may be quest-relevant or scenario-defining
+- may be carried over between scenarios only if the relevant transition allows it
+- may be discarded unless scenario logic makes doing so illegal or foolish
+
+Artifacts are equipped only by heroes.
+
+Generic units may not equip anything.
+
+#### Hero artifact slots
+Each hero has:
+
+- **1 Attack slot**
+- **1 Defense slot**
+- **3 Misc slots**
+
+An artifact definition states:
+- which slot or slots it may occupy
+- what effect it has in those slots
+
+Artifact effects remain active as long as the artifact is equipped.
+
+#### Artifact combination
+Some artifacts may be combined at an artifact-handling service into stronger artifacts.
+
+Rules:
+- combination is irreversible
+- the consumed artifacts are permanently gone
+- the resulting artifact is added to the team's artifact inventory or equipped inventory as appropriate
+
+### Economic visibility
+Resources, items, and artifacts are all valid authored inputs for:
+- quests
+- events
+- trader services
+- victory conditions
+- defeat conditions
+- campaign transition carry-over
+
+---
+
+## 20. Trader services and exchange rules
+
+Trader-type services are separate authored services. Each trader service has **one general function only**.
+
+The main trader service categories are:
+
+- **Trading Post**
+- **Market**
+- **Freelancer's Guild**
+- **Black Market**
+
+### Shared service-time rule
+If a trader-type service performs any actual exchange, then:
+
+- **20 minutes** pass when leaving the service screen
+
+If nothing was exchanged:
+- no time passes
+
+Trader services do **not** cost Energy directly.
+
+### Trading Post
+A Trading Post may do either of these functions:
+
+- exchange resources for other resources
+- send resources to another team
+
+A single Trading Post still exposes one trader-service identity in content, but both actions belong to the Trading Post family in current design language.
+
+#### Sending resources to other teams
+Sending resources:
+- may target **any** team
+- works regardless of alliance state
+- happens **instantly**
+- is not affected by exchange-rate overrides
+
+If the receiving team is human-controlled, a message should be shown.
+
+#### Gold-based base values
+The default base values are:
+
+- **Wood** = 100 gold
+- **Stone** = 100 gold
+- **Steel** = 200 gold
+- **Fiber** = 200 gold
+- **Clay** = 200 gold
+- **Gems** = 500 gold
+
+Default gold-trade rates at a Trading Post are:
+
+- **buy price** = 5 × base value
+- **sell price** = 1/5 of base value, rounded down, minimum 1
+
+So the default gold prices are:
+
+- buy 1 Wood = 500 gold
+- buy 1 Stone = 500 gold
+- buy 1 Steel = 1000 gold
+- buy 1 Fiber = 1000 gold
+- buy 1 Clay = 1000 gold
+- buy 1 Gem = 2500 gold
+
+And default sell prices are:
+
+- sell 1 Wood = 20 gold
+- sell 1 Stone = 20 gold
+- sell 1 Steel = 40 gold
+- sell 1 Fiber = 40 gold
+- sell 1 Clay = 40 gold
+- sell 1 Gem = 100 gold
+
+A scenario may override these defaults, and a specific Trading Post may override the scenario default if explicitly authored to do so.
+
+#### Default resource-for-resource barter
+Resource-for-resource exchange uses a separate default barter table rather than deriving all exchanges through gold.
+
+Use these tiers:
+
+- **Tier 1**: Wood, Stone
+- **Tier 2**: Steel, Fiber, Clay
+- **Tier 3**: Gems
+
+Default rule:
+- to buy **1** resource from the target tier, pay:
+  - **10** of a Tier 1 source
+  - **5** of a Tier 2 source
+  - **2** of a Tier 3 source
+
+This default is intentionally lossy and does **not** allow same-resource exchange.
+
+The full default barter table is:
+
+| Buy 1 of... | Pay Wood | Pay Stone | Pay Steel | Pay Fiber | Pay Clay | Pay Gems |
+|---|---:|---:|---:|---:|---:|---:|
+| **Wood** | — | 10 | 5 | 5 | 5 | 2 |
+| **Stone** | 10 | — | 5 | 5 | 5 | 2 |
+| **Steel** | 20 | 20 | — | 10 | 10 | 4 |
+| **Fiber** | 20 | 20 | 10 | — | 10 | 4 |
+| **Clay** | 20 | 20 | 10 | 10 | — | 4 |
+| **Gems** | 50 | 50 | 25 | 25 | 25 | — |
+
+A scenario may define a different default barter table, and a specific Trading Post may override that scenario default.
+
+### Market
+A Market buys and sells **items** for **gold only**.
+
+Rules:
+- available items are authored by the designer
+- default inventory is none unless authored
+- each authored item has only one copy available at a time unless the service explicitly says otherwise
+- the Market restocks at the start of each week
+- items sold to the Market return **1/2** of base gold value, rounded down, minimum 1
+
+### Freelancer's Guild
+A Freelancer's Guild buys **generic units** from a team for gold.
+
+Rules:
+- only generic units may be sold here
+- heroes may not be sold here
+- value returned is **1/2** original gold price, rounded down, minimum 1
+- the team may sell:
+  - an entire stack
+  - a partial stack
+  - or none
+
+### Black Market
+A Black Market sells **artifacts** for gold.
+
+Default structure:
+- **8** different artifacts
+- default authored mix:
+  - **7 random minor artifacts**
+  - **1 major artifact**
+
+Rules:
+- exact artifact list may be authored per service
+- Black Market stock does **not** restock by default
+
+---
+
+## 21. Battle spoils, stealing, escape, and surrender
+
+### Battle spoils against teams
+If a team defeats another team in battle, the winner gains:
+
+- **all items** from the defeated team
+- **all artifacts** from the defeated team
+- **1/4** of all non-gold resources from the defeated team
+
+Gold is not included in this automatic quarter-resource transfer rule.
+
+These battle-spoil rules should apply equally to AI and human teams whenever possible.
+
+### Gold stealing during battle
+Some battle effects may steal gold directly from the opposing team.
+
+A team cannot lose more gold than it currently has.
+
+If a steal-gold action targets a team with no gold:
+- the action is wasted
+
+### Consumable stealing during battle
+A separate battle effect may steal:
+- one random consumable
+from the opposing team's inventory
+
+This is distinct from ordinary battle-victory loot transfer.
+
+### Hero departure and equipped artifacts
+If a hero leaves the team for a reason other than being defeated by another team in battle, such as:
+- neutral defeat
+- dismissal
+- other non-team-defeat removal
+
+then that hero leaves with the artifacts currently equipped on them.
+
+### Escape
+Escape is a battle-end option performed through the leader.
+
+Rules:
+- only the **leader** may escape
+- the escaping team survives
+- the cost is that the entire **active party** is lost except for the leader
+- the reserve is not lost through this rule alone
+
+After escape:
+- the team is removed from the Region map
+- the team respawns the next day at **11:00**
+- the respawn point is:
+  - the latest resting place
+  - or the original spawn point if there is no resting place
+
+If the team cannot respawn because an enemy team occupies that spawn point:
+- the escaped team is defeated
+
+The winning side does not receive direct explicit information about the escaped team's later respawn location beyond logical deduction.
+
+### Surrender
+Surrender is a battle-end option where one team offers gold to the opposing team to retreat with the entire team intact.
+
+Rules:
+- surrender pays gold to the opposing team
+- the surrendering team keeps its entire team intact
+- the team is removed from the Region map
+- the team respawns the next day at **11:00**
+- respawn uses the same resting-place / spawn-point rule as escape
+
+If the surrendering team cannot respawn because the spawn point is occupied by an enemy team:
+- that team is defeated
+
+In single-player, surrender should feel broadly similar to the ordinary setback rhythm of being forced out of the Region, except the additional explicit cost is the gold paid to the opposing team.
+
+## 22. Recruitment and competition
 
 Recruitment services are shared competitive resources.
 
@@ -761,7 +1121,7 @@ After the hero is freed, that node becomes an empty travel node.
 
 ---
 
-## 20. Quest, objective, event, and progression structure
+## 23. Quest, objective, event, and progression structure
 
 ### Core terms
 Use the following distinction:
@@ -791,7 +1151,7 @@ This distinction applies across:
 
 ---
 
-## 21. Quest services
+## 24. Quest services
 
 A **quest service** is a specific authored Service structure on the map.
 
@@ -877,7 +1237,7 @@ This means enemy teams may complete or invalidate player-relevant quests.
 
 ---
 
-## 22. Quest states and player-facing quest log
+## 25. Quest states and player-facing quest log
 
 ### Technical quest state
 In the technical sense, a quest-service quest is primarily either:
@@ -922,7 +1282,7 @@ The quest log is distinct from both:
 
 ---
 
-## 23. Objective structure
+## 26. Objective structure
 
 ### Strong typing
 Objective types should remain **strongly typed and finite**.
@@ -941,7 +1301,8 @@ If a designer wants a larger arc, that should generally be expressed as:
 
 ### Valid quest-style requirements
 Examples of valid quest-service requirements include:
-- bring X amount of resource
+- bring X amount of a resource
+- deliver a specific item or artifact
 - defeat a specific team
 - be a specific team
 - have a specific hero
@@ -950,7 +1311,7 @@ Examples of valid quest-service requirements include:
 
 ---
 
-## 24. Events
+## 27. Events
 
 Events are the primary systemic progression engine.
 
@@ -968,7 +1329,8 @@ Event actions are broader than ordinary rewards.
 
 They may include things like:
 - start a fight
-- give resources
+- give or consume resources
+- give or consume items or artifacts
 - recover a team
 - grant hero experience
 - grant skills
@@ -1012,8 +1374,10 @@ These check automatically at the start of the day whether certain conditions are
 
 Typical conditions may include:
 - team has item X
-- team has hero Y
-- story flag Z is set
+- team has artifact Y
+- team has hero Z
+- team has at least N of resource R
+- story flag Q is set
 - other typed checks
 
 Condition-based automatic events may be:
@@ -1027,7 +1391,7 @@ Quest services are therefore a specialized structure layered on top of the gener
 
 ---
 
-## 25. Victory conditions
+## 28. Victory conditions
 
 Victory conditions are **scenario-level rules**, separate from the quest system.
 
@@ -1035,7 +1399,10 @@ A victory condition may still depend on:
 - completing a quest service
 - defeating a specific team
 - defeating a specific neutral enemy
-- owning something
+- owning a resource amount
+- holding a specific item or artifact
+- delivering a specific item or artifact
+- flagging all mines
 - or any other explicitly supported typed requirement
 
 ### Win structure
@@ -1072,7 +1439,7 @@ This is intentional.
 
 ---
 
-## 26. Defeat conditions
+## 29. Defeat conditions
 
 Defeat conditions are **scenario-level loss rules**, separate from quests.
 
@@ -1095,7 +1462,7 @@ A Scenario may also have no special defeat condition beyond ordinary inability t
 
 ---
 
-## 27. Guidance, journal, and player information
+## 30. Guidance, journal, and player information
 
 Keep these systems distinct.
 
@@ -1128,7 +1495,7 @@ Guidance text is not the same thing as the actual victory structure.
 
 ---
 
-## 28. Campaign transitions and carry-over
+## 31. Campaign transitions and carry-over
 
 Campaign transitions are authored **per transition**, not controlled by one global campaign-wide carry-over rule.
 
@@ -1171,7 +1538,7 @@ Story flags should always be available as campaign carry-over data.
 
 ---
 
-## 29. Temporarily Unavailable heroes
+## 32. Temporarily Unavailable heroes
 
 A hero becomes **Temporarily Unavailable** when removed from the roster through rules such as:
 
@@ -1195,7 +1562,7 @@ Quest-critical hero loss does not necessarily make a quest permanently impossibl
 
 ---
 
-## 30. Enemy-team defeat, persistence, and replacement
+## 33. Enemy-team defeat, persistence, and replacement
 
 When an enemy team is defeated:
 
@@ -1219,7 +1586,7 @@ Default naming may be tied to team color unless a Scenario overrides it.
 
 ---
 
-## 31. Node clearing outcomes
+## 34. Node clearing outcomes
 
 When temporary node content is cleared, the node becomes an empty travel node.
 
@@ -1235,7 +1602,7 @@ More drastic node destruction or structural world changes should happen only thr
 
 ---
 
-## 32. Agent / implementation guidance
+## 35. Agent / implementation guidance
 
 For future implementation and planning:
 
@@ -1254,6 +1621,9 @@ For future implementation and planning:
 - Treat **quest services** as one specific authored structure built on top of events and typed objectives.
 - Keep **victory conditions** and **defeat conditions** separate from the quest system.
 - Keep **eligibility** and **condition** as separate concepts.
+- Keep resources team-global within a Scenario unless a specific system says otherwise.
+- Keep items and artifacts as separate shared inventories, with hero-only artifact equip slots.
+- Treat trader services as distinct authored service categories with explicit rate tables.
 - Do not introduce a dedicated permanent combat-node abstraction unless the design changes later.
 - Do not assume allied control grants shared ownership or shared service rights.
 - Keep PvP as a separate future mode unless a task explicitly focuses on it.

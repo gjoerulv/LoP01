@@ -15,7 +15,7 @@ This file stays at the **vision** level. It explains the intended shape of the g
 
 ## 1. Core fantasy
 
-Project Ashvale is a turn-based strategy/RPG about surviving, organizing a traveling force, and pushing through hostile territory while building enough strength, allies, and positional advantage to win a Scenario.
+Project Ashvale is a turn-based strategy/RPG about surviving, organizing a traveling force, and pushing through hostile territory while building enough strength, allies, resources, and positional advantage to win a Scenario.
 
 The intended experience combines:
 - authored world structure
@@ -24,12 +24,15 @@ The intended experience combines:
 - travel and logistics pressure
 - enemy-team competition on the Region layer
 - strong scenario identity
+- event-driven progression
+- contested economic pressure
 
 The player should feel like they are:
 - moving through dangerous territory
 - making meaningful travel and roster decisions
 - interacting with authored places and factions
 - competing with other active forces in the world
+- managing a shared team economy
 - recovering from setbacks rather than merely resetting after them
 
 ---
@@ -89,6 +92,7 @@ A Location may contain:
 - story events
 - combat encounters
 - safe-anchor functionality
+- building / restoration / crafting-oriented economic hooks
 
 ### Service
 A **Service** is a functional interaction available either:
@@ -460,177 +464,221 @@ These nodes should become ordinary travel space after the hero is freed.
 
 ---
 
-## 10. Quest services, events, and scenario progression
+## 10. Progression vision
 
-The long-term progression model should not treat all authored progression as “quests.”
+The long-term progression model should not be reduced to “quests.”
 
-Instead, the design should clearly separate:
+The intended structure is:
 
-- **quest**
-- **objective**
-- **victory condition**
-- **event**
-- **guidance**
+- **Events** are the universal progression engine
+- **Quest services** are one specific authored structure layered on top of events
+- **Victory conditions** are Scenario-level win rules
+- **Defeat conditions** are Scenario-level loss rules
+- **Guidance** is an event-driven directional layer, separate from formal victory/defeat logic
+
+### Events
+Events should be able to:
+- react to time
+- react to node entry
+- react to team state
+- react to story flags
+- react to quest completion
+- reshape the world immediately through typed event actions
+
+Events are the main tool for:
+- unlocking Regions
+- changing alliances
+- spawning/removing teams
+- changing ownership
+- destroying/restoring Services
+- triggering victories or defeats
+- updating guidance
+- delivering authored scenario beats
 
 ### Quest services
-A quest service is a specific authored map service that offers optional tasks to eligible teams.
+Quest services are optional by default unless a victory condition depends on them.
 
-The intended feel is closer to a world structure than to a universal RPG journal abstraction:
-- a service exists at a place
-- a team discovers it by reaching it
-- the service exposes one currently available quest at a time
-- returning to that service matters
-- the service may block, gate, toll, or simply offer optional work
+A quest service should:
+- expose at most one currently available quest from its chain
+- resolve through return/turn-in
+- use starting, progress, and completion messages
+- allow authored competition between teams
+- optionally block, persist, disappear, or repeat in special guard/toll cases
 
-A quest itself is a **single task**. Longer authored arcs should usually be expressed as:
-- quest chains inside one quest service
-- events
-- or scenario-level guidance layered over the world
+Quest services are a concrete gameplay structure, not the universal model for all progression.
 
-Quest services should support:
-- starting message
-- progress message
-- completion message
-- optional portrait / image support
-- optional reward-like outcomes through event actions
-- competition between teams when more than one team is eligible to complete them
+### Victory and defeat
+A Scenario may have:
+- one or more victory conditions
+- one or more defeat conditions
 
-Turn-in should remain intentional. If a team returns with a completed quest requirement, the completion message may present a **Yes / No** choice rather than forcing immediate completion.
+Only one victory condition needs to be satisfied to win.  
+Any defeat condition becoming true causes loss.
 
-### Events as the universal progression engine
-The broader progression model should be **event-driven**.
+Victory and defeat should be formal scenario rules, not merely implicit consequences of quest completion.
 
-Events are the general world-state mechanism for:
-- changing alliances
-- updating guidance
-- unlocking Regions
-- spawning or removing teams
-- changing ownership
-- destroying or restoring Services
-- giving or removing resources, troops, or skills
-- starting fights
-- declaring victory or defeat
-- updating story flags
-- triggering other authored changes
-
-This means quests are not the universal progression system.  
-They are one authored structure built on top of the event system.
-
-The intended split is:
-
-- **quest** = a single authored task
-- **objective** = a typed requirement used by a quest or victory condition
-- **event** = a trigger / condition / effect structure that changes world state
-
-### Eligibility and condition
-The design should keep these concepts distinct:
-
-- **eligibility** = who is allowed to participate or trigger
-- **condition** = whether the actual requirement has been satisfied
-
-This matters across:
-- quest services
-- manual events
-- automatic events
-- victory conditions
-- defeat conditions
-
-### Manual and automatic events
-Events should support both:
-- **manual triggers**, such as entering a node or using a service
-- **automatic triggers**, such as day-based checks or condition checks at day start
-
-Manual events should be one-shot by default unless explicitly marked repeatable.
-
-Automatic events should be able to drive the world forward without requiring direct player interaction every time.
-
-### Neutral encounters as progression hooks
-Neutral hostile encounters on the Region layer are not only obstacles.
-
-They may also act as progression hooks by triggering event-action chains when defeated, if the designer chooses to author them that way.
-
----
-
-## 11. Victory, defeat, journal, and guidance
-
-### Victory conditions
-Victory conditions are **scenario-level rules**, not quests.
-
-A Scenario may have one or more victory conditions, and only **one** needs to be satisfied for a team to win.
-
-This allows:
-- multiple possible win routes
-- competitive wins between teams
-- authored “intended path” structures that may still be bypassed if a true victory condition is met directly
-
-The default intended fallback victory condition is:
-- defeat all enemy teams
-
-But stronger Scenario design should usually define more authored win structures than that.
-
-### Defeat conditions
-Defeat conditions are also **scenario-level rules**, separate from quests.
-
-If any defeat condition becomes true, that team loses.
-
-This allows Scenarios to express stakes such as:
-- losing a key hero
-- missing a time limit
-- losing an allied team
-- losing a critical Location or Service
-- being beaten to victory by another team
-
-### Guidance is not the same as victory
-The player should have multiple layers of information:
-
-- **Adventure menu** = formal victory and defeat rules
-- **Quest log / journal** = discovered quest-service tasks and their states
-- **Guidance text** = event-driven directional hinting
-
-Guidance should:
-- be persistent until replaced
+### Guidance
+Guidance text should:
+- point the player toward intended goals
+- update through events
+- remain visible until replaced
 - be hidable
-- help the player understand the intended next step
-- not override the actual rule structure of the Scenario
+- not be required for the real victory logic to function
 
-This is important because the intended path may be different from the true shortest path to victory.
+An intended guidance chain may be bypassed if the true victory condition is satisfied directly.
 
-### Failed quests
-Failed quest-service tasks should remain visible in a failed section of the player’s log.
+### Campaign transitions
+Campaign carry-over should be authored per transition from an explicit allowed list.
 
-That preserves world memory and makes competitive loss or invalidated opportunities feel understandable rather than silently erased.
-
----
-
-## 12. Campaign transitions and carry-over
-
-Campaign transitions should be authored **per transition**, not governed by one broad global carry-over rule.
-
-The intended model is:
-- every scenario transition chooses what may carry over
-- carry-over comes from an explicit allowed list
-- different branches may preserve different things
-
-Candidate carry-over categories include:
+This allows different Scenario transitions to preserve different subsets of:
 - heroes
-- generic troops from the traveling party
-- items
+- troops
 - resources
+- items
+- equipment/artifacts
 - story flags
-- hero level and attributes
-- hero skills
-- hero passive skills
-- equipment / artifacts
+- hero growth state
 
-This supports both:
-- highly continuous campaigns
-- and more authored, controlled chapter transitions
-
-Story flags should be a first-class carry-over concept because they are essential to branching narrative and authored continuity.
+That flexibility is important to scenario authorship.
 
 ---
 
-## 13. Locations, dungeons, and safe anchors
+## 11. Economy, resources, items, and equipment
+
+The economy layer should support both:
+- strategic world pressure
+- authored Scenario identity
+
+### Resources
+Resources are team-global within a Scenario.
+
+The intended baseline resource set is:
+
+- Gold
+- Wood
+- Stone
+- Steel
+- Fiber
+- Clay
+- Gems
+
+Gold is still a normal resource structurally, but it functions as the main universal currency and is typically gathered at a much larger scale than the others.
+
+Resources should matter for:
+- recruitment
+- service restoration
+- building Location services
+- quest and event requirements
+- victory / defeat conditions
+- trade and diplomacy
+- campaign carry-over where allowed
+
+### Owned resource services
+Mines are the baseline example of an **owned resource service**.
+
+They should:
+- pay out automatically each day to the owning team
+- be capturable
+- be optionally guarded
+- be defensible by stationed units
+- create real economic pressure on the Region layer
+
+The broader term “owned resource service” should remain available for future expansion beyond mines.
+
+### Trader family
+The intended economy model should use several distinct trading/service types rather than one generic merchant.
+
+Examples include:
+- **Trading Post** for resource conversion and resource transfer between teams
+- **Market** for item buying and selling with gold
+- **Freelancer’s Guild** for selling generic units for gold
+- **Black Market** for artifact sales
+
+These should feel like authored world institutions, not one flat abstract shop.
+
+### Trade philosophy
+Trade should be intentionally lossy by default.
+
+The game should support:
+- a gold-based trade model
+- a separate default resource-for-resource barter model
+- service-specific overrides by authored design
+
+That gives designers control over:
+- harsh or generous economies
+- regional scarcity
+- faction pressure
+- scenario-specific market behavior
+
+### Shared team inventory
+The team should have shared inventories rather than per-unit general backpacks.
+
+The intended broad split is:
+- a shared **item inventory**
+- a shared **artifact inventory**
+- per-hero **equipped artifact slots**
+
+### Items
+General items include:
+- consumables
+- stackable utility / trigger items
+- seeds
+- ingredients
+- food
+
+Items may support:
+- battle use
+- field use
+- crafting / cooking
+- event conditions
+- quest requirements
+- economy interactions
+
+### Artifacts
+Artifacts are the equippable gear layer.
+
+There is no separate general “equipment” category beyond artifacts.
+
+Heroes equip artifacts into:
+- 1 Attack slot
+- 1 Defense slot
+- 3 Misc slots
+
+Artifacts should:
+- modify stats or rules while equipped
+- support Scenario identity
+- participate in carry-over when allowed
+- sometimes matter for quests, events, or victory conditions
+
+### Artifact combination
+Artifacts may be combined into stronger artifacts through a dedicated service.
+
+This should be:
+- irreversible
+- content-driven
+- economically meaningful
+- a way to create long-term artifact progression without needing a separate crafting tree
+
+### Battle spoils and loss
+Economy should connect directly to battle consequence.
+
+Winning a team-vs-team battle should feel economically meaningful through loot, resource transfer, and item/artifact capture.
+
+Escape and surrender should exist as alternatives to total defeat, with their own consequences.
+
+### Scenario-defining objects
+Some items or artifacts should be central to Scenario identity:
+- legendary relics
+- key plot objects
+- quest-critical tools
+- economic prizes
+- strategic objectives
+
+The economy layer should therefore support both ordinary logistics and authored story importance.
+
+---
+
+## 12. Locations, dungeons, and safe anchors
 
 ### Locations
 Locations are where authored place identity can flourish.
@@ -641,6 +689,7 @@ They should justify entry through:
 - story scenes
 - more textured presentation
 - dungeon or settlement identity
+- building, restoration, crafting, or economic specialization where relevant
 
 ### Dungeons
 Dungeons are a type of Location.
@@ -658,7 +707,7 @@ That keeps the definition sharp and systemic while allowing wide authored variet
 
 ---
 
-## 14. Fog of war and information
+## 13. Fog of war and information
 
 The world should not be fully transparent at all times.
 
@@ -675,7 +724,7 @@ This supports both:
 
 ---
 
-## 15. Scenario identity and authored control
+## 14. Scenario identity and authored control
 
 Even though the game has strong systemic behavior, Regions and Scenarios should still feel authored.
 
@@ -691,12 +740,15 @@ A designer should be able to shape:
 - safe anchors
 - story triggers
 - branching outcomes
+- economic scarcity or abundance
+- artifact and item identity
+- victory and defeat routes
 
 The systems should create interaction, but the Scenario should still feel intentional.
 
 ---
 
-## 16. Implementation posture
+## 15. Implementation posture
 
 The intended long-term direction is:
 
