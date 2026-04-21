@@ -18,7 +18,7 @@ Why:
 
 Decision:
 - Keep gameplay rules and state transitions out of rendering code and raylib glue.
-- Prefer pure gameplay modules for rules, legality, progression, travel, and combat outcomes.
+- Prefer pure gameplay modules for rules, legality, progression, travel, combat outcomes, and economy.
 - Treat rendering as presentation and app code as orchestration.
 
 Why:
@@ -678,7 +678,285 @@ Why:
 - Keeps campaigns flexible.
 - Prevents one rigid carry-over rule from constraining all future campaigns.
 
-### 51) Keep PvP separate from the main single-player design path for now
+### 51) Keep a shared team-global economy within each Scenario
+
+Decision:
+- Resources belong to the team globally, not to individual units or locations.
+- Resources are shared across all Regions inside a Scenario.
+- Resources may or may not carry over to the next Scenario depending on authored transition rules.
+
+Why:
+- Keeps economic state easy to reason about.
+- Supports Region travel without fragmenting the economy.
+
+### 52) Use a fixed baseline resource set
+
+Decision:
+- The baseline resource set is:
+  - Gold
+  - Wood
+  - Stone
+  - Steel
+  - Fiber
+  - Clay
+  - Gems
+
+Why:
+- Gives the economy a stable content vocabulary.
+- Supports authored scarcity, trader behavior, quests, and owned-resource services.
+
+### 53) Treat gold as a normal resource with special practical importance
+
+Decision:
+- Gold is structurally a normal resource.
+- In practice it is gathered at a much larger scale than the other resources and acts as the main universal currency.
+
+Why:
+- Keeps the model simple.
+- Still supports gold’s special strategic role.
+
+### 54) Use battle loss, surrender, and theft as part of the economy
+
+Decision:
+- Team-vs-team battle victory grants:
+  - all defeated-team items
+  - all defeated-team artifacts
+  - 1/4 of all defeated-team non-gold resources
+- Gold may be stolen directly by specific battle skills.
+- Consumable items may also be stolen by specific skills.
+- Escape and surrender are valid alternatives to full defeat and have their own economic consequences.
+
+Why:
+- Makes battle matter economically.
+- Connects the Region layer to roster and inventory consequences.
+
+### 55) Keep trader services specialized, not generic
+
+Decision:
+- Use distinct economy services with one primary role each:
+  - **Trading Post**
+  - **Market**
+  - **Freelancer’s Guild**
+  - **Black Market**
+- Avoid collapsing all economy functionality into one abstract merchant.
+
+Why:
+- Makes authored world services more flavorful.
+- Keeps each service role easy to understand.
+
+### 56) Use two separate trade systems at Trading Posts
+
+Decision:
+- Trading Posts use:
+  - a **gold-based trade model**
+  - a separate **resource-for-resource barter model**
+- Do not derive all barter through gold.
+- Allow Scenario-level defaults to be overridden by specific Trading Posts.
+
+Why:
+- Produces cleaner and more controllable exchange behavior.
+- Allows authored economy variety without breaking the overall model.
+
+### 57) Keep gold trade intentionally lossy by default
+
+Decision:
+- Use updated base values:
+  - Wood / Stone = 100 gold
+  - Steel / Fiber / Clay = 200 gold
+  - Gems = 500 gold
+- Default gold buy rate = 5× base value
+- Default gold sell rate = 1/5 base value
+
+Why:
+- Makes direct gold conversion expensive by design.
+- Preserves resource scarcity and strategic tradeoffs.
+
+### 58) Use tier-based default barter rates for non-gold resource exchange
+
+Decision:
+- Treat:
+  - Wood / Stone as Tier 1
+  - Steel / Fiber / Clay as Tier 2
+  - Gems as Tier 3
+- Default buy costs follow the intended punitive barter model:
+  - buying 1 Tier 1 costs 10 / 5 / 2 in Tier 1 / 2 / 3
+  - and the full table is derived consistently from that structure
+- A resource cannot be exchanged for itself.
+
+Why:
+- Gives a readable, harsh default barter economy.
+- Loosely follows the gold-value structure without collapsing into it.
+
+### 59) Charge time, not Energy, for trade actions
+
+Decision:
+- Trading actions consume time but not Energy.
+- If at least one transaction happened before exiting the service screen, 20 minutes pass.
+- If nothing was exchanged, no time passes.
+
+Why:
+- Keeps trade meaningful without turning it into a movement action.
+- Prevents free high-frequency market abuse.
+
+### 60) Keep team-to-team resource transfer instant at Trading Posts
+
+Decision:
+- Resources sent to another team through a Trading Post arrive instantly.
+- If the receiving team is human-controlled, the game should show a message about the transfer.
+
+Why:
+- Keeps diplomacy and economic aid easy to understand.
+- Avoids unnecessary delivery simulation.
+
+### 61) Split inventory into item bag and artifact bag
+
+Decision:
+- Use:
+  - a shared **item inventory**
+  - a shared **artifact inventory**
+  - per-hero equipped artifact slots
+
+Why:
+- Keeps consumables/utilities separate from hero gear.
+- Makes inventory rules easier to understand.
+
+### 62) Keep artifacts as the only true equipment layer
+
+Decision:
+- There is no separate generic “equipment” category.
+- Equippable hero gear is handled entirely through **artifacts**.
+
+Why:
+- Simplifies inventory and reward structure.
+- Lets legendary weapons, armor-like objects, and special relics all live in one system.
+
+### 63) Make artifacts hero-only and slot-based
+
+Decision:
+- Only heroes may equip artifacts.
+- Heroes have:
+  - 1 Attack slot
+  - 1 Defense slot
+  - 3 Misc slots
+- Artifact effects apply while equipped.
+
+Why:
+- Makes hero customization meaningful without spreading gear rules across all unit types.
+- Keeps artifact design expressive but bounded.
+
+### 64) Distinguish general item subtypes clearly
+
+Decision:
+- General items include:
+  - consumables
+  - stackable utility / trigger items
+  - seeds
+  - ingredients
+  - food
+- Consumables may be battle-use, field-use, or both.
+- Food is a hero-consumed buff/recovery category.
+- Seeds and ingredients support farming / food systems.
+
+Why:
+- Gives the item system enough structure for future expansion.
+- Avoids lumping every non-artifact object into one vague category.
+
+### 65) Keep inventory effectively unlimited with per-type caps
+
+Decision:
+- Team inventory is effectively unlimited overall.
+- Per-type limits still apply:
+  - consumables: at most 1 per identical type
+  - artifacts: stack to 999 per identical type
+  - other stackable items: stack to 999 per identical type
+
+Why:
+- Avoids tedious bag-slot management.
+- Preserves item-identity rules where useful.
+
+### 66) Keep artifact combination irreversible
+
+Decision:
+- Artifacts may be combined into stronger artifacts at a dedicated service.
+- Combination is irreversible.
+- The source artifacts are consumed permanently.
+
+Why:
+- Makes artifact progression meaningful.
+- Prevents easy crafting reversals and exploit loops.
+
+### 67) Let heroes keep equipped artifacts when leaving the team for non-team-loss reasons
+
+Decision:
+- If a hero leaves the team for a reason other than being defeated by another team, the artifacts equipped on that hero leave with them.
+- If a team is defeated by another team, the winner gets the losing team’s artifacts and items.
+
+Why:
+- Keeps hero identity and equipment tied together.
+- Makes team-vs-team defeat a major economic consequence.
+
+### 68) Allow discarding and permanent consumption where authored rules permit
+
+Decision:
+- Consumables are gone immediately when used.
+- Artifacts used in combination are gone permanently.
+- Artifacts may be discarded unless doing so would violate Scenario-specific hard requirements such as victory conditions.
+
+Why:
+- Keeps inventory management flexible.
+- Supports authored scenario constraints without banning discard globally.
+
+### 69) Treat mines as the baseline owned resource service
+
+Decision:
+- Use **owned resource service** as the broader term.
+- Mines are the baseline example for now.
+- Default mine payouts are:
+  - Wood = 2/day
+  - Stone = 2/day
+  - Gold = 1000/day
+  - Steel / Fiber / Clay = 1/day
+  - Gems = 1/day
+- Specific mines may override these defaults by authored design.
+
+Why:
+- Gives the economy a clear foundational owned-node model.
+- Leaves room for future owned-resource service variants.
+
+### 70) Keep stationed mine units defensive only
+
+Decision:
+- Units stationed at a mine affect defense only, not production.
+
+Why:
+- Keeps production rules simple.
+- Prevents defensive assignment from becoming an economic multiplier system.
+
+### 71) Let resources, items, and artifacts participate directly in progression
+
+Decision:
+- Quests, events, and victory/defeat conditions may:
+  - require resources
+  - consume resources
+  - require items
+  - consume items
+  - require artifacts
+  - consume or deliver artifacts where authored
+
+Why:
+- Makes the economy truly part of Scenario identity.
+- Supports legendary-objective and logistics-driven content.
+
+### 72) Keep Scenario-defining items and artifacts as a first-class design tool
+
+Decision:
+- Some items and artifacts should be allowed to be central to Scenario identity, quests, or victory conditions.
+
+Why:
+- Supports memorable authored scenarios.
+- Lets economy and story interact meaningfully.
+
+### 73) Keep PvP separate from the main single-player design path for now
 
 Decision:
 - PvP may exist later as a separate mode.
