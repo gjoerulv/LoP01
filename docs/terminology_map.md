@@ -367,6 +367,73 @@ It is not a colored team and not an owned faction asset.
 
 Once cleared, that node becomes an empty travel node.
 
+
+### AI behavior seed
+An **AI behavior seed** is hidden Scenario-start seed data used to make AI world behavior deterministic.
+
+The same Scenario state, same AI seed, and same player actions should produce the same AI world decisions.
+
+### Battle seed
+A **battle seed** is deterministic seed data used for battle simulation and damage randomness.
+
+Battle seed behavior is separate from AI world behavior seed data.
+
+### AI knowledge
+**AI knowledge** is the set of Region information available to an AI team through that team's own fog-of-war and scouting rules.
+
+AI teams should not act on information outside their AI knowledge.
+
+### Priority pipeline
+A **priority pipeline** is the AI action-selection structure where major priorities are considered in order before personality weighting is applied.
+
+The broad order is:
+- victory opportunity
+- survival / defeat avoidance
+- urgent tactical or logistical needs
+- personality-shaped goals
+
+### Threat preview
+**Threat preview** is the cheap color-coded estimate shown before or around battle selection.
+
+It is not a full battle simulation and does not represent the exact auto-resolve result.
+
+### Auto-resolve result
+An **auto-resolve result** is the actual result of an automated backend battle simulation.
+
+It uses the battle rules and AI battle controller rather than a simple threat estimate.
+
+### Auto-combat
+**Auto-combat** is toggleable automated control during a manual battle.
+
+It should use the same battle AI controller as auto-resolve.
+
+### Fog of war
+**Fog of war** is the per-team revealed/unrevealed map-knowledge system.
+
+Unrevealed areas are hidden.
+
+Revealed areas remain revealed and provide live information.
+
+### Revealed
+A node or area is **revealed** once a team has uncovered it through movement, scouting, allied vision, stationed guards, owned services, or reveal services.
+
+Revealed information is live, not stale.
+
+### Scouting
+**Scouting** is the capability that increases reveal range and improves enemy-team inspection detail.
+
+At high scouting, full enemy-team details may be inspectable.
+
+### Visible enemy estimate
+A **visible enemy estimate** is the default limited information shown for a visible enemy team.
+
+It includes:
+- color
+- leader
+- threat color
+- unit quantity ranges
+- hero level ranges
+
 ---
 
 ## 5. Progression and scenario terms
@@ -715,6 +782,11 @@ When writing docs, code comments, prompts, plans, or design notes:
 - treat farming as either a Region service or a Location event-driven flow, depending on authored context
 - treat cooking as a party-menu system available outside battle, not as a required world service
 - treat artifact handling as artifact combination only unless the design explicitly expands later
+- treat AI world behavior as deterministic from Scenario-start AI seed data
+- treat AI knowledge as governed by fog of war, not omniscience
+- distinguish **threat preview** from the actual **auto-resolve result**
+- treat auto-resolve and auto-combat as using the same automated battle controller
+- treat scouting as the gate for deeper enemy inspection
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately

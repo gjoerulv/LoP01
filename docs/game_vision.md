@@ -356,12 +356,29 @@ Baseline aggression levels range from:
 
 This allows enemy teams to feel distinct without requiring unique hardcoded AI for every Scenario.
 
+### AI behavior philosophy
+Enemy-team AI should feel systemic and fair rather than scripted or omniscient.
+
+The long-term vision is:
+- medium-depth weighted behavior
+- deterministic choices from hidden Scenario-start AI seed data
+- no cheating with unrevealed information
+- personality and aggression shaping action priorities
+- hard patrol constraints unless changed by events
+- systemic behavior shaped indirectly by gates, events, team setup, and world rules
+
+AI should be strong enough to compete for resources, recruits, territory, and victory without requiring deep minimax planning.
+
 ### Auto-resolve-first design
-On the Region layer, battles involving the player should first produce an auto-resolve outcome that the player may either:
-- accept
+On the Region layer, battles involving the player should be able to auto-resolve first.
+
+The player should then be able to:
+- accept the result
 - or replay manually
 
 AI-vs-AI battles should auto-resolve without interrupting play directly.
+
+Auto-resolve should eventually be a full deterministic backend CTB simulation, not a loose strength comparison.
 
 This supports a game with multiple active teams and many possible collisions without making pacing collapse.
 
@@ -861,16 +878,51 @@ That keeps the definition sharp and systemic while allowing wide authored variet
 
 The world should not be fully transparent at all times.
 
-The player should:
-- see known and currently revealed parts of a Region
-- infer danger from enemy motion and ownership pressure
-- discover more through movement and exploration
+Fog of war is a major part of Region play, enemy-team fairness, and strategic tension.
 
-Enemy movement and AI-vs-AI outcomes should only be visible where the Region is revealed.
+### Fair knowledge
+Both human and AI teams should follow the same knowledge model.
 
-This supports both:
-- strategic uncertainty
-- and a stronger sense that other teams are acting in the world whether or not the player sees every detail
+AI teams should not act on hidden information that they have not explored or revealed.
+
+### Reveal model
+Fog should follow a HoMM2/HoMM3-like model:
+
+- unrevealed areas are hidden
+- revealed areas stay revealed
+- revealed information is live, not stale
+
+This keeps map knowledge simple and readable.
+
+### Vision sources
+Vision may come from:
+- team position
+- allied teams
+- scouting passives
+- stationed guards
+- owned services
+- special reveal services
+
+The player should gradually build map knowledge through movement, ownership, and scouting.
+
+### Visible information
+When enemy teams are visible, the player should get useful but not always complete information.
+
+Baseline visible information should include:
+- team color
+- leader
+- threat indication
+- estimated unit quantities
+- estimated hero level ranges
+
+High scouting should eventually allow full inspection, including resources, items, and artifacts.
+
+### Hidden events
+Unseen enemy movement and AI-vs-AI outcomes should not generate generic messages by default.
+
+Major events may still be announced through authored events.
+
+If a hidden AI team wins the Scenario, the game should end immediately and explain why.
 
 ---
 
