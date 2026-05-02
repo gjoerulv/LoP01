@@ -545,26 +545,381 @@ A team only enters or occupies the target node if all hostile teams remaining on
 Otherwise the attacker remains on its previous node.
 
 ### Player-involved battle flow
-For battles involving the player:
+For battles involving the player, battle entry uses the threat-preview and auto-resolve flow defined later in this document.
 
-- the game first computes an **auto-resolve** result
-- the player may accept that result
-- or choose to play the battle manually instead
-
-When a player-involved battle ends, the result screen is shown.
-
-The player may choose to retry the battle from the original pre-battle state.
+At a high level:
+- the player may see a rough threat preview
+- the game may auto-resolve first if auto-resolve is enabled
+- the player may accept the result or redo the battle manually
+- retries restore the original pre-battle state and deterministic battle seed
 
 ### AI-versus-AI battle flow
-AI-versus-AI battles are always auto-resolved.
+AI-versus-AI battles always use auto-resolve.
 
-Their results are not shown directly to the player.
-
-AI movement and AI-vs-AI outcomes are only visible where the Region has been revealed to the player.
+Their results are not shown directly to the player unless revealed through normal fog-of-war or event feedback.
 
 ---
 
-## 14. Node occupation and access
+## 14. AI behavior, knowledge, and action selection
+
+Enemy-team AI should use medium-depth weighted behavior, not deep minimax planning.
+
+The AI should make plausible strategic decisions under the same world rules as human teams without attempting to solve the entire future state of the Scenario.
+
+### Determinism and seeds
+AI world behavior is deterministic from hidden Scenario-start AI seed data.
+
+If a Scenario starts with the same AI seed and the human player makes the same moves, AI world decisions should resolve the same way.
+
+Battle randomness uses a separate deterministic battle / damage seed stream. Different playthroughs may therefore share an AI-behavior seed but still differ in battle outcomes if their battle seed differs.
+
+### AI knowledge
+AI teams obey the same knowledge rules as human teams.
+
+An AI team may act only on:
+- what that team has explored
+- what that team currently has revealed
+- information exposed by its scouting / vision rules
+- information made available through normal Scenario systems
+
+AI teams should not cheat by using unrevealed map knowledge.
+
+### Action-selection structure
+AI action selection should use a priority pipeline rather than a single flat score.
+
+The broad priority order is:
+
+1. pursue a valid victory opportunity
+2. avoid defeat or preserve survival where appropriate
+3. satisfy urgent tactical or logistical needs
+4. pursue personality-shaped goals
+
+Personality and aggression modify how the AI interprets risk, especially when victory and survival conflict.
+
+### Victory, survival, personality, and aggression
+Victory opportunity generally overrides personality.
+
+Avoiding defeat interacts with aggression level:
+
+- **Pacifist** and **Coward** strongly avoid losing
+- **Careful** usually avoids losing
+- **Opportunistic** is more willing to risk a win attempt
+- **Reckless** and **Berserk** try to win when the opportunity exists
+- **Warrior** accepts higher combat risk when a fight can satisfy a victory condition
+- **Builder** and **Explorer** weigh victory fights more evenly against their normal priorities
+
+### Personality effects
+Personality affects both:
+- goal priority
+- movement style
+
+Examples:
+- **Warrior** seeks pressure, fights, and denial
+- **Builder** values recruits, resources, restoration, and growth
+- **Explorer** values reveal, discovery, and traversal
+
+### Pass / wait behavior
+AI teams may intentionally pass or wait if that is the best legal action.
+
+Valid reasons include:
+- no useful action exists
+- movement would expose the team
+- the team is guarding a strategic node
+- the team is waiting for a cooldown
+- the team is constrained by patrol or service timing
+
+### Patrol radius
+Patrol radius is hard enforced.
+
+An AI team may not move outside its patrol radius unless events remove, replace, or expand that patrol rule.
+
+Victory opportunity does not override patrol radius by itself.
+
+### Movement and pathing
+AI movement uses the same broad model as player movement.
+
+An AI team:
+- selects a reachable destination within its one-action budget
+- uses the shortest legal path
+- pays the normal Energy cost
+- may not exceed what would consume 1 hour for that team
+
+AI should also account for relevant service time or Energy costs when deciding whether an action is legal and useful.
+
+### Hostile and allied occupied nodes
+AI may path through allied occupied nodes.
+
+Hostile occupied nodes are treated as obstacles unless the AI chooses to fight.
+
+If an AI wants something beyond a hostile occupied node:
+- it may attack if its aggression and strength evaluation allow it
+- it may choose an alternate route if one exists
+- it may recruit or improve first if a nearby service makes the fight more favorable
+
+Pacifist AI never initiates attacks.
+
+### AI service use
+AI teams may use any legal **Region** service.
+
+AI teams do not enter Locations and therefore do not use Location-only service interactions.
+
+AI teams may:
+- recruit
+- rest
+- collect resources
+- use Region farming services
+- use sanctuary
+- use Markets
+- use Trading Posts for resource exchange
+- use Freelancer's Guilds
+- use Black Markets
+- combine artifacts at artifact-handler services
+- cook through the party-menu system
+- equip and manage artifacts
+- leave guards where legal
+- destroy or restore services where legal
+
+AI teams should not send resources to other teams through Trading Posts.
+
+### AI economy and equipment behavior
+AI should try to use economic systems well enough to remain competitive.
+
+Examples:
+- trade resources to afford useful recruits
+- buy artifacts when useful
+- combine artifacts when possible
+- sell generic units at a Freelancer's Guild only when they are considered low-value and the team needs gold
+- cook when available food would be useful
+- keep the best available artifacts equipped
+
+Combining artifacts always produces a stronger artifact, so AI should generally prioritize valid combinations when they help the team.
+
+### Destroying and restoring services
+AI may destroy a service when:
+- the service is useful mainly to enemies
+- denial is strategically valuable
+- the team can afford the time and Energy cost
+- the service is legally destroyable
+
+**Warrior** AI is most likely to actively sabotage.
+
+AI may restore a destroyed service when:
+- the service is useful to the team
+- the team can afford the restoration cost
+- restoration supports its current goals
+
+**Builder** AI is most likely to restore services, but all personalities may restore useful services.
+
+### Authorship boundaries
+Designers assign:
+- personality
+- aggression
+- patrol
+- team setup
+- alliances
+- gates
+- events
+- team spawns
+
+Designers should not assign direct arbitrary AI objectives such as “go attack this exact node now.”
+
+Story-like AI behavior should be achieved through:
+- gates
+- event conditions
+- team spawning
+- changes to personality / aggression / patrol
+- systemic rules
+
+---
+
+## 15. Fog of war, reveal, and scouting
+
+Fog of war is shared in principle across human and AI teams.
+
+Each team has its own explored / revealed map knowledge.
+
+### Initial reveal
+By default, nothing is revealed except the area around the team's current position.
+
+When a team moves to a node, it reveals up to **2 nodes ahead** by default.
+
+Passive scouting can increase this reveal range up to **5 nodes**.
+
+Owned nodes at Scenario start reveal **2 nodes** around those owned nodes immediately.
+
+### Reveal persistence
+Fog of war uses a HoMM2/HoMM3-like model.
+
+A revealed area never becomes stale.
+
+Once something is revealed, it remains revealed and gives live information.
+
+### Vision sources
+Vision may come from:
+- the team's current position
+- allied teams
+- scouting / passive skills
+- stationed guards
+- owned services
+- authored reveal services
+
+A reveal service may reveal **10 nodes** in a radius around itself.
+
+### AI fog of war
+AI teams use the same fog-of-war rules as human teams.
+
+AI teams should not act on unrevealed information.
+
+### Visible and unseen actions
+Visible AI movement should be animated when it happens in revealed areas.
+
+The game should support movement-speed settings from very slow to instant.
+
+Unseen AI events do not generate messages by default unless an authored event explicitly does so.
+
+If a visible team uses a service, item, rest, waits, or passes, the player should receive appropriate visible feedback.
+
+### Hidden victory
+If a hidden AI team satisfies a victory condition, the game ends immediately and reveals why that team won.
+
+### Enemy inspection and scouting
+When an enemy team is visible, the default visible information is:
+
+- team color
+- leader
+- threat color
+- estimated unit quantities by stack
+- estimated hero level ranges
+
+Generic unit quantity ranges are:
+
+- `1-4`
+- `5-9`
+- `10-19`
+- `20-49`
+- `50-99`
+- `100-249`
+- `250-499`
+- `500-999`
+- `1000+`
+
+Hero level ranges are shown in increments of 4:
+
+- `1-4`
+- `5-8`
+- `9-12`
+- and so on
+
+With the highest scouting capability, a team may inspect full visible-team details, including:
+- exact composition
+- resources
+- items
+- artifacts
+
+The same scouting rules apply to AI knowledge.
+
+---
+
+## 16. Threat preview, auto-resolve, and auto-combat
+
+Threat preview, auto-resolve, and auto-combat are separate concepts.
+
+### Threat preview
+Threat preview is a cheap estimate shown before or around battle selection.
+
+It is **not** a full battle simulation.
+
+Threat preview is based on visible unit counts and stats and ignores usable skills.
+
+Threat color should communicate estimated danger:
+
+- **red** if the enemy is heavily favored
+- **yellow** if the enemy is favored
+- **green** if the player is heavily favored
+- **white** by default
+
+Suggested default thresholds:
+- enemy advantage above 75/25 = red
+- enemy advantage above 50/50 = yellow
+- player advantage above 80/20 = green
+- otherwise white
+
+### Auto-resolve result
+Auto-resolve is the actual automated battle result.
+
+Auto-resolve uses a full backend CTB battle simulation with AI battle choices.
+
+It should:
+- use the same battle rules as manual battle
+- be fast
+- be deterministic from the battle seed and starting state
+- produce the actual result screen
+- support AI-vs-AI battles without interrupting play
+
+### Full battle rules in auto-resolve
+Auto-resolve uses full battle rules, including:
+- leader aura
+- passive skills
+- food buffs
+- artifacts
+- position and range rules
+- MP constraints
+- usable skills and items where enabled
+
+AI teams may use everything available to them.
+
+Human teams may restrict auto-resolve / auto-combat use of:
+- usable skills
+- items
+
+By default, human-team auto-resolve / auto-combat use of usable skills and items is disabled to avoid wasting MP and items.
+
+This restriction does **not** disable:
+- leader aura
+- passive skills
+- food buffs
+- artifacts
+- other always-on effects
+
+### Player-involved auto-resolve flow
+If auto-resolve is enabled, player-involved Region battles auto-resolve first.
+
+The player sees the result screen and may:
+- accept the result
+- redo the battle manually
+
+The player cannot meaningfully rerun the same auto-resolve result, because it is deterministic.
+
+### Auto-combat
+Manual battle may include a toggleable **auto-combat** mode.
+
+Auto-combat uses the same AI battle controller as auto-resolve.
+
+Given the same:
+- pre-battle state
+- battle seed
+- auto-combat settings
+- human-team skill/item restrictions
+
+auto-combat should produce the same result as auto-resolve if allowed to run without player intervention.
+
+### Retry behavior
+Retrying a battle restores:
+- the exact pre-battle state
+- the deterministic battle seed
+
+The same choices should produce the same result.
+
+Different player choices may produce different results.
+
+### AI-vs-AI auto-resolve
+AI-vs-AI battles always auto-resolve.
+
+Their results are not shown directly to the player unless visible through normal fog-of-war or event feedback.
+
+---
+
+## 17. Node occupation and access
 
 If a hostile team occupies a node, the opposing side must defeat that team to use the node.
 
@@ -592,7 +947,7 @@ Enemy teams may not:
 
 ---
 
-## 15. Ownership, capture, and competitive control
+## 18. Ownership, capture, and competitive control
 
 Some nodes or Services may be owned by a specific team.
 
@@ -620,7 +975,7 @@ Default daily payouts at the start of the day are:
 - Gold mine = **1000 Gold**
 - Wood source = **2 Wood**
 - Stone source = **2 Stone**
-- Steel / Fiber / Clay / Gem source = **1** of its resource
+- Steel / Fiber / Clay / Gems source = **1** of its resource
 
 Scenario content may override these defaults.
 
@@ -636,7 +991,7 @@ An allied team may share a node, but that does not grant automatic use of the no
 
 ---
 
-## 16. Sanctuary and protected non-combat spaces
+## 19. Sanctuary and protected non-combat spaces
 
 A **sanctuary** is a single Service node.
 
@@ -659,7 +1014,7 @@ General service-destruction rules still apply.
 
 ---
 
-## 17. Service destruction and restoration
+## 20. Service destruction and restoration
 
 Only **Region Services** may be destroyed as a systemic rule.
 
@@ -698,7 +1053,7 @@ This queued restoration may be cancelled by destroying the service again before 
 
 ---
 
-## 18. Storage gates
+## 21. Storage gates
 
 Storage may exist either:
 
@@ -730,7 +1085,7 @@ Only enemy teams may attack storage gates as a default systemic rule.
 ---
 
 
-## 19. Resources, currencies, items, and artifacts
+## 22. Resources, currencies, items, and artifacts
 
 ### Team-owned resources
 Resources belong to the current team globally.
@@ -864,7 +1219,7 @@ Resources, items, and artifacts are all valid authored inputs for:
 
 ---
 
-## 20. Trader services and exchange rules
+## 23. Trader services and exchange rules
 
 Trader services are a family of specialized authored services.
 
@@ -876,6 +1231,7 @@ The main trader service categories are:
   - exchanges resources for other resources
   - exchanges resources for gold and gold for resources using the defined exchange models
   - sends resources to other teams
+  - AI teams may use Trading Posts for resource exchange, but resource sending to other teams is a human-facing activity.
 - **Market**
   - buys and sells items for gold only
 - **Freelancer's Guild**
@@ -1002,7 +1358,7 @@ Rules:
 - by default, Black Market stock does **not** restock
 ---
 
-## 21. Location-mode service construction, restoration, and upgrade
+## 24. Location-mode service construction, restoration, and upgrade
 
 Location-mode service flow is fundamentally more event-driven than Region-mode service flow.
 
@@ -1043,7 +1399,7 @@ When an event in a Location creates, restores, or upgrades a service, that resul
 
 ---
 
-## 22. Farming services
+## 25. Farming services
 
 Farming exists in two forms:
 
@@ -1133,7 +1489,7 @@ However:
 
 ---
 
-## 23. Cooking and food
+## 26. Cooking and food
 
 Cooking is a party-level system, not a world-service requirement.
 
@@ -1202,7 +1558,7 @@ Duration depends on the specific food item.
 
 ---
 
-## 24. Artifact handling and crafting
+## 27. Artifact handling and crafting
 
 The only intended crafting systems at this stage are:
 
@@ -1245,7 +1601,7 @@ This keeps artifact handling consistent with the broader split between Region ha
 
 ---
 
-## 25. Battle spoils, stealing, escape, and surrender
+## 28. Battle spoils, stealing, escape, and surrender
 
 ### Battle spoils against teams
 If a team defeats another team in battle, the winner gains:
@@ -1317,7 +1673,7 @@ If the surrendering team cannot respawn because the spawn point is occupied by a
 
 In single-player, surrender should feel broadly similar to the ordinary setback rhythm of being forced out of the Region, except the additional explicit cost is the gold paid to the opposing team.
 
-## 26. Recruitment and competition
+## 29. Recruitment and competition
 
 Recruitment services are shared competitive resources.
 
@@ -1362,7 +1718,7 @@ After the hero is freed, that node becomes an empty travel node.
 
 ---
 
-## 27. Quest, objective, event, and progression structure
+## 30. Quest, objective, event, and progression structure
 
 ### Core terms
 Use the following distinction:
@@ -1392,7 +1748,7 @@ This distinction applies across:
 
 ---
 
-## 28. Quest services
+## 31. Quest services
 
 A **quest service** is a specific authored Service structure on the map.
 
@@ -1478,7 +1834,7 @@ This means enemy teams may complete or invalidate player-relevant quests.
 
 ---
 
-## 29. Quest states and player-facing quest log
+## 32. Quest states and player-facing quest log
 
 ### Technical quest state
 In the technical sense, a quest-service quest is primarily either:
@@ -1523,7 +1879,7 @@ The quest log is distinct from both:
 
 ---
 
-## 30. Objective structure
+## 33. Objective structure
 
 ### Strong typing
 Objective types should remain **strongly typed and finite**.
@@ -1552,7 +1908,7 @@ Examples of valid quest-service requirements include:
 
 ---
 
-## 31. Events
+## 34. Events
 
 Events are the primary systemic progression engine.
 
@@ -1632,7 +1988,7 @@ Quest services are therefore a specialized structure layered on top of the gener
 
 ---
 
-## 32. Victory conditions
+## 35. Victory conditions
 
 Victory conditions are **scenario-level rules**, separate from the quest system.
 
@@ -1680,7 +2036,7 @@ This is intentional.
 
 ---
 
-## 33. Defeat conditions
+## 36. Defeat conditions
 
 Defeat conditions are **scenario-level loss rules**, separate from quests.
 
@@ -1703,7 +2059,7 @@ A Scenario may also have no special defeat condition beyond ordinary inability t
 
 ---
 
-## 34. Guidance, journal, and player information
+## 37. Guidance, journal, and player information
 
 Keep these systems distinct.
 
@@ -1736,7 +2092,7 @@ Guidance text is not the same thing as the actual victory structure.
 
 ---
 
-## 35. Campaign transitions and carry-over
+## 38. Campaign transitions and carry-over
 
 Campaign transitions are authored **per transition**, not controlled by one global campaign-wide carry-over rule.
 
@@ -1779,7 +2135,7 @@ Story flags should always be available as campaign carry-over data.
 
 ---
 
-## 36. Temporarily Unavailable heroes
+## 39. Temporarily Unavailable heroes
 
 A hero becomes **Temporarily Unavailable** when removed from the roster through rules such as:
 
@@ -1803,7 +2159,7 @@ Quest-critical hero loss does not necessarily make a quest permanently impossibl
 
 ---
 
-## 37. Enemy-team defeat, persistence, and replacement
+## 40. Enemy-team defeat, persistence, and replacement
 
 When an enemy team is defeated:
 
@@ -1827,7 +2183,7 @@ Default naming may be tied to team color unless a Scenario overrides it.
 
 ---
 
-## 38. Node clearing outcomes
+## 41. Node clearing outcomes
 
 When temporary node content is cleared, the node becomes an empty travel node.
 
@@ -1843,7 +2199,7 @@ More drastic node destruction or structural world changes should happen only thr
 
 ---
 
-## 39. Agent / implementation guidance
+## 42. Agent / implementation guidance
 
 For future implementation and planning:
 

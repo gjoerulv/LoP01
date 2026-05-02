@@ -1176,3 +1176,217 @@ Decision:
 Why:
 - Prevents the game from requiring every economic and support subsystem in every Scenario.
 - Supports strong Scenario identity and variety.
+
+### 93) Use medium-depth deterministic AI, not deep minimax
+
+Decision:
+- Enemy-team AI should use medium-depth weighted behavior.
+- It should not attempt deep minimax planning.
+- AI world behavior should be deterministic from hidden Scenario-start AI seed data.
+
+Why:
+- Keeps AI comprehensible and performant.
+- Supports repeatable debugging while still allowing varied Scenario starts.
+
+### 94) Give AI the same fog-of-war knowledge limits as humans
+
+Decision:
+- AI teams may act only on what they have explored or revealed through normal rules.
+- AI should not cheat by using hidden Region information.
+
+Why:
+- Preserves fairness.
+- Makes scouting and map control meaningful for all teams.
+
+### 95) Use a priority pipeline for AI action selection
+
+Decision:
+- AI action selection should use a priority pipeline rather than one flat score.
+- The broad priority order is:
+  - victory opportunity
+  - survival / defeat avoidance
+  - urgent tactical or logistical needs
+  - personality-shaped goals
+
+Why:
+- Prevents AI from looping on low-value tasks.
+- Ensures victory and survival remain strategically meaningful.
+
+### 96) Let personality and aggression shape AI risk and movement style
+
+Decision:
+- Personality affects both goal priority and movement style.
+- Aggression affects combat risk tolerance.
+- Victory opportunity usually overrides personality, but aggression affects how much danger the AI accepts.
+
+Why:
+- Makes enemy teams feel distinct without requiring custom scripting for each team.
+
+### 97) Make patrol radius a hard AI constraint
+
+Decision:
+- Patrol radius is forced.
+- AI teams may not move outside their patrol radius unless events remove, replace, or expand it.
+
+Why:
+- Gives designers reliable containment tools.
+- Avoids AI breaking authored Region structure.
+
+### 98) Avoid direct arbitrary AI objectives
+
+Decision:
+- Designers should assign personality, aggression, patrol, gates, events, team setup, and spawns.
+- Designers should not normally assign arbitrary direct objectives such as “go attack this exact node now.”
+
+Why:
+- Keeps AI systemic.
+- Encourages story-like behavior through authored world structure rather than one-off scripts.
+
+### 99) Allow events to change AI parameters
+
+Decision:
+- Events may change AI personality, aggression, patrol, alliances, and team spawning.
+
+Why:
+- Supports story progression and changing world pressure while keeping AI systemic.
+
+### 100) Let AI use all legal Region services and relevant party systems
+
+Decision:
+- AI teams may use all legal Region services.
+- AI may also use party-level systems such as cooking and artifact management.
+- AI still does not enter Locations.
+
+Why:
+- Keeps AI economically and strategically competitive.
+- Preserves the current Location-access rule.
+
+### 101) Prevent AI team-to-team resource sending
+
+Decision:
+- AI may use Trading Posts for resource exchange.
+- AI should not send resources to other teams through Trading Posts.
+- Team-to-team resource sending is a human-facing activity.
+
+Why:
+- Avoids unnecessary diplomacy/economy complexity.
+- Keeps AI trading focused on self-improvement.
+
+### 102) Let AI manage artifacts and cooking
+
+Decision:
+- AI should try to equip the best available artifacts.
+- AI may combine artifacts when useful.
+- AI may cook when available food would benefit the team.
+
+Why:
+- Keeps AI competitive under the same economy and preparation rules as human teams.
+
+### 103) Keep service destruction and restoration personality-sensitive
+
+Decision:
+- AI may destroy services for denial when legal.
+- Warrior AI is most likely to sabotage.
+- AI may restore useful services when it can afford to do so.
+- Builder AI is most likely to restore.
+
+Why:
+- Makes sabotage and rebuilding feel tied to team identity.
+
+### 104) Separate threat preview from auto-resolve result
+
+Decision:
+- Threat preview is a rough, color-coded estimate.
+- Threat preview is not a full battle simulation.
+- Auto-resolve result is the actual deterministic backend battle result.
+
+Why:
+- Keeps pre-battle readability cheap.
+- Prevents the preview from being confused with the actual simulated outcome.
+
+### 105) Use full backend CTB simulation for auto-resolve
+
+Decision:
+- Auto-resolve should play out a full backend CTB battle using AI battle choices.
+- It should use the same battle rules as manual battle.
+- It should be deterministic from battle seed and starting state.
+
+Why:
+- Keeps auto-resolve fair and consistent with real battle rules.
+- Makes AI-vs-AI outcomes credible.
+
+### 106) Share the battle AI controller between auto-resolve and auto-combat
+
+Decision:
+- Manual battle may support toggleable auto-combat.
+- Auto-combat should use the same AI battle controller as auto-resolve.
+- Same pre-battle state, seed, and settings should produce the same result.
+
+Why:
+- Avoids parallel automated-battle implementations.
+- Makes automated results easier to test.
+
+### 107) Restrict human auto-resolve skill/item use by setting
+
+Decision:
+- Human-team auto-resolve / auto-combat may disable usable skills and items.
+- By default, usable skills and items are disabled for human auto-resolve / auto-combat.
+- This does not disable leader aura, passive skills, food buffs, artifacts, or other always-on effects.
+- AI teams may use everything available.
+
+Why:
+- Prevents auto-resolve from wasting player MP and items by default.
+- Keeps always-on build choices meaningful.
+
+### 108) Make battle retry deterministic
+
+Decision:
+- Retrying a battle restores the exact pre-battle state and deterministic battle seed.
+- The same choices should produce the same result.
+- Different choices may produce different results.
+
+Why:
+- Keeps retries fair and debuggable.
+- Prevents retry randomness from becoming the main tactical tool.
+
+### 109) Use persistent live fog-of-war reveal
+
+Decision:
+- Unrevealed areas are hidden.
+- Revealed areas stay revealed forever.
+- Revealed information is live rather than stale.
+
+Why:
+- Matches the intended HoMM-like map readability.
+- Avoids more complex stale-information bookkeeping.
+
+### 110) Give both human and AI teams their own vision
+
+Decision:
+- Each team has its own revealed map knowledge.
+- Vision may come from team position, allied teams, scouting, stationed guards, owned services, or reveal services.
+
+Why:
+- Makes scouting, ownership, and allies strategically meaningful.
+- Keeps AI knowledge fair.
+
+### 111) Show visible AI activity, not unseen activity
+
+Decision:
+- Visible AI movement should be animated, with speed settings from very slow to instant.
+- Unseen AI actions should not produce generic messages by default.
+- Authored events may still announce important unseen outcomes.
+
+Why:
+- Maintains pacing and fog-of-war tension.
+- Keeps major story or victory events explainable.
+
+### 112) Use scouting to control enemy inspection depth
+
+Decision:
+- Default visible enemy information includes color, leader, threat color, estimated unit quantity ranges, and hero level ranges.
+- Highest scouting may reveal full details, including resources, items, and artifacts.
+
+Why:
+- Gives players enough information to make decisions while preserving scouting value.
+
