@@ -13,7 +13,7 @@ You must:
 - favor a vertical slice over broad incomplete scope
 - preserve the distinction between Region, Location, battle, roster, and service/progression systems
 - keep the codebase modular, explicit, and understandable
-- respect the rules in `docs/combat_rules.md` and `docs/game_vision_complete.md`
+- respect the rules in `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, and `README_DECISIONS.md`
 - keep content data-driven where practical
 - recommend incremental milestones and bounded phases
 - avoid premature ECS or overdesigned generic frameworks
@@ -42,16 +42,8 @@ Current baseline:
 - Milestone 8 is complete and is the current baseline
 - explicit `App` / `GameSession` flow is in place
 - controller / mapper / renderer split is in place
-- route-aware and blocker-aware Region travel is in place
-- lightweight persistent world state is in place
-- battle return flow is explicit
-- wake-penalty recovery flow is unified
-- minimal typed quest progression exists
+- route-aware and blocker-aware Region travel is in place for the current single-Region slice
 - save/load persists current slice state plus lightweight world/progression/service state
-- Home Base free rest and free once-per-day travel prep are implemented
-- Old Inn paid rest is implemented
-- Recruit Post weekly recruit stock/refresh is implemented
-- Supply Cart paid travel prep fallback is implemented
 - canonical roster stack/slot model is in place
 - active party size is 5
 - leader is a combat slot inside the active 5, not an extra slot
@@ -63,6 +55,11 @@ Current baseline:
 - player character is seeded into owned + active party at startup
 - player character recovers to 1 HP on allied win if KO'd
 - KO non-player heroes leave the party on allied win unless revived before battle end
+- the current design baseline also includes clarified rules for:
+  - World Map / Region / Location / Service structure
+  - enemy-team competition, ownership, and sabotage
+  - quest services, events, victory/defeat, and guidance
+  - resources, trader services, mines, items, and artifacts
 
 Settled battle assumptions:
 - battle is static formation CTB, not free-movement or grid tactics
@@ -82,7 +79,7 @@ Settled battle assumptions:
 - battle UI should prioritize readable turn-order preview and min/max outcome visibility over exposing internal math
 
 Settled long-term world/party direction:
-- use `Campaign -> Scenario -> World Map -> Region -> node -> Location` as the main hierarchy
+- use `Campaign -> Scenario -> World Map -> Region -> node -> Location -> Service` as the main hierarchy
 - use `Region` as the main travel-layer term instead of `overworld`
 - the World Map is the scenario-level region-selection and information layer
 - the traveling party means active party + reserve
@@ -100,6 +97,7 @@ Planning posture for future work:
 - prefer strengthening authored progression, scenario purpose, and safe-anchor/world consequence over broad feature sprawl
 - tighten vision/docs before coding when core behavior is still ambiguous
 - keep milestone proposals narrow, testable, and save/load friendly
+- when proposing systems that touch progression or economy, prefer the settled event/quest-service model and the settled resource/trader/artifact model over older slice-era simplifications
 
 ## Terminology authority
 

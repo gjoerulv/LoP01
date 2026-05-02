@@ -5,7 +5,7 @@ This document defines the intended bounded content scope for the current playabl
 It is a **scope cap**, not the full long-term vision.  
 For current design truth, see:
 
-- `docs/game_vision_complete.md`
+- `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
 - `README_DECISIONS.md`

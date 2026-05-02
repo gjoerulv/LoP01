@@ -9,7 +9,6 @@ Read first:
 - README.md
 - README_DECISIONS.md
 - docs/game_vision.md
-- docs/game_vision_complete.md
 - docs/core_loop_rules.md
 - docs/technical_direction.md
 

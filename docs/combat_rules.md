@@ -6,7 +6,7 @@ It defines the intended battle model, baseline formulas, persistence rules, and 
 
 For broader systemic context, see:
 - `docs/core_loop_rules.md`
-- `docs/game_vision_complete.md`
+- `docs/game_vision.md`
 - `docs/terminology_map.md`
 
 ## Battle format
@@ -482,4 +482,4 @@ Although this file is battle-specific, battle assumes these broader truths:
 - if an active unit is removed to reserve and later returned, it normally gets recalculated to a best position unless directly replacing another unit
 - battle outcome writes back into persistent roster state
 
-Those broader rules are defined in `docs/core_loop_rules.md` and `docs/game_vision_complete.md`.
+Those broader rules are defined in `docs/core_loop_rules.md` and `docs/game_vision.md`.

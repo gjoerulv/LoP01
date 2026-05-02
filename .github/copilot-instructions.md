@@ -87,7 +87,7 @@ Read these before planning or making broad changes:
 
 1. `README.md`
 2. `README_DECISIONS.md`
-3. `docs/game_vision_complete.md`
+3. `docs/game_vision.md`
 4. `docs/combat_rules.md`
 5. milestone-specific doc/prompt if the task is tied to one
 6. `docs/technical_direction.md`
@@ -106,7 +106,7 @@ Use this order when there is ambiguity:
 2. explicit current-task requirements from the user
 3. active milestone doc for the task, if one exists
 4. `README_DECISIONS.md`
-5. `docs/game_vision_complete.md`
+5. `docs/game_vision.md`
 6. `docs/core_loop_rules.md` and `docs/combat_rules.md`
 7. `docs/technical_direction.md`
 8. `docs/content_scope_v0.md` as a bounded-scope cap only
@@ -122,27 +122,26 @@ Assume the current baseline already includes:
 
 - explicit `App` / `GameSession` flow
 - controller / mapper / renderer split
-- typed regions, locations, location scenes, battle scenarios, quests, and service definitions
-- unified wake-penalty recovery flow
-- route-aware travel, cutoff-aware travel, and blocker-aware routing
-- minimal persistent cleared combat-node state
-- minimal typed quest progression tied to world actions
-- save/load for current slice state and lightweight world/progression/service state
-- Home Base free rest and free once-per-day travel prep
-- Old Inn paid rest
-- Recruit Post weekly recruit stock and refresh behavior
-- Supply Cart paid same-day travel prep fallback
-- app-layer service prompt formatting and UI-light readability improvements
+- typed Regions, Locations, battle scenarios, Services, quests, and content definitions
+- route-aware and blocker-aware Region travel inside the current single-Region slice
+- save/load for current slice state plus lightweight world/progression/service state
 - canonical roster stack/slot model
-- persistent owned-roster plus active-party state
+- persistent owned roster plus active-party state
 - battle quantity persistence and battle write-back into roster state
 - active party size of 5, with Leader inside the 5
-- leader/aura baseline in place
+- leader / aura baseline in place
 - player team requiring a legal leader
 - enemy teams optionally having a leader
 - player-character seeding into owned roster and active-party legality protections
 - player-character recovery to 1 HP on allied win if KO'd
 - KO non-player heroes leaving the party on allied win if not revived before battle end
+- post-M8 design clarification across:
+  - World Map / Region terminology
+  - single-purpose Region nodes
+  - enemy-team competition and sabotage
+  - event-driven progression
+  - quest services / victory / defeat / guidance
+  - economy / trader / mines / artifacts / items
 
 The current codebase is still a bounded single-region slice and does not yet implement the full World-Map / cross-region travel layer.
 
@@ -153,10 +152,10 @@ There is no new implementation milestone locked yet beyond M8.
 Until a new milestone is explicitly chosen:
 
 - preserve the current post-M8 baseline
-- treat `docs/combat_rules.md` and `docs/game_vision_complete.md` as the authoritative design baseline for battle and high-level gameplay vision
+- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, and `README_DECISIONS.md` as the authoritative design baseline
 - do not reopen settled battle rules unless explicitly requested
 - prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
-- keep future milestone proposals tightly scoped to the current single-region vertical slice
+- keep future milestone proposals tightly scoped and compatible with the current single-region vertical slice, unless the user explicitly chooses to widen scope
 - when discussing future world-map/region/party systems, use the settled terminology and party/storage model rather than older region-local-party assumptions
 
 ## Avoid

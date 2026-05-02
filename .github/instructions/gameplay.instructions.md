@@ -7,7 +7,7 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Treat the repository and the current design docs as the source of truth.
 - Respect the time and travel rules exactly as described in `docs/core_loop_rules.md`.
 - Respect battle logic exactly as described in `docs/combat_rules.md`.
-- Respect the current high-level design intent in `docs/game_vision_complete.md`.
+- Respect the current high-level design intent in `docs/game_vision.md`.
 - Use `docs/terminology_map.md` when legacy runtime or content names differ from current design language.
 
 ## Terminology
@@ -92,7 +92,7 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Prefer explicit mode-entry helpers for World Map, Region, Location, and Battle transitions instead of chaining generic mode advancement.
 - Prefer a single source of truth for status or event text; remove duplicate shadow strings once event-driven text exists.
 - Player defeat, sleep-failure penalties, temporary hero unavailability, and post-battle fallout must stay consistent with the current design docs.
-- Do not invent major story elements that contradict `docs/game_vision_complete.md`.
+- Do not invent major story elements that contradict `docs/game_vision.md`.
 - Prefer a playable incomplete feature over a broad unfinished feature.
 - When terminology migration is the task, keep it behavior-preserving and avoid unrelated gameplay refactors.
 - When a historical milestone doc conflicts with the current design docs, follow the current design docs.
