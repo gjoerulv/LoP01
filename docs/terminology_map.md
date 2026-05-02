@@ -8,7 +8,7 @@ This is a terminology and interpretation document. It is **not** the full design
 
 Current design truth lives primarily in:
 
-- `docs/game_vision_complete.md`
+- `docs/game_vision.md`
 - `docs/combat_rules.md`
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`

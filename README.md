@@ -10,7 +10,7 @@ For terminology, see `docs/terminology_map.md`.
 
 Use these files as the main current design references:
 
-- `docs/game_vision_complete.md`
+- `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
 - `README_DECISIONS.md`

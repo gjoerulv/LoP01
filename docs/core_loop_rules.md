@@ -866,14 +866,24 @@ Resources, items, and artifacts are all valid authored inputs for:
 
 ## 20. Trader services and exchange rules
 
-Trader-type services are separate authored services. Each trader service has **one general function only**.
+Trader services are a family of specialized authored services.
+
+Each trader-service instance has **one primary function only**. Do not treat a single service instance as a universal merchant.
 
 The main trader service categories are:
 
 - **Trading Post**
+  - exchanges resources for other resources
+  - exchanges resources for gold and gold for resources using the defined exchange models
+  - sends resources to other teams
 - **Market**
+  - buys and sells items for gold only
 - **Freelancer's Guild**
+  - buys generic units from a team for gold only
 - **Black Market**
+  - sells artifacts for gold only
+
+A Scenario or specific authored service may override prices, stock, or barter rates where allowed, but the service type itself should remain specialized.
 
 ### Shared service-time rule
 If a trader-type service performs any actual exchange, then:
@@ -886,12 +896,7 @@ If nothing was exchanged:
 Trader services do **not** cost Energy directly.
 
 ### Trading Post
-A Trading Post may do either of these functions:
-
-- exchange resources for other resources
-- send resources to another team
-
-A single Trading Post still exposes one trader-service identity in content, but both actions belong to the Trading Post family in current design language.
+Resource sending is part of the Trading Post role, not a separate trader-service type.
 
 #### Sending resources to other teams
 Sending resources:
