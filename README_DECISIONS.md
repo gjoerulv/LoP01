@@ -965,3 +965,214 @@ Decision:
 Why:
 - Keeps current design work focused.
 - Avoids mixing alternate timing and battle-flow assumptions into the main loop too early.
+
+
+### 74) Keep Location construction event-driven rather than hard-wired
+
+Decision:
+- In **Location mode**, service construction, restoration, and upgrade should primarily happen through **events**.
+- A Location interaction may build a new service, restore a ruined one, upgrade an existing one, or reveal/enable a service.
+- Do not assume one universal hard-wired construction subsystem for Locations.
+
+Why:
+- Preserves the distinction between strategic Region services and authored Location interactions.
+- Lets Locations feel like evolving places rather than small adventure-map overlays.
+
+### 75) Keep Region services more explicit and Location services more flexible
+
+Decision:
+- **Region-mode services** are usually explicit placed services selected from a predefined service list.
+- **Location-mode services** are usually event-triggered and may call default service flows from authored interactions.
+
+Why:
+- Preserves the intended split between:
+  - HoMM-like strategic Region interaction
+  - FF-like authored Location interaction
+
+### 76) Treat Location-built and Location-restored services as persistent world-state
+
+Decision:
+- When a Location event builds, restores, or upgrades a service, that result persists in the Scenario until changed again by later events.
+- The result is shared world-state and must save/load like other meaningful world-state changes.
+
+Why:
+- Makes Location evolution meaningful.
+- Prevents Location improvements from feeling temporary or cosmetic.
+
+### 77) Keep Location construction effectively human-only
+
+Decision:
+- Only human teams interact with Location construction/restoration/upgrade flows, because AI teams do not enter Locations.
+
+Why:
+- Matches the current location-access model.
+- Avoids implying a hidden AI Location simulation that does not exist.
+
+### 78) Keep farming as both a Region service and a Location event-driven flow
+
+Decision:
+- Farming exists in two forms:
+  - a default **Region farming service**
+  - **Location farming** triggered through events that call the same broader farming flow
+
+Why:
+- Supports risky strategic farming on the Region layer.
+- Also supports safer or more authored farming inside Locations.
+
+### 79) Make Region farming contested and risky by design
+
+Decision:
+- Region farming services are not private production spaces.
+- They may be:
+  - guarded
+  - sabotaged
+  - contested
+  - stolen from if left exposed
+- Another team may collect finished crops if it gains access to the service.
+
+Why:
+- Makes farming part of Region-level economic pressure rather than a passive background timer.
+
+### 80) Limit one farming process to one seed type at a time
+
+Decision:
+- A farming service may process only one seed type at a time.
+- The process quantity is authored, with a high default cap rather than a tiny fixed limit.
+
+Why:
+- Keeps the farming flow readable.
+- Avoids unnecessary mixed-crop bookkeeping inside a single process.
+
+### 81) Keep fertilization deterministic and chosen only at planting
+
+Decision:
+- Fertilization is:
+  - optional by default
+  - applied only when planting
+  - not added later if skipped
+  - one fertilizer per process
+- Seed choice plus fertilizer choice determine outcome.
+
+Why:
+- Keeps farming predictable and strategic.
+- Avoids fiddly mid-process intervention systems.
+
+### 82) Keep crop care as once-per-day service support, not a consumable cost
+
+Decision:
+- Watering/care costs time, not resources.
+- It is allowed once per day per farming service, shared across teams.
+- It improves the next day’s growth progress rather than permanently modifying the crop.
+
+Why:
+- Keeps farming support simple.
+- Makes care a meaningful logistical choice instead of another inventory sink.
+
+### 83) Keep finished crops persistent until collected
+
+Decision:
+- Finished farming output remains in the service until collected.
+- It does not expire by default.
+
+Why:
+- Keeps farming readable and less punitive.
+- Makes guarding and timing matter more than arbitrary spoilage.
+
+### 84) Keep cooking as a party-menu system, not a world-service dependency
+
+Decision:
+- Cooking is available anywhere outside battle while inside a Scenario whenever the party menu is available.
+- Do not require a map service or Location interaction just to cook.
+
+Why:
+- Keeps cooking integrated with travel logistics.
+- Avoids excessive friction for a basic preparation system.
+
+### 85) Keep recipes globally visible, but filterable by current feasibility
+
+Decision:
+- Recipes are globally visible from the start.
+- The player may filter to see only currently makeable recipes.
+- Some recipes may still require passive or secondary skills from the traveling team.
+
+Why:
+- Reduces discovery ambiguity.
+- Still allows meaningful preparation gating through ingredients and skills.
+
+### 86) Keep food as a hero-facing field-use layer
+
+Decision:
+- Food is consumed only by heroes.
+- Food is a field-use system, not a battle-item system.
+- Food may provide:
+  - recovery
+  - next-battle buffs
+  - day/week duration buffs
+  - combinations of these
+
+Why:
+- Keeps food distinct from ordinary battle consumables.
+- Makes food part of planning and logistics rather than in-combat micromanagement.
+
+### 87) Keep cooking and artifact combination as the only crafting systems for now
+
+Decision:
+- The only intended crafting systems at this stage are:
+  - **cooking**
+  - **artifact combination**
+- Do not expand into broad generalized crafting by default.
+
+Why:
+- Keeps system scope controlled.
+- Supports meaningful depth without opening a full crafting sandbox.
+
+### 88) Keep artifact handling narrowly focused
+
+Decision:
+- Artifact-handling services exist only to combine artifacts.
+- They do not dismantle, repair, or broadly craft other item types.
+
+Why:
+- Keeps artifact progression clean.
+- Avoids feature creep in the artifact layer.
+
+### 89) Keep artifact combination recipes globally fixed but service-filterable
+
+Decision:
+- Artifact combination recipes are globally fixed.
+- A specific artifact-handling service may allow all recipes or deny selected recipes by authored design.
+
+Why:
+- Gives a stable artifact-combination language.
+- Still allows Scenario- or Location-specific restriction.
+
+### 90) Keep artifact combination irreversible
+
+Decision:
+- Artifact combination permanently consumes the source artifacts.
+- There is no dismantling back into inputs.
+
+Why:
+- Makes combination a meaningful commitment.
+- Prevents infinite combine/dismantle loops.
+
+### 91) Allow artifact-handling services in both Regions and Locations
+
+Decision:
+- Artifact combination may exist as:
+  - a direct Region service
+  - or a Location event/service call
+
+Why:
+- Preserves flexibility in world authorship.
+- Fits the broader distinction between Region hard-wiring and Location event-driven flows.
+
+### 92) Keep these systems optional authored layers, not universal scenario requirements
+
+Decision:
+- Location building, farming, cooking, and artifact handling are optional authored systems.
+- Scenarios may use none, some, or many of them.
+
+Why:
+- Prevents the game from requiring every economic and support subsystem in every Scenario.
+- Supports strong Scenario identity and variety.

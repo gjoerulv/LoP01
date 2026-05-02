@@ -940,7 +940,7 @@ And default sell prices are:
 - sell 1 Clay = 40 gold
 - sell 1 Gem = 100 gold
 
-A scenario may override these defaults, and a specific Trading Post may override the scenario default if explicitly authored to do so.
+A Scenario may override these defaults, and a specific Trading Post may override the scenario default if explicitly authored to do so.
 
 #### Default resource-for-resource barter
 Resource-for-resource exchange uses a separate default barter table rather than deriving all exchanges through gold.
@@ -951,15 +951,17 @@ Use these tiers:
 - **Tier 2**: Steel, Fiber, Clay
 - **Tier 3**: Gems
 
-Default rule:
-- to buy **1** resource from the target tier, pay:
-  - **10** of a Tier 1 source
-  - **5** of a Tier 2 source
-  - **2** of a Tier 3 source
+Default buy costs for **1** unit of the target resource are:
 
-This default is intentionally lossy and does **not** allow same-resource exchange.
+| Pay with ↓ / Buy 1 of → | Tier 1 | Tier 2 | Tier 3 |
+|---|---:|---:|---:|
+| **Tier 1** | 10 | 20 | 50 |
+| **Tier 2** | 5 | 10 | 25 |
+| **Tier 3** | 2 | 4 | 10 |
 
-The full default barter table is:
+A resource may **not** be exchanged for itself.
+
+This produces the default full table:
 
 | Buy 1 of... | Pay Wood | Pay Stone | Pay Steel | Pay Fiber | Pay Clay | Pay Gems |
 |---|---:|---:|---:|---:|---:|---:|
@@ -970,46 +972,280 @@ The full default barter table is:
 | **Clay** | 20 | 20 | 10 | 10 | — | 4 |
 | **Gems** | 50 | 50 | 25 | 25 | 25 | — |
 
-A scenario may define a different default barter table, and a specific Trading Post may override that scenario default.
+This barter table is the default. A Scenario may override it, and a specific Trading Post may override the scenario default if explicitly authored to do so.
 
 ### Market
-A Market buys and sells **items** for **gold only**.
+A Market buys and sells general items for gold only.
 
 Rules:
-- available items are authored by the designer
-- default inventory is none unless authored
-- each authored item has only one copy available at a time unless the service explicitly says otherwise
-- the Market restocks at the start of each week
-- items sold to the Market return **1/2** of base gold value, rounded down, minimum 1
+- available stock is authored by the designer
+- default stock is none unless authored
+- there is only one of each authored item in stock at a time
+- stock restocks at the start of each week
+- items sell back for **1/2** of base value, rounded down, minimum 1 gold
 
 ### Freelancer's Guild
-A Freelancer's Guild buys **generic units** from a team for gold.
+A Freelancer's Guild buys generic units from the team for gold only.
 
 Rules:
-- only generic units may be sold here
-- heroes may not be sold here
-- value returned is **1/2** original gold price, rounded down, minimum 1
-- the team may sell:
-  - an entire stack
-  - a partial stack
-  - or none
+- the team may sell a full stack, a partial stack, or nothing
+- default sell value is **1/2** of the unit's original gold price, rounded down, minimum 1 gold
 
 ### Black Market
-A Black Market sells **artifacts** for gold.
-
-Default structure:
-- **8** different artifacts
-- default authored mix:
-  - **7 random minor artifacts**
-  - **1 major artifact**
+A Black Market sells artifacts for gold.
 
 Rules:
-- exact artifact list may be authored per service
-- Black Market stock does **not** restock by default
+- artifact stock is authored by the designer
+- default stock is:
+  - 7 random minor artifacts
+  - 1 major artifact
+- by default, Black Market stock does **not** restock
+---
+
+## 21. Location-mode service construction, restoration, and upgrade
+
+Location-mode service flow is fundamentally more event-driven than Region-mode service flow.
+
+### Region-mode versus Location-mode
+In **Region mode**:
+- services are usually placed directly from a predefined service list
+- the designer places the service on a Region node
+- the service starts from default settings for that service type
+- the designer may then edit the service within its legal limits
+
+In **Location mode**:
+- services are typically started by **triggerable events**
+- the trigger may be an NPC, counter, stone, object, creature, or any other authored interactable
+- the event may call a default service flow and then apply authored settings
+- the resulting service still starts from its default behavior, but the designer may edit it within its legal limits
+
+### Building, restoring, and upgrading
+In Locations, “building a service” does not imply one universal hard-wired construction subsystem.
+
+Instead, event actions may:
+- build a new service
+- restore a disabled or ruined service
+- upgrade an existing service
+
+This is all part of the broader event-driven Location model.
+
+### Human-only interaction
+Only **human teams** may build, restore, or upgrade services in Locations, because AI teams do not enter Locations.
+
+AI may still block human teams from entering a Location by occupying the parent Region node.
+
+### Persistence
+When an event in a Location creates, restores, or upgrades a service, that result:
+
+- persists in the current Scenario until later changed by another event
+- is part of shared world-state for teams that can later enter the Location
+- must be saved and loaded like other world-state changes
 
 ---
 
-## 21. Battle spoils, stealing, escape, and surrender
+## 22. Farming services
+
+Farming exists in two forms:
+
+- a default **Region farming service**
+- event-driven **Location farming** that calls the same broader farming flow when authored
+
+### Region farming service
+A Region farming service:
+
+- is a real Region-layer service
+- is not owned by any team by default
+- may support stationed guards, similar to mines and gates
+- may therefore be contested, defended, sabotaged, or stolen from by other teams
+
+A farming service can run one active growing process at a time.
+
+### Location farming
+In Locations, farming is event-driven.
+
+A Location interactable may call the default farming service flow through an event. For example:
+- an indoor pot
+- a greenhouse patch
+- a garden bed
+- some other authored farming point
+
+### Seed usage and process size
+A farming process uses:
+
+- exactly **one seed type**
+- an authored quantity of that seed
+
+By default, a farming service may process up to **999** seeds at once, but the designer may override that limit.
+
+Only one seed type may be active in the service at a time.
+
+### Fertilization
+Fertilization is:
+
+- optional by default
+- chosen only at planting time
+- not applicable later if skipped at planting
+- one fertilizer unit per process, regardless of seed quantity
+
+The designer may disallow fertilization for a specific farming service.
+
+Seed type plus fertilizer choice determine the outcome.
+
+The resulting output should be shown to the player **deterministically** when the process starts.
+
+Fertilization may affect:
+- growth speed
+- output amount
+- output type
+
+### Crop care / watering
+Crop care is a separate support action.
+
+Rules:
+- care / watering costs **1 hour**
+- it is allowed at most **once per day per farming service**
+- this limit is shared across teams
+- the effect lasts until the next day rollover
+
+Daily growth progress is:
+
+- **+1** if the process was not watered for that day
+- **+2** if it was watered for that day
+
+Crops always grow, even without care.
+
+### Finished crops
+When crops finish growing:
+
+- the result remains in the farming service until collected
+- the result does **not** expire by default
+
+If another team gains access to the farming service after completion, that team may collect the result.
+
+This makes unguarded farming intentionally risky on the Region layer.
+
+### Failure and sabotage
+Crops do not fail, wither, or spoil by default.
+
+However:
+- other teams may sabotage a Region farming service through normal world interaction
+- Location-mode events may still author special crop-failure behavior if desired
+
+---
+
+## 23. Cooking and food
+
+Cooking is a party-level system, not a world-service requirement.
+
+### Availability
+Cooking is available:
+
+- anywhere **outside battle**
+- while inside a **Scenario**
+- whenever the **party menu** is available
+
+### Cooking flow
+Cooking is a direct recipe-selection flow.
+
+The player:
+- opens the cooking section in the party menu
+- selects a recipe
+- consumes the required ingredients
+- receives the resulting food item
+
+The process is irreversible once performed.
+
+There is no cooking minigame.
+
+### Recipe visibility
+Recipes are:
+
+- globally known from the start
+- always viewable
+- optionally filterable to show only currently available recipes
+
+The default menu behavior should show only available recipes, with an option such as a “show all recipes” toggle.
+
+### Skill requirements
+Some recipes may require passive or secondary skills.
+
+If at least one unit in the **traveling team** has the required skill, that counts as sufficient for the recipe.
+
+Certain passive skills may also:
+- reduce time cost
+- increase output
+- produce secondary benefits
+
+### Time cost
+Cooking consumes time.
+
+The time cost is tied to the recipe, with **1 hour** as the default.
+
+### Food rules
+Food:
+- is a stackable team-inventory item
+- stacks up to **999**
+- may only be consumed by heroes
+- is **field-use only**
+- is **not** a battle-use item
+
+Food effects may include:
+- HP recovery
+- MP recovery
+- battle buffs
+- day-based buffs
+- week-based buffs
+- combinations of multiple effects
+- other authored hero-facing outcomes
+
+Duration depends on the specific food item.
+
+---
+
+## 24. Artifact handling and crafting
+
+The only intended crafting systems at this stage are:
+
+- **cooking**
+- **artifact combination**
+
+There is no broader general crafting system beyond those two.
+
+### Artifact handler service
+An artifact-handling service exists only to combine artifacts.
+
+It does **not**:
+- dismantle artifacts
+- repair artifacts
+- perform broader equipment crafting
+
+### Combination recipes
+Artifact combination recipes are:
+
+- globally fixed
+- content-authored
+- deterministic
+
+By default, an artifact-handling service may combine **all** valid fixed recipes.
+
+However, a specific service may be authored to deny certain otherwise-valid combinations.
+
+### Irreversibility
+Artifact combination is irreversible.
+
+Artifacts used in a combination are permanently consumed, and there is no dismantling back into inputs.
+
+### Where artifact handling may exist
+Artifact combination may exist as:
+
+- a direct **Region service**
+- a Location-mode event that calls the artifact-combination flow
+
+This keeps artifact handling consistent with the broader split between Region hard-wired services and Location event-driven service calls.
+
+---
+
+## 25. Battle spoils, stealing, escape, and surrender
 
 ### Battle spoils against teams
 If a team defeats another team in battle, the winner gains:
@@ -1081,7 +1317,7 @@ If the surrendering team cannot respawn because the spawn point is occupied by a
 
 In single-player, surrender should feel broadly similar to the ordinary setback rhythm of being forced out of the Region, except the additional explicit cost is the gold paid to the opposing team.
 
-## 22. Recruitment and competition
+## 26. Recruitment and competition
 
 Recruitment services are shared competitive resources.
 
@@ -1126,7 +1362,7 @@ After the hero is freed, that node becomes an empty travel node.
 
 ---
 
-## 23. Quest, objective, event, and progression structure
+## 27. Quest, objective, event, and progression structure
 
 ### Core terms
 Use the following distinction:
@@ -1156,7 +1392,7 @@ This distinction applies across:
 
 ---
 
-## 24. Quest services
+## 28. Quest services
 
 A **quest service** is a specific authored Service structure on the map.
 
@@ -1242,7 +1478,7 @@ This means enemy teams may complete or invalidate player-relevant quests.
 
 ---
 
-## 25. Quest states and player-facing quest log
+## 29. Quest states and player-facing quest log
 
 ### Technical quest state
 In the technical sense, a quest-service quest is primarily either:
@@ -1287,7 +1523,7 @@ The quest log is distinct from both:
 
 ---
 
-## 26. Objective structure
+## 30. Objective structure
 
 ### Strong typing
 Objective types should remain **strongly typed and finite**.
@@ -1316,7 +1552,7 @@ Examples of valid quest-service requirements include:
 
 ---
 
-## 27. Events
+## 31. Events
 
 Events are the primary systemic progression engine.
 
@@ -1396,7 +1632,7 @@ Quest services are therefore a specialized structure layered on top of the gener
 
 ---
 
-## 28. Victory conditions
+## 32. Victory conditions
 
 Victory conditions are **scenario-level rules**, separate from the quest system.
 
@@ -1444,7 +1680,7 @@ This is intentional.
 
 ---
 
-## 29. Defeat conditions
+## 33. Defeat conditions
 
 Defeat conditions are **scenario-level loss rules**, separate from quests.
 
@@ -1467,7 +1703,7 @@ A Scenario may also have no special defeat condition beyond ordinary inability t
 
 ---
 
-## 30. Guidance, journal, and player information
+## 34. Guidance, journal, and player information
 
 Keep these systems distinct.
 
@@ -1500,7 +1736,7 @@ Guidance text is not the same thing as the actual victory structure.
 
 ---
 
-## 31. Campaign transitions and carry-over
+## 35. Campaign transitions and carry-over
 
 Campaign transitions are authored **per transition**, not controlled by one global campaign-wide carry-over rule.
 
@@ -1543,7 +1779,7 @@ Story flags should always be available as campaign carry-over data.
 
 ---
 
-## 32. Temporarily Unavailable heroes
+## 36. Temporarily Unavailable heroes
 
 A hero becomes **Temporarily Unavailable** when removed from the roster through rules such as:
 
@@ -1567,7 +1803,7 @@ Quest-critical hero loss does not necessarily make a quest permanently impossibl
 
 ---
 
-## 33. Enemy-team defeat, persistence, and replacement
+## 37. Enemy-team defeat, persistence, and replacement
 
 When an enemy team is defeated:
 
@@ -1591,7 +1827,7 @@ Default naming may be tied to team color unless a Scenario overrides it.
 
 ---
 
-## 34. Node clearing outcomes
+## 38. Node clearing outcomes
 
 When temporary node content is cleared, the node becomes an empty travel node.
 
@@ -1607,7 +1843,7 @@ More drastic node destruction or structural world changes should happen only thr
 
 ---
 
-## 35. Agent / implementation guidance
+## 39. Agent / implementation guidance
 
 For future implementation and planning:
 

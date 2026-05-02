@@ -164,6 +164,45 @@ A quest service:
 - always resolves through turn-in
 - may be blocking, non-blocking, disappearing, or repeatable in the blocker/toll case
 
+### Location-built service
+A **Location-built service** is a service created, restored, upgraded, revealed, or enabled through a Location-mode event.
+
+It is not a separate universal construction subsystem.
+
+The trigger may be an NPC, object, shrine, counter, stone, field plot, or other authored Location interactable.
+
+### Farming service
+A **farming service** is a service or event-driven service flow that lets a team plant seeds and later collect grown output.
+
+Farming exists in two forms:
+- direct Region farming services
+- Location farming triggered by events
+
+Region farming is contestable and may be guarded, sabotaged, or stolen from.
+
+### Crop care / watering
+**Crop care** or **watering** is the farming support action that improves daily crop growth progress.
+
+It costs time, not resources, and is limited to once per day per farming service.
+
+### Fertilization
+**Fertilization** is an optional planting-time farming modifier.
+
+It is chosen when planting, not later, and may affect:
+- growth speed
+- output amount
+- output type
+
+### Artifact handler service
+An **artifact handler service** is a service that combines artifacts.
+
+It does not dismantle artifacts, repair artifacts, or perform general crafting.
+
+### Cooking
+**Cooking** is the party-menu crafting flow for turning ingredients into food.
+
+Cooking is available outside battle while inside a Scenario whenever the party menu is available.
+
 ---
 
 ## 3. Party, roster, and inventory terms
@@ -518,10 +557,17 @@ Farmed outputs may become ingredients.
 ### Food
 **Food** is an item subtype that only heroes consume.
 
+Food is a field-use layer, not a battle-use item layer.
+
 Food may:
 - recover HP/MP
 - apply temporary buffs
 - support longer-duration non-battle effects
+
+### Recipe
+A **recipe** defines the ingredients, time cost, skill requirements, and output of a cooking action.
+
+Recipes are globally visible by default, though the player may filter to show only currently craftable recipes.
 
 ### Artifact
 An **artifact** is the game's equippable gear layer.
@@ -665,6 +711,10 @@ When writing docs, code comments, prompts, plans, or design notes:
 - treat ownership, sabotage, sanctuary, and service destruction as Region-layer concepts unless explicitly designed otherwise
 - treat **artifacts** as the hero equipment layer and **items** as the shared non-artifact inventory layer
 - treat **gold trade** and **barter** as related but separate Trading Post systems
+- treat Location construction/restoration/upgrade as event-driven world-state, not as one universal hard-wired building subsystem
+- treat farming as either a Region service or a Location event-driven flow, depending on authored context
+- treat cooking as a party-menu system available outside battle, not as a required world service
+- treat artifact handling as artifact combination only unless the design explicitly expands later
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately
