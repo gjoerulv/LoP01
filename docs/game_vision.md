@@ -678,7 +678,157 @@ The economy layer should therefore support both ordinary logistics and authored 
 
 ---
 
-## 12. Locations, dungeons, and safe anchors
+## 12. Location-built services, farming, cooking, and artifact handling
+
+These systems should reinforce a key structural distinction in Ashvale:
+
+- **Region-layer services** are usually explicit placed services on the strategic map
+- **Location-layer services** are often **event-driven** and may feel more authored, characterful, or scene-based
+
+That distinction is important to preserve.
+
+### Location-built services
+Locations should not require one universal hard-wired construction subsystem.
+
+Instead, Location construction is primarily an **event-driven world-state process**.
+
+A Location interaction may:
+- build a new service
+- restore a ruined or inactive service
+- upgrade an existing service
+- reveal or enable a service that was previously unavailable
+
+The trigger may be:
+- an NPC
+- a magical object
+- a workbench
+- a counter
+- a shrine
+- a field plot
+- or any other authored interactable
+
+This makes Location development feel more like authored place evolution than like placing fixed strategic-map objects.
+
+### Human-only Location interaction
+AI teams do not enter Locations.
+
+That means:
+- Location building
+- Location restoration
+- Location upgrades
+- Location-only service interactions
+
+are effectively **human-team systems**, even though their outcomes still become part of shared Scenario world-state.
+
+### Persistence of Location changes
+When a Location event builds, restores, or upgrades something, that result should:
+
+- persist in the current Scenario
+- be part of shared world-state
+- save and load like other meaningful world-state changes
+
+This keeps Locations feeling like real places that evolve.
+
+### Farming
+Farming should exist in two structurally different but connected forms:
+
+- **Region farming services**
+- **Location farming triggered through events**
+
+#### Region farming
+Region farming should feel like a risky strategic process.
+
+A Region farming service:
+- holds one active seed type at a time
+- may process a large authored quantity of seeds
+- may optionally use fertilizer
+- may be watered/cared for over time
+- may be guarded by stationed units
+- may be contested or stolen if left exposed
+
+This makes farming on the Region layer feel like an economic gamble rather than a private menu action.
+
+#### Location farming
+In Locations, farming should usually feel safer and more authored.
+
+It may be triggered through:
+- a pot
+- a greenhouse
+- a garden bed
+- a field plot
+- some other authored world object
+
+Location farming does not need to look like the same hard-wired service placement model used in Regions, even if it calls the same underlying farming flow.
+
+#### Deterministic crop identity
+Farming should be deterministic enough to plan around.
+
+The player should understand:
+- what seed is being planted
+- whether fertilizer is being used
+- what the expected outcome is
+- how care/watering changes timing
+
+This is a logistics and planning layer, not a hidden-randomness minigame.
+
+### Cooking
+Cooking should be a **party-level convenience system**, not a map-service dependency.
+
+The intended feel is:
+- open the party menu
+- inspect available recipes
+- cook directly if ingredients and any required passive skills are present
+
+This keeps cooking integrated with travel logistics rather than tying it to specific world infrastructure.
+
+Recipes should be globally visible, while still allowing:
+- filtering by what is currently possible
+- authored passive-skill gates for specific foods
+
+### Food
+Food should act like a hero-facing field resource.
+
+Food is intended to support:
+- recovery
+- next-battle preparation
+- day/week buff planning
+- longer logistical preparation between fights
+
+This helps the game distinguish:
+- battle consumables
+- field logistics
+- hero preparation
+
+Food should remain a field-use layer, not a battle-item layer.
+
+### Artifact handling
+Artifact handling should remain its own distinct service-based system.
+
+Artifacts are:
+- the hero equipment layer
+- a source of long-term progression and identity
+- sometimes scenario-defining objects
+
+Artifact combination should therefore feel like:
+- a meaningful authored service
+- a deliberate upgrade path
+- an irreversible commitment
+
+Artifact handling should exist:
+- as a direct Region service where appropriate
+- or as a Location event/service call where that better fits the place
+
+### Limited crafting scope
+The game should **not** explode into a broad crafting sandbox by default.
+
+The intended crafting scope remains deliberately narrow:
+
+- **Cooking**
+- **Artifact combination**
+
+That keeps the game focused while still allowing meaningful authored depth in economy and preparation.
+
+## 13. Locations, dungeons, and safe anchors
 
 ### Locations
 Locations are where authored place identity can flourish.
@@ -707,7 +857,7 @@ That keeps the definition sharp and systemic while allowing wide authored variet
 
 ---
 
-## 13. Fog of war and information
+## 14. Fog of war and information
 
 The world should not be fully transparent at all times.
 
@@ -724,7 +874,7 @@ This supports both:
 
 ---
 
-## 14. Scenario identity and authored control
+## 15. Scenario identity and authored control
 
 Even though the game has strong systemic behavior, Regions and Scenarios should still feel authored.
 
@@ -748,7 +898,7 @@ The systems should create interaction, but the Scenario should still feel intent
 
 ---
 
-## 15. Implementation posture
+## 16. Implementation posture
 
 The intended long-term direction is:
 
