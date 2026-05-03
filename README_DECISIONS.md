@@ -628,8 +628,8 @@ Why:
 ### 47) Keep guidance, journal, and formal victory/defeat info separate
 
 Decision:
-- **Adventure menu** = formal victory and defeat conditions
-- **Quest log / journal** = discovered quest-service tasks and status
+- **Scenario Info screen** = formal victory and defeat conditions
+- **Quest Log / journal** = discovered quest-service tasks and status
 - **Guidance text** = event-driven directional hint layer that persists until changed
 
 Why:
@@ -1389,4 +1389,282 @@ Decision:
 
 Why:
 - Gives players enough information to make decisions while preserving scouting value.
+
+### 113) Use hybrid UI density
+
+Decision:
+- Ashvale UI should be clean by default and detailed on hover, select, inspect, or context action.
+
+Why:
+- Supports both JRPG readability and HoMM-like strategic clarity.
+- Prevents dense systems from becoming visually overwhelming.
+
+### 114) Keep the whole game controller-friendly and touch-aware
+
+Decision:
+- The whole game should be controller-friendly.
+- Mouse/keyboard and controller remain primary targets.
+- UI should also be touch-friendly where practical and avoid future-mobile-hostile assumptions.
+
+Why:
+- Supports planned PC play while keeping future smartphone/tablet support feasible.
+
+### 115) Avoid hover-only information
+
+Decision:
+- Information shown by hover must have select/tap/controller equivalents.
+
+Why:
+- Keeps controller and touch support viable.
+- Prevents important information from being mouse-only.
+
+### 116) Use exact numbers only when information is known
+
+Decision:
+- Show exact values for the player's own known state.
+- Show estimates when fog, scouting, or hidden information limits certainty.
+
+Why:
+- Keeps information fair and consistent with fog/scouting systems.
+
+### 117) Use Adventure button strip and Scenario Info screen as separate terms
+
+Decision:
+- **Adventure button strip** means the left-side icon menu in Region / World Map UI.
+- **Scenario Info screen** means the formal victory/defeat-condition screen.
+
+Why:
+- Avoids terminology conflict between a UI button strip and formal scenario-rule display.
+
+### 118) Keep Region HUD stable and strategic
+
+Decision:
+- Region mode should have a persistent top bar, bottom resource bar, minimap, Adventure button strip, contextual info panel, and temporary news area.
+
+Why:
+- Gives players stable access to strategic information while moving around a contested Region.
+
+### 119) Use select-then-confirm for Region and World Map movement
+
+Decision:
+- First click/tap/select previews.
+- Second click/tap/confirm executes where legal.
+
+Why:
+- Prevents accidental travel.
+- Gives route, cost, and legality information before commitment.
+
+### 120) Show shortest legal route and blocker feedback
+
+Decision:
+- Route preview should show the shortest legal route where one exists.
+- Blockers should be outlined red when they make a path illegal.
+- Time and Energy blockers should show red values in tooltip.
+
+Why:
+- Makes movement legality understandable without revealing alternate optimal strategies too aggressively.
+
+### 121) Represent teams through color, banner, and portrait
+
+Decision:
+- Team tokens should show team color outline, color banner, and leader portrait if available.
+- If no leader exists, use the strongest unit as representative portrait.
+
+Why:
+- Keeps team identity readable at map scale.
+
+### 122) Show owned and guarded services visually
+
+Decision:
+- Owned nodes/services use flag icons.
+- Guarded services show strongest-guard portrait and threat information.
+
+Why:
+- Makes ownership and danger readable without opening a full panel.
+
+### 123) Make farming state visible on Region nodes
+
+Decision:
+- Farming services should visually communicate growing, watered, and ready-to-harvest states.
+
+Why:
+- Farming is a contested world process, so its state must be visible and inspectable.
+
+### 124) Keep Location UI JRPG-like and event-driven
+
+Decision:
+- Location mode should use sprite-based walking exploration.
+- Location interactions are authored events, not a standard minimap/service-list interface.
+
+Why:
+- Preserves the intended FF-like Location feel.
+
+### 125) Keep Location services represented by event-state changes
+
+Decision:
+- Built/restored/upgraded Location services should appear through changed sprites, collision, layers, objects, and interactables.
+
+Why:
+- Makes Location development feel authored and visual rather than abstract.
+
+### 126) Use a clear JRPG battle layout
+
+Decision:
+- Party right, enemies left, CTB bar top, help panel below CTB, formation center, party status bottom right, command menu beside status.
+
+Why:
+- Supports readable CTB battles and clear target/action feedback.
+
+### 127) Show positions visually, not as constant row labels
+
+Decision:
+- Formation positions should be readable by sprite placement and distance from screen center.
+- Targeting help may show actual position, but rows are not always displayed as text labels.
+
+Why:
+- Keeps battle presentation clean while preserving tactical information.
+
+### 128) Use live CTB preview without formula explanation
+
+Decision:
+- Hovering/selecting actions and targets should update CTB order live.
+- The UI should show the resulting order, not internal CTB math.
+
+Why:
+- Supports tactical planning without overwhelming the player.
+
+### 129) Use one battle result screen for manual and auto-resolve
+
+Decision:
+- Manual battle and auto-resolve use the same result screen.
+
+Why:
+- Reduces duplicated UI and keeps battle outcomes consistent.
+
+### 130) Keep party menu centered on active party, reserve, and right-side actions
+
+Decision:
+- Party menu layout should include a large active-party panel, bottom reserve slots, and right-side menu actions for Items, Artifacts, Cooking, and Position.
+
+Why:
+- Keeps the core roster-management flow visible and controller-navigable.
+
+### 131) Document generic stack mouse shortcuts now
+
+Decision:
+- Support and document Ctrl/Alt/Shift mouse shortcuts for splitting and merging generic stacks.
+- Provide controller context-menu equivalents.
+
+Why:
+- Makes stack management efficient without losing controller support.
+
+### 132) Keep Temporarily Unavailable heroes hidden until return
+
+Decision:
+- Temporarily Unavailable heroes are not shown in normal party/roster UI until they return.
+
+Why:
+- Keeps the roster display focused on usable units.
+
+### 133) Use flat item inventory with sorting
+
+Decision:
+- Item inventory is a flat list with icon, name, and quantity.
+- Sorting supports manual, name, type, least, and most.
+
+Why:
+- Avoids overcomplicating the item inventory with categories.
+
+### 134) Manage equipped artifacts through the hero artifact interface
+
+Decision:
+- Equipped artifacts are managed through the Artifacts menu after selecting a hero.
+
+Why:
+- Keeps artifact equipment tied to hero identity and stat preview.
+
+### 135) Show cooking ingredients inline with missing counts marked red
+
+Decision:
+- Recipes always show required ingredients and held/required counts.
+- Missing quantities are marked red inline.
+- There is no separate missing-ingredient list.
+
+Why:
+- Keeps recipe requirements clear without redundant UI.
+
+### 136) Make artifact combination immediate when legal
+
+Decision:
+- Selecting a legal artifact combination performs it immediately.
+- No extra irreversible-warning confirmation is required.
+- Inputs and output must be clearly shown before activation.
+
+Why:
+- Artifact combination may happen frequently and should not be slowed by repeated warnings.
+
+### 137) Do not force all services into one universal screen
+
+Decision:
+- Services may have custom interfaces.
+- Applicable costs, availability, guards, and threat must still be shown.
+
+Why:
+- Supports variety while preserving essential clarity.
+
+### 138) Confirm only high-risk service actions
+
+Decision:
+- Confirm Region travel that loses generics, surrender, escape, discarding artifacts, and destroying services.
+- Artifact combination does not need a separate warning prompt.
+
+Why:
+- Keeps dangerous actions safe while avoiding intrusive confirmations for frequent upgrades.
+
+### 139) Keep Quest Log, Scenario Info, and Guidance separate
+
+Decision:
+- Quest Log lists discovered quest-service tasks.
+- Scenario Info shows victory/defeat conditions.
+- Guidance is event-driven directional text.
+
+Why:
+- Prevents objective, rule, and hint surfaces from blending together.
+
+### 140) Use black animated fog without silhouettes
+
+Decision:
+- Unrevealed Region areas are black fog with a smooth animated edge.
+- Nodes are shown only when revealed.
+
+Why:
+- Keeps fog clear and strongly readable.
+
+### 141) Tie enemy inspection depth to scouting
+
+Decision:
+- Default enemy inspection is limited.
+- Basic, Advanced, and Expert scouting progressively reveal more.
+- Expert reveals exact stacks, hero levels, leader stats, items, and artifacts.
+
+Why:
+- Makes scouting strategically valuable.
+
+### 142) Maintain a temporary popup area and full history log
+
+Decision:
+- Important events appear as temporary news popups.
+- The latest four can be expanded.
+- Clicking opens full log/history with date information.
+
+Why:
+- Keeps the player informed without forcing constant modal interruptions.
+
+### 143) Let animation speed be configurable
+
+Decision:
+- AI and human movement / animation speed should be configurable from very slow to instant.
+
+Why:
+- Supports both readability and fast repeated play.
 

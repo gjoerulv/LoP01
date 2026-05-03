@@ -519,10 +519,10 @@ It is:
 - persistent until changed by another event
 - hidable by the player
 
-### Adventure menu
-The **adventure menu** is the formal player-facing view of:
-- victory conditions
-- defeat conditions
+### Formal Scenario information
+**Formal Scenario information** means the player-facing victory and defeat rules for the current Scenario.
+
+This information is shown through the **Scenario Info screen**.
 
 ### Quest log / journal
 The **quest log** or **journal** is the player-facing log of discovered quest-service tasks and their visible states.
@@ -703,9 +703,84 @@ Freeing a Sealed / Frozen Hero costs:
 - **500 Energy**
 - **1 hour**
 
+
 ---
 
-## 8. Legacy runtime and content names
+## 8. UI and information terms
+
+### Adventure button strip
+The **Adventure button strip** is the left-side icon menu in Region and World Map UI.
+
+It is not the same thing as the Scenario Info screen.
+
+### Scenario Info screen
+The **Scenario Info screen** is the formal screen for Scenario-level rules and information, especially victory and defeat conditions.
+
+### Contextual info panel
+The **contextual info panel** is the bottom-left Region / World Map information panel.
+
+It shows selected node or Region information when something is selected, and otherwise may toggle between active-party summary and occupied-node information.
+
+### News popup
+A **news popup** is a temporary event or status message shown in the upper-left content area.
+
+News popups are also recorded in the message log / history where appropriate.
+
+### Message log / history
+The **message log** or **history** is the persistent record of relevant messages, popups, and guidance changes with date information.
+
+### Threat color
+**Threat color** is the UI color used to communicate approximate danger.
+
+It appears on target cursors and hover / inspection panels where appropriate.
+
+### Target preview
+**Target preview** is the battle UI information shown before confirming an action against a target.
+
+It may include damage, KO / kill result, and Agility penalty.
+
+### Help window
+The **help window** is the battle panel under the CTB bar used for skill, target, and contextual help text.
+
+### Party menu
+The **party menu** is the main out-of-battle menu for managing active party, reserve, items, artifacts, cooking, and positions.
+
+### Active container
+An **active container** is the current unit-container context for stack operations.
+
+It may be:
+- active party
+- reserve
+- currently opened storage
+
+Generic stack split/merge shortcuts operate only within the current active container.
+
+### Context action
+A **context action** is the controller / touch / keyboard equivalent of secondary mouse interaction such as right-click.
+
+It is used for actions like showing requirements, opening unit info, or opening a context menu.
+
+### Context info action
+A **context info action** opens detailed information about the selected unit, item, artifact, quest, or other inspected object.
+
+### Select-then-confirm
+**Select-then-confirm** is the movement interaction model where the first action selects and previews, and the second confirms.
+
+It applies to Region node travel and World Map Region travel.
+
+### Location event sprite
+A **Location event sprite** is a Location-mode sprite tied to an authored event trigger.
+
+It may define interaction behavior, collision, and render layer.
+
+### Show All Recipes
+**Show All Recipes** is the cooking UI toggle that reveals recipes even when the team currently lacks requirements.
+
+Unavailable recipes remain disabled and show missing ingredient counts inline.
+
+---
+
+## 9. Legacy runtime and content names
 
 Some older names may still appear in source files, content files, tests, comments, or serialized values.
 
@@ -742,7 +817,7 @@ Do not treat the key name itself as current design terminology.
 
 ---
 
-## 9. Leader terminology note
+## 10. Leader terminology note
 
 ### Current design intent
 Current design intent is:
@@ -761,7 +836,7 @@ Do **not** expand the old separate-leader-category model in new design work unle
 
 ---
 
-## 10. Guidance for future work
+## 11. Guidance for future work
 
 When writing docs, code comments, prompts, plans, or design notes:
 
@@ -787,6 +862,10 @@ When writing docs, code comments, prompts, plans, or design notes:
 - distinguish **threat preview** from the actual **auto-resolve result**
 - treat auto-resolve and auto-combat as using the same automated battle controller
 - treat scouting as the gate for deeper enemy inspection
+- distinguish the **Adventure button strip** from the **Scenario Info screen**
+- keep hover information accessible through select/tap/context actions
+- avoid UI patterns that rely on mouse-only hover
+- treat Location UI as event-driven sprite interaction, not as a default service-list screen
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately

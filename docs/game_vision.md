@@ -1,4 +1,4 @@
-# Game Vision Complete
+# Game Vision
 
 This document describes the current intended long-term vision for Project Ashvale.
 
@@ -926,7 +926,403 @@ If a hidden AI team wins the Scenario, the game should end immediately and expla
 
 ---
 
-## 15. Scenario identity and authored control
+
+## 15. UI / UX vision and information presentation
+
+Ashvale's UI should be a **hybrid** between clean JRPG readability and HoMM-like strategic information density.
+
+The default presentation should be clean, but the player should be able to inspect, hover, select, or open panels to get the detail needed for tactical and strategic decisions.
+
+### Platform and input philosophy
+The whole game should be designed to be:
+
+- controller-friendly
+- mouse/keyboard-friendly
+- touch-friendly where practical
+
+Mouse/keyboard and controller are the primary development targets, but UI layout and interaction patterns should avoid assumptions that would make future smartphone or tablet support impossible.
+
+That means:
+- important actions need controller navigation paths
+- hover-only information needs select/tap equivalents
+- hit targets should not be tiny
+- dense panels should remain readable at smaller sizes
+- contextual info should be available without requiring precision mouse hover
+
+### Numbers and certainty
+The UI should show exact numbers when the information is known.
+
+Use this general rule:
+
+- exact values for the player's own known state
+- exact values for fully scouted or fully known targets
+- estimated values when scouting or fog limits information
+- no hidden formula dump unless it directly helps readability
+
+Examples:
+- battle target preview should show exact min/max damage when known
+- threat preview should remain a rough color-coded estimate
+- visible enemy stacks should show quantity ranges unless scouting is high enough
+- turn order should show the resulting order, not internal CTB math
+
+### Tooltips and panels
+Tooltips should be significant but non-intrusive.
+
+Use floating tooltips for quick contextual details:
+- route time / Energy cost
+- target damage / KO preview
+- service availability
+- illegal action reason
+
+Use stable panels for selected or inspected information:
+- selected node details
+- battle help text
+- item details
+- recipe details
+- unit information
+
+The player should never need to guess why a major action is unavailable.
+
+### Region UI
+Region mode should use a persistent strategic layout:
+
+- **top info bar**
+  - day / week / month
+  - time
+  - Energy
+- **bottom resource bar**
+  - team resources
+- **top-left minimap**
+  - always visible in Region mode
+- **Adventure button strip**
+  - left-side icon menu
+- **bottom-left contextual info panel**
+  - selected node info when a node is selected
+  - otherwise toggles between active-party summary and occupied-node info
+- **temporary news / popup area**
+  - upper-left content area, under the top bar and to the right of the Adventure button strip
+
+The Adventure button strip should contain icons for common strategic screens, such as:
+- player / party menu
+- Scenario Info screen
+- World Map / Region selection
+- Quest Log
+- center on current team
+- rest
+- settings
+
+### Region node selection
+Region movement should use a select-then-confirm model.
+
+For mouse and touch:
+- first click/tap selects a node and previews the route
+- second click/tap confirms movement where legal
+
+For controller:
+- D-pad or mapped navigation selects nodes
+- confirm executes the selected move
+
+The selected route should show the shortest legal path where one exists.
+
+If blockers make the destination illegal:
+- show the legal part of the route
+- outline the first blocker in red
+- continue the preview in disabled/gray form past the blocker where useful
+- outline additional blockers in red if the preview path crosses them
+
+If time or Energy prevents travel:
+- show the relevant cost in red in the route tooltip
+
+### Region tokens, ownership, and service state
+Enemy teams should be readable as colored army tokens.
+
+A team token should show:
+- a clear color outline
+- a small banner for team color
+- the leader portrait if there is a leader
+- otherwise the strongest unit as the representative portrait
+
+Owned nodes and services should use flag icons.
+
+Region service state should be readable at a glance:
+- destroyed services darkened with a destroyed icon
+- guarded services showing a small strongest-unit portrait
+- farming services using light sparkle while growing
+- brighter sparkle when watered
+- glow when harvest is ready
+- restoration / cooldown / availability shown through tooltip or node info when relevant
+
+### World Map UI
+The World Map should reuse the same broad HUD frame as Region mode:
+- top info bar
+- bottom resource bar
+- left contextual strip / panel
+
+Only unlocked Regions should be visible. Locked Regions remain hidden in black fog.
+
+Region selection should feel similar to Region node selection:
+- select a Region
+- inspect tooltip and left-panel details
+- confirm travel
+
+World Map travel confirmation should warn only when confirming would lose units.
+
+The confirmation should show:
+- travel time
+- arrival time
+- Energy status after arrival
+- generic-unit loss warning when applicable
+
+It should not reveal detailed destination-node information.
+
+### Location UI
+Location mode should feel like JRPG walking exploration with sprites.
+
+Locations should not use a minimap or automatic service list by default.
+
+Interactions are event-driven:
+- the designer assigns sprites
+- the designer chooses trigger behavior
+- triggers may happen by confirm button, collision, or other authored logic
+- service calls may be direct or hidden behind dialogue, prompts, or event flow
+
+Location-built, restored, or upgraded services should appear through visible event-state changes:
+- new sprites
+- changed collision
+- changed layers
+- new NPCs
+- changed objects
+- replaced map events
+
+### Battle UI
+Battle should use a clear JRPG-style layout:
+
+- player party on the right
+- enemies on the left
+- CTB bar at the top
+- help window / panel below the CTB bar
+- battle formation in the center
+- party status rows at bottom right
+- battle command menu to the left of the party status rows
+
+Units are represented as sprites facing each other.
+
+Position is shown visually by distance from the center rather than as a constant text label.
+
+Generic unit count should be shown directly on the unit sprite, at bottom-left.
+
+Leader status should be shown with a small leader icon on the unit sprite, at bottom-right.
+
+When targeting:
+- target preview appears in a tooltip with a panel background
+- damage and KO / kill preview are shown
+- Agility penalty is shown by color-coded cursor / tooltip feedback
+- the help panel shows target name, actual position, and status icons
+- CTB order updates live before confirmation
+
+The player should see the resulting turn order, not the internal CTB formula.
+
+### Battle result screen
+The same result screen should be used for auto-resolve and manual battle.
+
+It should be a centered panel showing:
+- top result banner
+- result explanation
+- row of player losses
+- row of enemy losses
+- Accept Result button
+- Try Again button
+
+Possible result banners include:
+- Win
+- Loss
+- Enemy Escaped
+- You Escaped
+
+### Party menu and roster UX
+The party menu should support both mouse-driven and controller-friendly management.
+
+The main layout should include:
+- large active-party panel
+- reserve slots along the bottom
+- right-side menu with:
+  - Items
+  - Artifacts
+  - Cooking
+  - Position
+
+Mouse interaction should support drag/drop and stack shortcuts.
+
+Controller interaction should support:
+- cursor selection
+- confirm to pick up / select
+- confirm on destination to move or swap
+- context menu for stack actions
+- context/info button for unit detail panel
+
+Active-party legality warnings should be explicit and blocking.
+
+Temporarily Unavailable heroes should stay hidden until they return.
+
+### Stack management shortcuts
+Mouse/keyboard stack shortcuts should be supported for generic units:
+
+- `Ctrl + Left Click`
+  - split one unit from the stack to the next available legal slot
+- `Alt + Left Click`
+  - merge all units of the same type into the clicked stack where legal
+- `Shift + Left Click`
+  - split all units of the same type as evenly as possible across available legal slots in the same active container
+- `Ctrl + Shift + Left Click`
+  - fill available legal empty slots with 1-unit stacks while units remain
+
+These shortcuts apply only within the active container of the selected unit:
+- active party
+- reserve
+- or the currently opened storage
+
+If no legal move exists, the shortcut cancels.
+
+### Items, artifacts, and cooking
+Item inventory should be a flat list with:
+- icon
+- name
+- quantity
+
+Item sorting should support:
+- manual
+- auto by name
+- auto by type
+- auto by least
+- auto by most
+
+Artifact inventory should support similar sorting.
+
+Artifacts are equipped through a hero-specific artifact / equipment interface.
+
+Cooking should show:
+- available recipes by default
+- a Show All Recipes toggle
+- required ingredients with icons and counts
+- missing quantities marked red inline
+- required passive skills
+- time cost
+- resulting food effects
+- quantity selector
+
+### Artifact combination UI
+Artifact combination should resemble cooking:
+- show available authored combinations
+- show input artifacts
+- show output preview
+- block combinations that are illegal
+- block artifacts required by victory conditions
+
+Artifact combination does not require an additional irreversible-warning prompt.
+
+However, the UI must make the input artifacts and output artifact clear before activation.
+
+### Service UI
+Services do not need one universal shared screen pattern.
+
+However, any service must clearly show applicable:
+- title
+- cost
+- time cost
+- Energy cost
+- item / resource cost
+- availability reason
+- guards
+- threat estimate
+
+Immediate-effect services may show temporary feedback above the team.
+
+Simple confirmation services may show a prompt and then the same temporary effect feedback.
+
+Risky actions should require confirmation when appropriate, including:
+- Region travel that loses generic units
+- surrender
+- escape
+- discarding artifacts
+- destroying services
+
+### Quest Log, Scenario Info, and guidance
+Use distinct terms and surfaces:
+
+- **Adventure button strip**
+  - left-side icon menu in Region / World Map UI
+- **Scenario Info screen**
+  - formal victory and defeat conditions
+- **Quest Log**
+  - discovered quest-service tasks
+- **Guidance**
+  - event-driven optional direction text
+
+Quest Log behavior:
+- entries are buttons
+- primary action centers the camera on the quest-service location
+- context / info action shows requirements
+- controller and touch must have equivalents to left-click / right-click behavior
+
+Guidance should appear:
+- under the top info bar
+- to the right of the Adventure button strip
+- with optional icon + text
+- collapsible
+- also recorded in the journal / message history
+
+Guidance may point to hidden or unrevealed content if authored to do so.
+
+### Fog, scouting, and enemy inspection
+Fog of war should appear as black fog with a smooth animated edge.
+
+No silhouettes should be shown for unrevealed nodes.
+
+Nodes should appear only once revealed.
+
+Scouting is a passive skill with three levels:
+- Basic
+- Advanced
+- Expert
+
+The game does not need to directly announce scouting effects. Players can infer them from reveal range and inspection detail.
+
+Enemy inspection should scale by scouting:
+- default: color, leader, threat color, unit icons, names, quantity ranges, hero level ranges
+- Basic: improved reveal / better confidence
+- Advanced: enemy resources and better estimates
+- Expert: exact stack quantities, exact hero levels, leader stats, items, and artifacts
+
+Threat color should appear on:
+- target cursor
+- hover / inspection panel outline
+
+### Notifications and logs
+Temporary notifications should appear near the upper-left content area and hide after a short time.
+
+An expandable news area should show the latest four news items when expanded.
+
+Clicking a news item or log control should open the full history log.
+
+The full log should record:
+- message text
+- day / week / month
+- guidance changes
+- relevant visible events
+
+Popup-worthy events include:
+- quest completed
+- enemy team received a service buff
+- hero becomes Temporarily Unavailable
+- service restored or destroyed
+- resource received from another team
+- mine lost
+- team defeated
+- Region unlocked
+
+AI and human movement / animation speed should be configurable from very slow to instant.
+
+## 16. Scenario identity and authored control
 
 Even though the game has strong systemic behavior, Regions and Scenarios should still feel authored.
 
@@ -950,7 +1346,7 @@ The systems should create interaction, but the Scenario should still feel intent
 
 ---
 
-## 16. Implementation posture
+## 17. Implementation posture
 
 The intended long-term direction is:
 
