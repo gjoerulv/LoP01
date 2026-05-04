@@ -800,7 +800,8 @@ Rules:
 - Location-called services use the same rules as Region services where applicable.
 - Only whitelisted service types are callable from Locations.
 - One-time / single-use services should not be callable from Location events.
-- Location-owned service instances may live inside the Location file or in a Scenario-local service list if later needed.
+- By default, Location-owned service instances live inside the Location file.
+- A Scenario-local service list may be introduced later only for services that must be shared across multiple authored scopes.
 - Validation must ensure the referenced service is callable from Location context.
 
 ---

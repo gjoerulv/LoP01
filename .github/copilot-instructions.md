@@ -93,8 +93,8 @@ Read these before planning or making broad changes:
 6. `docs/validation_system.md`
 7. `docs/content_schema.md`
 8. milestone-specific doc/prompt if the task is tied to one
-8. `docs/technical_direction.md`
-9. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
+9. `docs/technical_direction.md`
+10. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
 
 If those sources disagree:
 - prefer the **current codebase** for already implemented behavior

@@ -1369,13 +1369,14 @@ The long-term authoring model should let designers edit:
 - quests
 - events
 - victory and defeat conditions
-- resources
+- resource amounts, costs, pickups, payouts, and economy settings
 - units
 - items
 - artifacts
 - recipes
 
 Code should define the supported system types, formulas, runtime rules, validation rules, and legal behavior boundaries.
+The resource enum itself remains code/schema-defined. Designers configure how resources are used, awarded, spent, traded, and produced.
 
 ### Designer tool vision
 A designer tool should eventually support editing the major authored layers of the game.
@@ -1387,7 +1388,7 @@ That includes:
 - quest services
 - victory / defeat conditions
 - team setup
-- resources, items, artifacts, units, and recipes
+- resource usage and economy settings, items, artifacts, units, and recipes
 - validation reports
 - test-play entry points
 

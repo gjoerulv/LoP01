@@ -794,18 +794,6 @@ The **designer tool** is the intended long-term editor for creating and modifyin
 ### Content library
 A **content library** is a reusable data set for definitions such as units, items, artifacts, Services, recipes, condition types, and action types.
 
-### Node content
-**Node content** is the main authored content placed on a Region node.
-
-Examples include:
-- resource pickup
-- artifact pickup
-- Service
-- neutral enemy
-- one-time special content
-
-Node behavior is primarily determined by node content and attached events, not by a large fixed node-type hierarchy.
-
 ### Event attachment
 An **event attachment** is an event connected to a node, Location sprite, Service, or other authored trigger point.
 
