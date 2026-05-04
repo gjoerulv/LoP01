@@ -8,6 +8,8 @@ For current design truth, see:
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
+- `docs/scenario_authoring.md`
+- `docs/validation_system.md`
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
 
@@ -147,7 +149,7 @@ Suggested v0 coverage:
 - at least one explicit defeat condition
 - at least one event-driven world-state change
 
-The slice should not reduce progression to only “reach node” or “clear combat node” logic anymore.
+The slice should not reduce progression to only “reach node” or “clear hostile node content” logic anymore.
 
 ## Recommended bounded target
 
