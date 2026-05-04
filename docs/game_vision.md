@@ -9,6 +9,7 @@ Detailed systemic rules live primarily in:
 - `docs/core_loop_rules.md`
 - `docs/scenario_authoring.md`
 - `docs/validation_system.md`
+- `docs/content_schema.md`
 - `README_DECISIONS.md`
 
 This file stays at the **vision** level. It explains the intended shape of the game and the major layers of play without restating every exact rule and formula.

@@ -1674,7 +1674,8 @@ Why:
 ### 144) Keep authored game content data-driven
 
 Decision:
-- Scenarios, Regions, Locations, nodes, Services, teams, quests, events, victory/defeat conditions, resources, units, items, artifacts, and recipes should be editable through a designer tool.
+- Scenarios, Regions, Locations, nodes, Services, teams, quests, events, victory/defeat conditions, resource amounts/costs/payouts, units, items, artifacts, and recipes should be editable through a designer tool.
+- The resource enum itself remains code/schema-defined unless explicitly expanded later.
 
 Why:
 - Keeps Scenario creation flexible.
@@ -1972,3 +1973,53 @@ Decision:
 Why:
 - Makes validation reliable, automated, and agent-friendly.
 
+### 175) Use JSON content files with schemaVersion, kind, and id
+
+Decision:
+- Authored content uses JSON.
+- Top-level content files include `schemaVersion`, `kind`, and `id`.
+
+Why:
+- Makes content validation, migration, mod loading, and AI-assisted editing predictable.
+
+### 176) Use localized text objects for player-facing text
+
+Decision:
+- Player-facing text uses language-code objects from the start.
+
+Why:
+- Keeps language support built into content instead of retrofitted later.
+
+### 177) Use `kind + id` as mod override identity
+
+Decision:
+- Mods override content by matching top-level `kind + id`, not filename alone.
+
+Why:
+- Keeps mod loading deterministic and validation-friendly.
+
+### 178) Use Scenario Region Context instead of broad Region patches
+
+Decision:
+- Reusable Regions read Scenario-provided context.
+- Avoid arbitrary shallow patching as the primary override model.
+
+Why:
+- Keeps reusable Regions validateable and agent-readable.
+
+### 179) Use discriminated union node content
+
+Decision:
+- Node content is represented as one discriminated union field.
+
+Why:
+- Enforces one main node content item and reduces ambiguity.
+
+### 180) Keep authored initial state separate from runtime save state
+
+Decision:
+- Content files define initial state.
+- Save data owns runtime progression state.
+
+Why:
+- Prevents authored data from being polluted by playthrough state.

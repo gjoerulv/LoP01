@@ -10,6 +10,7 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Respect the current high-level design intent in `docs/game_vision.md`.
 - Respect content authoring rules in `docs/scenario_authoring.md` when changing content schemas, events, quests, or Services.
 - Respect validation levels, severities, and gates in `docs/validation_system.md` when changing validators or validation reports.
+- Respect content schema conventions in `docs/content_schema.md` when changing content JSON, loaders, schemas, or validation.
 - Use `docs/terminology_map.md` when legacy runtime or content names differ from current design language.
 
 ## Terminology

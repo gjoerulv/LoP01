@@ -14,6 +14,7 @@ Current design truth lives primarily in:
 - `README_DECISIONS.md`
 - `docs/scenario_authoring.md`
 - `docs/validation_system.md`
+- `docs/content_schema.md`
 
 ---
 
@@ -844,6 +845,24 @@ A **validation warning** is a likely issue or design risk that does not necessar
 Invalid work-in-progress content may be saved, but should not be playable.
 
 
+### Content schema
+The **content schema** is the authored JSON data model described in `docs/content_schema.md`.
+
+### Scenario Region Context
+**Scenario Region Context** is Scenario-provided data used by a reusable Region when loaded in that Scenario.
+
+### Localized text object
+A **localized text object** stores player-facing text by language code.
+
+### Mod override identity
+**Mod override identity** is the top-level `kind + id` pair used to decide whether mod content overrides existing content.
+
+### Authored initial state
+**Authored initial state** is the starting state defined in content files.
+
+### Runtime state
+**Runtime state** is playthrough state stored in save data, not authored content.
+
 ### Save validation
 **Save validation** runs when content is saved and never blocks saving.
 
@@ -958,6 +977,7 @@ When writing docs, code comments, prompts, plans, or design notes:
 - avoid UI patterns that rely on mouse-only hover
 - use `docs/scenario_authoring.md` for content authoring and designer-tool terminology
 - use `docs/validation_system.md` for validation levels, severities, gates, errors, warnings, and reports
+- use `docs/content_schema.md` for authored content JSON schema conventions, Scenario Region Context, mod override identity, and runtime-state boundaries
 - treat node behavior as node content plus event attachments, not as a broad fixed node-type hierarchy
 - treat event action chains as non-atomic ordered flows
 - treat Location UI as event-driven sprite interaction, not as a default service-list screen
