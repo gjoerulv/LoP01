@@ -1871,3 +1871,104 @@ Decision:
 Why:
 - Catches broken content early and repeatedly.
 
+### 165) Use Save, Playable, and Release validation levels
+
+Decision:
+- Validation has three levels:
+  - Save validation
+  - Playable validation
+  - Release validation
+- Save validation never blocks saving.
+- Playable validation blocks play on errors.
+- Release validation requires warnings to be resolved, acknowledged, or suppressed with a reason.
+
+Why:
+- Supports real authoring workflow without allowing broken content into play.
+
+### 166) Use Error, Warning, and Info validation severities
+
+Decision:
+- Validation messages use:
+  - Error
+  - Warning
+  - Info
+
+Why:
+- Separates structural invalidity from suspicious design and helpful authoring notes.
+
+### 167) Require validation messages to identify exact authored objects
+
+Decision:
+- Every validation message should include a stable code and exact authored-object path.
+- Editor output should make object paths clickable where practical.
+
+Why:
+- Makes validation actionable for designers and AI agents.
+
+### 168) Keep deletion cleanup explicit and validation-authoritative
+
+Decision:
+- The editor may offer safe reference cleanup when deleting content.
+- Cleanup must be visible and reviewable.
+- Validation remains the authority.
+- If no safe default exists, a validation error remains.
+
+Why:
+- Prevents silent ambiguous content changes.
+
+### 169) Enforce one main node content item per node
+
+Decision:
+- Validation should enforce one main node content item per Region node.
+- Attached events are allowed separately.
+
+Why:
+- Preserves the node-content model and prevents muddy node behavior.
+
+### 170) Require explicit node event priority when content and event coexist
+
+Decision:
+- If a node has both attached event and main content, event priority should be explicit:
+  - beforeContent
+  - afterContent
+  - replacesContent
+- Default is beforeContent.
+
+Why:
+- Prevents ambiguity about what happens when a team arrives on a node.
+
+### 171) Validate event cycles as errors
+
+Decision:
+- Validation should detect unbounded event cycles and same-day repeat loops.
+- These are errors unless a safe boundary can be proven.
+
+Why:
+- Prevents runaway event execution.
+
+### 172) Treat artifact-combination cycles as warnings
+
+Decision:
+- Artifact-combination cycles are warnings, not errors.
+- They may represent poor design but remain legal if intentional and acknowledged.
+
+Why:
+- Preserves designer freedom while surfacing likely bad upgrade loops.
+
+### 173) Support warning suppression with reasons
+
+Decision:
+- Release validation may allow warnings only when acknowledged or suppressed with a reason.
+
+Why:
+- Keeps intentional harsh or unusual content explicit and reviewable.
+
+### 174) Keep validation pure and headless
+
+Decision:
+- Validation should be testable without rendering.
+- It should run in editor, startup, CI, and packaging/release workflows.
+
+Why:
+- Makes validation reliable, automated, and agent-friendly.
+

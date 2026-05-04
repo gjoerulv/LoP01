@@ -2,12 +2,15 @@
 
 This document defines the intended long-term authoring model for Ashvale Scenarios, Regions, Locations, Services, events, quests, victory/defeat conditions, teams, items, artifacts, recipes, and validation.
 
-This is a design and tooling guide. It does not replace:
+This is a design and tooling guide. Detailed validation levels, severities, gates, and validator categories live in `docs/validation_system.md`.
+
+This document does not replace:
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
+- `docs/validation_system.md`
 
 Use this document when designing content schemas, designer tools, validation rules, scenario files, and AI-agent tasks that modify authored content.
 

@@ -138,7 +138,7 @@ Assume the current baseline already includes:
 - KO non-player heroes leaving the party on allied win if not revived before battle end
 - post-M8 design clarification across:
   - World Map / Region terminology
-  - Region node-content model
+  - single-purpose Region nodes
   - enemy-team competition and sabotage
   - event-driven progression
   - quest services / victory / defeat / guidance

@@ -8,7 +8,8 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Respect the time and travel rules exactly as described in `docs/core_loop_rules.md`.
 - Respect battle logic exactly as described in `docs/combat_rules.md`.
 - Respect the current high-level design intent in `docs/game_vision.md`.
-- Respect content authoring and validation rules in `docs/scenario_authoring.md` when changing content schemas, events, quests, Services, or validation.
+- Respect content authoring rules in `docs/scenario_authoring.md` when changing content schemas, events, quests, or Services.
+- Respect validation levels, severities, and gates in `docs/validation_system.md` when changing validators or validation reports.
 - Use `docs/terminology_map.md` when legacy runtime or content names differ from current design language.
 
 ## Terminology
