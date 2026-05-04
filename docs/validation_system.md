@@ -2,6 +2,8 @@
 
 This document defines the intended validation model for Ashvale content.
 
+Validation should validate the schema conventions defined in `docs/content_schema.md`.
+
 Use this document when implementing or modifying:
 - content validation
 - editor validation
@@ -13,6 +15,7 @@ Use this document when implementing or modifying:
 
 Related docs:
 - `docs/scenario_authoring.md`
+- `docs/content_schema.md`
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/terminology_map.md`

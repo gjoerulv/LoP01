@@ -4,6 +4,8 @@ This document defines the intended long-term authoring model for Ashvale Scenari
 
 This is a design and tooling guide. Detailed validation levels, severities, gates, and validator categories live in `docs/validation_system.md`.
 
+Detailed content data shapes and schema conventions live in `docs/content_schema.md`.
+
 This document does not replace:
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
@@ -11,6 +13,7 @@ This document does not replace:
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
 - `docs/validation_system.md`
+- `docs/content_schema.md`
 
 Use this document when designing content schemas, designer tools, validation rules, scenario files, and AI-agent tasks that modify authored content.
 
@@ -35,12 +38,14 @@ The following should be editable through a designer tool:
 - events
 - victory conditions
 - defeat conditions
-- resources
+- resource amounts, costs, pickups, payouts, and economy settings
 - units
 - items
 - artifacts
 - recipes
 - artifact-combination recipes
+
+The resource enum itself is code/schema-defined. Designers configure how resources are used, awarded, spent, traded, and produced; they do not add arbitrary new resource types unless the resource enum is explicitly expanded.
 
 Code defines:
 - allowed system types
@@ -678,7 +683,7 @@ A team definition may include:
 - starting node
 - active party
 - reserve
-- resources
+- starting resources
 - inventory
 - artifacts
 - hero stats and skills

@@ -15,6 +15,7 @@ Use these files as the main current design references:
 - `docs/combat_rules.md`
 - `docs/scenario_authoring.md`
 - `docs/validation_system.md`
+- `docs/content_schema.md`
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
 
