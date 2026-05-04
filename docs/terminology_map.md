@@ -13,6 +13,7 @@ Current design truth lives primarily in:
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`
 - `docs/scenario_authoring.md`
+- `docs/validation_system.md`
 
 ---
 
@@ -842,6 +843,32 @@ A **validation warning** is a likely issue or design risk that does not necessar
 
 Invalid work-in-progress content may be saved, but should not be playable.
 
+
+### Save validation
+**Save validation** runs when content is saved and never blocks saving.
+
+### Playable validation
+**Playable validation** determines whether content can be played. Errors block play.
+
+### Release validation
+**Release validation** determines whether content can be marked release-ready or packaged. Warnings must be resolved, acknowledged, or suppressed with a reason.
+
+### Validation severity
+**Validation severity** is the level assigned to a validation message.
+
+Current severities are:
+- Error
+- Warning
+- Info
+
+### Warning suppression
+**Warning suppression** is the act of acknowledging a validation warning with a stored reason so release validation may proceed.
+
+### Quick fix
+A **quick fix** is an explicit editor suggestion or action that may repair a validation issue.
+
+Quick fixes must be reviewable and should not silently change designer intent.
+
 ---
 
 ## 10. Legacy runtime and content names
@@ -929,7 +956,8 @@ When writing docs, code comments, prompts, plans, or design notes:
 - distinguish the **Adventure button strip** from the **Scenario Info screen**
 - keep hover information accessible through select/tap/context actions
 - avoid UI patterns that rely on mouse-only hover
-- use `docs/scenario_authoring.md` for content authoring, validation, and designer-tool terminology
+- use `docs/scenario_authoring.md` for content authoring and designer-tool terminology
+- use `docs/validation_system.md` for validation levels, severities, gates, errors, warnings, and reports
 - treat node behavior as node content plus event attachments, not as a broad fixed node-type hierarchy
 - treat event action chains as non-atomic ordered flows
 - treat Location UI as event-driven sprite interaction, not as a default service-list screen

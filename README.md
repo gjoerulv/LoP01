@@ -14,6 +14,7 @@ Use these files as the main current design references:
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
 - `docs/scenario_authoring.md`
+- `docs/validation_system.md`
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
 

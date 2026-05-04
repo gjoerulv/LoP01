@@ -1463,6 +1463,8 @@ If an event action still fails at runtime:
 - debug logs should make the authoring problem clear
 
 ### Best-effort softlock validation
+Detailed validation rules live in `docs/validation_system.md`.
+
 Validation should include best-effort graph and softlock analysis.
 
 It should try to catch:
