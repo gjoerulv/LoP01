@@ -8,6 +8,7 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Respect the time and travel rules exactly as described in `docs/core_loop_rules.md`.
 - Respect battle logic exactly as described in `docs/combat_rules.md`.
 - Respect the current high-level design intent in `docs/game_vision.md`.
+- Respect content authoring and validation rules in `docs/scenario_authoring.md` when changing content schemas, events, quests, Services, or validation.
 - Use `docs/terminology_map.md` when legacy runtime or content names differ from current design language.
 
 ## Terminology
@@ -33,14 +34,12 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 ## Region structure
 
 - Regions are authored node graphs with systemic rules on top.
-- Keep Region nodes single-purpose.
-- Use the current node model:
-  - empty/travel node
-  - Location node
-  - single Service node
-  - blocker node
+- Use the node-content model: nodes are travel points whose gameplay behavior comes from main node content plus event attachments.
+- Keep main node content single-purpose.
+- A node may contain at most one main content item, such as a resource pickup, artifact pickup, Service, neutral enemy, or one-time special content.
 - Do not introduce a dedicated combat-node abstraction.
-- A node may temporarily contain a resource or a single hostile encounter, but once cleared it becomes an empty travel node.
+- Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule.
+- One-time content usually resolves back into an empty travel node when cleared.
 - `Arrival` is a flag, not a node type.
 - Arrival nodes may also be Location or Service nodes, but enemies may not spawn on them or occupy them.
 

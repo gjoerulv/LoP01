@@ -18,7 +18,7 @@ Task:
 - Make building/interactable visuals clearer
 - Make current interaction prompts clearer
 - Add or refine a dialogue/result panel where useful
-- Add or refine a HUD showing day, time, gold, and location name
+- Add or refine a HUD showing day, time, relevant resources, and location name
 - Help the player understand available services, their role, and their current cost/stock state where relevant
 - Help the player understand interaction outcomes without adding new systems
 

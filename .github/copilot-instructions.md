@@ -89,9 +89,10 @@ Read these before planning or making broad changes:
 2. `README_DECISIONS.md`
 3. `docs/game_vision.md`
 4. `docs/combat_rules.md`
-5. milestone-specific doc/prompt if the task is tied to one
-6. `docs/technical_direction.md`
-7. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
+5. `docs/scenario_authoring.md`
+6. milestone-specific doc/prompt if the task is tied to one
+7. `docs/technical_direction.md`
+8. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
 
 If those sources disagree:
 - prefer the **current codebase** for already implemented behavior
@@ -137,7 +138,7 @@ Assume the current baseline already includes:
 - KO non-player heroes leaving the party on allied win if not revived before battle end
 - post-M8 design clarification across:
   - World Map / Region terminology
-  - single-purpose Region nodes
+  - Region node-content model
   - enemy-team competition and sabotage
   - event-driven progression
   - quest services / victory / defeat / guidance
@@ -152,7 +153,7 @@ There is no new implementation milestone locked yet beyond M8.
 Until a new milestone is explicitly chosen:
 
 - preserve the current post-M8 baseline
-- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, and `README_DECISIONS.md` as the authoritative design baseline
+- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, and `README_DECISIONS.md` as the authoritative design baseline
 - do not reopen settled battle rules unless explicitly requested
 - prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
 - keep future milestone proposals tightly scoped and compatible with the current single-region vertical slice, unless the user explicitly chooses to widen scope

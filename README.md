@@ -13,6 +13,7 @@ Use these files as the main current design references:
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
+- `docs/scenario_authoring.md`
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
 
@@ -105,16 +106,21 @@ The current intended Region model is:
 
 - Regions are authored node graphs
 - systemic rules operate on top of that authored structure
-- Regions use a **single-purpose node model**
+- Regions use a **node-content model**
 
-Main node categories are:
+A node is fundamentally a travel point. Its gameplay behavior is determined by its main node content and any attached events.
 
-- empty / travel node
-- Location node
-- single Service node
-- blocker node
+A node may contain at most one main content item, such as:
+
+- resource pickup
+- artifact pickup
+- Service
+- neutral enemy
+- one-time special content
 
 There is **no dedicated permanent combat-node type** in the current intended design.
+
+Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule. It is not primarily a separate node type.
 
 Temporary hostile content, temporary resources, one-time blockers, and one-time Sealed / Frozen Hero services may all resolve back into empty travel nodes after use or clearing.
 
