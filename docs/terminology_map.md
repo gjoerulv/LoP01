@@ -12,6 +12,7 @@ Current design truth lives primarily in:
 - `docs/combat_rules.md`
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`
+- `docs/scenario_authoring.md`
 
 ---
 
@@ -82,15 +83,23 @@ Examples may include:
 ## 2. Region structure terms
 
 ### Node
-A **node** is a single-purpose travel point inside a Region graph.
+A **node** is a travel point inside a Region graph.
 
-Current intended node categories are:
-- **empty / travel node**
-- **Location node**
-- **single Service node**
-- **blocker node**
+A node's gameplay behavior is determined by its main **node content** and any attached events.
 
 There is **no dedicated permanent combat-node type** in the current design.
+
+### Node content
+**Node content** is the main authored content placed on a Region node.
+
+A node may contain at most one main content item, such as:
+- resource pickup
+- artifact pickup
+- Service
+- neutral enemy
+- one-time special content
+
+Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule. It is not primarily a separate node type.
 
 ### Route
 A **route** is the connection between nodes inside a Region.
@@ -519,11 +528,6 @@ It is:
 - persistent until changed by another event
 - hidable by the player
 
-### Formal Scenario information
-**Formal Scenario information** means the player-facing victory and defeat rules for the current Scenario.
-
-This information is shown through the **Scenario Info screen**.
-
 ### Quest log / journal
 The **quest log** or **journal** is the player-facing log of discovered quest-service tasks and their visible states.
 
@@ -780,7 +784,67 @@ Unavailable recipes remain disabled and show missing ingredient counts inline.
 
 ---
 
-## 9. Legacy runtime and content names
+## 9. Authoring and validation terms
+
+### Designer tool
+The **designer tool** is the intended long-term editor for creating and modifying authored content such as Scenarios, Regions, Locations, nodes, Services, events, quests, teams, items, artifacts, recipes, and validation reports.
+
+### Content library
+A **content library** is a reusable data set for definitions such as units, items, artifacts, Services, recipes, condition types, and action types.
+
+### Node content
+**Node content** is the main authored content placed on a Region node.
+
+Examples include:
+- resource pickup
+- artifact pickup
+- Service
+- neutral enemy
+- one-time special content
+
+Node behavior is primarily determined by node content and attached events, not by a large fixed node-type hierarchy.
+
+### Event attachment
+An **event attachment** is an event connected to a node, Location sprite, Service, or other authored trigger point.
+
+### Region node-entry event
+A **Region node-entry event** triggers when an eligible team arrives on a Region node.
+
+### Event branch
+An **event branch** is an If / Else structure inside an event action flow.
+
+Branches are used to author conditional outcomes and fallback behavior.
+
+### Event action chain
+An **event action chain** is the ordered list of actions executed by an event or quest completion.
+
+Event action chains are non-atomic by current design.
+
+### Non-atomic event execution
+**Non-atomic event execution** means that event actions execute in authored order and previous successful actions are not automatically rolled back if a later action fails.
+
+### Runtime event-action failure
+A **runtime event-action failure** occurs when an authored event action cannot legally execute at runtime.
+
+This should not happen in normal intended play, but if it does, the game should fail safely and show/log a clear reason when reasonable.
+
+### Validation error
+A **validation error** is a structural authoring problem that prevents content from being playable.
+
+### Validation warning
+A **validation warning** is a likely issue or design risk that does not necessarily prevent saving or playing.
+
+### Softlock validation
+**Softlock validation** is best-effort validation that looks for likely unreachable requirements, impossible victory paths, invalid Region paths, missing required content, or other structural progression traps.
+
+### Playable content
+**Playable content** is authored content that passes required validation checks and may be loaded for actual gameplay.
+
+Invalid work-in-progress content may be saved, but should not be playable.
+
+---
+
+## 10. Legacy runtime and content names
 
 Some older names may still appear in source files, content files, tests, comments, or serialized values.
 
@@ -817,7 +881,7 @@ Do not treat the key name itself as current design terminology.
 
 ---
 
-## 10. Leader terminology note
+## 11. Leader terminology note
 
 ### Current design intent
 Current design intent is:
@@ -836,7 +900,7 @@ Do **not** expand the old separate-leader-category model in new design work unle
 
 ---
 
-## 11. Guidance for future work
+## 12. Guidance for future work
 
 When writing docs, code comments, prompts, plans, or design notes:
 
@@ -865,6 +929,9 @@ When writing docs, code comments, prompts, plans, or design notes:
 - distinguish the **Adventure button strip** from the **Scenario Info screen**
 - keep hover information accessible through select/tap/context actions
 - avoid UI patterns that rely on mouse-only hover
+- use `docs/scenario_authoring.md` for content authoring, validation, and designer-tool terminology
+- treat node behavior as node content plus event attachments, not as a broad fixed node-type hierarchy
+- treat event action chains as non-atomic ordered flows
 - treat Location UI as event-driven sprite interaction, not as a default service-list screen
 
 When source/runtime compatibility requires older names to remain in place:

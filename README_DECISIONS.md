@@ -144,22 +144,25 @@ Why:
 - Gives Scenarios strong authored identity.
 - Still allows replayable and emergent world pressure.
 
-### 11) Use a single-purpose node model
+### 11) Use a node-content model
 
 Decision:
-- Region nodes are single-purpose.
-- Main node categories are:
-  - empty / travel node
-  - Location node
-  - single Service node
-  - blocker node
+- Region nodes are fundamentally travel points.
+- A node's gameplay behavior is determined by its main node content and any attached events.
+- A node may contain at most one main content item, such as:
+  - resource pickup
+  - artifact pickup
+  - Service
+  - neutral enemy
+  - one-time special content
 - There is no dedicated permanent combat-node type.
-- Temporary hostile content, temporary resource content, and one-time blockers collapse into empty travel nodes after clearing.
+- Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule.
 - Arrival is a flag, not a node type.
 
 Why:
 - Keeps Region structure understandable.
-- Prevents node design from becoming muddy or over-combined.
+- Avoids a bloated fixed node-type hierarchy.
+- Keeps blockers, pickups, Services, and neutral encounters validateable as content.
 
 ### 12) Keep Location and direct Service distinct
 
@@ -420,7 +423,7 @@ Decision:
 
 Why:
 - Adds persistent strategic objectives to Regions.
-- Supports territorial competition without overcomplicating node categories.
+- Supports territorial competition without overcomplicating node content rules.
 
 ### 30) Keep recruitment and hero availability globally competitive inside a Scenario
 
@@ -629,7 +632,7 @@ Why:
 
 Decision:
 - **Scenario Info screen** = formal victory and defeat conditions
-- **Quest Log / journal** = discovered quest-service tasks and status
+- **Quest log / journal** = discovered quest-service tasks and status
 - **Guidance text** = event-driven directional hint layer that persists until changed
 
 Why:
@@ -1667,4 +1670,204 @@ Decision:
 
 Why:
 - Supports both readability and fast repeated play.
+
+### 144) Keep authored game content data-driven
+
+Decision:
+- Scenarios, Regions, Locations, nodes, Services, teams, quests, events, victory/defeat conditions, resources, units, items, artifacts, and recipes should be editable through a designer tool.
+
+Why:
+- Keeps Scenario creation flexible.
+- Makes long-term modding and iteration practical.
+
+### 145) Keep mechanics typed and code-defined
+
+Decision:
+- Code defines allowed system types, formulas, runtime behavior, validation rules, and legal enum values.
+- Content configures those systems within legal limits.
+- Content should not invent arbitrary new mechanics without code support.
+
+Why:
+- Preserves validation and runtime predictability.
+- Avoids uncontrolled scripting complexity.
+
+### 146) Allow saving invalid work-in-progress content but block play
+
+Decision:
+- Designers may save invalid or incomplete maps for later work.
+- Invalid maps should not be playable in-game.
+
+Why:
+- Supports real authoring workflow without letting broken content reach runtime.
+
+### 147) Distinguish invalid content from harsh legal content
+
+Decision:
+- Validation should reject structurally invalid content.
+- Validation should allow harsh, unfair, or obscure content if it is structurally valid.
+
+Why:
+- Preserves designer freedom.
+- Prevents validation from becoming taste enforcement.
+
+### 148) Treat nodes as travel points with authored content
+
+Decision:
+- Nodes are fundamentally empty travel points.
+- Node behavior is determined by node content and attached events.
+- Blocker behavior usually comes from content, not from an intrinsic node type.
+
+Why:
+- Keeps Region authoring flexible.
+- Avoids a bloated fixed node-type hierarchy.
+
+### 149) Use manually authored World Map adjacency
+
+Decision:
+- World Map Region adjacency is manually authored.
+- Automatic polygon/border detection is not the source of truth.
+
+Why:
+- Gives designers explicit control over Region travel paths.
+
+### 150) Keep routes authored but stateful
+
+Decision:
+- Routes are authored data with road flag and terrain enum.
+- Events may destroy, restore, reveal, or activate routes.
+- Events do not create entirely new route definitions from nothing at runtime.
+
+Why:
+- Supports authored structural changes while keeping validation possible.
+
+### 151) Make service validation type-specific and strict
+
+Decision:
+- Each service type has its own legal settings and validation rules.
+- Defaults are global data, not per-Scenario assumptions.
+
+Why:
+- Keeps service authoring safe and predictable.
+
+### 152) Use reusable service definitions for Location service calls
+
+Decision:
+- Location events call reusable service definitions where legal.
+- Only selected service types should be callable from Locations.
+
+Why:
+- Keeps Location service flow flexible without creating incompatible service systems.
+
+### 153) Keep event authoring typed
+
+Decision:
+- Events should use typed triggers, eligibility, conditions, branches, actions, repeatability, and priority.
+- Events should not become arbitrary free-form scripts.
+
+Why:
+- Keeps authoring expressive but validateable.
+
+### 154) Support nested If / Else event branches
+
+Decision:
+- Events may support nested If / Else branches.
+- Branches replace optional-action flags.
+
+Why:
+- Gives designers explicit fallback control without adding optional-action complexity.
+
+### 155) Use non-atomic ordered event action chains
+
+Decision:
+- Event actions execute in authored order.
+- Previous successful actions are not rolled back if a later action fails.
+- Designers must author safe flows using conditions and branches.
+
+Why:
+- Keeps event execution understandable and avoids complex rollback semantics.
+
+### 156) Show and log runtime event-action failures when reasonable
+
+Decision:
+- Event actions should not fail in normal intended play.
+- If an event action fails anyway, fail safely and show/log a clear reason when reasonable.
+
+Why:
+- Helps designers and testers detect broken authored logic.
+- Avoids silent state corruption.
+
+### 157) Make take actions fail hard when unavailable
+
+Decision:
+- Actions that take resources/items re-check availability at runtime.
+- They fail hard if unavailable.
+- They never clamp or create negative resources.
+
+Why:
+- Prevents invalid economy state.
+
+### 158) Let give actions obey target overflow rules
+
+Decision:
+- Give actions obey inventory and roster capacity rules.
+- Excess may be capped or discarded where the target system defines that behavior.
+- The player should receive feedback when reasonable.
+
+Why:
+- Keeps overflow behavior consistent with item/roster systems.
+
+### 159) Use authored priority for automatic events
+
+Decision:
+- Automatic events use authored priority.
+- The designer tool should allow moving events up/down.
+- New events are added to the bottom by default.
+
+Why:
+- Makes start-of-day and condition-event ordering predictable.
+
+### 160) Share typed condition structures across quests, events, victory, and defeat
+
+Decision:
+- Quest objectives, event conditions, victory conditions, and defeat conditions should use the same broad typed condition model where practical.
+
+Why:
+- Reduces duplicate logic.
+- Makes validation and tooling easier.
+
+### 161) Validate for likely softlocks with best-effort analysis
+
+Decision:
+- Validation should attempt graph and dependency checks for reachability and required progression.
+- Validation does not need to prove every Scenario is beatable.
+
+Why:
+- Catches obvious structural impossibilities without pretending to solve authored design.
+
+### 162) Treat designer judgment as part of the authoring model
+
+Decision:
+- Designers may create harsh or obscure Scenarios.
+- Validation catches structural impossibility, not bad taste.
+- Intentional softlocks should be modeled as defeat states, not accidental broken states.
+
+Why:
+- Preserves creative freedom while still discouraging accidental broken content.
+
+### 163) Keep content hand-editable where practical
+
+Decision:
+- The designer tool is the primary long-term authoring flow.
+- Data files should remain reasonably human-readable and hand-editable where practical.
+
+Why:
+- Supports debugging, modding, review, and AI-assisted editing.
+
+### 164) Run validation in editor, startup, CI, and packaging workflows
+
+Decision:
+- Validation should run on editor save, game startup, automated tests/CI, and before packaging release content.
+
+Why:
+- Catches broken content early and repeatedly.
 

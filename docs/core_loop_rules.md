@@ -244,36 +244,52 @@ Each Region must have a designated **arrival node**.
 
 ---
 
-## 9. Region nodes
+## 9. Region nodes and node content
 
-Regions use a **single-purpose node model**.
+Regions use a **node-content model**.
 
-### Node categories
-The intended node categories are:
+A node is fundamentally a travel point in a Region graph. Its gameplay behavior is determined by its main node content and any attached events.
 
-- **empty / travel node**
-- **Location node**
-- **single Service node**
-- **blocker node**
+### Main node content
+A node may contain at most one main content item, such as:
+
+- resource pickup
+- artifact pickup
+- Service
+- neutral enemy
+- one-time special content
 
 There is **no dedicated permanent combat-node type**.
 
-### Empty / travel node
-An empty / travel node:
+A node may not contain both a resource pickup and a neutral hostile encounter.
+
+### Empty travel node
+An empty travel node:
 
 - may be traveled to
-- may contain a single hostile encounter
-- may contain a single resource or item
-- becomes an ordinary empty travel node after the one-time content is cleared
+- has no unresolved main content
+- may still have attached events if authored
 
-### Location node
-A Location node enters a Location and switches the game to Location Mode.
+When one-time content is cleared, the node becomes an ordinary empty travel node unless another event changes it.
 
-### Single Service node
-A single Service node gives one direct functional interaction on the Region layer.
+### Location content
+A node containing Location content enters a Location and switches the game to Location Mode.
 
-### Blocker node
-A blocker node gates traversal.
+### Service content
+A node containing Service content gives one direct functional interaction on the Region layer.
+
+### Blocker behavior
+Blocker behavior is usually created by content, not by an intrinsic node type.
+
+A blocker may be created by:
+
+- gate service
+- quest gate
+- neutral enemy
+- hostile team occupation
+- authored Service rule
+- event-controlled rule
+- some other authored condition
 
 A blocker may require:
 
@@ -291,7 +307,14 @@ A blocker may be:
 - payment-per-passage
 - hostile by virtue of enemy occupation
 
-When permanently cleared, it becomes an empty travel node.
+When permanently cleared, blocker content normally leaves the node as an empty travel node.
+
+### Event attachments
+Events may be attached to nodes.
+
+A node event may optionally take priority over the node's normal content if authored to do so.
+
+A **Region node-entry event** triggers when an eligible team arrives on the node.
 
 ---
 
@@ -925,10 +948,10 @@ If a hostile team occupies a node, the opposing side must defeat that team to us
 
 This includes:
 
-- Service nodes
-- blocker nodes
+- nodes containing Services
+- nodes with blocker behavior
 - storage gates
-- Location nodes
+- nodes containing Locations
 
 ### Location-node occupation
 If a hostile team occupies a Location node:
@@ -1988,6 +2011,52 @@ Quest services are therefore a specialized structure layered on top of the gener
 
 ---
 
+
+### Event action execution and failure
+Event action chains are **non-atomic ordered actions**.
+
+Rules:
+- actions execute in authored order
+- previous successful actions are not rolled back if a later action fails
+- there is no automatic refund
+- designers are responsible for safe event flow
+- validation and runtime guardrails should help catch mistakes
+
+Event actions should not fail during normal intended play.
+
+Designers should use:
+- eligibility
+- conditions
+- If / Else branches
+- validation feedback
+
+to prevent illegal actions from being reached.
+
+If an action still fails at runtime:
+- the game should fail safely
+- the player should receive a clear popup/log message when reasonable
+- the reason should be included when possible
+- developer/debug logs should identify the authored content problem
+
+Actions that take resources or items must re-check availability at execution time.
+
+If unavailable:
+- fail hard
+- do not clamp
+- do not allow negative resources
+
+Give actions must obey inventory and roster rules.
+
+If receiving rules cap or reject excess, the target system rule applies and the player should receive feedback when reasonable.
+
+### Event branches
+Events may support nested **If / Else** branches.
+
+Branches are preferred over optional action flags.
+
+There is no separate optional-action flag in the current design.
+
+
 ## 35. Victory conditions
 
 Victory conditions are **scenario-level rules**, separate from the quest system.
@@ -2611,6 +2680,7 @@ For future implementation and planning:
 - Treat Regions as authored node graphs with systemic rules layered on top.
 - Treat enemy teams as authored setups with systemic behavior.
 - Treat **events** as the universal progression engine.
+- Use `docs/scenario_authoring.md` for content authoring, validation, and designer-tool rules.
 - Treat **quest services** as one specific authored structure built on top of events and typed objectives.
 - Keep **victory conditions** and **defeat conditions** separate from the quest system.
 - Keep **eligibility** and **condition** as separate concepts.
@@ -2618,5 +2688,6 @@ For future implementation and planning:
 - Keep items and artifacts as separate shared inventories, with hero-only artifact equip slots.
 - Treat trader services as distinct authored service categories with explicit rate tables.
 - Do not introduce a dedicated permanent combat-node abstraction unless the design changes later.
+- Treat node behavior as node content plus event attachments, not as a broad fixed node-type hierarchy.
 - Do not assume allied control grants shared ownership or shared service rights.
 - Keep PvP as a separate future mode unless a task explicitly focuses on it.

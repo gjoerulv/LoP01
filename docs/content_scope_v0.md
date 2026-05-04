@@ -41,13 +41,13 @@ The slice should support:
 - a small set of connected nodes
 - a protected arrival node
 - a few route-quality variations
-- a few meaningful node roles
+- a few meaningful node-content roles
 
 Suggested Region-node distribution:
 - several empty / travel nodes
-- a few Location nodes
-- a few single Service nodes
-- a few blockers
+- a few nodes with Location content
+- a few nodes with direct Service content
+- a few pieces of content that create blocker behavior
 - a few temporary hostile or temporary resource interactions on normal nodes
 
 The slice should **not** assume or require a dedicated combat-node type.

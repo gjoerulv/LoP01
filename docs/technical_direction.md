@@ -69,8 +69,9 @@ If existing source files, content keys, or serialized values still use older nam
 ## Region / Location / Service architecture guidance
 
 - Treat a **Region** as an authored node graph with reusable systemic rules layered on top.
-- Keep nodes single-purpose at the content-definition level.
-- Do not introduce a dedicated combat-node abstraction. Hostile encounters, blockers, and one-time resource pickups should resolve back into empty travel nodes when cleared.
+- Use the node-content model: nodes are travel points whose gameplay behavior comes from main node content plus event attachments.
+- Keep node content single-purpose at the content-definition level.
+- Do not introduce a dedicated combat-node abstraction. Hostile encounters, blocker behavior, and one-time resource pickups should be authored as node content and usually resolve back into empty travel nodes when cleared.
 - Treat **arrival** as a flag on a node, not as a separate node type.
 - Keep **Location** as a distinct entered-space concept rather than collapsing it into node-level services.
 - Treat **direct Service nodes** as quick functional interactions on the Region layer.

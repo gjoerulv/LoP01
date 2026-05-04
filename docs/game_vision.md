@@ -105,23 +105,25 @@ Services should feel like authored world functionality rather than generic menu 
 
 ## 3. Region structure vision
 
-Regions use a **single-purpose node model**.
+Regions use a **node-content model**.
 
-The main node categories are:
+A node is fundamentally a travel point in a Region graph. Its gameplay behavior is determined by its main node content and any attached events.
 
-- **empty / travel node**
-- **Location node**
-- **single Service node**
-- **blocker node**
+A node may contain at most one main content item, such as:
+
+- resource pickup
+- artifact pickup
+- Service
+- neutral enemy
+- one-time special content
 
 There is no dedicated permanent combat-node type in the intended design.
 
-Instead:
-- a normal node may contain one-time hostile content
-- a normal node may contain a one-time item or resource
-- once that content is cleared, the node becomes an ordinary empty travel node
+Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule. It is not primarily a separate node type.
 
-This keeps the Region layer understandable and content-driven.
+Once one-time content is cleared, the node usually becomes an ordinary empty travel node unless an event changes it.
+
+This keeps the Region layer understandable, content-driven, and easier to validate.
 
 ### Arrival nodes
 Each Region has a protected **arrival node**.
@@ -1346,7 +1348,134 @@ The systems should create interaction, but the Scenario should still feel intent
 
 ---
 
-## 17. Implementation posture
+## 17. Scenario authoring, content data, and validation
+
+Ashvale should be heavily data-driven, but not free-form-script driven.
+
+The long-term authoring model should let designers edit:
+
+- Campaigns
+- Scenarios
+- World Maps
+- Regions
+- Locations
+- nodes
+- routes
+- Services
+- teams
+- quests
+- events
+- victory and defeat conditions
+- resources
+- units
+- items
+- artifacts
+- recipes
+
+Code should define the supported system types, formulas, runtime rules, validation rules, and legal behavior boundaries.
+
+### Designer tool vision
+A designer tool should eventually support editing the major authored layers of the game.
+
+That includes:
+- Region and Location editing
+- service placement and settings
+- event pipes
+- quest services
+- victory / defeat conditions
+- team setup
+- resources, items, artifacts, units, and recipes
+- validation reports
+- test-play entry points
+
+Content should also remain reasonably hand-editable where practical.
+
+### Data-driven but typed
+The game should avoid letting content invent arbitrary new mechanics.
+
+Instead, content should choose from explicit typed systems:
+- event triggers
+- eligibility checks
+- conditions
+- event actions
+- service types
+- AI personalities
+- aggression levels
+- route terrain types
+- resource types
+- item and artifact definitions
+
+This gives designers expressive power while keeping validation and runtime behavior predictable.
+
+### Validation philosophy
+Validation should be strict enough that invalid content cannot be played.
+
+But validation should not prevent designers from saving unfinished work.
+
+A map or Scenario may be saved while invalid, but it should not be marked playable until validation passes.
+
+### Harsh content versus invalid content
+The game should allow harsh, unfair, or obscure authored Scenarios if they are structurally valid.
+
+Validation should catch broken content, not forbid difficult design.
+
+For example:
+- no safe anchor can be legal
+- brutal enemies can be legal
+- hidden or obscure objectives can be legal
+- missing required references should be invalid
+- impossible mandatory victory conditions should be invalid
+
+### Node authoring model
+Nodes should be treated primarily as travel points with authored content.
+
+A node's behavior comes from:
+- node content
+- attached events
+- Services
+- neutral encounters
+- pickups
+- blockers created by content
+
+A blocker is usually behavior created by content, not an intrinsic node type.
+
+### Events as typed authoring logic
+Events should use typed structures:
+- trigger
+- eligibility
+- conditions
+- branches
+- action chains
+- repeatability
+- priority
+
+Events may support nested If / Else branching, but they should not become arbitrary free-form scripts.
+
+### Runtime action failure
+Event actions should not fail during normal intended play.
+
+Designers should use eligibility, conditions, and branches to avoid invalid actions.
+
+If an event action still fails at runtime:
+- previous successful actions are not rolled back
+- the chain follows non-atomic ordered execution
+- the player should receive a clear popup/log message when reasonable
+- debug logs should make the authoring problem clear
+
+### Best-effort softlock validation
+Validation should include best-effort graph and softlock analysis.
+
+It should try to catch:
+- unreachable required objects
+- invalid arrival nodes
+- broken Region paths
+- impossible victory targets
+- missing required heroes or items
+- required routes or Services that cannot exist
+
+It does not need to mathematically prove that every Scenario is beatable.
+
+## 18. Implementation posture
 
 The intended long-term direction is:
 
@@ -1370,3 +1499,4 @@ Use:
 as the current design terminology.
 
 PvP may exist later as a separate mode, but it should not currently drive the main single-player vision.
+

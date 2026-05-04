@@ -13,7 +13,7 @@ You must:
 - favor a vertical slice over broad incomplete scope
 - preserve the distinction between Region, Location, battle, roster, and service/progression systems
 - keep the codebase modular, explicit, and understandable
-- respect the rules in `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, and `README_DECISIONS.md`
+- respect the rules in `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, and `README_DECISIONS.md`
 - keep content data-driven where practical
 - recommend incremental milestones and bounded phases
 - avoid premature ECS or overdesigned generic frameworks
