@@ -800,8 +800,7 @@ Rules:
 - Location-called services use the same rules as Region services where applicable.
 - Only whitelisted service types are callable from Locations.
 - One-time / single-use services should not be callable from Location events.
-- By default, Location-owned service instances live inside the Location file.
-- A Scenario-local service list may be introduced later only for services that must be shared across multiple authored scopes.
+- Location-owned service instances may live inside the Location file or in a Scenario-local service list if later needed.
 - Validation must ensure the referenced service is callable from Location context.
 
 ---
@@ -1223,6 +1222,7 @@ A Team owns:
 
 - id or team color
 - controller
+- playerCharacterHeroId for human teams
 - start Region
 - start node
 - active party
@@ -1241,6 +1241,7 @@ Conceptual shape:
   "id": "team_green",
   "color": "Green",
   "controller": "human",
+  "playerCharacterHeroId": "hero_player",
   "startRegionId": "region_mushville",
   "startNodeId": "node_arrival",
   "activeParty": [],
@@ -1567,9 +1568,81 @@ Suppression must include a reason.
 
 Suppressing one warning must not suppress unrelated future warnings.
 
+
 ---
 
-## 40. Runtime save data boundary
+## 40. Player character schema
+
+The player character is a normal unique hero unit with special human-team rules.
+
+For human teams, `playerCharacterHeroId` lives on the Team object.
+
+Example:
+
+```json
+{
+  "id": "team_green",
+  "color": "Green",
+  "controller": "human",
+  "playerCharacterHeroId": "hero_player"
+}
+```
+
+Rules:
+- `playerCharacterHeroId` references a valid hero definition / hero identity.
+- the player character must be leader-capable.
+- the player character must be in that human team's traveling party.
+- the player character may be active or reserve.
+- the player character is not part of the recruitable hero pool.
+- the player character must not appear in AI templates, recruit services, sealed hero services, neutral encounters, or AI-owned rosters.
+
+### Character creation data
+Before a Scenario or Campaign starts, the player creates the player character.
+
+Character creation fills the stable player-character hero identity with:
+- name
+- sex
+- simple graphical representation
+- starting stats
+- starting skills
+- starting preset/template
+
+Example:
+
+```json
+{
+  "playerCharacter": {
+    "heroId": "hero_player",
+    "name": "Asha",
+    "sex": "female",
+    "appearance": {
+      "body": "body_01",
+      "hair": "hair_03",
+      "palette": "palette_02"
+    },
+    "startingPreset": "Warrior",
+    "stats": {},
+    "skills": [],
+    "passiveSkills": []
+  }
+}
+```
+
+Starting presets such as Warrior, Builder, and Explorer are presets only. They are not permanent class restrictions.
+
+### Campaign carry-over
+The player-character identity always carries over in Campaigns.
+
+Campaign transition rules may still affect progression details such as level, skills, passive skills, equipment, or artifacts according to the normal carry-over rules.
+
+### Runtime boundary
+Player-character authored identity and creation defaults belong in content / campaign-start data.
+
+Current HP, KO recovery, equipment state, level changes, learned skills, and other playthrough state belong in save data.
+
+---
+
+## 41. Runtime save data boundary
 
 Authored content defines initial state.
 
@@ -1596,7 +1669,7 @@ Editor tools may edit authored initial state, not live save state, unless explic
 
 ---
 
-## 41. Agent / implementation guidance
+## 42. Agent / implementation guidance
 
 For AI agents and future implementation work:
 

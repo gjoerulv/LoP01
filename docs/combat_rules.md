@@ -45,7 +45,7 @@ For broader systemic context, see:
 - If reduced to 0 HP, a hero is KO'd.
 - A KO'd hero can be revived during battle.
 - If a non-player hero is still KO'd when battle ends, that hero leaves the party and becomes **Temporarily Unavailable** through the broader world rules.
-- If the player character is still KO'd when battle ends but the allied team wins, the player character returns to the party at 1 HP.
+- If the player character is still KO'd when battle ends, the player character is restored to 1 HP.
 - Heroes that leave the party are not considered permanently dead. They may later return through the game's shared hero-availability systems.
 
 ### Generic units
@@ -483,3 +483,54 @@ Although this file is battle-specific, battle assumes these broader truths:
 - battle outcome writes back into persistent roster state
 
 Those broader rules are defined in `docs/core_loop_rules.md` and `docs/game_vision.md`.
+
+
+---
+
+## Player character battle rules
+
+The player character follows normal hero-unit battle rules except where explicitly overridden here.
+
+### KO at battle end
+If the player character has KO status at battle end, restore the player character to **1 HP**.
+
+This applies whether the human side wins directly or wins through allied resolution.
+
+Player-character KO at battle end is not automatic Scenario defeat unless a Scenario-specific defeat condition says so or the player character cannot be recovered.
+
+### Battle loss recovery
+If the human team loses a battle:
+- the team leaves the Region map
+- the team recovers at the latest resting place
+- if no resting place exists, the team recovers at its spawn location
+- recovery occurs next day at 11:00
+- the normal recovery / sleep-penalty flow applies
+
+If the recovery point is blocked and no valid fallback exists, the team is removed from the game and loses.
+
+### Escape
+When a human team escapes:
+- all hero units in the traveling party survive
+- all reserve units survive, including reserve generic units
+- active generic units are lost
+- the team leaves the Region map
+- the team respawns at latest resting place, or spawn location if no resting place exists, next day at 11:00
+- blocked respawn with no fallback removes the team from the game and causes loss
+
+Escape may only be initiated by the current leader.
+
+### Surrender
+Surrender preserves the full traveling party.
+Surrender may only be initiated by the current leader.
+
+The team still leaves the Region map and uses the normal surrender recovery timing and location rules.
+
+### Leader fallback after battle
+The leader must be in the active party.
+
+After battle, if no leader exists:
+1. choose the first available leader-capable active hero
+2. if none exists, move the player character into a legal active slot if possible and assign them leader
+3. if that is impossible, the party is invalid and recovery/defeat rules apply
+
+In normal legal play, this fallback should not fail.

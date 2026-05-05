@@ -714,9 +714,59 @@ Quick fixes should be explicit and reviewable.
 
 They should not silently change designer intent.
 
+
 ---
 
-## 27. Agent / implementation guidance
+## 27. Player character validation
+
+Player-character validation applies to human teams.
+
+### Errors
+Validation errors:
+- standalone Scenario has no player character for the human team
+- single-player human team has no player character
+- `playerCharacterHeroId` references missing hero identity
+- player character is not a hero unit
+- player character is not leader-capable
+- player character is not in the human team's traveling party
+- player character is stored
+- player character is dismissible
+- player character can become Temporarily Unavailable
+- player character appears in an AI team
+- player character appears in an AI team template
+- player character appears in a recruit service
+- player character appears in a Sealed / Frozen Hero service
+- player character appears in a neutral enemy encounter
+- player character can be permanently removed by authored content
+- player character is unavailable at Scenario start
+
+### Warnings
+Validation warnings:
+- an event can move the player character out of the traveling party
+- an event can affect the player character with a kill/remove action
+- an escape/recovery path can fail because the respawn point may be blocked
+- carry-over rules exclude player-character progression data in a way that may surprise the designer
+- a defeat condition depends on player-character loss but recovery rules may prevent that loss in normal play
+
+### Character creation validation
+Character creation validation should ensure:
+- selected name is valid
+- selected sex value is valid
+- selected appearance values are valid
+- selected starting preset exists
+- starting stats are legal
+- starting skills are legal and not banned by the Scenario
+- player character satisfies leader-capable hero requirements
+
+### Campaign validation
+Campaign validation should ensure:
+- player-character identity carries over between Campaign Scenarios
+- Scenario transitions do not remove the player-character identity
+- progression carry-over rules are explicit when they reset level, skills, passives, equipment, or artifacts
+
+---
+
+## 28. Agent / implementation guidance
 
 When implementing validation:
 

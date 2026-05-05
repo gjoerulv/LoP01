@@ -80,6 +80,17 @@ Examples may include:
 - quest interaction
 - other authored interactions
 
+
+### Player character
+The **player character** is a normal unique hero unit with special human-team rules.
+
+The player character uses a stable hero id such as `hero_player` and is configured through character creation.
+
+The player character must stay in the human team's traveling party, but may be active or reserve.
+
+### Character creation
+**Character creation** is the pre-Scenario or pre-Campaign process that fills the stable player-character identity with name, sex, simple appearance, starting stats, starting skills, and starting preset/template.
+
 ---
 
 ## 2. Region structure terms
@@ -666,12 +677,14 @@ By default, this includes:
 - 1/4 of defeated-team non-gold resources
 
 ### Escape
-**Escape** is a battle outcome where only the leader escapes.
+**Escape** is a battle outcome initiated by the current leader where a team flees and later recovers.
 
-The escaping team survives, but loses its active party except the leader and later respawns at its latest resting place or spawn point.
+The escaping team survives, all heroes and reserve units survive, and active generic units are lost.
 
 ### Surrender
 **Surrender** is a battle outcome where a team offers gold to the opponent in order to retreat with its full team intact.
+
+Surrender is initiated by the current leader.
 
 The surrendered team later respawns under the normal surrender rules.
 
@@ -974,3 +987,5 @@ When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately
 - document the mismatch if it could confuse future work
 - do not assume legacy names define current design intent
+
+- treat the player character as a unique hero with special human-team rules; they must remain in the traveling party and cannot be stored, dismissed, recruited, sealed, or AI-owned

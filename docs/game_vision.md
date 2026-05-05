@@ -1351,6 +1351,34 @@ The systems should create interaction, but the Scenario should still feel intent
 
 ---
 
+
+### Player character
+The player character is a normal unique hero unit with special human-team rules.
+
+The player creates the player character before a Scenario or Campaign starts, using a stable hero identity such as `hero_player`.
+
+Character creation chooses:
+- name
+- sex
+- simple graphical representation
+- starting stats
+- starting skills
+- starting preset/template
+
+The player character:
+- belongs to the human team
+- must stay in the traveling party
+- may be active or reserve
+- cannot be stored, dismissed, recruited, sealed/frozen, Temporarily Unavailable, neutral, or AI-owned
+- must be leader-capable
+- does not have to be current leader
+- always carries over as identity in Campaigns
+
+If the player character is KO at battle end, they recover to 1 HP.
+
+Player-character KO is not automatic Scenario defeat unless recovery is impossible or a Scenario-specific defeat condition says so.
+
+
 ## 17. Scenario authoring, content data, and validation
 
 Ashvale should be heavily data-driven, but not free-form-script driven.

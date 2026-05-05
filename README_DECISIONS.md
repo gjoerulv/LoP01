@@ -480,7 +480,7 @@ Decision:
 - Heroes are not permanently tied to one team.
 - If a team loses a hero, that hero may later return to the shared pool through the normal Temporarily Unavailable rules.
 - Enemy teams may remain leaderless if allowed.
-- The single-player player character remains a special exception and never permanently disappears from play.
+- The player character is a special exception and follows player-character recovery and defeat rules instead of the normal Temporarily Unavailable / recruitable hero-pool loop.
 
 Why:
 - Keeps the simulation coherent.
@@ -2023,3 +2023,79 @@ Decision:
 
 Why:
 - Prevents authored data from being polluted by playthrough state.
+
+### 181) Treat the player character as a unique hero with special human-team rules
+
+Decision:
+- The player character is a normal unique hero unit with special human-team rules.
+- The player character is identified by a stable hero id such as `hero_player`.
+
+Why:
+- Keeps player-character behavior integrated with the hero system while preserving required protagonist rules.
+
+### 182) Define player character identity on the human team
+
+Decision:
+- Human teams define `playerCharacterHeroId`.
+- Single-player Scenarios have exactly one player character.
+- Multi-human / PvP Scenarios may have one player character per human team.
+
+Why:
+- Team-level ownership supports both single-player and future multi-human structures.
+
+### 183) Require character creation before play
+
+Decision:
+- Before a Scenario or Campaign starts, the player creates the player character.
+- Character creation fills name, sex, simple appearance, starting stats, starting skills, and starting preset/template.
+- Templates such as Warrior, Builder, and Explorer are starting presets only.
+
+Why:
+- Gives the player authored identity without adding permanent class restrictions.
+
+### 184) Keep the player character in the traveling party
+
+Decision:
+- The player character must remain in the human team's traveling party.
+- The player character may be active or reserve.
+- The player character cannot be stored, dismissed, Temporarily Unavailable, recruited, sealed/frozen, neutral, AI-owned, or placed in AI templates.
+
+Why:
+- Prevents protagonist loss and AI ownership edge cases while preserving party-management flexibility.
+
+### 185) Restore player character KO at battle end
+
+Decision:
+- If the player character has KO status at battle end, restore them to 1 HP.
+- Player-character KO is not automatic Scenario defeat unless recovery is impossible or a Scenario-specific defeat condition says so.
+
+Why:
+- Keeps the player character persistent while allowing explicit defeat conditions.
+
+### 186) Leader initiates escape and surrender
+
+Decision:
+- Escape and surrender may only be initiated by the current leader.
+- The resulting escape/surrender outcome still applies to the team according to the normal escape/surrender rules.
+
+Why:
+- Keeps battle command authority tied to the leader without reverting to the old “only leader escapes” outcome.
+
+### 187) Preserve heroes and reserve on escape
+
+Decision:
+- When a human team escapes, all hero units and all reserve units survive.
+- Active generic units are lost.
+
+Why:
+- Prevents escape from accidentally deleting the player character or reserve roster.
+
+### 188) Do not allow events to replace player-character identity
+
+Decision:
+- Events may modify player-character stats, skills, passives, appearance, name, equipment, and authored properties.
+- Events may not replace the player-character identity with a different hero id during a Scenario.
+
+Why:
+- Keeps Scenario identity stable and validation tractable.
+

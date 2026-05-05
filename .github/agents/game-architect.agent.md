@@ -52,8 +52,8 @@ Current baseline:
 - leader / aura foundation is complete
 - player team must always have a legal leader when fielding an active party
 - enemy teams may have a leader but are not required to
-- player character is seeded into owned + active party at startup
-- player character recovers to 1 HP on allied win if KO'd
+- player character is seeded into the human team's traveling party at startup
+- player character recovers to 1 HP at battle end if KO'd
 - KO non-player heroes leave the party on allied win unless revived before battle end
 - the current design baseline also includes clarified rules for:
   - World Map / Region / Location / Service structure

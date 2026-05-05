@@ -129,7 +129,7 @@ Generic units in the traveling party do **not** survive Region change.
 - The game must clearly warn the player before such travel.
 - Generic units that the player wants to preserve across Region departure must be stored beforehand.
 
-### Stored units
+### Stored units during Region travel
 Stored units remain in their original Region and persist there.
 
 ### Region persistence
@@ -651,7 +651,7 @@ Valid reasons include:
 - the team is waiting for a cooldown
 - the team is constrained by patrol or service timing
 
-### Patrol radius
+### Patrol enforcement
 Patrol radius is hard enforced.
 
 An AI team may not move outside its patrol radius unless events remove, replace, or expand that patrol rule.
@@ -1661,13 +1661,14 @@ If a hero leaves the team for a reason other than being defeated by another team
 then that hero leaves with the artifacts currently equipped on them.
 
 ### Escape
-Escape is a battle-end option performed through the leader.
+Escape is a battle-end option initiated by the current leader.
 
 Rules:
-- only the **leader** may escape
+- only the current leader may initiate escape
 - the escaping team survives
-- the cost is that the entire **active party** is lost except for the leader
-- the reserve is not lost through this rule alone
+- all hero units in the traveling party survive
+- all reserve units survive, including reserve generic units
+- active generic units are lost
 
 After escape:
 - the team is removed from the Region map
@@ -1676,22 +1677,23 @@ After escape:
   - the latest resting place
   - or the original spawn point if there is no resting place
 
-If the team cannot respawn because an enemy team occupies that spawn point:
+If the team cannot respawn because the recovery point is blocked and no valid fallback exists:
 - the escaped team is defeated
 
 The winning side does not receive direct explicit information about the escaped team's later respawn location beyond logical deduction.
 
 ### Surrender
-Surrender is a battle-end option where one team offers gold to the opposing team to retreat with the entire team intact.
+Surrender is a battle-end option initiated by the current leader where one team offers gold to the opposing team to retreat with the entire team intact.
 
 Rules:
+- only the current leader may initiate surrender
 - surrender pays gold to the opposing team
 - the surrendering team keeps its entire team intact
 - the team is removed from the Region map
 - the team respawns the next day at **11:00**
 - respawn uses the same resting-place / spawn-point rule as escape
 
-If the surrendering team cannot respawn because the spawn point is occupied by an enemy team:
+If the surrendering team cannot respawn because the recovery point is blocked and no valid fallback exists:
 - that team is defeated
 
 In single-player, surrender should feel broadly similar to the ordinary setback rhythm of being forced out of the Region, except the additional explicit cost is the gold paid to the opposing team.
@@ -2222,7 +2224,7 @@ A Temporarily Unavailable hero is:
 
 By default, Temporarily Unavailable heroes return to the relevant hero pool at the start of the next week.
 
-These hero rules apply equally across teams, except that the single-player player character has the special rule that they never permanently disappear from play.
+These hero rules apply equally across teams, except that the player character does not enter the normal Temporarily Unavailable / recruitable hero-pool loop. The player character follows the player-character recovery and defeat rules instead.
 
 Quest-critical hero loss does not necessarily make a quest permanently impossible if that hero can later be recruited again.
 
@@ -2662,9 +2664,100 @@ Popup-worthy events include:
 - Region unlocked
 
 AI and human movement / animation speed should be configurable from very slow to instant.
+
 ---
 
-## 43. Agent / implementation guidance
+## 43. Player character lifecycle rules
+
+The **player character** is a normal unique hero unit with special human-team rules.
+
+The player character is identified by a stable hero id such as `hero_player`.
+
+Before a Scenario or Campaign starts, the player creates the player character by choosing:
+- name
+- sex
+- simple graphical representation
+- starting stats
+- starting skills
+- starting preset/template
+
+Starting presets such as Warrior, Builder, and Explorer are presets only. They are not permanent class restrictions.
+
+### Ownership
+Single-player Scenarios have exactly one player character.
+
+Multi-human or PvP Scenarios may have one player character per human team.
+
+The player character:
+- must belong to a human team
+- must stay in that team's traveling party
+- may be in the active party or reserve
+- cannot be stored
+- cannot be dismissed
+- cannot become Temporarily Unavailable
+- cannot be AI-owned
+- cannot be recruited
+- cannot appear in a recruit service
+- cannot appear in a Sealed / Frozen Hero service
+- cannot be a neutral enemy
+- cannot be placed in AI team templates
+
+The player character is a hero mechanically, but is not part of the recruitable hero pool.
+
+### Leader rules
+The player character must be leader-capable.
+
+The player character does not have to be the current leader.
+
+The leader must be in the active party.
+
+After battle, if no leader exists:
+1. choose the first available leader-capable active hero
+2. if none exists, move the player character into a legal active slot if possible and assign them leader
+3. if that is impossible, the party is invalid and recovery/defeat rules apply
+
+In normal legal play, this fallback should not fail.
+
+### Battle-end recovery
+If the player character has KO status at battle end, restore the player character to **1 HP**.
+
+Player-character KO at battle end is not automatically Scenario defeat.
+
+A Scenario may still define a defeat condition that cares about losing or failing to recover the player character.
+
+### Human-team battle loss
+If the human team loses a battle:
+- the team leaves the Region map
+- the team recovers at the latest resting place
+- if no resting place exists, the team recovers at its spawn location
+- recovery occurs next day at 11:00
+- the normal recovery / sleep-penalty flow applies
+
+If the recovery point is blocked and no valid fallback exists, the team is removed from the game and loses.
+
+### Escape and surrender
+Escape and surrender follow the standard escape/surrender rules.
+
+The player character is protected by those rules because:
+- all heroes in the traveling party survive escape
+- all reserve units survive escape
+- surrender preserves the full traveling party
+
+### Events
+Events may modify player-character properties, including:
+- stats
+- skills
+- passive skills
+- appearance
+- name
+- equipment
+- other authored properties
+
+Events may not replace the player-character identity with a different hero id during a Scenario.
+
+---
+
+## 44. Agent / implementation guidance
 
 For future implementation and planning:
 
@@ -2680,7 +2773,9 @@ For future implementation and planning:
 - Treat Regions as authored node graphs with systemic rules layered on top.
 - Treat enemy teams as authored setups with systemic behavior.
 - Treat **events** as the universal progression engine.
-- Use `docs/scenario_authoring.md` for content authoring, validation, and designer-tool rules.
+- Use `docs/scenario_authoring.md` for content authoring and designer-tool rules.
+- Use `docs/validation_system.md` for validation levels, gates, warnings, and errors.
+- Use `docs/content_schema.md` for authored JSON/content schema conventions.
 - Treat **quest services** as one specific authored structure built on top of events and typed objectives.
 - Keep **victory conditions** and **defeat conditions** separate from the quest system.
 - Keep **eligibility** and **condition** as separate concepts.

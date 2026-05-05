@@ -135,8 +135,8 @@ Assume the current baseline already includes:
 - leader / aura baseline in place
 - player team requiring a legal leader
 - enemy teams optionally having a leader
-- player-character seeding into owned roster and active-party legality protections
-- player-character recovery to 1 HP on allied win if KO'd
+- player-character seeding into the human team's traveling party
+- player-character recovery to 1 HP at battle end if KO'd
 - KO non-player heroes leaving the party on allied win if not revived before battle end
 - post-M8 design clarification across:
   - World Map / Region terminology
@@ -156,6 +156,7 @@ Until a new milestone is explicitly chosen:
 
 - preserve the current post-M8 baseline
 - treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/validation_system.md`, `docs/content_schema.md`, and `README_DECISIONS.md` as the authoritative design baseline
+- respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
 - do not reopen settled battle rules unless explicitly requested
 - prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
 - keep future milestone proposals tightly scoped and compatible with the current single-region vertical slice, unless the user explicitly chooses to widen scope
@@ -173,3 +174,4 @@ Until a new milestone is explicitly chosen:
 - speculative campaign-scale systems that bypass the current slice
 
 When in doubt, prefer the smallest clean implementation that preserves the existing vertical-slice foundation and strengthens authored progression, consequence, and safe-anchor identity.
+

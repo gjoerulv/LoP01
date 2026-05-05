@@ -911,9 +911,58 @@ Invalid content may be saved as work-in-progress.
 
 Invalid content should not be playable.
 
+
 ---
 
-## 29. Agent / implementation guidance
+## 29. Player character authoring
+
+The player character is authored as a normal unique hero unit with special human-team rules.
+
+For human teams, the Team definition owns `playerCharacterHeroId`.
+
+Single-player Scenarios must define exactly one player character for the human team.
+
+Multi-human / PvP Scenarios may define one player character per human team.
+
+### Character creation
+Before a Scenario or Campaign starts, the player creates the player character.
+
+The Scenario provides the stable hero identity, such as `hero_player`.
+
+Character creation fills that identity with:
+- name
+- sex
+- simple graphical representation
+- starting stats
+- starting skills
+- starting preset/template
+
+Starting presets such as Warrior, Builder, and Explorer are presets only. They are not permanent class restrictions.
+
+### Authoring restrictions
+The player character:
+- must belong to the human team
+- must stay in the traveling party
+- may be active or reserve
+- cannot be stored
+- cannot be dismissed
+- cannot become Temporarily Unavailable
+- cannot be recruitable
+- cannot be sealed/frozen
+- cannot be neutral
+- cannot be AI-owned
+- cannot appear in AI templates
+
+The player character is a hero mechanically, but is not part of the recruitable hero pool.
+
+### Events
+Events may modify player-character stats, skills, passives, appearance, name, equipment, or other authored properties.
+
+Events may not replace the player-character identity with a different hero id during a Scenario.
+
+---
+
+## 30. Agent / implementation guidance
 
 For future implementation and AI-agent work:
 
