@@ -97,3 +97,4 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - Prefer a playable incomplete feature over a broad unfinished feature.
 - When terminology migration is the task, keep it behavior-preserving and avoid unrelated gameplay refactors.
 - When a historical milestone doc conflicts with the current design docs, follow the current design docs.
+- Respect player-character rules: the player character is a unique hero with special human-team rules and must remain in the traveling party.
