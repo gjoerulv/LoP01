@@ -5,6 +5,7 @@ This document describes the current intended long-term vision for Project Ashval
 For terminology, see `docs/terminology_map.md`.
 
 Detailed systemic rules live primarily in:
+- `docs/presentation_game_feel.md`
 - `docs/game_shell_flow.md`
 - `docs/combat_rules.md`
 - `docs/core_loop_rules.md`

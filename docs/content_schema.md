@@ -19,6 +19,7 @@ Related docs:
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/terminology_map.md`
+- `docs/presentation_game_feel.md`
 - `README_DECISIONS.md`
 
 ---
@@ -1687,3 +1688,4 @@ For AI agents and future implementation work:
 - keep event conditions/actions explicit and small
 - use `showMessage` as the shared message-display action path
 - keep validation suppressions Scenario-level
+- follow `docs/presentation_game_feel.md` for presentation asset ids and presentation event-action boundaries

@@ -2180,3 +2180,40 @@ Decision:
 Why:
 - Avoids runtime state conflicts from hot-swapping content packages.
 
+### 198) Define Ashvale's presentation as warm but dangerous fantasy adventure
+
+Decision:
+- Ashvale should feel like a warm but dangerous fantasy adventure.
+- It should combine SNES/JRPG warmth, HoMM-style strategic wonder, dangerous wilderness, and melancholic mystery.
+
+Why:
+- Prevents player-facing UI and transitions from feeling sterile or debug-like.
+
+### 199) Keep presentation snappy, readable, and moderately expressive
+
+Decision:
+- Common actions should be fast.
+- Important decisions should be readable.
+- Presentation should use moderate juice, not excessive animation or reward spam.
+
+Why:
+- Preserves responsiveness while giving the game character.
+
+### 200) Use typed presentation hooks and actions
+
+Decision:
+- Music, ambience, stingers, portraits, and visual effects should be referenced through typed ids/actions where needed.
+- Presentation actions should not become free-form scripts.
+
+Why:
+- Keeps audiovisual direction content-driven but validateable.
+
+### 201) Respect accessibility in presentation
+
+Decision:
+- Presentation must respect reduce-motion settings.
+- Critical information must not rely only on color or only on audio.
+
+Why:
+- Keeps feedback accessible and clear across input modes and player needs.
+

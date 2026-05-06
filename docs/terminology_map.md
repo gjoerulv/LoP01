@@ -10,6 +10,7 @@ Current design truth lives primarily in:
 
 - `docs/game_vision.md`
 - `docs/game_shell_flow.md`
+- `docs/presentation_game_feel.md`
 - `docs/combat_rules.md`
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`
@@ -971,7 +972,23 @@ The **Mods menu** is the shell screen for installed mod visibility, enabled/disa
 
 ---
 
-## 13. Guidance for future work
+## 13. Presentation terms
+
+### Game feel
+**Game feel** is the moment-to-moment tactile quality of play, including responsiveness, feedback, pacing, and perceived weight of actions.
+
+### Presentation action
+A **presentation action** is a typed event action that changes audiovisual presentation, such as playing a stinger, fading the screen, changing music, or showing a portrait.
+
+### Stinger
+A **stinger** is a short musical or sound cue used to emphasize a transition, discovery, battle start, result, warning, or story beat.
+
+### Ambience
+**Ambience** is background environmental audio or subtle visual motion that supports place identity without becoming the main music or gameplay signal.
+
+---
+
+## 14. Guidance for future work
 
 When writing docs, code comments, prompts, plans, or design notes:
 
@@ -1007,6 +1024,7 @@ When writing docs, code comments, prompts, plans, or design notes:
 - treat event action chains as non-atomic ordered flows
 - treat Location UI as event-driven sprite interaction, not as a default service-list screen
 - treat the player character as a unique hero with special human-team rules; they must remain in the traveling party and cannot be stored, dismissed, recruited, sealed, or AI-owned
+- use `docs/presentation_game_feel.md` for moment-to-moment feel, audiovisual tone, transitions, and feedback
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately
