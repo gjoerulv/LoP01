@@ -9,15 +9,16 @@ Read these first when relevant:
 1. `README.md`
 2. `docs/game_vision.md`
 3. `docs/game_shell_flow.md`
-4. `docs/core_loop_rules.md`
-5. `docs/combat_rules.md`
-6. `docs/scenario_authoring.md`
-7. `docs/validation_system.md`
-8. `docs/content_schema.md`
-9. `docs/terminology_map.md`
-10. `README_DECISIONS.md`
-11. `.github/copilot-instructions.md`
-12. `.github/instructions/gameplay.instructions.md`
+4. `docs/presentation_game_feel.md`
+5. `docs/core_loop_rules.md`
+6. `docs/combat_rules.md`
+7. `docs/scenario_authoring.md`
+8. `docs/validation_system.md`
+9. `docs/content_schema.md`
+10. `docs/terminology_map.md`
+11. `README_DECISIONS.md`
+12. `.github/copilot-instructions.md`
+13. `.github/instructions/gameplay.instructions.md`
 
 For UI work, also read:
 
@@ -29,6 +30,8 @@ For architecture work, also read:
 - `docs/technical_direction.md`
 
 ## Core rules
+
+- Respect `docs/presentation_game_feel.md` for moment-to-moment presentation, audio/visual tone, transitions, and feedback.
 
 - Do not invent new game-design rules that contradict the docs.
 - Do not reintroduce old terminology such as `overworld`, `combat node`, or `game_vision_complete.md` as current design truth.

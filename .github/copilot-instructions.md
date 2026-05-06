@@ -89,13 +89,14 @@ Read these before planning or making broad changes:
 2. `README_DECISIONS.md`
 3. `docs/game_vision.md`
 4. `docs/game_shell_flow.md`
-5. `docs/combat_rules.md`
-6. `docs/scenario_authoring.md`
-7. `docs/validation_system.md`
-8. `docs/content_schema.md`
-9. milestone-specific doc/prompt if the task is tied to one
-10. `docs/technical_direction.md`
-11. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
+5. `docs/presentation_game_feel.md`
+6. `docs/combat_rules.md`
+7. `docs/scenario_authoring.md`
+8. `docs/validation_system.md`
+9. `docs/content_schema.md`
+10. milestone-specific doc/prompt if the task is tied to one
+11. `docs/technical_direction.md`
+12. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
 
 If those sources disagree:
 - prefer the **current codebase** for already implemented behavior
@@ -112,10 +113,11 @@ Use this order when there is ambiguity:
 4. `README_DECISIONS.md`
 5. `docs/game_vision.md`
 6. `docs/game_shell_flow.md`
-7. `docs/core_loop_rules.md` and `docs/combat_rules.md`
-8. `docs/technical_direction.md`
-9. `docs/content_scope_v0.md` as a bounded-scope cap only
-10. archived docs/prompts as historical context only
+7. `docs/presentation_game_feel.md`
+8. `docs/core_loop_rules.md` and `docs/combat_rules.md`
+9. `docs/technical_direction.md`
+10. `docs/content_scope_v0.md` as a bounded-scope cap only
+11. archived docs/prompts as historical context only
 
 `docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
 
@@ -157,12 +159,12 @@ There is no new implementation milestone locked yet beyond M8.
 Until a new milestone is explicitly chosen:
 
 - preserve the current post-M8 baseline
-- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/game_shell_flow.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/validation_system.md`, `docs/content_schema.md`, and `README_DECISIONS.md` as the authoritative design baseline
-- respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
+- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/game_shell_flow.md`, `docs/presentation_game_feel.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/validation_system.md`, `docs/content_schema.md`, and `README_DECISIONS.md` as the authoritative design baseline
 - do not reopen settled battle rules unless explicitly requested
 - prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
 - keep future milestone proposals tightly scoped and compatible with the current single-region vertical slice, unless the user explicitly chooses to widen scope
 - when discussing future world-map/region/party systems, use the settled terminology and party/storage model rather than older region-local-party assumptions
+- respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
 
 ## Avoid
 

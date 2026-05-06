@@ -5,6 +5,7 @@ Use these instructions when changing UI, HUD, menus, map presentation, service s
 Always follow the current terminology in `docs/terminology_map.md`.
 
 Primary design references:
+- `docs/presentation_game_feel.md`
 - `docs/game_vision.md`
 - `docs/game_shell_flow.md`
 - `docs/core_loop_rules.md`
@@ -272,4 +273,3 @@ Use:
 - Scenario Info screen
 - Quest Log
 - Guidance
-- Respect `docs/game_shell_flow.md` for title, main menu, mode selection, save/load, settings, mods, and dev/debug shell UI.

@@ -15,6 +15,7 @@ Use this document when implementing or modifying:
 
 Related docs:
 - `docs/scenario_authoring.md`
+- `docs/presentation_game_feel.md`
 - `docs/content_schema.md`
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
@@ -182,6 +183,8 @@ Duplicate ids inside their required scope are errors.
 ---
 
 ## 7. Reference and schema validation
+
+Validation should treat referenced presentation ids such as music, ambience, stinger, portrait, and visual effect ids as normal content references.
 
 Missing references are errors.
 
