@@ -9,6 +9,7 @@ This is a terminology and interpretation document. It is **not** the full design
 Current design truth lives primarily in:
 
 - `docs/game_vision.md`
+- `docs/game_shell_flow.md`
 - `docs/combat_rules.md`
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`
@@ -947,7 +948,30 @@ Do **not** expand the old separate-leader-category model in new design work unle
 
 ---
 
-## 12. Guidance for future work
+## 12. Game shell terms
+
+### Game shell
+The **game shell** is the player-facing entry and configuration layer outside active gameplay.
+
+It includes boot flow, title screen, main menu, game mode selection, save/load, settings, mods menu, and dev/debug shell options.
+
+### Game Mode Selection
+**Game Mode Selection** is the New Game flow where the player chooses Campaign, Standalone Scenario, Tutorial, or PvP when available.
+
+### Saved character template
+A **saved character template** is reusable character-creation convenience data.
+
+It is not Campaign carry-over data.
+
+### Save metadata
+**Save metadata** is version/content/mod information stored with a save file so compatibility can be checked before loading.
+
+### Mods menu
+The **Mods menu** is the shell screen for installed mod visibility, enabled/disabled state, load order, metadata, and validation health where supported.
+
+---
+
+## 13. Guidance for future work
 
 When writing docs, code comments, prompts, plans, or design notes:
 
@@ -982,10 +1006,9 @@ When writing docs, code comments, prompts, plans, or design notes:
 - treat node behavior as node content plus event attachments, not as a broad fixed node-type hierarchy
 - treat event action chains as non-atomic ordered flows
 - treat Location UI as event-driven sprite interaction, not as a default service-list screen
+- treat the player character as a unique hero with special human-team rules; they must remain in the traveling party and cannot be stored, dismissed, recruited, sealed, or AI-owned
 
 When source/runtime compatibility requires older names to remain in place:
 - preserve compatibility deliberately
 - document the mismatch if it could confuse future work
 - do not assume legacy names define current design intent
-
-- treat the player character as a unique hero with special human-team rules; they must remain in the traveling party and cannot be stored, dismissed, recruited, sealed, or AI-owned

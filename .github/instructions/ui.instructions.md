@@ -271,3 +271,4 @@ Use:
 - Scenario Info screen
 - Quest Log
 - Guidance
+- Respect `docs/game_shell_flow.md` for title, main menu, mode selection, save/load, settings, mods, and dev/debug shell UI.
