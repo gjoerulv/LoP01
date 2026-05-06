@@ -111,10 +111,11 @@ Use this order when there is ambiguity:
 3. active milestone doc for the task, if one exists
 4. `README_DECISIONS.md`
 5. `docs/game_vision.md`
-6. `docs/core_loop_rules.md` and `docs/combat_rules.md`
-7. `docs/technical_direction.md`
-8. `docs/content_scope_v0.md` as a bounded-scope cap only
-9. archived docs/prompts as historical context only
+6. `docs/game_shell_flow.md`
+7. `docs/core_loop_rules.md` and `docs/combat_rules.md`
+8. `docs/technical_direction.md`
+9. `docs/content_scope_v0.md` as a bounded-scope cap only
+10. archived docs/prompts as historical context only
 
 `docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
 
@@ -156,7 +157,8 @@ There is no new implementation milestone locked yet beyond M8.
 Until a new milestone is explicitly chosen:
 
 - preserve the current post-M8 baseline
-- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/validation_system.md`, `docs/content_schema.md`, and `README_DECISIONS.md` as the authoritative design baseline
+- treat `docs/combat_rules.md`, `docs/game_vision.md`, `docs/game_shell_flow.md`, `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/validation_system.md`, `docs/content_schema.md`, and `README_DECISIONS.md` as the authoritative design baseline
+- respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
 - do not reopen settled battle rules unless explicitly requested
 - prefer vision tightening, bounded milestone planning, and small consistency cleanups over broad new feature work
 - keep future milestone proposals tightly scoped and compatible with the current single-region vertical slice, unless the user explicitly chooses to widen scope
@@ -174,4 +176,3 @@ Until a new milestone is explicitly chosen:
 - speculative campaign-scale systems that bypass the current slice
 
 When in doubt, prefer the smallest clean implementation that preserves the existing vertical-slice foundation and strengthens authored progression, consequence, and safe-anchor identity.
-- respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
