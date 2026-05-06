@@ -6,6 +6,7 @@ Always follow the current terminology in `docs/terminology_map.md`.
 
 Primary design references:
 - `docs/game_vision.md`
+- `docs/game_shell_flow.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
 - `README_DECISIONS.md`
