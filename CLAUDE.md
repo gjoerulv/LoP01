@@ -17,8 +17,9 @@ Read these first when relevant:
 9. `docs/content_schema.md`
 10. `docs/terminology_map.md`
 11. `README_DECISIONS.md`
-12. `.github/copilot-instructions.md`
-13. `.github/instructions/gameplay.instructions.md`
+12. `docs/implementation_roadmap.md`
+13. `.github/copilot-instructions.md`
+14. `.github/instructions/gameplay.instructions.md`
 
 For UI work, also read:
 

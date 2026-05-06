@@ -23,6 +23,14 @@ Use these files as the main current design references:
 
 When older source names, content keys, prompts, or serialized values still use legacy wording such as `overworld`, prefer the terminology in `docs/terminology_map.md` for design and planning.
 
+## Implementation planning
+
+Current implementation sequencing lives in:
+
+- `docs/implementation_roadmap.md`
+
+Use this roadmap for milestone order and explicit “not yet” boundaries. Use the design docs above as the source of truth for behavior.
+
 ## Project identity
 
 Ashvale is intended to combine:

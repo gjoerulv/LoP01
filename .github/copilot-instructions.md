@@ -87,16 +87,19 @@ Read these before planning or making broad changes:
 
 1. `README.md`
 2. `README_DECISIONS.md`
-3. `docs/game_vision.md`
-4. `docs/game_shell_flow.md`
-5. `docs/presentation_game_feel.md`
-6. `docs/combat_rules.md`
-7. `docs/scenario_authoring.md`
-8. `docs/validation_system.md`
-9. `docs/content_schema.md`
-10. milestone-specific doc/prompt if the task is tied to one
-11. `docs/technical_direction.md`
-12. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
+3. `docs/implementation_roadmap.md`
+4. `docs/game_vision.md`
+5. `docs/game_shell_flow.md`
+6. `docs/presentation_game_feel.md`
+7. `docs/core_loop_rules.md`
+8. `docs/combat_rules.md`
+9. `docs/scenario_authoring.md`
+10. `docs/validation_system.md`
+11. `docs/content_schema.md`
+12. `docs/terminology_map.md`
+13. milestone-specific doc/prompt if the task is tied to one
+14. `docs/technical_direction.md`
+15. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
 
 If those sources disagree:
 - prefer the **current codebase** for already implemented behavior
@@ -111,13 +114,15 @@ Use this order when there is ambiguity:
 2. explicit current-task requirements from the user
 3. active milestone doc for the task, if one exists
 4. `README_DECISIONS.md`
-5. `docs/game_vision.md`
-6. `docs/game_shell_flow.md`
-7. `docs/presentation_game_feel.md`
-8. `docs/core_loop_rules.md` and `docs/combat_rules.md`
-9. `docs/technical_direction.md`
-10. `docs/content_scope_v0.md` as a bounded-scope cap only
-11. archived docs/prompts as historical context only
+5. `docs/implementation_roadmap.md` for sequencing and “not yet” boundaries
+6. `docs/game_vision.md`
+7. `docs/game_shell_flow.md`
+8. `docs/presentation_game_feel.md`
+9. `docs/core_loop_rules.md` and `docs/combat_rules.md`
+10. `docs/technical_direction.md`
+11. `docs/content_scope_v0.md` as a bounded-scope cap only
+12. `docs/terminology_map.md` as the source for terminology conflicts
+13. archived docs/prompts as historical context only
 
 `docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
 
@@ -154,7 +159,9 @@ The current codebase is still a bounded single-region slice and does not yet imp
 
 ## Current planning posture
 
-There is no new implementation milestone locked yet beyond M8.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`.
+
+M9 Content Validation is the proposed next milestone, but implementation should not begin until the user explicitly chooses it.
 
 Until a new milestone is explicitly chosen:
 
@@ -165,6 +172,7 @@ Until a new milestone is explicitly chosen:
 - keep future milestone proposals tightly scoped and compatible with the current single-region vertical slice, unless the user explicitly chooses to widen scope
 - when discussing future world-map/region/party systems, use the settled terminology and party/storage model rather than older region-local-party assumptions
 - respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
+- use `docs/implementation_roadmap.md` for milestone order and explicit “not yet” boundaries
 
 ## Avoid
 
