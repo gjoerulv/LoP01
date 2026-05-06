@@ -17,8 +17,9 @@ Read these first when relevant:
 9. `docs/content_schema.md`
 10. `docs/terminology_map.md`
 11. `README_DECISIONS.md`
-12. `.github/copilot-instructions.md`
-13. `.github/instructions/gameplay.instructions.md`
+12. `docs/implementation_roadmap.md`
+13. `.github/copilot-instructions.md`
+14. `.github/instructions/gameplay.instructions.md`
 
 For UI work, also read:
 
@@ -28,6 +29,22 @@ For architecture work, also read:
 
 - `.github/agents/game-architect.agent.md`
 - `docs/technical_direction.md`
+
+## Claude Code project commands
+
+Reusable Claude Code workflows live in `.claude/commands/`.
+
+Use these command prompts when relevant:
+
+- `audit-docs.md` for Markdown consistency audits
+- `audit-implementation.md` for code-vs-doc audits
+- `roadmap.md` for implementation roadmap planning
+- `first-milestone.md` for planning the first small implementation milestone
+- `implement-small.md` for approved narrow implementation patches
+- `review-diff.md` for pre-commit diff review
+- `doc-patch.md` for focused documentation updates
+
+Do not treat command files as design truth. They are workflow prompts. The docs listed above remain authoritative.
 
 ## Core rules
 
