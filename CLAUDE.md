@@ -8,15 +8,16 @@ Read these first when relevant:
 
 1. `README.md`
 2. `docs/game_vision.md`
-3. `docs/core_loop_rules.md`
-4. `docs/combat_rules.md`
-5. `docs/scenario_authoring.md`
-6. `docs/validation_system.md`
-7. `docs/content_schema.md`
-8. `docs/terminology_map.md`
-9. `README_DECISIONS.md`
-10. `.github/copilot-instructions.md`
-11. `.github/instructions/gameplay.instructions.md`
+3. `docs/game_shell_flow.md`
+4. `docs/core_loop_rules.md`
+5. `docs/combat_rules.md`
+6. `docs/scenario_authoring.md`
+7. `docs/validation_system.md`
+8. `docs/content_schema.md`
+9. `docs/terminology_map.md`
+10. `README_DECISIONS.md`
+11. `.github/copilot-instructions.md`
+12. `.github/instructions/gameplay.instructions.md`
 
 For UI work, also read:
 
@@ -37,7 +38,6 @@ For architecture work, also read:
 - Treat validation rules in `docs/validation_system.md` as authoritative for validation planning.
 - Keep authored initial state separate from runtime save state.
 - Use `kind + id` as mod override identity.
-- Respect player-character rules in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`.
 
 ## Workflow
 

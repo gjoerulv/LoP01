@@ -2099,3 +2099,84 @@ Decision:
 Why:
 - Keeps Scenario identity stable and validation tractable.
 
+### 189) Use a title screen and main menu shell flow
+
+Decision:
+- The game boots through optional skippable splash/logos, title screen, then main menu.
+- The title screen waits for player input before opening the main menu.
+
+Why:
+- Gives the game a clear player-facing entry flow without mixing shell UI with gameplay state.
+
+### 190) Do not use a first-boot setup wizard
+
+Decision:
+- The game should not force a first-boot setup flow.
+- Language, input method, and display settings are inferred from the system.
+- Accessibility options are available from Settings.
+
+Why:
+- Lets players start immediately while keeping settings discoverable.
+
+### 191) Treat Tutorial as authored Scenario/Campaign content
+
+Decision:
+- Tutorial is exposed through New Game as a convenience entry.
+- Tutorial should be backed by a designated tutorial Scenario and tutorial Campaign.
+
+Why:
+- Keeps tutorial behavior inside the same authored-content and validation model as other game modes.
+
+### 192) Hide PvP until implemented
+
+Decision:
+- PvP should not appear in normal player builds until it is implemented enough to use.
+- Dev builds may expose PvP earlier for testing.
+
+Why:
+- Avoids presenting unsupported game modes to players.
+
+### 193) Allow saving wherever the Settings menu can be opened
+
+Decision:
+- There should be no save-prevention event action or Scenario rule.
+- Saving is allowed whenever the Settings menu can be opened.
+- Saving is not available during transient non-menu states such as event execution, battle animation, loading, or result calculation.
+
+Why:
+- Avoids artificial save restrictions while preserving state integrity.
+
+### 194) Group saves by mode and content identity
+
+Decision:
+- Load Game groups saves by Campaign, Standalone Scenario, and PvP where applicable.
+- Campaign saves are grouped by Campaign name before save-file selection.
+
+Why:
+- Keeps save navigation clear as content grows.
+
+### 195) Record mod and content metadata in saves
+
+Decision:
+- Save files record game version, schema version, active content packages, mod list, mod load order, mod versions, and relevant content ids.
+
+Why:
+- Makes save compatibility, mod diagnostics, and migration safer.
+
+### 196) Keep normal-player validation messages simple
+
+Decision:
+- Normal player builds should not expose raw validation reports by default.
+- Dev/editor builds may expose full validation reports and invalid content details.
+
+Why:
+- Keeps player-facing shell UI clean while preserving tooling detail for authors.
+
+### 197) Require restart/reload after changing mod load state
+
+Decision:
+- Changing enabled mods or mod load order requires restart/reload.
+
+Why:
+- Avoids runtime state conflicts from hot-swapping content packages.
+
