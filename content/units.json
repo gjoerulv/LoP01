@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "kind": "UnitCollection",
+  "id": "units",
   "units": [
     {
       "id": "hero_player",

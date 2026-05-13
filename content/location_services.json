@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "kind": "LocationServiceCollection",
+  "id": "location_services",
   "location_services": [
     {
       "id": "home_base_rest",

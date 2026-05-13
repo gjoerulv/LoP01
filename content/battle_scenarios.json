@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "kind": "BattleScenarioCollection",
+  "id": "battle_scenarios",
   "battle_scenarios": [
     {
       "id": "debug_intro_battle",

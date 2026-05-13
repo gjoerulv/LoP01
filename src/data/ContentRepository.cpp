@@ -1,30 +1,29 @@
 #include "data/ContentRepository.h"
+#include "data/ContentValidator.h"
 
+#include <algorithm>
 #include <fstream>
+#include <optional>
 
 namespace data {
 
     namespace {
 
-        bool LoadJsonFile(const std::filesystem::path& path, nlohmann::json& output) {
+        std::optional<nlohmann::json> ParseJsonFile(const std::filesystem::path& path) {
             std::ifstream input(path);
             if (!input.is_open()) {
-                return false;
+                return std::nullopt;
             }
-
-            input >> output;
-            return true;
+            nlohmann::json root;
+            try {
+                input >> root;
+            } catch (...) {
+                return std::nullopt;
+            }
+            return root;
         }
 
-        bool LoadLocationsFile(const std::filesystem::path& path, std::vector<LocationDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadLocationsFile(const nlohmann::json& root, std::vector<LocationDefinition>& output) {
             if (!root.contains("locations") || !root["locations"].is_array()) {
                 return false;
             }
@@ -47,15 +46,7 @@ namespace data {
             return true;
         }
 
-        bool LoadRegionsFile(const std::filesystem::path& path, std::vector<RegionDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadRegionsFile(const nlohmann::json& root, std::vector<RegionDefinition>& output) {
             if (!root.contains("regions") || !root["regions"].is_array()) {
                 return false;
             }
@@ -105,15 +96,7 @@ namespace data {
             return true;
         }
 
-        bool LoadLocationScenesFile(const std::filesystem::path& path, std::vector<LocationSceneDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadLocationScenesFile(const nlohmann::json& root, std::vector<LocationSceneDefinition>& output) {
             if (!root.contains("location_scenes") || !root["location_scenes"].is_array()) {
                 return false;
             }
@@ -181,15 +164,7 @@ namespace data {
             return true;
         }
 
-        bool LoadUnitsFile(const std::filesystem::path& path, std::vector<UnitDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadUnitsFile(const nlohmann::json& root, std::vector<UnitDefinition>& output) {
             if (!root.contains("units") || !root["units"].is_array()) {
                 return false;
             }
@@ -222,15 +197,7 @@ namespace data {
             return true;
         }
 
-        bool LoadBattleScenariosFile(const std::filesystem::path& path, std::vector<BattleScenarioDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadBattleScenariosFile(const nlohmann::json& root, std::vector<BattleScenarioDefinition>& output) {
             if (!root.contains("battle_scenarios") || !root["battle_scenarios"].is_array()) {
                 return false;
             }
@@ -267,15 +234,7 @@ namespace data {
             return true;
         }
 
-        bool LoadQuestDefinitionsFile(const std::filesystem::path& path, std::vector<QuestDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadQuestDefinitionsFile(const nlohmann::json& root, std::vector<QuestDefinition>& output) {
             if (!root.contains("quests") || !root["quests"].is_array()) {
                 return false;
             }
@@ -295,15 +254,7 @@ namespace data {
             return true;
         }
 
-        bool LoadLocationServicesFile(const std::filesystem::path& path, std::vector<LocationServiceDefinition>& output) {
-            std::ifstream input(path);
-            if (!input.is_open()) {
-                return false;
-            }
-
-            nlohmann::json root;
-            input >> root;
-
+        bool LoadLocationServicesFile(const nlohmann::json& root, std::vector<LocationServiceDefinition>& output) {
             if (!root.contains("location_services") || !root["location_services"].is_array()) {
                 return false;
             }
@@ -339,136 +290,62 @@ namespace data {
             return true;
         }
 
-        bool ValidateCrossReferences(
-            const std::vector<RegionDefinition>& regions,
-            const std::vector<LocationDefinition>& locations,
-            const std::vector<LocationSceneDefinition>& scenes,
-            const std::vector<UnitDefinition>& units,
-            const std::vector<BattleScenarioDefinition>& battleScenarios,
-            const std::vector<LocationServiceDefinition>& services)
-        {
-            auto hasLocation = [&](const std::string& id) {
-                return std::ranges::any_of(locations, [&](const auto& x) { return x.id == id; });
-                };
-
-            auto findLocation = [&](const std::string& id) -> const LocationDefinition* {
-                for (const auto& location : locations) {
-                    if (location.id == id) {
-                        return &location;
-                    }
-                }
-                return nullptr;
-                };
-
-            auto hasScene = [&](const std::string& id) {
-                return std::ranges::any_of(scenes, [&](const auto& x) { return x.id == id; });
-                };
-
-            auto findScene = [&](const std::string& id) -> const LocationSceneDefinition* {
-                for (const auto& scene : scenes) {
-                    if (scene.id == id) {
-                        return &scene;
-                    }
-                }
-                return nullptr;
-                };
-
-            auto hasBattleScenario = [&](const std::string& id) {
-                return std::ranges::any_of(battleScenarios, [&](const auto& x) { return x.id == id; });
-                };
-
-            auto hasUnit = [&](const std::string& id) {
-                return std::ranges::any_of(units, [&](const auto& x) { return x.id == id; });
-                };
-
-            for (const auto& region : regions) {
-                for (const auto& node : region.nodes) {
-                    if (!hasLocation(node.locationId)) {
-                        return false;
-                    }
-                }
-
-                for (const auto& link : region.links) {
-                    if (!hasLocation(link.fromLocationId) || !hasLocation(link.toLocationId)) {
-                        return false;
-                    }
-                }
-            }
-
-            for (const auto& location : locations) {
-                if (!location.sceneId.empty() && !hasScene(location.sceneId)) {
-                    return false;
-                }
-
-                if (!location.battleScenarioId.empty() && !hasBattleScenario(location.battleScenarioId)) {
-                    return false;
-                }
-            }
-
-            for (const auto& service : services) {
-                const auto* location = findLocation(service.locationId);
-                if (location == nullptr) {
-                    return false;
-                }
-
-                if (location->sceneId.empty()) {
-                    return false;
-                }
-
-                const auto* scene = findScene(location->sceneId);
-                if (scene == nullptr) {
-                    return false;
-                }
-
-                const bool zoneExists = std::ranges::any_of(scene->zones, [&](const auto& zone) {
-                    return zone.id == service.zoneId;
-                    });
-
-                if (!zoneExists) {
-                    return false;
-                }
-
-                if (service.kind == LocationServiceKind::Recruit) {
-                    if (service.unitId.empty()) {
-                        return false;
-                    }
-
-                    if (!hasUnit(service.unitId)) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
-        const bool regionsLoaded = LoadRegionsFile(root / "regions.json", regions_);
-        const bool locationsLoaded = LoadLocationsFile(root / "locations.json", locations_);
-        const bool locationScenesLoaded = LoadLocationScenesFile(root / "location_scenes.json", locationScenes_);
-        const bool unitsLoaded = LoadUnitsFile(root / "units.json", units_);
-        const bool battleScenariosLoaded = LoadBattleScenariosFile(root / "battle_scenarios.json", battleScenarios_);
-        const bool enemyGroupsLoaded = LoadJsonFile(root / "enemy_groups.json", enemyGroups_);
-        const bool questDefinitionsLoaded = LoadQuestDefinitionsFile(root / "quests.json", questDefinitions_);
-        const bool questsLoaded = LoadJsonFile(root / "quests.json", quests_);
-        const bool locationServicesLoaded = LoadLocationServicesFile(root / "location_services.json", locationServices_);
+        messages_.clear();
 
+        ContentValidator validator;
 
-        const bool crossReferencesValid = ValidateCrossReferences(
-            regions_,
-            locations_,
-            locationScenes_,
-            units_,
-            battleScenarios_,
-            locationServices_);
+        auto load = [&](const std::filesystem::path& path) -> std::optional<nlohmann::json> {
+            auto doc = ParseJsonFile(path);
+            if (!doc) return std::nullopt;
+            auto idMsgs = validator.ValidateIdentity(*doc);
+            messages_.insert(messages_.end(), idMsgs.begin(), idMsgs.end());
+            return doc;
+        };
 
-        return regionsLoaded && locationsLoaded && locationScenesLoaded &&
-            locationServicesLoaded &&
-            unitsLoaded && battleScenariosLoaded &&
-            enemyGroupsLoaded && questDefinitionsLoaded && questsLoaded &&
-            crossReferencesValid;
+        auto regionsDoc   = load(root / "regions.json");
+        auto locationsDoc = load(root / "locations.json");
+        auto scenesDoc    = load(root / "location_scenes.json");
+        auto unitsDoc     = load(root / "units.json");
+        auto scenariosDoc = load(root / "battle_scenarios.json");
+        auto enemyDoc     = load(root / "enemy_groups.json");
+        auto questsDoc    = load(root / "quests.json");
+        auto servicesDoc  = load(root / "location_services.json");
+
+        if (!regionsDoc || !locationsDoc || !scenesDoc || !unitsDoc ||
+            !scenariosDoc || !enemyDoc || !questsDoc || !servicesDoc) {
+            return false;
+        }
+
+        const bool regionsLoaded   = LoadRegionsFile(*regionsDoc, regions_);
+        const bool locationsLoaded = LoadLocationsFile(*locationsDoc, locations_);
+        const bool scenesLoaded    = LoadLocationScenesFile(*scenesDoc, locationScenes_);
+        const bool unitsLoaded     = LoadUnitsFile(*unitsDoc, units_);
+        const bool scenariosLoaded = LoadBattleScenariosFile(*scenariosDoc, battleScenarios_);
+        enemyGroups_               = *enemyDoc;
+        const bool questDefLoaded  = LoadQuestDefinitionsFile(*questsDoc, questDefinitions_);
+        quests_                    = *questsDoc;
+        const bool servicesLoaded  = LoadLocationServicesFile(*servicesDoc, locationServices_);
+
+        if (!regionsLoaded || !locationsLoaded || !scenesLoaded || !unitsLoaded ||
+            !scenariosLoaded || !questDefLoaded || !servicesLoaded) {
+            return false;
+        }
+
+        auto refMsgs = validator.ValidateReferences(
+            regions_, locations_, locationScenes_, units_,
+            battleScenarios_, locationServices_, questDefinitions_);
+        messages_.insert(messages_.end(), refMsgs.begin(), refMsgs.end());
+
+        const bool anyRefError = std::ranges::any_of(refMsgs,
+            [](const ValidationMessage& m) { return m.severity == Severity::Error; });
+        return !anyRefError;
+    }
+
+    const std::vector<ValidationMessage>& ContentRepository::ValidationMessages() const {
+        return messages_;
     }
 
     const std::vector<RegionDefinition>& ContentRepository::Regions() const {

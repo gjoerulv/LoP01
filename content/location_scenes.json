@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "kind": "LocationSceneCollection",
+  "id": "location_scenes",
   "location_scenes": [
     {
       "id": "town_square_proto",

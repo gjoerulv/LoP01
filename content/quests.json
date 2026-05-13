@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "kind": "QuestCollection",
+  "id": "quests",
   "quests": [
     {
       "id": "q_restore_well",

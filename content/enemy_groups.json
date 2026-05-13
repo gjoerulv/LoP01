@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "kind": "EnemyGroupCollection",
+  "id": "enemy_groups",
   "enemy_groups": [
     { "id": "eg_patrol_01", "name": "Rust Patrol A", "units": ["unit_guard", "unit_scout"] },
     { "id": "eg_patrol_02", "name": "Rust Patrol B", "units": ["unit_guard", "unit_lancer"] },

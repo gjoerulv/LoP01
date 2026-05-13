@@ -5,6 +5,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "data/ContentValidator.h"
 #include "data/definitions/BattleScenarioDefinition.h"
 #include "data/definitions/LocationDefinition.h"
 #include "data/definitions/LocationSceneDefinition.h"
@@ -18,6 +19,8 @@ namespace data {
     class ContentRepository {
     public:
         [[nodiscard]] bool LoadFromDirectory(const std::filesystem::path& root);
+
+        [[nodiscard]] const std::vector<ValidationMessage>& ValidationMessages() const;
 
         [[nodiscard]] const std::vector<RegionDefinition>& Regions() const;
         [[nodiscard]] const RegionDefinition* FindRegionById(const std::string& id) const;
@@ -54,6 +57,7 @@ namespace data {
         std::vector<LocationServiceDefinition> locationServices_;
         nlohmann::json enemyGroups_;
         nlohmann::json quests_;
+        std::vector<ValidationMessage> messages_;
     };
 
 } // namespace data

@@ -1,5 +1,8 @@
 #include "data/ContentValidator.h"
 
+#include <algorithm>
+#include <string>
+
 std::vector<ValidationMessage> ContentValidator::ValidateIdentity(const nlohmann::json& doc) const
 {
     std::vector<ValidationMessage> msgs;
@@ -86,6 +89,162 @@ std::vector<ValidationMessage> ContentValidator::ValidateIdentity(const nlohmann
             "\"id\" must not be empty.",
             ""
         });
+    }
+
+    return msgs;
+}
+
+std::vector<ValidationMessage> ContentValidator::ValidateReferences(
+    const std::vector<data::RegionDefinition>& regions,
+    const std::vector<data::LocationDefinition>& locations,
+    const std::vector<data::LocationSceneDefinition>& scenes,
+    const std::vector<data::UnitDefinition>& units,
+    const std::vector<data::BattleScenarioDefinition>& battleScenarios,
+    const std::vector<data::LocationServiceDefinition>& services,
+    const std::vector<data::QuestDefinition>& quests) const
+{
+    std::vector<ValidationMessage> msgs;
+
+    auto hasLocation = [&](const std::string& id) {
+        return std::ranges::any_of(locations, [&](const auto& x) { return x.id == id; });
+    };
+
+    auto findLocation = [&](const std::string& id) -> const data::LocationDefinition* {
+        for (const auto& loc : locations) {
+            if (loc.id == id) return &loc;
+        }
+        return nullptr;
+    };
+
+    auto hasScene = [&](const std::string& id) {
+        return std::ranges::any_of(scenes, [&](const auto& x) { return x.id == id; });
+    };
+
+    auto findScene = [&](const std::string& id) -> const data::LocationSceneDefinition* {
+        for (const auto& s : scenes) {
+            if (s.id == id) return &s;
+        }
+        return nullptr;
+    };
+
+    auto hasBattleScenario = [&](const std::string& id) {
+        return std::ranges::any_of(battleScenarios, [&](const auto& x) { return x.id == id; });
+    };
+
+    auto hasUnit = [&](const std::string& id) {
+        return std::ranges::any_of(units, [&](const auto& x) { return x.id == id; });
+    };
+
+    // Region node and link reference checks
+    for (size_t i = 0; i < regions.size(); ++i) {
+        const auto& region = regions[i];
+        const std::string ri = "regions[" + std::to_string(i) + "]";
+
+        for (size_t j = 0; j < region.nodes.size(); ++j) {
+            const auto& node = region.nodes[j];
+            if (!hasLocation(node.locationId)) {
+                msgs.push_back({Severity::Error, "NODE_LOCATION_NOT_FOUND",
+                    ri + ".nodes[" + std::to_string(j) + "].location_id",
+                    "Region node references unknown location \"" + node.locationId + "\".", ""});
+            }
+        }
+
+        for (size_t j = 0; j < region.links.size(); ++j) {
+            const auto& link = region.links[j];
+            const std::string li = ri + ".links[" + std::to_string(j) + "]";
+            if (!hasLocation(link.fromLocationId)) {
+                msgs.push_back({Severity::Error, "LINK_LOCATION_NOT_FOUND",
+                    li + ".from",
+                    "Adjacency link references unknown location \"" + link.fromLocationId + "\".", ""});
+            }
+            if (!hasLocation(link.toLocationId)) {
+                msgs.push_back({Severity::Error, "LINK_LOCATION_NOT_FOUND",
+                    li + ".to",
+                    "Adjacency link references unknown location \"" + link.toLocationId + "\".", ""});
+            }
+        }
+    }
+
+    // Location scene and battle scenario reference checks
+    for (size_t i = 0; i < locations.size(); ++i) {
+        const auto& location = locations[i];
+        const std::string li = "locations[" + std::to_string(i) + "]";
+
+        if (!location.sceneId.empty() && !hasScene(location.sceneId)) {
+            msgs.push_back({Severity::Error, "LOCATION_SCENE_NOT_FOUND",
+                li + ".scene_id",
+                "Location references unknown scene \"" + location.sceneId + "\".", ""});
+        }
+
+        if (!location.battleScenarioId.empty() && !hasBattleScenario(location.battleScenarioId)) {
+            msgs.push_back({Severity::Error, "LOCATION_BATTLE_SCENARIO_NOT_FOUND",
+                li + ".battle_scenario_id",
+                "Location references unknown battle scenario \"" + location.battleScenarioId + "\".", ""});
+        }
+    }
+
+    // Service reference checks
+    for (size_t i = 0; i < services.size(); ++i) {
+        const auto& service = services[i];
+        const std::string si = "services[" + std::to_string(i) + "]";
+
+        const auto* location = findLocation(service.locationId);
+        if (location == nullptr) {
+            msgs.push_back({Severity::Error, "SERVICE_LOCATION_NOT_FOUND",
+                si + ".location_id",
+                "Service references unknown location \"" + service.locationId + "\".", ""});
+            continue;
+        }
+
+        if (location->sceneId.empty()) {
+            msgs.push_back({Severity::Error, "SERVICE_ZONE_NOT_FOUND",
+                si + ".zone_id",
+                "Service zone \"" + service.zoneId + "\" cannot be resolved because location \""
+                + service.locationId + "\" has no scene.", ""});
+            continue;
+        }
+
+        const auto* scene = findScene(location->sceneId);
+        if (scene == nullptr) {
+            msgs.push_back({Severity::Error, "SERVICE_ZONE_NOT_FOUND",
+                si + ".zone_id",
+                "Service zone \"" + service.zoneId + "\" cannot be resolved because scene \""
+                + location->sceneId + "\" does not exist.", ""});
+            continue;
+        }
+
+        const bool zoneExists = std::ranges::any_of(scene->zones,
+            [&](const auto& zone) { return zone.id == service.zoneId; });
+        if (!zoneExists) {
+            msgs.push_back({Severity::Error, "SERVICE_ZONE_NOT_FOUND",
+                si + ".zone_id",
+                "Service references unknown zone \"" + service.zoneId + "\" in scene \""
+                + location->sceneId + "\".", ""});
+        }
+
+        if (service.kind == data::LocationServiceKind::Recruit) {
+            if (service.unitId.empty() || !hasUnit(service.unitId)) {
+                msgs.push_back({Severity::Error, "SERVICE_UNIT_NOT_FOUND",
+                    si + ".unit_id",
+                    "Recruit service references unknown unit \"" + service.unitId + "\".", ""});
+            }
+        }
+    }
+
+    // Quest target reference checks
+    for (size_t i = 0; i < quests.size(); ++i) {
+        const auto& quest = quests[i];
+        if (!quest.target.empty() &&
+            (quest.objective == data::QuestObjectiveType::BringResource ||
+             quest.objective == data::QuestObjectiveType::ClearCombatNode ||
+             quest.objective == data::QuestObjectiveType::MeetHero))
+        {
+            if (!hasLocation(quest.target)) {
+                msgs.push_back({Severity::Error, "QUEST_TARGET_NOT_FOUND",
+                    "quests[" + std::to_string(i) + "].target",
+                    "Quest target \"" + quest.target + "\" not found in locations.", ""});
+            }
+        }
     }
 
     return msgs;
