@@ -15,6 +15,7 @@ Read first:
 - `docs/validation_system.md`
 - `docs/content_schema.md`
 - `docs/terminology_map.md`
+- `docs/implementation_roadmap.md`
 - relevant `.github/instructions/*.md`
 
 Then inspect source, tests, content, and CMake/build files.

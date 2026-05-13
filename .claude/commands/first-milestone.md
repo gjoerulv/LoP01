@@ -6,6 +6,7 @@ Do not edit files.
 
 Read:
 - `CLAUDE.md`
+- `docs/implementation_roadmap.md`
 - `docs/content_schema.md`
 - `docs/validation_system.md`
 - `docs/scenario_authoring.md`

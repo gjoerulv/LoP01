@@ -306,7 +306,6 @@ All follow existing Catch2 patterns. No rendering or input tests; pure logic onl
 ## 7. Explicit "Not Yet" Boundaries
 
 These are **specified at design level in the docs** but out of scope for this roadmap until explicitly requested:
-requested:
 
 - **Skill system / status effects** — duration-by-affected-unit's-own-turns model specified
   in `docs/combat_rules.md`; no implementation phase yet
