@@ -26,6 +26,7 @@ add_library(ashvale_logic
   src/core/GameClock.cpp
   src/core/SaveGame.cpp
   src/data/ContentRepository.cpp
+  src/data/ContentValidator.cpp
   src/gameplay/battle/Battle.cpp
   src/gameplay/GameSession.cpp
   src/gameplay/world/NodeWorldState.cpp
@@ -116,6 +117,7 @@ if (BUILD_TESTING)
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp    
     tests/LocationServicePromptFormatterTests.cpp
+    tests/ContentValidatorTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)
