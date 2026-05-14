@@ -1,4 +1,6 @@
 #include "gameplay/GameSession.h"
+#include "gameplay/events/EventEngine.h"
+#include "gameplay/events/EventParser.h"
 
 #include <algorithm>
 #include <map>
@@ -393,6 +395,53 @@ void GameSession::ApplyRegionCombatVictoryNodeClear(
     }
 
     MarkCombatNodeCleared(nodeId);
+}
+
+void GameSession::InitializeEventDefinitions(std::vector<events::EventDefinition> definitions) {
+    eventDefinitions_ = std::move(definitions);
+}
+
+std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
+    std::vector<events::ActionResult> allResults;
+
+    auto sorted = eventDefinitions_;
+    std::stable_sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
+        if (a.priority.has_value() && b.priority.has_value())
+            return *a.priority < *b.priority;
+        return a.priority.has_value();
+    });
+
+    for (const auto& def : sorted) {
+        if (def.trigger.type != events::EventTriggerType::StartOfDay) continue;
+
+        const bool alreadyFired = std::ranges::any_of(firedEventIds_,
+            [&](const auto& id) { return id == def.id; });
+        if (alreadyFired && def.repeat.mode == "once") continue;
+
+        events::EventEvaluationContext ctx;
+        const auto snap = Snapshot();
+        ctx.currentDay = snap.day;
+        ctx.resources["Gold"] = snap.gold;
+        const auto& partyIds = ActivePartyUnitIds();
+        ctx.heroIds = std::vector<std::string>(partyIds.begin(), partyIds.end());
+        ctx.storyFlags = storyFlags_;
+
+        if (!events::EvaluateCondition(ctx, def.condition)) continue;
+
+        auto results = events::ExecuteActions(ctx, def.actions);
+        allResults.insert(allResults.end(), results.begin(), results.end());
+
+        if (ctx.resources.count("Gold")) {
+            gold_ = ctx.resources.at("Gold");
+        }
+        storyFlags_ = ctx.storyFlags;
+
+        if (def.repeat.mode == "once") {
+            firedEventIds_.push_back(def.id);
+        }
+    }
+
+    return allResults;
 }
 
 void GameSession::InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions) {
@@ -888,7 +937,7 @@ SessionSnapshot GameSession::Snapshot() const {
 
 core::SaveData GameSession::ToSaveData() const {
     return core::SaveData{
-        3,
+        4,
         clock_.Day(),
         clock_.MinutesIntoSliceDay(),
         gold_,
@@ -917,7 +966,9 @@ core::SaveData GameSession::ToSaveData() const {
         reserveSlotStackIds_,
         nextStackIdCounter_,
         {},
-        {}
+        {},
+        firedEventIds_,
+        {storyFlags_.begin(), storyFlags_.end()}
     };
 }
 
@@ -1051,6 +1102,8 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     activeSlotStackIds_ = std::move(loadedActiveSlots);
     reserveSlotStackIds_ = std::move(loadedReserveSlots);
     nextStackIdCounter_ = loadedNextCounter;
+    firedEventIds_ = saveData.firedEventIds;
+    storyFlags_ = {saveData.storyFlags.begin(), saveData.storyFlags.end()};
     MarkRosterProjectionDirty();
 }
 

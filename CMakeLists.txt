@@ -36,6 +36,8 @@ add_library(ashvale_logic
   src/gameplay/location/LocationServiceRules.cpp
   src/gameplay/battle/BattleFactory.cpp
   src/gameplay/quests/QuestState.cpp
+  src/gameplay/events/EventParser.cpp
+  src/gameplay/events/EventEngine.cpp
 )
 
 target_include_directories(ashvale_logic PUBLIC src)
@@ -118,6 +120,9 @@ if (BUILD_TESTING)
     tests/SaveGameTests.cpp    
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
+    tests/EventDefinitionTests.cpp
+    tests/EventEngineTests.cpp
+    tests/EventIntegrationTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

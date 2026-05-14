@@ -8,6 +8,8 @@
 #include "core/SaveGame.h"
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
+#include "gameplay/events/EventDefinition.h"
+#include "gameplay/events/EventEngine.h"
 #include "gameplay/quests/QuestState.h"
 #include "gameplay/world/NodeWorldState.h"
 
@@ -102,6 +104,9 @@ public:
         const std::string& nodeId,
         bool nodeIsCombatType);
 
+    void InitializeEventDefinitions(std::vector<events::EventDefinition> definitions);
+    [[nodiscard]] std::vector<events::ActionResult> NotifyStartOfDay();
+
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
     [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);
     [[nodiscard]] std::vector<std::string> NotifyCombatNodeCleared(const std::string& nodeId);
@@ -190,6 +195,10 @@ private:
     int activePartyCapacity_ = kActiveSlotCount;
     quests::QuestState questState_;
     world::NodeWorldState nodeWorldState_;
+
+    std::vector<events::EventDefinition> eventDefinitions_;
+    std::vector<std::string>             firedEventIds_;
+    std::set<std::string>                storyFlags_;
 };
 
 } // namespace gameplay

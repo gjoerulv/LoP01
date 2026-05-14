@@ -7,6 +7,7 @@
 
 #include "data/ContentValidator.h"
 #include "data/definitions/BattleScenarioDefinition.h"
+#include "gameplay/events/EventParser.h"
 #include "data/definitions/LocationDefinition.h"
 #include "data/definitions/LocationSceneDefinition.h"
 #include "data/definitions/LocationServiceDefinition.h"
@@ -47,6 +48,8 @@ namespace data {
             const std::string& locationId,
             const std::string& zoneId) const;
 
+        [[nodiscard]] const std::vector<gameplay::events::EventDefinition>& EventDefinitions() const;
+
     private:
         std::vector<RegionDefinition> regions_;
         std::vector<LocationDefinition> locations_;
@@ -57,6 +60,7 @@ namespace data {
         std::vector<LocationServiceDefinition> locationServices_;
         nlohmann::json enemyGroups_;
         nlohmann::json quests_;
+        std::vector<gameplay::events::EventDefinition> eventDefinitions_;
         std::vector<ValidationMessage> messages_;
     };
 

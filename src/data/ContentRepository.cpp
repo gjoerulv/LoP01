@@ -3,7 +3,9 @@
 
 #include <algorithm>
 #include <fstream>
+#include <map>
 #include <optional>
+#include <set>
 
 namespace data {
 
@@ -290,6 +292,39 @@ namespace data {
             return true;
         }
 
+        bool LoadEventDefinitionsFile(
+            const nlohmann::json& root,
+            std::vector<gameplay::events::EventDefinition>& output,
+            std::vector<ValidationMessage>& msgs)
+        {
+            if (!root.contains("events") || !root["events"].is_array())
+                return false;
+
+            output.clear();
+
+            std::set<std::string> seenIds;
+            for (const auto& e : root["events"]) {
+                const auto def = gameplay::events::ParseEventDefinition(e);
+                if (!seenIds.insert(def.id).second) {
+                    msgs.push_back({Severity::Error, "EVENT_ID_DUPLICATE", "events",
+                        "Duplicate event id \"" + def.id + "\".", ""});
+                }
+                output.push_back(def);
+            }
+
+            std::map<gameplay::events::EventTriggerType, std::set<int>> seenPriorities;
+            for (const auto& def : output) {
+                if (!def.priority.has_value()) continue;
+                auto& pset = seenPriorities[def.trigger.type];
+                if (!pset.insert(*def.priority).second) {
+                    msgs.push_back({Severity::Error, "EVENT_PRIORITY_DUPLICATE", "events",
+                        "Duplicate priority " + std::to_string(*def.priority)
+                        + " for trigger type in event \"" + def.id + "\".", ""});
+                }
+            }
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -332,6 +367,11 @@ namespace data {
         if (!regionsLoaded || !locationsLoaded || !scenesLoaded || !unitsLoaded ||
             !scenariosLoaded || !questDefLoaded || !servicesLoaded) {
             return false;
+        }
+
+        auto eventsDoc = load(root / "events.json");
+        if (eventsDoc) {
+            LoadEventDefinitionsFile(*eventsDoc, eventDefinitions_, messages_);
         }
 
         auto refMsgs = validator.ValidateReferences(
@@ -439,6 +479,10 @@ namespace data {
 
     const nlohmann::json& ContentRepository::Quests() const {
         return quests_;
+    }
+
+    const std::vector<gameplay::events::EventDefinition>& ContentRepository::EventDefinitions() const {
+        return eventDefinitions_;
     }
 
 } // namespace data

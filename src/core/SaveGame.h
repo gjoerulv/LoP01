@@ -53,6 +53,9 @@ struct SaveData {
 
     std::vector<OwnedUnitCountSaveState> ownedUnitCounts;
     std::vector<std::string> activePartyUnitIds;
+
+    std::vector<std::string> firedEventIds;
+    std::vector<std::string> storyFlags;
 };
 
 class SaveGameRepository {

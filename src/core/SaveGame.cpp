@@ -193,7 +193,7 @@ void ParseCanonicalRosterFromJson(const json& j, SaveData& data) {
         throw std::runtime_error("Invalid canonical slot counts");
     }
 
-    if (data.schemaVersion == 3) {
+    if (data.schemaVersion == 4 || data.schemaVersion == 3) {
         if (data.activeSlotStackIds.size() != kCanonicalActiveSlotsV3) {
             throw std::runtime_error("Invalid canonical slot counts");
         }
@@ -315,7 +315,9 @@ void to_json(json& j, const SaveData& data) {
         {"roster_stacks", data.rosterStacks},
         {"active_slot_stack_ids", data.activeSlotStackIds},
         {"reserve_slot_stack_ids", data.reserveSlotStackIds},
-        {"next_stack_id_counter", data.nextStackIdCounter}
+        {"next_stack_id_counter", data.nextStackIdCounter},
+        {"fired_event_ids", data.firedEventIds},
+        {"story_flags", data.storyFlags}
     };
 }
 
@@ -352,6 +354,13 @@ void from_json(const json& j, SaveData& data) {
     data.travelPrepDiscountMinutes = j.value("travel_prep_discount_minutes", 0);
     data.travelPrepRemainingCharges = j.value("travel_prep_remaining_charges", 0);
     data.travelPrepGrantedDay = j.value("travel_prep_granted_day", 0);
+
+    if (!TryReadOptionalStringArray(j, "fired_event_ids", data.firedEventIds)) {
+        throw std::runtime_error("Invalid fired_event_ids");
+    }
+    if (!TryReadOptionalStringArray(j, "story_flags", data.storyFlags)) {
+        throw std::runtime_error("Invalid story_flags");
+    }
 
     const bool hasCanonicalStructuralFields =
         j.contains("roster_stacks") &&
