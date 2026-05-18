@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/GameClock.h"
+#include "gameplay/EnemyOccupationRules.h"
 
 namespace gameplay::region {
 
@@ -98,9 +99,16 @@ TravelEvaluation EvaluateTravel(
     const int minutesIntoSliceDay,
     const std::vector<data::RegionLinkDefinition>& routeLinks,
     const std::vector<std::string>& blockedTransitNodeIds,
-    const int perHopTravelMinutes) {
+    const int perHopTravelMinutes,
+    const std::vector<std::string>& hostileOccupiedNodeIds,
+    const std::string& arrivalNodeId) {
     if (currentLocationId == selectedLocationId) {
         return TravelEvaluation{ true, 0, 0, TravelBlockReason::None };
+    }
+
+    if (gameplay::IsBlockedByHostileOccupation(
+            selectedLocationId, arrivalNodeId, hostileOccupiedNodeIds)) {
+        return TravelEvaluation{ false, 0, 0, TravelBlockReason::HostileOccupied };
     }
 
     if (!destinationTravelAvailable) {

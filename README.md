@@ -356,3 +356,8 @@ Future work should:
 cmake -S . -B build -G Ninja
 cmake --build build
 ```
+
+## Run all tests
+```
+ctest --test-dir build --output-on-failure
+```

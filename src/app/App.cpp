@@ -13,7 +13,6 @@
 
 #include "core/GameClock.h"
 #include "gameplay/battle/BattleFactory.h"
-#include "gameplay/EnemyOccupationRules.h"
 #include "gameplay/location/LocationServiceRules.h"
 #include "gameplay/region/RegionDeadEndRules.h"
 #include "gameplay/region/RegionTravelRules.h"
@@ -466,9 +465,7 @@ void App::UpdateRegionMode(const input::InputState& input) {
             continue;
         }
 
-        const bool nodeAvailable =
-            nodes[i].travelAvailable &&
-            !gameplay::IsBlockedByHostileOccupation(nodes[i].id, arrivalNodeId, hostileOccupied);
+        const bool nodeAvailable = nodes[i].travelAvailable;
 
         const auto nowTravel = gameplay::region::EvaluateTravel(
             snapshot.destinationId,
@@ -476,7 +473,10 @@ void App::UpdateRegionMode(const input::InputState& input) {
             nodeAvailable,
             snapshot.minutesIntoSliceDay,
             links,
-            blockedTransitNodeIds);
+            blockedTransitNodeIds,
+            /*perHopTravelMinutes=*/15,
+            hostileOccupied,
+            arrivalNodeId);
         if (nowTravel.legal) {
             hasLegalTravelNow = true;
         }
@@ -487,7 +487,10 @@ void App::UpdateRegionMode(const input::InputState& input) {
             nodeAvailable,
             0,
             links,
-            blockedTransitNodeIds);
+            blockedTransitNodeIds,
+            /*perHopTravelMinutes=*/15,
+            hostileOccupied,
+            arrivalNodeId);
         if (ignoreCutoffTravel.legal) {
             hasReachableTravelIgnoringCutoff = true;
         }
@@ -516,19 +519,23 @@ void App::UpdateRegionMode(const input::InputState& input) {
 
     if (result.travelConfirmed) {
         const auto& destination = nodes[regionSelectedNodeIndex_];
-        const bool destinationAvailable =
-            destination.travelAvailable &&
-            !gameplay::IsBlockedByHostileOccupation(destination.id, arrivalNodeId, hostileOccupied);
+        const bool destinationAvailable = destination.travelAvailable;
         const auto travel = gameplay::region::EvaluateTravel(
             snapshot.destinationId,
             destination.id,
             destinationAvailable,
             snapshot.minutesIntoSliceDay,
             links,
-            blockedTransitNodeIds);
+            blockedTransitNodeIds,
+            /*perHopTravelMinutes=*/15,
+            hostileOccupied,
+            arrivalNodeId);
 
         if (!travel.legal) {
-            if (travel.reason == gameplay::region::TravelBlockReason::DestinationUnavailable) {
+            if (travel.reason == gameplay::region::TravelBlockReason::HostileOccupied) {
+                statusMessage_ = destination.label + " is occupied by a hostile team";
+            }
+            else if (travel.reason == gameplay::region::TravelBlockReason::DestinationUnavailable) {
                 statusMessage_ = destination.label + " is not reachable yet";
             }
             else if (travel.reason == gameplay::region::TravelBlockReason::NoRouteLink) {

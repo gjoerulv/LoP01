@@ -10,6 +10,7 @@ namespace gameplay::region {
 enum class TravelBlockReason {
     None,
     DestinationUnavailable,
+    HostileOccupied,
     NoRouteLink,
     ArrivalPastDayEnd,
     BlockedByUnclearedTransitNode
@@ -29,7 +30,9 @@ struct TravelEvaluation {
     int minutesIntoSliceDay,
     const std::vector<data::RegionLinkDefinition>& routeLinks,
     const std::vector<std::string>& blockedTransitNodeIds = {},
-    int perHopTravelMinutes = 15);
+    int perHopTravelMinutes = 15,
+    const std::vector<std::string>& hostileOccupiedNodeIds = {},
+    const std::string& arrivalNodeId = {});
 
 // Returns the shortest hop count between two nodes via bidirectional links,
 // or -1 if unreachable. No blocked-transit filter applied.
