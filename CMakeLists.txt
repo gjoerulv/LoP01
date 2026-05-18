@@ -123,6 +123,7 @@ if (BUILD_TESTING)
     tests/EventDefinitionTests.cpp
     tests/EventEngineTests.cpp
     tests/EventIntegrationTests.cpp
+    tests/EnemyTeamTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

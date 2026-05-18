@@ -1362,4 +1362,27 @@ GameMode GameSession::FromString(const std::string& mode) {
     return GameMode::Title;
 }
 
+const std::vector<std::string> GameSession::kTeamColorOrder =
+    { "Green", "Red", "Blue", "Yellow", "Purple", "Orange", "Teal", "White" };
+
+void GameSession::SetEnemyTeams(std::vector<EnemyTeamState> teams) {
+    enemyTeams_ = std::move(teams);
+}
+
+const std::vector<EnemyTeamState>& GameSession::EnemyTeams() const {
+    return enemyTeams_;
+}
+
+std::vector<EnemyTeamActionResult> GameSession::ProcessEnemyPhase() {
+    std::vector<EnemyTeamActionResult> results;
+    for (const auto& color : kTeamColorOrder) {
+        for (const auto& team : enemyTeams_) {
+            if (team.active && team.teamColor == color) {
+                results.push_back({ team.teamColor, "idle" });
+            }
+        }
+    }
+    return results;
+}
+
 } // namespace gameplay
