@@ -26,10 +26,9 @@ Produce:
 
 Keep the milestone narrow enough to finish in one or two reviewable patches.
 
-Recommended first-milestone bias:
-- content identity and schema basics
-- `schemaVersion`, `kind`, `id`
-- validation message structure
-- pure/headless validation entry point
-- one tiny content fixture
-- tests for valid/invalid content
+Milestone planning bias:
+- prefer pure/headless logic first
+- prefer small, independently testable slices
+- avoid renderer/input changes unless the milestone requires them
+- identify docs that become stale after completion
+- keep source-of-truth behavior docs separate from implementation-status roadmap updates

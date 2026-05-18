@@ -39,20 +39,13 @@ Current stable foundation:
 - Catch2 test coverage for core logic, validation, event foundation, and enemy-team phase
 
 Still incomplete:
-- broader event trigger wiring, more condition/action types, stronger argument-level payload
-  validation, presentation/dialogue integration, and full playability validation
-- enemy-team occupation and node inaccessibility
+- explicit hostile-occupation travel feedback / block reason
 - battle/contact behavior on enemy-player collision
-- broader time-cost hooks (service use, location actions) triggering enemy phase
+- broader Region time-cost hooks triggering enemy phase
 - event-spawn wiring for enemy teams
 - personality/aggression-driven movement
 - Region rendering of enemy positions
 - fog/visibility per team
-- victory/defeat condition runtime
-- inventory/artifacts/recipes
-- World Map implementation
-- Campaign sequencing and carry-over
-- full shell UI and presentation implementation
 
 ---
 
@@ -247,25 +240,23 @@ Scope:
 
 ## 4. Current Next Milestone
 
-**M11-c — Node Occupation + Inaccessibility (Phase 3)**
+**M11-d — Hostile Occupation Feedback + Explicit Travel Blocking Reason**
 
-Deliverable: Hostile enemy teams block the player from travelling to their current node.
-Occupation is derived from `EnemyTeamState.nodeId` — no new field. Arrival nodes are always
-accessible regardless of enemy position.
+Deliverable: Hostile-occupied travel blocking is distinguishable from generic destination unavailability in travel preview/status feedback.
 
 Scope:
-1. `src/data/definitions/RegionDefinition.h` — add `std::string arrivalNodeId` field;
-   load from JSON in `ContentRepository` (absent content defaults to empty string)
-2. `src/gameplay/GameSession.h/cpp` — add `HostileOccupiedNodeIds(playerColor)` query;
-   returns `nodeId` of every active team whose color is not the player's and is not allied
-3. `src/app/App.cpp` — in `UpdateRegionMode`, build hostile-occupied set; apply
-   hostile-occupation blocking, with arrival-node exemption, to all three relevant
-   `EvaluateTravel` call sites: normal scan, ignore-cutoff scan, and confirmation re-evaluation
-4. `tests/EnemyTeamTests.cpp` — pure-logic tests for `IsBlockedByHostileOccupation`,
-   `HostileOccupiedNodeIds`, and `RegionDefinition.arrivalNodeId` loading
+1. Add or reuse a specific travel-block reason for hostile occupation.
+2. Ensure Region travel preview / confirmation failure reports hostile occupation clearly.
+3. Keep arrival-node exemption intact.
+4. Add tests where practical.
 
-Out of scope for M11-c: battle on contact, visual indicator in `RegionRenderer`,
-personality-driven movement, preventing enemies from physically patrolling to the arrival node.
+Out of scope:
+- battle/contact behavior
+- RegionRenderer enemy portrait/marker
+- personality/aggression behavior
+- event-spawn wiring
+- fog/visibility
+- full diplomacy
 
 ---
 

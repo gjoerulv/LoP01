@@ -159,9 +159,7 @@ The current codebase is still a bounded single-region slice and does not yet imp
 
 ## Current planning posture
 
-Current implementation sequencing lives in `docs/implementation_roadmap.md`.
-
-M9 Content Validation is the proposed next milestone, but implementation should not begin until the user explicitly chooses it.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`. Use the roadmap's Current Next Milestone section for the next proposed implementation slice.
 
 Until a new milestone is explicitly chosen:
 
