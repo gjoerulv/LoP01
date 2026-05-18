@@ -249,21 +249,21 @@ Scope:
 
 **M11-c — Node Occupation + Inaccessibility (Phase 3)**
 
-Deliverable: Enemy teams with an occupation-capable action record which node they occupy;
-the Region layer treats occupied nodes as inaccessible to the player and reflects this in
-`RegionTravelRules` / `App::UpdateRegionMode`. No rendering or battle-contact logic yet.
+Deliverable: Hostile enemy teams block the player from travelling to their current node.
+Occupation is derived from `EnemyTeamState.nodeId` — no new field. Arrival nodes are always
+accessible regardless of enemy position.
 
 Scope:
-1. `EnemyTeamState` — add `occupiedNodeId` field (empty = no occupation)
-2. `ProcessEnemyPhase` — after a patrol move, if the destination node type is occupiable,
-   set `occupiedNodeId`; cleared when team moves away
-3. `App::UpdateRegionMode` — pass occupied node ids as blocked transit nodes or mark
-   destination unavailable when a team occupies it
-4. `tests/EnemyTeamTests.cpp` — team occupies node after move; player travel blocked to
-   occupied node; team vacates on move-away
+1. `src/data/definitions/RegionDefinition.h` — add `std::string arrivalNodeId` field;
+   load from JSON in `ContentRepository` (absent content defaults to empty string)
+2. `src/gameplay/GameSession.h/cpp` — add `HostileOccupiedNodeIds(playerColor)` query;
+   returns `nodeId` of every active team whose color is not the player's and is not allied
+3. `src/app/App.cpp` — in `UpdateRegionMode`, build hostile-occupied set; apply
+   `&& !isHostileBlocked` (arrival node exempt) in both `EvaluateTravel` call sites
+4. `tests/EnemyTeamTests.cpp` — 5 new pure-logic tests for `HostileOccupiedNodeIds`
 
 Out of scope for M11-c: battle on contact, visual indicator in `RegionRenderer`,
-personality-driven occupation targeting, service-use triggering enemy phase.
+personality-driven movement, preventing enemies from physically patrolling to the arrival node.
 
 ---
 

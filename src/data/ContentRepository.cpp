@@ -60,6 +60,7 @@ namespace data {
                 region.id = regionJson.value("id", "unknown");
                 region.name = regionJson.value("name", "Unknown");
                 region.unlocked = regionJson.value("unlocked", false);
+                region.arrivalNodeId = regionJson.value("arrivalNodeId", "");
 
                 if (regionJson.contains("nodes") && regionJson["nodes"].is_array()) {
                     for (const auto& nodeJson : regionJson["nodes"]) {

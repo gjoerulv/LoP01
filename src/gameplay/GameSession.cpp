@@ -1418,4 +1418,23 @@ std::vector<EnemyTeamActionResult> GameSession::ProcessEnemyPhase(
     return results;
 }
 
+std::vector<std::string> GameSession::HostileOccupiedNodeIds(
+    const std::string& playerColor) const {
+    std::set<std::string> seen;
+    for (const auto& team : enemyTeams_) {
+        if (!team.active || team.nodeId.empty()) {
+            continue;
+        }
+        if (team.teamColor == playerColor) {
+            continue;
+        }
+        if (std::find(team.alliances.begin(), team.alliances.end(), playerColor)
+            != team.alliances.end()) {
+            continue;
+        }
+        seen.insert(team.nodeId);
+    }
+    return std::vector<std::string>(seen.begin(), seen.end());
+}
+
 } // namespace gameplay
