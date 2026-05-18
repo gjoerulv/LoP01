@@ -308,3 +308,118 @@ TEST_CASE("ParseEventDefinition - repeat defaults to once when absent")
     REQUIRE(def.repeat.mode == "once");
     REQUIRE(def.repeat.intervalDays == 0);
 }
+
+// ---------------------------------------------------------------------------
+// camelCase trigger-specific target fields
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ParseEventDefinition - regionNodeEntry with nodeId parses into targetId")
+{
+    auto doc = ValidEvent();
+    doc["trigger"] = nlohmann::json{{"type", "regionNodeEntry"}, {"nodeId", "node_gate"}};
+    auto def = ParseEventDefinition(doc);
+    REQUIRE(def.trigger.targetId == "node_gate");
+}
+
+TEST_CASE("ParseEventDefinition - locationConfirm with objectId parses into targetId")
+{
+    auto doc = ValidEvent();
+    doc["trigger"] = nlohmann::json{{"type", "locationConfirm"}, {"objectId", "obj_chest"}};
+    auto def = ParseEventDefinition(doc);
+    REQUIRE(def.trigger.targetId == "obj_chest");
+}
+
+TEST_CASE("ParseEventDefinition - neutralEncounterDefeated with encounterId parses into targetId")
+{
+    auto doc = ValidEvent();
+    doc["trigger"] = nlohmann::json{{"type", "neutralEncounterDefeated"}, {"encounterId", "enc_wolves"}};
+    auto def = ParseEventDefinition(doc);
+    REQUIRE(def.trigger.targetId == "enc_wolves");
+}
+
+TEST_CASE("ParseEventDefinition - legacy target_id fallback populates targetId")
+{
+    auto doc = ValidEvent();
+    doc["trigger"] = nlohmann::json{{"type", "startOfDay"}, {"target_id", "legacy_value"}};
+    auto def = ParseEventDefinition(doc);
+    REQUIRE(def.trigger.targetId == "legacy_value");
+}
+
+// ---------------------------------------------------------------------------
+// camelCase eligibility and repeat fields
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ParseEventDefinition - camelCase eligibility fields parse correctly")
+{
+    auto doc = ValidEvent();
+    doc["eligibility"] = nlohmann::json{
+        {"teamColors", {"red"}},
+        {"teamKinds", {"human"}},
+        {"requiredHeroIds", {"hero_jon"}}
+    };
+    auto def = ParseEventDefinition(doc);
+    REQUIRE(def.eligibility.teamColors == std::vector<std::string>{"red"});
+    REQUIRE(def.eligibility.teamKinds == std::vector<std::string>{"human"});
+    REQUIRE(def.eligibility.requiredHeroIds == std::vector<std::string>{"hero_jon"});
+}
+
+TEST_CASE("ParseEventDefinition - camelCase intervalDays in repeat parses correctly")
+{
+    auto doc = ValidEvent();
+    doc["repeat"] = nlohmann::json{{"mode", "everyNDays"}, {"intervalDays", 3}};
+    auto def = ParseEventDefinition(doc);
+    REQUIRE(def.repeat.intervalDays == 3);
+}
+
+// ---------------------------------------------------------------------------
+// Unknown condition and action type validation
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ValidateEventDefinition - unknown leaf condition type produces EVENT_CONDITION_TYPE_UNKNOWN")
+{
+    auto doc = ValidEvent();
+    doc["condition"] = nlohmann::json{{"type", "onMoonrise"}};
+    auto msgs = ValidateEventDefinition(doc);
+    REQUIRE(msgs.size() == 1);
+    REQUIRE(msgs[0].code == "EVENT_CONDITION_TYPE_UNKNOWN");
+    REQUIRE(msgs[0].severity == Severity::Error);
+    REQUIRE(msgs[0].path == "condition.type");
+}
+
+TEST_CASE("ValidateEventDefinition - all known leaf condition types are valid")
+{
+    for (const auto& t : {"always", "teamHasResource", "teamHasHero", "storyFlagSet"}) {
+        auto doc = ValidEvent();
+        doc["condition"] = nlohmann::json{{"type", t}};
+        auto msgs = ValidateEventDefinition(doc);
+        INFO("Condition type: " << t);
+        const bool hasUnknown = std::ranges::any_of(msgs,
+            [](const auto& m) { return m.code == "EVENT_CONDITION_TYPE_UNKNOWN"; });
+        REQUIRE_FALSE(hasUnknown);
+    }
+}
+
+TEST_CASE("ValidateEventDefinition - unknown action type produces EVENT_ACTION_TYPE_UNKNOWN")
+{
+    auto doc = ValidEvent();
+    doc["actions"] = nlohmann::json::array({{{"type", "grantWishes"}}});
+    auto msgs = ValidateEventDefinition(doc);
+    REQUIRE(msgs.size() == 1);
+    REQUIRE(msgs[0].code == "EVENT_ACTION_TYPE_UNKNOWN");
+    REQUIRE(msgs[0].severity == Severity::Error);
+    REQUIRE(msgs[0].path == "actions[0].type");
+}
+
+TEST_CASE("ValidateEventDefinition - all known action types are valid")
+{
+    for (const auto& t : {"showMessage", "giveResource", "takeResource",
+                          "setStoryFlag", "clearStoryFlag", "if"}) {
+        auto doc = ValidEvent();
+        doc["actions"] = nlohmann::json::array({{{"type", t}}});
+        auto msgs = ValidateEventDefinition(doc);
+        INFO("Action type: " << t);
+        const bool hasUnknown = std::ranges::any_of(msgs,
+            [](const auto& m) { return m.code == "EVENT_ACTION_TYPE_UNKNOWN"; });
+        REQUIRE_FALSE(hasUnknown);
+    }
+}

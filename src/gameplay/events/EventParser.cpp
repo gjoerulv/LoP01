@@ -52,6 +52,46 @@ std::vector<EventAction> ParseActions(const nlohmann::json& actionsArray)
 
 namespace {
 
+static std::string ReadTriggerTargetId(EventTriggerType type, const nlohmann::json& t)
+{
+    auto tryKey = [&](const char* key) -> std::string {
+        if (t.contains(key) && t[key].is_string())
+            return t[key].get<std::string>();
+        return {};
+    };
+
+    std::string val;
+    switch (type) {
+        case EventTriggerType::RegionNodeEntry:
+            val = tryKey("nodeId"); break;
+        case EventTriggerType::LocationCollision:
+        case EventTriggerType::LocationConfirm:
+            val = tryKey("objectId"); break;
+        case EventTriggerType::NeutralEncounterDefeated:
+            val = tryKey("encounterId"); break;
+        case EventTriggerType::ServiceUsed:
+        case EventTriggerType::ServiceDestroyed:
+            val = tryKey("serviceId"); break;
+        case EventTriggerType::QuestCompletion:
+            val = tryKey("questId"); break;
+        default: break;
+    }
+    if (!val.empty()) return val;
+    val = tryKey("targetId");   // transitional generic camelCase
+    if (!val.empty()) return val;
+    return tryKey("target_id"); // legacy snake_case
+}
+
+static bool IsKnownConditionLeafType(const std::string& t) {
+    return t == "always" || t == "teamHasResource"
+        || t == "teamHasHero" || t == "storyFlagSet";
+}
+
+static bool IsKnownActionType(const std::string& t) {
+    return t == "showMessage" || t == "giveResource" || t == "takeResource"
+        || t == "setStoryFlag" || t == "clearStoryFlag" || t == "if";
+}
+
 void ValidateConditionNode(const nlohmann::json& cond,
                            const std::string& path,
                            std::vector<ValidationMessage>& msgs)
@@ -93,6 +133,14 @@ void ValidateConditionNode(const nlohmann::json& cond,
         }
     } else if (hasNot) {
         ValidateConditionNode(cond["not"], path + ".not", msgs);
+    } else {
+        // leaf — hasType && compositeCount == 0
+        const std::string typeStr = cond["type"].get<std::string>();
+        if (!IsKnownConditionLeafType(typeStr)) {
+            msgs.push_back({Severity::Error, "EVENT_CONDITION_TYPE_UNKNOWN", path + ".type",
+                "Condition leaf type \"" + typeStr + "\" is not recognised. "
+                "Known types: always, teamHasResource, teamHasHero, storyFlagSet.", ""});
+        }
     }
 }
 
@@ -110,25 +158,25 @@ EventDefinition ParseEventDefinition(const nlohmann::json& doc)
     if (doc.contains("trigger") && doc["trigger"].is_object()) {
         const auto& t = doc["trigger"];
         def.trigger.type     = EventTriggerTypeFromString(t.value("type", ""));
-        def.trigger.targetId = t.value("target_id", "");
+        def.trigger.targetId = ReadTriggerTargetId(def.trigger.type, t);
     }
 
     if (doc.contains("eligibility") && doc["eligibility"].is_object()) {
         const auto& e = doc["eligibility"];
-        if (e.contains("team_colors") && e["team_colors"].is_array()) {
-            for (const auto& c : e["team_colors"]) {
+        const char* tcKey = e.contains("teamColors") ? "teamColors" : "team_colors";
+        if (e.contains(tcKey) && e[tcKey].is_array()) {
+            for (const auto& c : e[tcKey])
                 if (c.is_string()) def.eligibility.teamColors.push_back(c.get<std::string>());
-            }
         }
-        if (e.contains("team_kinds") && e["team_kinds"].is_array()) {
-            for (const auto& k : e["team_kinds"]) {
+        const char* tkKey = e.contains("teamKinds") ? "teamKinds" : "team_kinds";
+        if (e.contains(tkKey) && e[tkKey].is_array()) {
+            for (const auto& k : e[tkKey])
                 if (k.is_string()) def.eligibility.teamKinds.push_back(k.get<std::string>());
-            }
         }
-        if (e.contains("required_hero_ids") && e["required_hero_ids"].is_array()) {
-            for (const auto& h : e["required_hero_ids"]) {
+        const char* rhKey = e.contains("requiredHeroIds") ? "requiredHeroIds" : "required_hero_ids";
+        if (e.contains(rhKey) && e[rhKey].is_array()) {
+            for (const auto& h : e[rhKey])
                 if (h.is_string()) def.eligibility.requiredHeroIds.push_back(h.get<std::string>());
-            }
         }
     }
 
@@ -143,7 +191,8 @@ EventDefinition ParseEventDefinition(const nlohmann::json& doc)
     if (doc.contains("repeat") && doc["repeat"].is_object()) {
         const auto& r = doc["repeat"];
         def.repeat.mode         = r.value("mode", "once");
-        def.repeat.intervalDays = r.value("interval_days", 0);
+        def.repeat.intervalDays = r.contains("intervalDays") ? r.value("intervalDays", 0)
+                                                              : r.value("interval_days", 0);
     }
 
     if (doc.contains("actions")) {
@@ -208,6 +257,11 @@ std::vector<ValidationMessage> ValidateEventDefinition(const nlohmann::json& doc
                 } else if (a["type"].get<std::string>().empty()) {
                     msgs.push_back({Severity::Error, "EVENT_ACTION_TYPE_EMPTY", path + ".type",
                         "Action at index " + std::to_string(i) + " has an empty \"type\".", ""});
+                } else if (!IsKnownActionType(a["type"].get<std::string>())) {
+                    msgs.push_back({Severity::Error, "EVENT_ACTION_TYPE_UNKNOWN", path + ".type",
+                        "Action type \"" + a["type"].get<std::string>() + "\" is not recognised. "
+                        "Known types: showMessage, giveResource, takeResource, "
+                        "setStoryFlag, clearStoryFlag, if.", ""});
                 }
             }
         }

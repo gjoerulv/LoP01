@@ -26,11 +26,15 @@ Current stable foundation:
 - daily clock, Energy, Region travel, wake/recovery penalty, and basic services
 - JSON content loading through `ContentRepository`
 - content validation foundation
-- typed event foundation with optional `events.json`, duplicate id/priority validation, story flags, fired event ids, start-of-day event notification, and save/load persistence
+- typed event foundation: optional `events.json` loading, duplicate id/priority validation,
+  `EventDefinitions` accessor, `GameSession` initialization, camelCase field parsing,
+  unknown condition/action type validation, storyFlags/firedEventIds save/load persistence,
+  start-of-day notification, and integration tests
 - Catch2 test coverage for core logic, validation, and event foundation
 
 Still incomplete:
-- full event trigger coverage and broader action/condition vocabulary
+- broader event trigger wiring, more condition/action types, stronger argument-level payload
+  validation, presentation/dialogue integration, and full playability validation
 - enemy teams and Region AI
 - victory/defeat condition runtime
 - inventory/artifacts/recipes
