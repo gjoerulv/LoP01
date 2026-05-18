@@ -30,12 +30,24 @@ Current stable foundation:
   `EventDefinitions` accessor, `GameSession` initialization, camelCase field parsing,
   unknown condition/action type validation, storyFlags/firedEventIds save/load persistence,
   start-of-day notification, and integration tests
-- Catch2 test coverage for core logic, validation, and event foundation
+- typed `EnemyGroupDefinition` composition loading (unit lists only)
+- `EnemyTeamState` runtime fields (personality, aggression, patrol, energy, cooldown, alliances)
+- `GameSession` enemy-team container and fixed-color-order enemy phase
+- `FindHopCount` BFS primitive in `RegionTravelRules`
+- Region-travel enemy-phase hook in `App::UpdateRegionMode`
+- deterministic patrol step with patrol-radius enforcement
+- Catch2 test coverage for core logic, validation, event foundation, and enemy-team phase
 
 Still incomplete:
 - broader event trigger wiring, more condition/action types, stronger argument-level payload
   validation, presentation/dialogue integration, and full playability validation
-- enemy teams and Region AI
+- enemy-team occupation and node inaccessibility
+- battle/contact behavior on enemy-player collision
+- broader time-cost hooks (service use, location actions) triggering enemy phase
+- event-spawn wiring for enemy teams
+- personality/aggression-driven movement
+- Region rendering of enemy positions
+- fog/visibility per team
 - victory/defeat condition runtime
 - inventory/artifacts/recipes
 - World Map implementation
@@ -137,8 +149,9 @@ Scope:
 - Occupation shown with visual indicator in `RegionRenderer`
 - Enemy team event actions defined in Phase 2 (spawn, personality change, alliance change)
   wired to `EnemyTeamState`
-- `EnemyGroupDefinition` extended to load personality, aggression, patrol radius, starting
-  node
+- `EnemyGroupDefinition` is composition-only (unit lists); runtime AI fields (personality,
+  aggression, patrol, energy, cooldown) live in `EnemyTeamState` and are set at spawn or
+  by event actions — not loaded from `EnemyGroupDefinition`
 - `tests/EnemyTeamTests.cpp` — spawn, movement rules, occupation, inaccessibility,
   color-order action sequencing
 
@@ -232,26 +245,25 @@ Scope:
 
 ---
 
-## 4. First Small Milestone
+## 4. Current Next Milestone
 
-**M9 — Content Validation (Phase 1)**
+**M11-c — Node Occupation + Inaccessibility (Phase 3)**
 
-Deliverable: `ContentValidator` runs at `ContentRepository::Load()` time and returns typed
-`ValidationMessage` objects before any game state is constructed.
+Deliverable: Enemy teams with an occupation-capable action record which node they occupy;
+the Region layer treats occupied nodes as inaccessible to the player and reflects this in
+`RegionTravelRules` / `App::UpdateRegionMode`. No rendering or battle-contact logic yet.
 
 Scope:
-1. `src/data/ContentValidator.h` — `Severity` enum (Error/Warning/Info),
-   `ValidationMessage` struct, `ContentValidator` class
-2. `src/data/ContentValidator.cpp` — 10–15 rules: schema identity checks aligned with
-   `schemaVersion`, `kind`, and `id`; required field presence; node id uniqueness per Region;
-   adjacency link resolution; one main node-content item max; arrival flag present; quest
-   objective references resolve; service type field legality
-3. `ContentRepository::Load()` calls validator and surfaces message list; callers decide gate
-   level
-4. `tests/ContentValidatorTests.cpp` — one positive and one negative test per rule
+1. `EnemyTeamState` — add `occupiedNodeId` field (empty = no occupation)
+2. `ProcessEnemyPhase` — after a patrol move, if the destination node type is occupiable,
+   set `occupiedNodeId`; cleared when team moves away
+3. `App::UpdateRegionMode` — pass occupied node ids as blocked transit nodes or mark
+   destination unavailable when a team occupies it
+4. `tests/EnemyTeamTests.cpp` — team occupies node after move; player travel blocked to
+   occupied node; team vacates on move-away
 
-Out of scope for M9: UI display of messages, event validation, victory-path reachability,
-Release-level acknowledgment flow.
+Out of scope for M11-c: battle on contact, visual indicator in `RegionRenderer`,
+personality-driven occupation targeting, service-use triggering enemy phase.
 
 ---
 
