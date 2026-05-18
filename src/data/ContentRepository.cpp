@@ -325,6 +325,28 @@ namespace data {
             return true;
         }
 
+        bool LoadEnemyGroupsFile(const nlohmann::json& root, std::vector<EnemyGroupDefinition>& output) {
+            if (!root.contains("enemy_groups") || !root["enemy_groups"].is_array()) {
+                return false;
+            }
+
+            output.clear();
+
+            for (const auto& entry : root["enemy_groups"]) {
+                EnemyGroupDefinition def;
+                def.id = entry.value("id", "");
+                def.name = entry.value("name", "");
+                if (entry.contains("units") && entry["units"].is_array()) {
+                    for (const auto& unit : entry["units"]) {
+                        def.unitIds.push_back(unit.get<std::string>());
+                    }
+                }
+                output.push_back(def);
+            }
+
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -359,13 +381,13 @@ namespace data {
         const bool scenesLoaded    = LoadLocationScenesFile(*scenesDoc, locationScenes_);
         const bool unitsLoaded     = LoadUnitsFile(*unitsDoc, units_);
         const bool scenariosLoaded = LoadBattleScenariosFile(*scenariosDoc, battleScenarios_);
-        enemyGroups_               = *enemyDoc;
+        const bool enemyLoaded     = LoadEnemyGroupsFile(*enemyDoc, enemyGroups_);
         const bool questDefLoaded  = LoadQuestDefinitionsFile(*questsDoc, questDefinitions_);
         quests_                    = *questsDoc;
         const bool servicesLoaded  = LoadLocationServicesFile(*servicesDoc, locationServices_);
 
         if (!regionsLoaded || !locationsLoaded || !scenesLoaded || !unitsLoaded ||
-            !scenariosLoaded || !questDefLoaded || !servicesLoaded) {
+            !scenariosLoaded || !enemyLoaded || !questDefLoaded || !servicesLoaded) {
             return false;
         }
 
@@ -473,8 +495,17 @@ namespace data {
         return nullptr;
     }
 
-    const nlohmann::json& ContentRepository::EnemyGroups() const {
+    const std::vector<EnemyGroupDefinition>& ContentRepository::EnemyGroups() const {
         return enemyGroups_;
+    }
+
+    const EnemyGroupDefinition* ContentRepository::FindEnemyGroupById(const std::string& id) const {
+        for (const auto& group : enemyGroups_) {
+            if (group.id == id) {
+                return &group;
+            }
+        }
+        return nullptr;
     }
 
     const nlohmann::json& ContentRepository::Quests() const {

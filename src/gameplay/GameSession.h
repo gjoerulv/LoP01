@@ -8,6 +8,7 @@
 #include "core/SaveGame.h"
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
+#include "gameplay/EnemyTeamState.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/quests/QuestState.h"
@@ -45,6 +46,11 @@ struct ActiveBattleStackEntry {
 struct BattleStackLifeResult {
     std::string stackId;
     int resultingLife = 0;
+};
+
+struct EnemyTeamActionResult {
+    std::string teamColor;
+    std::string actionType;
 };
 
 struct SessionSnapshot {
@@ -106,6 +112,10 @@ public:
 
     void InitializeEventDefinitions(std::vector<events::EventDefinition> definitions);
     [[nodiscard]] std::vector<events::ActionResult> NotifyStartOfDay();
+
+    void SetEnemyTeams(std::vector<EnemyTeamState> teams);
+    [[nodiscard]] std::vector<EnemyTeamActionResult> ProcessEnemyPhase();
+    [[nodiscard]] const std::vector<EnemyTeamState>& EnemyTeams() const;
 
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
     [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);
@@ -199,6 +209,9 @@ private:
     std::vector<events::EventDefinition> eventDefinitions_;
     std::vector<std::string>             firedEventIds_;
     std::set<std::string>                storyFlags_;
+
+    std::vector<EnemyTeamState> enemyTeams_;
+    static const std::vector<std::string> kTeamColorOrder;
 };
 
 } // namespace gameplay

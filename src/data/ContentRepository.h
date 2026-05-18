@@ -7,6 +7,7 @@
 
 #include "data/ContentValidator.h"
 #include "data/definitions/BattleScenarioDefinition.h"
+#include "data/definitions/EnemyGroupDefinition.h"
 #include "gameplay/events/EventParser.h"
 #include "data/definitions/LocationDefinition.h"
 #include "data/definitions/LocationSceneDefinition.h"
@@ -40,7 +41,9 @@ namespace data {
 
         [[nodiscard]] const std::vector<QuestDefinition>& QuestDefinitions() const;
 
-        [[nodiscard]] const nlohmann::json& EnemyGroups() const;
+        [[nodiscard]] const std::vector<EnemyGroupDefinition>& EnemyGroups() const;
+        [[nodiscard]] const EnemyGroupDefinition* FindEnemyGroupById(const std::string& id) const;
+
         [[nodiscard]] const nlohmann::json& Quests() const;
 
         [[nodiscard]] const std::vector<LocationServiceDefinition>& LocationServices() const;
@@ -58,7 +61,7 @@ namespace data {
         std::vector<BattleScenarioDefinition> battleScenarios_;
         std::vector<QuestDefinition> questDefinitions_;
         std::vector<LocationServiceDefinition> locationServices_;
-        nlohmann::json enemyGroups_;
+        std::vector<EnemyGroupDefinition> enemyGroups_;
         nlohmann::json quests_;
         std::vector<gameplay::events::EventDefinition> eventDefinitions_;
         std::vector<ValidationMessage> messages_;
