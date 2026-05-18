@@ -116,7 +116,8 @@ ActionResult ExecuteAction(EventEvaluationContext& ctx, const EventAction& actio
         const auto subActions = ParseActions(args[branchKey]);
         auto results = ExecuteActions(ctx, subActions);
 
-        // Treat the if-action itself as success if sub-actions executed (even if some failed)
+        // The if-action reports failure if any executed branch action fails.
+		// Earlier successful side effects are not rolled back.
         ActionResult combined;
         combined.success = true;
         for (const auto& r : results) {

@@ -20,46 +20,23 @@ what those phases strictly require.
 
 ## 1. Current Implementation Baseline
 
-**Solid (production quality):**
-- Battle engine: static formation CTB, 5 units, Leader aura, deterministic damage
-  (`src/gameplay/battle/`)
-- Persistent roster: Active(5) + Reserve(7), save/load, muster interaction
-  (`src/gameplay/`, `src/core/SaveGame`)
-- Time & travel: daily clock, Energy formula, region node travel, dead-end rules
-  (`src/core/GameClock`, `src/gameplay/region/`)
-- Location services: rest, shop/travel-prep, recruit, quest, muster
-  (`src/gameplay/location/LocationServiceRules`)
-- Quest state: objective types BringResource, ClearCombatNode, ReachNode
-  (`src/gameplay/quests/QuestState`)
-- Content loading: JSON → typed C++ definitions (`src/data/ContentRepository`); save-game schema versioning exists in `src/core/SaveGame`
-- Tests: 17 test files covering core rules; Catch2 infrastructure in place
+Current stable foundation:
+- battle engine, CTB, static formation, leader aura, and deterministic damage
+- persistent roster, active/reserve party, mustering, and save/load
+- daily clock, Energy, Region travel, wake/recovery penalty, and basic services
+- JSON content loading through `ContentRepository`
+- content validation foundation
+- typed event foundation with optional `events.json`, duplicate id/priority validation, story flags, fired event ids, start-of-day event notification, and save/load persistence
+- Catch2 test coverage for core logic, validation, and event foundation
 
-**Present but incomplete against specification:**
-- `EnemyGroupDefinition` struct loads basic fields; the full AI model (personality types,
-  aggression levels, action-budget cadence, four-priority pipeline) is fully specified in
-  `docs/core_loop_rules.md` §12–18 and `README_DECISIONS.md` §93–102 but not yet implemented
-  in C++
-- `WorldMapMode` exists as an enum value in `App.h`; the World Map layer (controller,
-  renderer, definition struct) is specified in `docs/game_vision.md`, `docs/core_loop_rules.md`,
-  and `docs/content_schema.md` but not yet implemented
-- Quest event wiring exists for three objective types; the full typed event system (triggers,
-  eligibility, conditions with `all`/`any`/`not` composition, typed actions, If/Else branches)
-  is fully specified in `docs/content_schema.md` §20–25 and `docs/scenario_authoring.md`
-  §12–19 but no C++ structs or engine exist
-
-**Specified in docs; C++ structs and logic not yet written:**
-- Validation system — three levels (Save / Playable / Release), severity codes,
-  path-qualified messages: `docs/validation_system.md`
-- Enemy team systemic AI and Region-layer behavior:
-  `docs/core_loop_rules.md` §12–18, `README_DECISIONS.md` §93–102
-- Victory and defeat condition evaluation (OR-based, default "defeat all enemy teams"):
-  `docs/core_loop_rules.md` §35–36, `README_DECISIONS.md` §44–45 and §160
-- Full typed event system:
-  `docs/content_schema.md` §20–25, `docs/scenario_authoring.md` §12–19
-- `ItemDefinition`, `ArtifactDefinition`, `RecipeDefinition`, `WorldMapDefinition`,
-  `CampaignDefinition`: `docs/content_schema.md`
-- Skill system / status effects (duration tracked by affected unit's own turns):
-  `docs/combat_rules.md`
+Still incomplete:
+- full event trigger coverage and broader action/condition vocabulary
+- enemy teams and Region AI
+- victory/defeat condition runtime
+- inventory/artifacts/recipes
+- World Map implementation
+- Campaign sequencing and carry-over
+- full shell UI and presentation implementation
 
 ---
 
