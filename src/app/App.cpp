@@ -13,6 +13,7 @@
 
 #include "core/GameClock.h"
 #include "gameplay/battle/BattleFactory.h"
+#include "gameplay/EnemyOccupationRules.h"
 #include "gameplay/location/LocationServiceRules.h"
 #include "gameplay/region/RegionDeadEndRules.h"
 #include "gameplay/region/RegionTravelRules.h"
@@ -455,6 +456,8 @@ void App::UpdateRegionMode(const input::InputState& input) {
     const std::vector<data::RegionLinkDefinition> emptyLinks;
     const auto& links = region != nullptr ? region->links : emptyLinks;
     const auto blockedTransitNodeIds = BuildBlockedTransitNodeIds(nodes);
+    const auto hostileOccupied = session_.HostileOccupiedNodeIds("Green");
+    const std::string arrivalNodeId = region != nullptr ? region->arrivalNodeId : "";
 
     bool hasLegalTravelNow = false;
     bool hasReachableTravelIgnoringCutoff = false;
@@ -463,10 +466,14 @@ void App::UpdateRegionMode(const input::InputState& input) {
             continue;
         }
 
+        const bool nodeAvailable =
+            nodes[i].travelAvailable &&
+            !gameplay::IsBlockedByHostileOccupation(nodes[i].id, arrivalNodeId, hostileOccupied);
+
         const auto nowTravel = gameplay::region::EvaluateTravel(
             snapshot.destinationId,
             nodes[i].id,
-            nodes[i].travelAvailable,
+            nodeAvailable,
             snapshot.minutesIntoSliceDay,
             links,
             blockedTransitNodeIds);
@@ -477,7 +484,7 @@ void App::UpdateRegionMode(const input::InputState& input) {
         const auto ignoreCutoffTravel = gameplay::region::EvaluateTravel(
             snapshot.destinationId,
             nodes[i].id,
-            nodes[i].travelAvailable,
+            nodeAvailable,
             0,
             links,
             blockedTransitNodeIds);
@@ -509,10 +516,13 @@ void App::UpdateRegionMode(const input::InputState& input) {
 
     if (result.travelConfirmed) {
         const auto& destination = nodes[regionSelectedNodeIndex_];
+        const bool destinationAvailable =
+            destination.travelAvailable &&
+            !gameplay::IsBlockedByHostileOccupation(destination.id, arrivalNodeId, hostileOccupied);
         const auto travel = gameplay::region::EvaluateTravel(
             snapshot.destinationId,
             destination.id,
-            destination.travelAvailable,
+            destinationAvailable,
             snapshot.minutesIntoSliceDay,
             links,
             blockedTransitNodeIds);

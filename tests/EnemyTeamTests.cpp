@@ -5,6 +5,7 @@
 
 #include "data/ContentRepository.h"
 #include "data/definitions/RegionDefinition.h"
+#include "gameplay/EnemyOccupationRules.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/GameSession.h"
 
@@ -236,4 +237,120 @@ TEST_CASE("ProcessEnemyPhase team with no patrol stays idle") {
     REQUIRE(results.size() == 1);
     REQUIRE(results[0].actionType == "idle");
     REQUIRE(session.EnemyTeams()[0].nodeId == "node_a");
+}
+
+// ---------------------------------------------------------------------------
+// IsBlockedByHostileOccupation
+// ---------------------------------------------------------------------------
+
+TEST_CASE("IsBlockedByHostileOccupation hostile occupied normal node is blocked") {
+    REQUIRE(gameplay::IsBlockedByHostileOccupation("node_a", "", { "node_a", "node_b" }));
+}
+
+TEST_CASE("IsBlockedByHostileOccupation hostile occupied arrival node is not blocked") {
+    REQUIRE_FALSE(gameplay::IsBlockedByHostileOccupation("node_a", "node_a", { "node_a" }));
+}
+
+TEST_CASE("IsBlockedByHostileOccupation unoccupied node is not blocked") {
+    REQUIRE_FALSE(gameplay::IsBlockedByHostileOccupation("node_c", "", { "node_a", "node_b" }));
+}
+
+// ---------------------------------------------------------------------------
+// HostileOccupiedNodeIds
+// ---------------------------------------------------------------------------
+
+TEST_CASE("HostileOccupiedNodeIds returns nodeId of active hostile team") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Red";
+    team.nodeId = "bridge_node";
+    team.active = true;
+    session.SetEnemyTeams({ team });
+
+    const auto result = session.HostileOccupiedNodeIds("Green");
+    REQUIRE(result.size() == 1);
+    REQUIRE(result[0] == "bridge_node");
+}
+
+TEST_CASE("HostileOccupiedNodeIds excludes player-color team") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Green";
+    team.nodeId = "bridge_node";
+    team.active = true;
+    session.SetEnemyTeams({ team });
+
+    REQUIRE(session.HostileOccupiedNodeIds("Green").empty());
+}
+
+TEST_CASE("HostileOccupiedNodeIds excludes team allied with player") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Red";
+    team.nodeId = "bridge_node";
+    team.active = true;
+    team.alliances = { "Green" };
+    session.SetEnemyTeams({ team });
+
+    REQUIRE(session.HostileOccupiedNodeIds("Green").empty());
+}
+
+TEST_CASE("HostileOccupiedNodeIds excludes inactive team") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Red";
+    team.nodeId = "bridge_node";
+    team.active = false;
+    session.SetEnemyTeams({ team });
+
+    REQUIRE(session.HostileOccupiedNodeIds("Green").empty());
+}
+
+TEST_CASE("HostileOccupiedNodeIds excludes team with empty nodeId") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Red";
+    team.nodeId = "";
+    team.active = true;
+    session.SetEnemyTeams({ team });
+
+    REQUIRE(session.HostileOccupiedNodeIds("Green").empty());
+}
+
+// ---------------------------------------------------------------------------
+// RegionDefinition arrivalNodeId JSON loading
+// ---------------------------------------------------------------------------
+
+TEST_CASE("RegionDefinition loads arrivalNodeId from JSON") {
+    const std::filesystem::path root = "saves/enemy_team_test_arrival_node";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({
+        "schemaVersion": 1,
+        "kind": "RegionCollection",
+        "id": "regions",
+        "regions": [
+            {
+                "id": "region_01",
+                "name": "Test Region",
+                "arrivalNodeId": "node_start",
+                "nodes": [],
+                "links": []
+            }
+        ]
+    })");
+    WriteTextFile(root / "locations.json",         R"({"schemaVersion":1,"kind":"LocationCollection","id":"locations","locations":[]})");
+    WriteTextFile(root / "location_scenes.json",   R"({"schemaVersion":1,"kind":"LocationSceneCollection","id":"location_scenes","location_scenes":[]})");
+    WriteTextFile(root / "units.json",             R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[]})");
+    WriteTextFile(root / "battle_scenarios.json",  R"({"schemaVersion":1,"kind":"BattleScenarioCollection","id":"battle_scenarios","battle_scenarios":[]})");
+    WriteTextFile(root / "quests.json",            R"({"schemaVersion":1,"kind":"QuestCollection","id":"quests","quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"schemaVersion":1,"kind":"LocationServiceCollection","id":"location_services","location_services":[]})");
+    WriteTextFile(root / "enemy_groups.json",      R"({"schemaVersion":1,"kind":"EnemyGroupCollection","id":"enemy_groups","enemy_groups":[]})");
+
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(root));
+
+    const auto* region = repo.FindRegionById("region_01");
+    REQUIRE(region != nullptr);
+    REQUIRE(region->arrivalNodeId == "node_start");
 }

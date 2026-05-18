@@ -25,6 +25,7 @@ namespace data
         std::string id;
         std::string name;
         bool unlocked = false;
+        std::string arrivalNodeId;
         std::vector<RegionNodeDefinition> nodes;
         std::vector<RegionLinkDefinition> links;
     };

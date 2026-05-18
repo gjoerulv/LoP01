@@ -118,6 +118,8 @@ public:
     [[nodiscard]] std::vector<EnemyTeamActionResult> ProcessEnemyPhase(
         const std::vector<data::RegionLinkDefinition>& regionLinks);
     [[nodiscard]] const std::vector<EnemyTeamState>& EnemyTeams() const;
+    [[nodiscard]] std::vector<std::string> HostileOccupiedNodeIds(
+        const std::string& playerColor) const;
 
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
     [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);
