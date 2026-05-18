@@ -36,10 +36,12 @@ Current stable foundation:
 - `FindHopCount` BFS primitive in `RegionTravelRules`
 - Region-travel enemy-phase hook in `App::UpdateRegionMode`
 - deterministic patrol step with patrol-radius enforcement
+- hostile-occupation blocking: `arrivalNodeId` on `RegionDefinition`, `IsBlockedByHostileOccupation()`
+  pure-logic header, `GameSession::HostileOccupiedNodeIds()` query, wired in `App::UpdateRegionMode`
+  with arrival-node exemption, and Catch2 test coverage
 - Catch2 test coverage for core logic, validation, event foundation, and enemy-team phase
 
 Still incomplete:
-- explicit hostile-occupation travel feedback / block reason
 - battle/contact behavior on enemy-player collision
 - broader Region time-cost hooks triggering enemy phase
 - event-spawn wiring for enemy teams
@@ -240,23 +242,7 @@ Scope:
 
 ## 4. Current Next Milestone
 
-**M11-d — Hostile Occupation Feedback + Explicit Travel Blocking Reason**
-
-Deliverable: Hostile-occupied travel blocking is distinguishable from generic destination unavailability in travel preview/status feedback.
-
-Scope:
-1. Add or reuse a specific travel-block reason for hostile occupation.
-2. Ensure Region travel preview / confirmation failure reports hostile occupation clearly.
-3. Keep arrival-node exemption intact.
-4. Add tests where practical.
-
-Out of scope:
-- battle/contact behavior
-- RegionRenderer enemy portrait/marker
-- personality/aggression behavior
-- event-spawn wiring
-- fog/visibility
-- full diplomacy
+No milestone is currently defined. M11-d (Hostile Occupation Feedback + Explicit Travel Blocking Reason) is complete: `TravelBlockReason::HostileOccupied` added, occupation check folded into `EvaluateTravel()`, distinct status message wired in `App::UpdateRegionMode`, and Catch2 test coverage added.
 
 ---
 

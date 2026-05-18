@@ -210,3 +210,54 @@ TEST_CASE("Region travel rules do not block transit through uncleared non-blocke
     REQUIRE(result.hopCount == 2);
     REQUIRE(result.reason == gameplay::region::TravelBlockReason::None);
 }
+
+TEST_CASE("EvaluateTravel hostile occupied destination is blocked when arrivalNodeId is empty") {
+    // arrivalNodeId = "" → IsBlockedByHostileOccupation still fires → HostileOccupied
+    const auto result = gameplay::region::EvaluateTravel(
+        "home_base",
+        "town_center",
+        true,
+        0,
+        MakeLinks(),
+        /*blockedTransitNodeIds=*/{},
+        /*perHopTravelMinutes=*/15,
+        /*hostileOccupiedNodeIds=*/{"town_center"},
+        /*arrivalNodeId=*/{});
+
+    REQUIRE(!result.legal);
+    REQUIRE(result.reason == gameplay::region::TravelBlockReason::HostileOccupied);
+}
+
+TEST_CASE("EvaluateTravel hostile occupied arrival node is not blocked") {
+    // destination == arrivalNodeId → IsBlockedByHostileOccupation returns false → legal
+    const auto result = gameplay::region::EvaluateTravel(
+        "home_base",
+        "town_center",
+        true,
+        0,
+        MakeLinks(),
+        /*blockedTransitNodeIds=*/{},
+        /*perHopTravelMinutes=*/15,
+        /*hostileOccupiedNodeIds=*/{"town_center"},
+        /*arrivalNodeId=*/"town_center");
+
+    REQUIRE(result.legal);
+    REQUIRE(result.reason == gameplay::region::TravelBlockReason::None);
+}
+
+TEST_CASE("EvaluateTravel destination not in hostile list is unaffected by occupation params") {
+    // destination absent from hostileOccupiedNodeIds → passes through to normal evaluation
+    const auto result = gameplay::region::EvaluateTravel(
+        "home_base",
+        "town_center",
+        true,
+        0,
+        MakeLinks(),
+        /*blockedTransitNodeIds=*/{},
+        /*perHopTravelMinutes=*/15,
+        /*hostileOccupiedNodeIds=*/{"old_inn"},
+        /*arrivalNodeId=*/"home_base");
+
+    REQUIRE(result.legal);
+    REQUIRE(result.reason == gameplay::region::TravelBlockReason::None);
+}
