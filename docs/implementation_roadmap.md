@@ -259,8 +259,10 @@ Scope:
 2. `src/gameplay/GameSession.h/cpp` — add `HostileOccupiedNodeIds(playerColor)` query;
    returns `nodeId` of every active team whose color is not the player's and is not allied
 3. `src/app/App.cpp` — in `UpdateRegionMode`, build hostile-occupied set; apply
-   `&& !isHostileBlocked` (arrival node exempt) in both `EvaluateTravel` call sites
-4. `tests/EnemyTeamTests.cpp` — 5 new pure-logic tests for `HostileOccupiedNodeIds`
+   hostile-occupation blocking, with arrival-node exemption, to all three relevant
+   `EvaluateTravel` call sites: normal scan, ignore-cutoff scan, and confirmation re-evaluation
+4. `tests/EnemyTeamTests.cpp` — pure-logic tests for `IsBlockedByHostileOccupation`,
+   `HostileOccupiedNodeIds`, and `RegionDefinition.arrivalNodeId` loading
 
 Out of scope for M11-c: battle on contact, visual indicator in `RegionRenderer`,
 personality-driven movement, preventing enemies from physically patrolling to the arrival node.
