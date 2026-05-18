@@ -17,6 +17,23 @@ int FindShortestHopCount(
     const std::string& currentLocationId,
     const std::string& selectedLocationId,
     const std::vector<data::RegionLinkDefinition>& routeLinks,
+    const std::unordered_set<std::string>& blockedTransitNodeIds);
+
+} // namespace
+
+int FindHopCount(
+    const std::string& fromLocationId,
+    const std::string& toLocationId,
+    const std::vector<data::RegionLinkDefinition>& routeLinks) {
+    return FindShortestHopCount(fromLocationId, toLocationId, routeLinks, {});
+}
+
+namespace {
+
+int FindShortestHopCount(
+    const std::string& currentLocationId,
+    const std::string& selectedLocationId,
+    const std::vector<data::RegionLinkDefinition>& routeLinks,
     const std::unordered_set<std::string>& blockedTransitNodeIds) {
     if (currentLocationId == selectedLocationId) {
         return 0;

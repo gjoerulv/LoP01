@@ -1,6 +1,7 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
+#include "gameplay/region/RegionTravelRules.h"
 
 #include <algorithm>
 #include <map>
@@ -1373,11 +1374,43 @@ const std::vector<EnemyTeamState>& GameSession::EnemyTeams() const {
     return enemyTeams_;
 }
 
-std::vector<EnemyTeamActionResult> GameSession::ProcessEnemyPhase() {
+std::vector<EnemyTeamActionResult> GameSession::ProcessEnemyPhase(
+    const std::vector<data::RegionLinkDefinition>& regionLinks) {
     std::vector<EnemyTeamActionResult> results;
     for (const auto& color : kTeamColorOrder) {
-        for (const auto& team : enemyTeams_) {
-            if (team.active && team.teamColor == color) {
+        for (auto& team : enemyTeams_) {
+            if (!team.active || team.teamColor != color) {
+                continue;
+            }
+
+            if (!team.patrol.enabled || team.nodeId.empty()) {
+                results.push_back({ team.teamColor, "idle" });
+                continue;
+            }
+
+            std::vector<std::string> candidates;
+            for (const auto& link : regionLinks) {
+                if (link.fromLocationId == team.nodeId) {
+                    candidates.push_back(link.toLocationId);
+                } else if (link.toLocationId == team.nodeId) {
+                    candidates.push_back(link.fromLocationId);
+                }
+            }
+            std::sort(candidates.begin(), candidates.end());
+            candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+
+            std::vector<std::string> valid;
+            for (const auto& c : candidates) {
+                const int hops = region::FindHopCount(team.patrol.centerNodeId, c, regionLinks);
+                if (hops >= 0 && hops <= team.patrol.radius) {
+                    valid.push_back(c);
+                }
+            }
+
+            if (!valid.empty()) {
+                team.nodeId = valid[0];
+                results.push_back({ team.teamColor, "moved" });
+            } else {
                 results.push_back({ team.teamColor, "idle" });
             }
         }
