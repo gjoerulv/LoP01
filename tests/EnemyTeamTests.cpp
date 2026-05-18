@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "data/ContentRepository.h"
+#include "data/definitions/RegionDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/GameSession.h"
 
@@ -107,7 +108,7 @@ TEST_CASE("Leaderless enemy team is valid") {
 
     session.SetEnemyTeams({ team });
 
-    const auto results = session.ProcessEnemyPhase();
+    const auto results = session.ProcessEnemyPhase({});
     REQUIRE(results.size() == 1);
     REQUIRE(results[0].teamColor == "Yellow");
 }
@@ -121,7 +122,7 @@ TEST_CASE("ProcessEnemyPhase returns one idle result per active team") {
 
     session.SetEnemyTeams({ a, b, c });
 
-    const auto results = session.ProcessEnemyPhase();
+    const auto results = session.ProcessEnemyPhase({});
     REQUIRE(results.size() == 3);
     for (const auto& r : results) {
         REQUIRE(r.actionType == "idle");
@@ -137,7 +138,7 @@ TEST_CASE("Inactive teams are skipped in ProcessEnemyPhase") {
 
     session.SetEnemyTeams({ a, b, c });
 
-    const auto results = session.ProcessEnemyPhase();
+    const auto results = session.ProcessEnemyPhase({});
     REQUIRE(results.size() == 2);
 }
 
@@ -153,7 +154,7 @@ TEST_CASE("ProcessEnemyPhase results are in fixed color order") {
 
     // Canonical order: Green, Red, Blue, Yellow, Purple, Orange, Teal, White
     // Expected output order: Red, Blue, Yellow
-    const auto results = session.ProcessEnemyPhase();
+    const auto results = session.ProcessEnemyPhase({});
     REQUIRE(results.size() == 3);
     REQUIRE(results[0].teamColor == "Red");
     REQUIRE(results[1].teamColor == "Blue");
@@ -163,6 +164,76 @@ TEST_CASE("ProcessEnemyPhase results are in fixed color order") {
 TEST_CASE("ProcessEnemyPhase returns empty list when no teams are active") {
     gameplay::GameSession session;
 
-    const auto results = session.ProcessEnemyPhase();
+    const auto results = session.ProcessEnemyPhase({});
     REQUIRE(results.empty());
+}
+
+TEST_CASE("ProcessEnemyPhase moves patrol team to adjacent node within radius") {
+    // Graph: A-B-C chain. Team at A, patrol center=A, radius=1.
+    // Candidate from A: B (1 hop from A <= 1). Valid.
+    std::vector<data::RegionLinkDefinition> links = {
+        { "node_a", "node_b" },
+        { "node_b", "node_c" }
+    };
+
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Red";
+    team.nodeId = "node_a";
+    team.patrol.enabled = true;
+    team.patrol.centerNodeId = "node_a";
+    team.patrol.radius = 1;
+    team.active = true;
+
+    session.SetEnemyTeams({ team });
+    const auto results = session.ProcessEnemyPhase(links);
+
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].actionType == "moved");
+    REQUIRE(session.EnemyTeams()[0].nodeId == "node_b");
+}
+
+TEST_CASE("ProcessEnemyPhase keeps patrol team idle when adjacent nodes exceed radius") {
+    // Graph: A-B-C chain. Team at A, patrol center=A, radius=0.
+    // Candidate from A: B. FindHopCount(A, B) = 1 > 0. No valid candidates.
+    std::vector<data::RegionLinkDefinition> links = {
+        { "node_a", "node_b" },
+        { "node_b", "node_c" }
+    };
+
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Red";
+    team.nodeId = "node_a";
+    team.patrol.enabled = true;
+    team.patrol.centerNodeId = "node_a";
+    team.patrol.radius = 0;
+    team.active = true;
+
+    session.SetEnemyTeams({ team });
+    const auto results = session.ProcessEnemyPhase(links);
+
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].actionType == "idle");
+    REQUIRE(session.EnemyTeams()[0].nodeId == "node_a");
+}
+
+TEST_CASE("ProcessEnemyPhase team with no patrol stays idle") {
+    std::vector<data::RegionLinkDefinition> links = {
+        { "node_a", "node_b" }
+    };
+
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team;
+    team.teamColor = "Green";
+    team.nodeId = "node_a";
+    team.patrol.enabled = false;
+    team.active = true;
+
+    session.SetEnemyTeams({ team });
+    const auto results = session.ProcessEnemyPhase(links);
+
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].actionType == "idle");
+    REQUIRE(session.EnemyTeams()[0].nodeId == "node_a");
 }

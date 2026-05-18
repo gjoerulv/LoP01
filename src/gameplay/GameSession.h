@@ -8,6 +8,7 @@
 #include "core/SaveGame.h"
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
+#include "data/definitions/RegionDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
@@ -114,7 +115,8 @@ public:
     [[nodiscard]] std::vector<events::ActionResult> NotifyStartOfDay();
 
     void SetEnemyTeams(std::vector<EnemyTeamState> teams);
-    [[nodiscard]] std::vector<EnemyTeamActionResult> ProcessEnemyPhase();
+    [[nodiscard]] std::vector<EnemyTeamActionResult> ProcessEnemyPhase(
+        const std::vector<data::RegionLinkDefinition>& regionLinks);
     [[nodiscard]] const std::vector<EnemyTeamState>& EnemyTeams() const;
 
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);

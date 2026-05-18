@@ -555,6 +555,7 @@ void App::UpdateRegionMode(const input::InputState& input) {
         }
         statusMessage_ = travelStatus;
         OnDestinationArrived(destination.id);
+        static_cast<void>(session_.ProcessEnemyPhase(links));
 
         if (destination.supportsBattle && !destination.combatNodeCleared && !destination.battleScenarioId.empty()) {
             StartBattleScenario(destination.battleScenarioId, travelStatus + " | Encounter started at " + destination.label);
