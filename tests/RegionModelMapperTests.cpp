@@ -151,6 +151,7 @@ TEST_CASE("RegionModelMapper preview blocks hostile-occupied destination") {
     const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
 
     REQUIRE(model.travelTimeText == "Unavailable");
+    REQUIRE(model.nodes[2].hostileOccupied);
 
     std::filesystem::remove_all(root);
 }
@@ -178,6 +179,7 @@ TEST_CASE("RegionModelMapper preview allows travel when enemy team is inactive")
     const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
 
     REQUIRE(model.travelTimeText == "30 min");
+    REQUIRE_FALSE(model.nodes[2].hostileOccupied);
 
     std::filesystem::remove_all(root);
 }

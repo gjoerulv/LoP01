@@ -404,6 +404,7 @@ void GameSession::InitializeEventDefinitions(std::vector<events::EventDefinition
 
 std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
     std::vector<events::ActionResult> allResults;
+    std::vector<events::EnemyTeamMutation> pendingMutations;
 
     auto sorted = eventDefinitions_;
     std::stable_sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
@@ -426,6 +427,7 @@ std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
         const auto& partyIds = ActivePartyUnitIds();
         ctx.heroIds = std::vector<std::string>(partyIds.begin(), partyIds.end());
         ctx.storyFlags = storyFlags_;
+        ctx.pendingTeamMutations = &pendingMutations;
 
         if (!events::EvaluateCondition(ctx, def.condition)) continue;
 
@@ -439,6 +441,26 @@ std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
 
         if (def.repeat.mode == "once") {
             firedEventIds_.push_back(def.id);
+        }
+    }
+
+    for (const auto& mut : pendingMutations) {
+        for (auto& team : enemyTeams_) {
+            if (team.teamColor != mut.teamColor) continue;
+            if (mut.type == events::EnemyTeamMutationType::Spawn) {
+                team.nodeId = mut.nodeId;
+                team.active = true;
+            } else if (mut.type == events::EnemyTeamMutationType::Remove) {
+                team.active = false;
+            } else if (mut.type == events::EnemyTeamMutationType::ChangeAlliance) {
+                if (mut.addAlliance) {
+                    if (std::ranges::find(team.alliances, mut.allyColor) == team.alliances.end())
+                        team.alliances.push_back(mut.allyColor);
+                } else {
+                    std::erase(team.alliances, mut.allyColor);
+                }
+            }
+            break;
         }
     }
 
@@ -938,7 +960,7 @@ SessionSnapshot GameSession::Snapshot() const {
 
 core::SaveData GameSession::ToSaveData() const {
     return core::SaveData{
-        4,
+        5,
         clock_.Day(),
         clock_.MinutesIntoSliceDay(),
         gold_,
@@ -969,7 +991,16 @@ core::SaveData GameSession::ToSaveData() const {
         {},
         {},
         firedEventIds_,
-        {storyFlags_.begin(), storyFlags_.end()}
+        {storyFlags_.begin(), storyFlags_.end()},
+        [&]() {
+            std::vector<core::EnemyTeamSaveState> states;
+            states.reserve(enemyTeams_.size());
+            for (const auto& team : enemyTeams_) {
+                states.push_back({team.teamColor, team.nodeId, team.active,
+                    team.energy, team.cooldownExpiresAtMinutes, team.alliances});
+            }
+            return states;
+        }()
     };
 }
 
@@ -1105,6 +1136,18 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     nextStackIdCounter_ = loadedNextCounter;
     firedEventIds_ = saveData.firedEventIds;
     storyFlags_ = {saveData.storyFlags.begin(), saveData.storyFlags.end()};
+    for (const auto& saved : saveData.enemyTeams) {
+        for (auto& team : enemyTeams_) {
+            if (team.teamColor == saved.teamColor) {
+                team.nodeId = saved.nodeId;
+                team.active = saved.active;
+                team.energy = saved.energy;
+                team.cooldownExpiresAtMinutes = saved.cooldownExpiresAtMinutes;
+                team.alliances = saved.alliances;
+                break;
+            }
+        }
+    }
     MarkRosterProjectionDirty();
 }
 
@@ -1435,6 +1478,25 @@ std::vector<std::string> GameSession::HostileOccupiedNodeIds(
         seen.insert(team.nodeId);
     }
     return std::vector<std::string>(seen.begin(), seen.end());
+}
+
+void GameSession::ClearEnemyTeamByColor(const std::string& teamColor) {
+    for (auto& team : enemyTeams_) {
+        if (team.teamColor == teamColor) {
+            team.active = false;
+            break;
+        }
+    }
+}
+
+std::string GameSession::HostileTeamColorAtNode(
+    const std::string& nodeId, const std::string& playerColor) const {
+    for (const auto& team : enemyTeams_) {
+        if (!team.active || team.nodeId != nodeId || team.teamColor == playerColor) continue;
+        if (std::ranges::find(team.alliances, playerColor) != team.alliances.end()) continue;
+        return team.teamColor;
+    }
+    return "";
 }
 
 } // namespace gameplay

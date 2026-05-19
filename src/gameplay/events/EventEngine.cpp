@@ -129,6 +129,46 @@ ActionResult ExecuteAction(EventEvaluationContext& ctx, const EventAction& actio
         return combined;
     }
 
+    if (type == "spawnTeam") {
+        if (ctx.pendingTeamMutations == nullptr)
+            return {false, "spawnTeam: mutation context unavailable"};
+        const std::string teamColor = args.value("teamColor", "");
+        const std::string nodeId    = args.value("nodeId", "");
+        if (teamColor.empty())
+            return {false, "spawnTeam: missing required arg 'teamColor'"};
+        if (nodeId.empty())
+            return {false, "spawnTeam: missing required arg 'nodeId'"};
+        ctx.pendingTeamMutations->push_back(
+            {EnemyTeamMutationType::Spawn, teamColor, nodeId, {}, true});
+        return {true, ""};
+    }
+
+    if (type == "removeTeam") {
+        if (ctx.pendingTeamMutations == nullptr)
+            return {false, "removeTeam: mutation context unavailable"};
+        const std::string teamColor = args.value("teamColor", "");
+        if (teamColor.empty())
+            return {false, "removeTeam: missing required arg 'teamColor'"};
+        ctx.pendingTeamMutations->push_back(
+            {EnemyTeamMutationType::Remove, teamColor, {}, {}, true});
+        return {true, ""};
+    }
+
+    if (type == "changeAlliance") {
+        if (ctx.pendingTeamMutations == nullptr)
+            return {false, "changeAlliance: mutation context unavailable"};
+        const std::string teamColor = args.value("teamColor", "");
+        const std::string allyColor = args.value("allyColor", "");
+        if (teamColor.empty())
+            return {false, "changeAlliance: missing required arg 'teamColor'"};
+        if (allyColor.empty())
+            return {false, "changeAlliance: missing required arg 'allyColor'"};
+        const bool add = args.value("add", true);
+        ctx.pendingTeamMutations->push_back(
+            {EnemyTeamMutationType::ChangeAlliance, teamColor, {}, allyColor, add});
+        return {true, ""};
+    }
+
     return {false, "Unknown action type: \"" + type + "\"."};
 }
 

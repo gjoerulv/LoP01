@@ -72,6 +72,12 @@ namespace ashvale::rendering
                 DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), context.theme.nodeRadius + 11.0f, context.theme.selectionColor);
             }
 
+            if (node.hostileOccupied)
+            {
+                DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), context.theme.nodeRadius + 16.0f, context.theme.dangerColor);
+                DrawTextEx(font, "!", { p.x - 4.0f, p.y - context.theme.nodeRadius - 18.0f }, context.smallFontSize, 1.0f, context.theme.dangerColor);
+            }
+
             DrawTextEx(font, node.label.c_str(), { p.x - 20.0f, p.y + 22.0f }, context.smallFontSize, 1.0f, context.theme.textColor);
         }
 
