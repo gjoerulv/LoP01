@@ -29,6 +29,15 @@ struct RosterStackSaveState {
     int quantity = 0;
 };
 
+struct EnemyTeamSaveState {
+    std::string teamColor;
+    std::string nodeId;
+    bool active = false;
+    int energy = 0;
+    int cooldownExpiresAtMinutes = 0;
+    std::vector<std::string> alliances;
+};
+
 struct SaveData {
     int schemaVersion = 1;
     int day = 1;
@@ -56,6 +65,7 @@ struct SaveData {
 
     std::vector<std::string> firedEventIds;
     std::vector<std::string> storyFlags;
+    std::vector<EnemyTeamSaveState> enemyTeams;
 };
 
 class SaveGameRepository {

@@ -28,6 +28,7 @@ namespace ashvale::rendering
         bool enterable = true;
         bool current = false;
         bool selected = false;
+        bool hostileOccupied = false;
     };
 
     struct RegionRenderModel

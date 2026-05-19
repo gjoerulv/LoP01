@@ -354,3 +354,110 @@ TEST_CASE("RegionDefinition loads arrivalNodeId from JSON") {
     REQUIRE(region != nullptr);
     REQUIRE(region->arrivalNodeId == "node_start");
 }
+
+// ---------------------------------------------------------------------------
+// ClearEnemyTeamByColor / HostileTeamColorAtNode
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ClearEnemyTeamByColor deactivates named team and only that team") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState red;  red.teamColor  = "Red";  red.active  = true;
+    gameplay::EnemyTeamState blue; blue.teamColor = "Blue"; blue.active = true;
+    session.SetEnemyTeams({red, blue});
+
+    session.ClearEnemyTeamByColor("Red");
+
+    const auto& teams = session.EnemyTeams();
+    REQUIRE(teams.size() == 2);
+    const gameplay::EnemyTeamState* r = nullptr;
+    const gameplay::EnemyTeamState* b = nullptr;
+    for (const auto& t : teams) {
+        if (t.teamColor == "Red")  r = &t;
+        if (t.teamColor == "Blue") b = &t;
+    }
+    REQUIRE(r != nullptr); REQUIRE_FALSE(r->active);
+    REQUIRE(b != nullptr); REQUIRE(b->active);
+}
+
+TEST_CASE("ClearEnemyTeamByColor with unknown color is a no-op") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState red; red.teamColor = "Red"; red.active = true;
+    session.SetEnemyTeams({red});
+
+    session.ClearEnemyTeamByColor("Yellow");
+
+    REQUIRE(session.EnemyTeams()[0].active);
+}
+
+TEST_CASE("ClearEnemyTeamByColor on one of two teams at same node leaves the other intact") {
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState red;  red.teamColor  = "Red";  red.nodeId  = "tower"; red.active  = true;
+    gameplay::EnemyTeamState blue; blue.teamColor = "Blue"; blue.nodeId = "tower"; blue.active = true;
+    session.SetEnemyTeams({red, blue});
+
+    session.ClearEnemyTeamByColor("Red");
+
+    const auto& teams = session.EnemyTeams();
+    const gameplay::EnemyTeamState* r = nullptr;
+    const gameplay::EnemyTeamState* b = nullptr;
+    for (const auto& t : teams) {
+        if (t.teamColor == "Red")  r = &t;
+        if (t.teamColor == "Blue") b = &t;
+    }
+    REQUIRE(r != nullptr); REQUIRE_FALSE(r->active);
+    REQUIRE(b != nullptr); REQUIRE(b->active);
+}
+
+TEST_CASE("EnemyTeam runtime state survives ToSaveData/ApplySaveData round-trip") {
+    gameplay::EnemyTeamState alpha;
+    alpha.teamColor = "Red";
+    alpha.nodeId = "forest_camp";
+    alpha.active = true;
+    alpha.energy = 300;
+    alpha.cooldownExpiresAtMinutes = 120;
+    alpha.alliances = {"Blue"};
+
+    gameplay::EnemyTeamState beta;
+    beta.teamColor = "Blue";
+    beta.nodeId = "market_square";
+    beta.active = false;
+    beta.energy = 0;
+    beta.cooldownExpiresAtMinutes = 0;
+    beta.alliances = {};
+
+    gameplay::GameSession source;
+    source.SetEnemyTeams({alpha, beta});
+    const auto saved = source.ToSaveData();
+
+    gameplay::EnemyTeamState alphaInit; alphaInit.teamColor = "Red";
+    gameplay::EnemyTeamState betaInit;  betaInit.teamColor  = "Blue";
+
+    gameplay::GameSession restored;
+    restored.SetEnemyTeams({alphaInit, betaInit});
+    restored.ApplySaveData(saved);
+
+    const auto& teams = restored.EnemyTeams();
+    REQUIRE(teams.size() == 2);
+
+    const gameplay::EnemyTeamState* red  = nullptr;
+    const gameplay::EnemyTeamState* blue = nullptr;
+    for (const auto& t : teams) {
+        if (t.teamColor == "Red")  red  = &t;
+        if (t.teamColor == "Blue") blue = &t;
+    }
+
+    REQUIRE(red != nullptr);
+    REQUIRE(red->nodeId == "forest_camp");
+    REQUIRE(red->active);
+    REQUIRE(red->energy == 300);
+    REQUIRE(red->cooldownExpiresAtMinutes == 120);
+    REQUIRE(red->alliances.size() == 1);
+    REQUIRE(red->alliances[0] == "Blue");
+
+    REQUIRE(blue != nullptr);
+    REQUIRE(blue->nodeId == "market_square");
+    REQUIRE_FALSE(blue->active);
+    REQUIRE(blue->energy == 0);
+    REQUIRE(blue->cooldownExpiresAtMinutes == 0);
+    REQUIRE(blue->alliances.empty());
+}

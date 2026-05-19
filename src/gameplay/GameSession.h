@@ -120,6 +120,9 @@ public:
     [[nodiscard]] const std::vector<EnemyTeamState>& EnemyTeams() const;
     [[nodiscard]] std::vector<std::string> HostileOccupiedNodeIds(
         const std::string& playerColor) const;
+    void ClearEnemyTeamByColor(const std::string& teamColor);
+    [[nodiscard]] std::string HostileTeamColorAtNode(
+        const std::string& nodeId, const std::string& playerColor) const;
 
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
     [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);

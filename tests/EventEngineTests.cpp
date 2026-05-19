@@ -404,6 +404,74 @@ TEST_CASE("ExecuteActions - two successful actions both succeed and return two r
     REQUIRE(ctx.resources["Wood"] == 15);
 }
 
+// ---------------------------------------------------------------------------
+// ExecuteAction — enemy team mutation actions
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ExecuteAction - spawnTeam records pending mutation")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    auto result = ExecuteAction(ctx, MakeAction(
+        {{"type", "spawnTeam"}, {"teamColor", "Red"}, {"nodeId", "forest_camp"}}));
+    REQUIRE(result.success);
+    REQUIRE(mutations.size() == 1);
+    REQUIRE(mutations[0].type == EnemyTeamMutationType::Spawn);
+    REQUIRE(mutations[0].teamColor == "Red");
+    REQUIRE(mutations[0].nodeId == "forest_camp");
+}
+
+TEST_CASE("ExecuteAction - removeTeam records pending mutation")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    auto result = ExecuteAction(ctx, MakeAction(
+        {{"type", "removeTeam"}, {"teamColor", "Blue"}}));
+    REQUIRE(result.success);
+    REQUIRE(mutations.size() == 1);
+    REQUIRE(mutations[0].type == EnemyTeamMutationType::Remove);
+    REQUIRE(mutations[0].teamColor == "Blue");
+}
+
+TEST_CASE("ExecuteAction - changeAlliance records pending mutation")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    auto result = ExecuteAction(ctx, MakeAction(
+        {{"type", "changeAlliance"}, {"teamColor", "Red"}, {"allyColor", "Blue"}, {"add", true}}));
+    REQUIRE(result.success);
+    REQUIRE(mutations.size() == 1);
+    REQUIRE(mutations[0].type == EnemyTeamMutationType::ChangeAlliance);
+    REQUIRE(mutations[0].teamColor == "Red");
+    REQUIRE(mutations[0].allyColor == "Blue");
+    REQUIRE(mutations[0].addAlliance);
+}
+
+TEST_CASE("ExecuteAction - team mutation actions fail when context is null")
+{
+    EventEvaluationContext ctx; // pendingTeamMutations == nullptr
+    auto r1 = ExecuteAction(ctx, MakeAction({{"type", "spawnTeam"}, {"teamColor", "Red"}, {"nodeId", "x"}}));
+    auto r2 = ExecuteAction(ctx, MakeAction({{"type", "removeTeam"}, {"teamColor", "Red"}}));
+    auto r3 = ExecuteAction(ctx, MakeAction({{"type", "changeAlliance"}, {"teamColor", "Red"}, {"allyColor", "Blue"}}));
+    REQUIRE_FALSE(r1.success); REQUIRE_FALSE(r1.message.empty());
+    REQUIRE_FALSE(r2.success); REQUIRE_FALSE(r2.message.empty());
+    REQUIRE_FALSE(r3.success); REQUIRE_FALSE(r3.message.empty());
+}
+
+TEST_CASE("ExecuteAction - spawnTeam fails when required arg is missing")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    // Missing nodeId
+    auto result = ExecuteAction(ctx, MakeAction({{"type", "spawnTeam"}, {"teamColor", "Red"}}));
+    REQUIRE_FALSE(result.success);
+    REQUIRE(mutations.empty());
+}
+
 TEST_CASE("ExecuteActions - first action succeeds then second fails; first result persists (non-atomic)")
 {
     EventEvaluationContext ctx;

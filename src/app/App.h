@@ -102,6 +102,8 @@ namespace app {
 
         std::string statusMessage_;
         std::string pendingBattleScenarioId_;
+        std::string pendingHostileContactNodeId_;
+        std::string pendingHostileContactTeamColor_;
     };
 
 } // namespace app

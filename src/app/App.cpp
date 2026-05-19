@@ -266,6 +266,8 @@ std::string App::ResolveSafeFallbackLocationId() const {
 
 void App::ApplyWakePenaltyAndRecover(const std::string& reason) {
     session_.ApplyWakePenalty();
+    pendingHostileContactNodeId_.clear();
+    pendingHostileContactTeamColor_.clear();
 
     const std::string fallbackLocationId = ResolveSafeFallbackLocationId();
     session_.SetDestination(fallbackLocationId);
@@ -317,6 +319,20 @@ void App::ResolveBattleOutcomeIfNeeded() {
     }
 
     if (summary.alliesWon) {
+        if (!pendingHostileContactTeamColor_.empty()) {
+            session_.ClearEnemyTeamByColor(pendingHostileContactTeamColor_);
+            pendingHostileContactNodeId_.clear();
+            pendingHostileContactTeamColor_.clear();
+            statusMessage_ = summary.playerSetToOneHp
+                ? "Hostile team defeated. Player recovered to 1 HP."
+                : "Hostile team defeated.";
+            if (writeBackFailed) { statusMessage_ += " | Roster write-back failed"; }
+            session_.EnterRegionMode();
+            return;
+        }
+        pendingHostileContactNodeId_.clear();
+        pendingHostileContactTeamColor_.clear();
+
         const gameplay::SessionSnapshot snapshot = session_.Snapshot();
         const auto* location = content_.FindLocationById(snapshot.destinationId);
         const bool nodeIsCombatType = location != nullptr && location->type == data::LocationType::Combat;
@@ -362,6 +378,8 @@ void App::ResolveBattleOutcomeIfNeeded() {
         return;
     }
 
+    pendingHostileContactNodeId_.clear();
+    pendingHostileContactTeamColor_.clear();
     session_.EnterRegionMode();
     statusMessage_ = "Battle ended.";
     if (writeBackFailed) {
@@ -533,7 +551,18 @@ void App::UpdateRegionMode(const input::InputState& input) {
 
         if (!travel.legal) {
             if (travel.reason == gameplay::region::TravelBlockReason::HostileOccupied) {
-                statusMessage_ = destination.label + " is occupied by a hostile team";
+                if (destination.battleScenarioId.empty()) {
+                    statusMessage_ = "Hostile team at " + destination.label +
+                        " cannot be engaged — no encounter defined.";
+                } else {
+                    pendingHostileContactNodeId_ = destination.id;
+                    // "Green" is a known hardcode — see plan M11-e Known Risks.
+                    pendingHostileContactTeamColor_ =
+                        session_.HostileTeamColorAtNode(destination.id, "Green");
+                    StartBattleScenario(destination.battleScenarioId,
+                        "Hostile encounter at " + destination.label);
+                }
+                return;
             }
             else if (travel.reason == gameplay::region::TravelBlockReason::DestinationUnavailable) {
                 statusMessage_ = destination.label + " is not reachable yet";
@@ -572,6 +601,9 @@ void App::UpdateRegionMode(const input::InputState& input) {
         }
         statusMessage_ = travelStatus;
         OnDestinationArrived(destination.id);
+        // Contract: call after every Region-mode time-costing player action.
+        // Location-mode time costs are intentionally excluded (core_loop_rules §12).
+        // Extension point: add a call here when new Region-mode actions are introduced.
         static_cast<void>(session_.ProcessEnemyPhase(links));
 
         if (destination.supportsBattle && !destination.combatNodeCleared && !destination.battleScenarioId.empty()) {

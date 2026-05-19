@@ -163,8 +163,13 @@ namespace app::mappers
             ? 0
             : std::clamp(selectedNodeIndex, 0, static_cast<int>(nodes.size()) - 1);
 
+        // "Green" is a known hardcode — see plan M11-e Known Risks.
+        const auto hostileOccupiedNodeIds = session.HostileOccupiedNodeIds("Green");
+
         for (int i = 0; i < static_cast<int>(nodes.size()); ++i)
         {
+            const bool nodeHostileOccupied =
+                std::ranges::find(hostileOccupiedNodeIds, nodes[i].id) != hostileOccupiedNodeIds.end();
             model.nodes.push_back(RegionNodeView{
                 nodes[i].id,
                 nodes[i].label,
@@ -173,7 +178,8 @@ namespace app::mappers
                 nodes[i].discovered,
                 nodes[i].travelAvailable,
                 i == currentIndex,
-                i == safeSelectedIndex
+                i == safeSelectedIndex,
+                nodeHostileOccupied
                 });
         }
 
@@ -197,8 +203,6 @@ namespace app::mappers
         if (!nodes.empty())
         {
             const auto blockedTransitNodeIds = BuildBlockedTransitNodeIds(nodes);
-            // "Green" is a known hardcode — see plan M11-e Known Risks.
-            const auto hostileOccupiedNodeIds = session.HostileOccupiedNodeIds("Green");
             const std::string arrivalNodeId = region != nullptr ? region->arrivalNodeId : "";
             const std::vector<data::RegionLinkDefinition> emptyLinks;
             const auto travel = gameplay::region::EvaluateTravel(

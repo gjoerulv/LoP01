@@ -193,7 +193,7 @@ void ParseCanonicalRosterFromJson(const json& j, SaveData& data) {
         throw std::runtime_error("Invalid canonical slot counts");
     }
 
-    if (data.schemaVersion == 4 || data.schemaVersion == 3) {
+    if (data.schemaVersion == 5 || data.schemaVersion == 4 || data.schemaVersion == 3) {
         if (data.activeSlotStackIds.size() != kCanonicalActiveSlotsV3) {
             throw std::runtime_error("Invalid canonical slot counts");
         }
@@ -296,6 +296,29 @@ void from_json(const json& j, DailyServiceState& data) {
     j.at("last_refresh_day").get_to(data.lastRefreshDay);
 }
 
+void to_json(json& j, const EnemyTeamSaveState& data) {
+    j = json{
+        {"team_color", data.teamColor},
+        {"node_id", data.nodeId},
+        {"active", data.active},
+        {"energy", data.energy},
+        {"cooldown_expires_at_minutes", data.cooldownExpiresAtMinutes},
+        {"alliances", data.alliances}
+    };
+}
+
+void from_json(const json& j, EnemyTeamSaveState& data) {
+    j.at("team_color").get_to(data.teamColor);
+    j.at("node_id").get_to(data.nodeId);
+    j.at("active").get_to(data.active);
+    data.energy = j.value("energy", 0);
+    data.cooldownExpiresAtMinutes = j.value("cooldown_expires_at_minutes", 0);
+    data.alliances.clear();
+    if (j.contains("alliances") && j["alliances"].is_array()) {
+        data.alliances = j["alliances"].get<std::vector<std::string>>();
+    }
+}
+
 void to_json(json& j, const SaveData& data) {
     j = json{
         {"schema_version", data.schemaVersion},
@@ -317,7 +340,8 @@ void to_json(json& j, const SaveData& data) {
         {"reserve_slot_stack_ids", data.reserveSlotStackIds},
         {"next_stack_id_counter", data.nextStackIdCounter},
         {"fired_event_ids", data.firedEventIds},
-        {"story_flags", data.storyFlags}
+        {"story_flags", data.storyFlags},
+        {"enemy_teams", data.enemyTeams}
     };
 }
 
@@ -360,6 +384,11 @@ void from_json(const json& j, SaveData& data) {
     }
     if (!TryReadOptionalStringArray(j, "story_flags", data.storyFlags)) {
         throw std::runtime_error("Invalid story_flags");
+    }
+
+    data.enemyTeams.clear();
+    if (j.contains("enemy_teams") && j["enemy_teams"].is_array()) {
+        data.enemyTeams = j["enemy_teams"].get<std::vector<EnemyTeamSaveState>>();
     }
 
     const bool hasCanonicalStructuralFields =
