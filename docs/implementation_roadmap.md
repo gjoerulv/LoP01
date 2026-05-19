@@ -242,7 +242,34 @@ Scope:
 
 ## 4. Current Next Milestone
 
-No milestone is currently defined. M11-d (Hostile Occupation Feedback + Explicit Travel Blocking Reason) is complete: `TravelBlockReason::HostileOccupied` added, occupation check folded into `EvaluateTravel()`, distinct status message wired in `App::UpdateRegionMode`, and Catch2 test coverage added.
+### M11-e — Enemy Team Presence, Contact, and Phase 3 Closure
+
+Latest completed milestone: M11-d — Hostile Occupation Feedback.
+
+Goal: complete Phase 3 by turning hostile occupation from hidden travel blocking into visible, contact-resolvable Region-layer enemy-team gameplay.
+
+Scope:
+- Extend the Region render model with visible enemy-team markers / hostile occupation state.
+- Make RegionModelMapper travel preview use the same hostile-occupation inputs as confirmed travel.
+- Draw hostile enemy teams on occupied Region nodes.
+- Add minimal contact behavior for hostile-occupied nodes:
+  - entering/confirming an occupied hostile node starts contact battle or explicit attack prompt;
+  - victory clears/deactivates/retreats the enemy team and unblocks the node.
+- Run enemy phase after every time-costing player action, not only Region travel.
+- Wire minimum event actions for enemy teams:
+  - spawn team;
+  - remove team;
+  - change alliance.
+- Persist enemy-team runtime state in save/load.
+- Add Catch2 coverage for preview legality, render-model occupation state, contact victory clearing occupation, event spawn, save/load, and non-travel time-cost enemy phase.
+
+Out of scope:
+- full fog-of-war implementation;
+- advanced AI economy/service use;
+- sabotage/destruction/restoration loops;
+- enemy recruitment;
+- cross-Region enemy travel;
+- full auto-resolve.
 
 ---
 

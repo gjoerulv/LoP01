@@ -197,6 +197,9 @@ namespace app::mappers
         if (!nodes.empty())
         {
             const auto blockedTransitNodeIds = BuildBlockedTransitNodeIds(nodes);
+            // "Green" is a known hardcode — see plan M11-e Known Risks.
+            const auto hostileOccupiedNodeIds = session.HostileOccupiedNodeIds("Green");
+            const std::string arrivalNodeId = region != nullptr ? region->arrivalNodeId : "";
             const std::vector<data::RegionLinkDefinition> emptyLinks;
             const auto travel = gameplay::region::EvaluateTravel(
                 snapshot.destinationId,
@@ -204,7 +207,10 @@ namespace app::mappers
                 nodes[safeSelectedIndex].travelAvailable,
                 snapshot.minutesIntoSliceDay,
                 region != nullptr ? region->links : emptyLinks,
-                blockedTransitNodeIds);
+                blockedTransitNodeIds,
+                /*perHopTravelMinutes=*/15,
+                hostileOccupiedNodeIds,
+                arrivalNodeId);
 
             model.currentNodeLabel = nodes[currentIndex].label;
             model.selectedNodeLabel = nodes[safeSelectedIndex].label;
