@@ -2,7 +2,7 @@
 
 Ashvale is a turn-based strategy/RPG built as a content-driven C++/raylib project.
 
-The current repository should be treated as a **post-M8 baseline** with a clarified long-term design direction. The codebase is still a bounded playable slice, but the design language and planning posture are now much more explicit.
+The repository is a bounded playable slice with a clarified long-term design direction. Current implementation status and milestone sequencing live in `docs/implementation_roadmap.md`.
 
 For terminology, see `docs/terminology_map.md`.
 
@@ -267,48 +267,31 @@ A Scenario may have:
 Only one victory condition needs to be satisfied to win.  
 Any defeat condition becoming true causes loss.
 
-## Current milestone status
+## Implementation status
 
-Milestone 8 is complete and merged to `main`.
+Current implementation status, completed slices, next milestone candidates, and explicit “not yet” boundaries live in:
 
-M8 established:
+- `docs/implementation_roadmap.md`
 
-- canonical persistent roster state
-- active party size = 5
-- recruit flow integrated with persistent roster
-- reserve and mustering integrated into persistent party logic
-- battle initialization from the active party
-- persistent battle write-back
-- leader / aura baseline integration
-- save/load migration support for earlier slice formats
-
-Since then, the docs and terminology have been clarified to cover:
-
-- World Map / Region terminology
-- battle system baseline
-- Region / node / Location / Service structure
-- enemy teams / sabotage / ownership
-- quest services / events / victory / defeat / guidance
-- campaign transition carry-over
-- terminology mapping for legacy names
+Do not treat this README as the detailed milestone tracker. Use it as the project entry point and documentation router.
 
 ## Current planning posture
 
 The repo should currently be treated as:
 
-- **post-M8 implementation baseline**
-- **more advanced design baseline than the current runtime in some areas**
-- **content-driven project with explicit terminology and clarified planning posture**
+- a bounded playable implementation slice
+- a broader documented design baseline than the current runtime
+- a content-driven project with explicit terminology and clarified planning posture
 
 Future work should:
 
 - preserve architecture clarity
 - preserve gameplay / rendering separation
 - avoid reintroducing old terminology in design-facing docs and prompts
-- tighten vision first where a major system remains ambiguous
-- keep changes bounded
+- keep implementation slices bounded
 - maintain save/load awareness
-- treat the current docs as stronger design truth than older historical milestone prompts
+- use `docs/implementation_roadmap.md` for sequencing and “not yet” boundaries
+- treat the current design docs as stronger design truth than older historical milestone prompts
 
 ## Folder structure
 
