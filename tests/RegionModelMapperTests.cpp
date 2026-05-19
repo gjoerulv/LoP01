@@ -5,6 +5,7 @@
 
 #include "app/mappers/RegionModelMapper.h"
 #include "data/ContentRepository.h"
+#include "gameplay/EnemyTeamState.h"
 #include "gameplay/GameSession.h"
 
 namespace {
@@ -122,6 +123,61 @@ TEST_CASE("RegionModelMapper travel time preview reflects active supply prep dis
 
     REQUIRE(model.selectedNodeLabel == "Bridge Checkpoint");
     REQUIRE(model.travelTimeText.find("Supply Prep") != std::string::npos);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("RegionModelMapper preview blocks hostile-occupied destination") {
+    const auto root = BuildRegionMapperTestContent();
+
+    data::ContentRepository repository;
+    REQUIRE(repository.LoadFromDirectory(root));
+
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team{};
+    team.teamColor = "Red";
+    team.nodeId = "clocktower_square";
+    team.active = true;
+    session.SetEnemyTeams({team});
+
+    gameplay::SessionSnapshot snapshot;
+    snapshot.mode = gameplay::GameMode::RegionMode;
+    snapshot.regionId = "ashvale_heartland";
+    snapshot.destinationId = "home_base";
+    snapshot.minutesIntoSliceDay = 0;
+
+    app::mappers::RegionModelMapper mapper;
+    // index 2 = clocktower_square; bridge cleared so it is otherwise reachable
+    const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
+
+    REQUIRE(model.travelTimeText == "Unavailable");
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("RegionModelMapper preview allows travel when enemy team is inactive") {
+    const auto root = BuildRegionMapperTestContent();
+
+    data::ContentRepository repository;
+    REQUIRE(repository.LoadFromDirectory(root));
+
+    gameplay::GameSession session;
+    gameplay::EnemyTeamState team{};
+    team.teamColor = "Red";
+    team.nodeId = "clocktower_square";
+    team.active = false;
+    session.SetEnemyTeams({team});
+
+    gameplay::SessionSnapshot snapshot;
+    snapshot.mode = gameplay::GameMode::RegionMode;
+    snapshot.regionId = "ashvale_heartland";
+    snapshot.destinationId = "home_base";
+    snapshot.minutesIntoSliceDay = 0;
+
+    app::mappers::RegionModelMapper mapper;
+    const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
+
+    REQUIRE(model.travelTimeText == "30 min");
 
     std::filesystem::remove_all(root);
 }

@@ -2,7 +2,7 @@
 
 This document defines the intended bounded content scope for the current playable slice.
 
-It is a **scope cap**, not the full long-term vision.  
+It is a **scope cap**, not the full long-term vision or implementation status.  
 For current design truth, see:
 
 - `docs/game_vision.md`
@@ -13,6 +13,8 @@ For current design truth, see:
 - `docs/content_schema.md`
 - `README_DECISIONS.md`
 - `docs/terminology_map.md`
+
+For current implementation status, see `docs/implementation_roadmap.md`
 
 ## Scope goal
 
