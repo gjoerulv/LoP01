@@ -1,333 +1,373 @@
 # Ashvale Implementation Roadmap
 
 ## Context
-Post-M8 baseline is stable: battle engine, persistent roster, single-region playable slice,
-save/load, basic location/service interactions, time/travel rules, quest tracking. The core
-design documentation is broad and stable for the currently identified major systems. Remaining
-design gaps should be treated as explicit clarification tasks, not guessed during
-implementation. The roadmap works from foundations outward: validation → typed event/condition
-core → enemy teams (which immediately draw on event types) → victory/defeat → inventory →
-World Map → Campaign.
 
-**Presentation and shell guidance:** `docs/presentation_game_feel.md` and
-`docs/game_shell_flow.md` are active guidance documents and must be respected when their
-subject matter is touched. However, they are not implementation priorities until shell, UI, and
-presentation phases are explicitly in scope. Work in earlier phases (validation, events, enemy
-teams, victory/defeat) should not pre-implement shell screens or presentation behaviors beyond
-what those phases strictly require.
+The current codebase is a post-M11-e bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed event foundation, and the practical Phase 3 enemy-team Region-layer slice.
+
+The roadmap works from foundations outward:
+
+1. validation
+2. typed event/condition core
+3. enemy teams on the Region layer
+4. victory/defeat
+5. inventory and artifacts
+6. World Map
+7. Campaign
+
+`docs/presentation_game_feel.md` and `docs/game_shell_flow.md` are active guidance documents and must be respected when their subject matter is touched. They are not implementation priorities until shell, UI, and presentation phases are explicitly in scope.
+
+Work in earlier phases should not pre-implement shell screens or presentation behavior beyond what those phases strictly require.
 
 ---
 
 ## 1. Current Implementation Baseline
 
 Current stable foundation:
-- battle engine, CTB, static formation, leader aura, and deterministic damage
+
+- explicit `App` / `GameSession` flow
+- controller / mapper / renderer split
+- battle engine, CTB, static formation, leader aura, deterministic damage, and battle write-back
 - persistent roster, active/reserve party, mustering, and save/load
 - daily clock, Energy, Region travel, wake/recovery penalty, and basic services
 - JSON content loading through `ContentRepository`
 - content validation foundation
-- typed event foundation: optional `events.json` loading, duplicate id/priority validation,
-  `EventDefinitions` accessor, `GameSession` initialization, camelCase field parsing,
-  unknown condition/action type validation, storyFlags/firedEventIds save/load persistence,
-  start-of-day notification, and integration tests
-- typed `EnemyGroupDefinition` composition loading (unit lists only)
-- `EnemyTeamState` runtime fields (personality, aggression, patrol, energy, cooldown, alliances)
+- typed event foundation:
+  - optional `events.json` loading
+  - duplicate id / priority validation
+  - `EventDefinitions` accessor
+  - `GameSession` initialization
+  - camelCase field parsing
+  - unknown condition/action type validation
+  - story flags / fired event ids in save/load
+  - start-of-day notification
+  - integration tests
+- typed `EnemyGroupDefinition` composition loading
+- `EnemyTeamState` runtime fields:
+  - `teamColor`
+  - `nodeId`
+  - `personality`
+  - `aggression`
+  - `patrol`
+  - `alliances`
+  - `active`
+  - `energy`
+  - `cooldownExpiresAtMinutes`
 - `GameSession` enemy-team container and fixed-color-order enemy phase
 - `FindHopCount` BFS primitive in `RegionTravelRules`
 - Region-travel enemy-phase hook in `App::UpdateRegionMode`
 - deterministic patrol step with patrol-radius enforcement
-- hostile-occupation blocking: `arrivalNodeId` on `RegionDefinition`, `IsBlockedByHostileOccupation()`
-  pure-logic header, `GameSession::HostileOccupiedNodeIds()` query, wired in `App::UpdateRegionMode`
-  with arrival-node exemption, and Catch2 test coverage
-- Catch2 test coverage for core logic, validation, event foundation, and enemy-team phase
+- hostile-occupation blocking:
+  - `arrivalNodeId` on `RegionDefinition`
+  - `IsBlockedByHostileOccupation()` pure-logic header
+  - `GameSession::HostileOccupiedNodeIds()` query
+  - wired in `App::UpdateRegionMode` with arrival-node exemption
+  - Catch2 test coverage
+- post-M11-e enemy-team Region-layer features:
+  - Region preview and confirmed travel use the same hostile-occupation truth
+  - hostile-occupied nodes are exposed in the Region render model
+  - hostile-occupied nodes are drawn with a visible danger marker
+  - hostile-occupied destinations can start contact battles using the node's configured `battleScenarioId`
+  - hostile contact has no debug battle fallback; missing encounter config produces a diagnostic and leaves the enemy team uncleared
+  - victory clears the exact engaged team by team color
+  - enemy-team runtime state persists through save/load, including mutable alliances
+  - `spawnTeam`, `removeTeam`, and `changeAlliance` event actions exist with explicit failure behavior
+  - enemy-phase trigger expectations are documented in code and covered by tests
+- Catch2 test coverage for core logic, validation, event foundation, enemy-team phase, Region mapper preview, event team mutations, and save/load runtime state
 
-Still incomplete:
-- battle/contact behavior on enemy-player collision
-- broader Region time-cost hooks triggering enemy phase
-- event-spawn wiring for enemy teams
-- personality/aggression-driven movement
-- Region rendering of enemy positions
+Still incomplete / intentionally deferred:
+
+- authored scenario victory/defeat outcome evaluation
+- proper scenario-end transitions beyond placeholder behavior
+- advanced personality/aggression-driven AI beyond the current basic patrol/phase foundation
+- enemy recruitment and advanced AI service use
+- enemy sabotage/destruction/restoration loops
 - fog/visibility per team
+- inventory, artifacts, recipes, and item use
+- World Map and cross-Region travel
+- Campaign carry-over
+- full shell/menu/character-creation/load/settings flow
 
 ---
 
-## 2. Doc/Code Conflicts to Resolve First
+## 2. Doc/Code Conflicts and Known Debt
 
 | # | Issue | Action |
 |---|-------|--------|
-| 1 | Energy formula includes leader item bonus; no artifacts implemented yet, so bonus is always zero. | Accept; add a code comment "leader item bonus = 0 until ArtifactDefinition implemented." No fix needed yet. |
-| 2 | `ContentRepository` loads only what has C++ struct definitions; `EventDefinition`, `ItemDefinition`, `ArtifactDefinition`, `RecipeDefinition`, `WorldMapDefinition` are all fully specified in `docs/content_schema.md` but have no load path yet. | No conflict. Each phase adds the relevant struct and load call. Do not add speculative stubs. |
-| 3 | `docs/game_shell_flow.md` specifies a full shell (Title → Main Menu → Character Creation → Load Game, autosave slots, Settings). Code has only a `TitleRenderer` stub and direct mode transitions. | Gap, not a conflict. Phase 6 implements the in-game World Map layer. Full shell flow is not needed before Phase 7 Campaign and later shell/UI work. |
-| 4 | `docs/validation_system.md` specifies three-level validation with severity codes; `ContentRepository` does no validation gating today. | Fix in Phase 1. |
-| 5 | `docs/combat_rules.md` specifies timed status effects tracked by affected unit's own turns; current battle code tracks HP/MP/KO/defending only. | Gap; acceptable until skill system. Note for a future phase. |
-| 6 | Wake penalty (−1000 gold) is implemented in `GameClock`; verify deduction is wired to `GameSession` gold state end-to-end. | Verify at start of Phase 2; one-line fix if not wired. |
+| 1 | Energy formula includes leader item bonus; artifacts/items are not implemented yet, so the bonus is always zero. | Accept for now. Add or keep a code comment that leader item bonus is zero until artifact/item runtime exists. |
+| 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, `RecipeDefinition`, `WorldMapDefinition`, and `CampaignDefinition` are specified in docs but not all have load paths yet. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
+| 3 | `docs/game_shell_flow.md` specifies full shell flow. Code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
+| 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Continue expanding validation only when a phase requires it. |
+| 5 | `docs/combat_rules.md` specifies timed status effects and broader combat command depth. Current battle code tracks a smaller baseline. | Gap; acceptable until skill/status phases. |
+| 6 | Player color is still hardcoded as `"Green"` in some Region/enemy-team paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
+| 7 | Hostile contact requires a configured node `battleScenarioId`. | Intentional post-M11-e rule. Missing encounters produce diagnostics, not fallback battles. Future validation should enforce this for hostile-contact-capable nodes. |
+| 8 | Verify whether `regionNodeEntry` events execute team mutations through `GameSession::NotifyDestinationReached()`. | Pre-work check for M12-a. If not wired, either add narrow trigger wiring first or explicitly constrain outcome checks to currently wired trigger points. |
 
-No true design contradictions found. All gaps are implementation-only.
+No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
 ---
 
 ## 3. Implementation Phases
 
 ### Phase 1 — Content Validation System
-**Goal:** Prevent structurally invalid authored content from reaching playable state; unblock
-safe content authoring.
 
-Scope (from `docs/validation_system.md`):
-- `src/data/ContentValidator.h/cpp` — `ValidationMessage` struct (severity enum, code string,
-  dot-path, message, optional suggestion), `ContentValidator` class returning a message list
-- Rules: schema identity checks aligned with `schemaVersion`, `kind`, and `id`; required field
-  presence; node id uniqueness per Region; adjacency references resolve; one main
-  node-content item max; arrival flag present on at least one node; quest objective
-  node/location references resolve; service type fields legal
-- Three validation levels: `SaveLevel`, `PlayableLevel`, and `ReleaseLevel`.
-- M9 implements the level model and message severities; Release-level warning acknowledgment/suppression is deferred.
-- `ContentRepository::Load()` calls validator; returns messages alongside loaded data; caller
-  decides gate level
-- `tests/ContentValidatorTests.cpp` — one test per rule, valid and invalid JSON fixtures
+**Status:** Foundation implemented; broader validation model still expandable.
 
-Out of scope: event validation, victory-path reachability graph analysis, UI display of
-validation messages.
+**Goal:** Prevent structurally invalid authored content from reaching playable state; unblock safe content authoring.
 
-**Files:** `src/data/ContentValidator.h/cpp`, `src/data/ContentRepository.h/cpp`,
-`tests/ContentValidatorTests.cpp`
+Scope from `docs/validation_system.md`:
+
+- `src/data/ContentValidator.h/cpp`
+- `ValidationMessage` structure with severity, code, path, message, and optional suggestion/related data
+- rules for schema identity, required field presence, node uniqueness, adjacency references, arrival node, quest references, service legality, and related content references
+- validation levels: `SaveLevel`, `PlayableLevel`, `ReleaseLevel`
+
+Out of scope for initial validation foundation:
+
+- full victory-path reachability graph analysis
+- full UI display of validation messages
+- release-level warning suppression UX
 
 ---
 
 ### Phase 2 — Minimal Typed Event Foundation
-**Goal:** The typed condition/action vocabulary specified in `docs/content_schema.md` §20–25
-and `docs/scenario_authoring.md` §12–19 exists in C++ and evaluates correctly. This is the
-shared foundation for enemy team authoring, victory/defeat conditions, and authored scenario
-progression — all three depend on the same condition types and action types.
 
-Scope:
-- `src/gameplay/events/EventDefinition.h` — C++ structs mirroring the schema: `EventTrigger`
-  enum (values drawn from `docs/content_schema.md`; initial set covers `regionNodeEntry`,
-  `startOfDay`, `locationCollision`, `locationConfirm`, `neutralEncounterDefeated`,
-  `serviceUsed`, `serviceDestroyed`, `questCompletion`), `EventEligibility`, typed
-  `EventCondition` (with `all`/`any`/`not` composition; leaf condition types aligned with
-  `docs/content_schema.md`), typed `EventAction` (values must align with
-  `docs/content_schema.md`, covering resource grant/take actions, story-flag actions,
-  showMessage, battle/team actions, victory/defeat triggers, AI/personality changes, and
-  alliance changes), `EventBranch` (If/Else arrays)
-- `src/gameplay/events/EventEngine.h/cpp` — condition evaluator, action executor, one-shot
-  guard (fired events not re-fired), automatic priority ordering, cycle detection at load time
-- `ContentRepository` extended to load `EventDefinition` from authored JSON
-- `GameSession` wires `regionNodeEntry` and `startOfDay` triggers; other triggers wired as
-  their host systems are built
-- `src/core/SaveGame` extended for story flags and one-shot fired-event tracking
-- `tests/EventEngineTests.cpp` — trigger evaluation, condition leaf types, `all`/`any`/`not`
-  composition, If/Else branching, one-shot guard, cycle detection rejection
+**Status:** Foundation implemented.
 
-Out of scope: `showGuidance`, complex dialogue sequencing, all rendering of event dialogue
-(presentation deferred to `docs/presentation_game_feel.md` guidance).
+**Goal:** Typed events, conditions, and actions exist in C++ and evaluate deterministically.
 
-**Files:** `src/gameplay/events/EventDefinition.h`,
-`src/gameplay/events/EventEngine.h/cpp`, `src/data/ContentRepository.h/cpp`,
-`src/core/SaveGame.h/cpp`, `tests/EventEngineTests.cpp`
+Implemented/expected foundation:
+
+- `EventDefinition` and `EventDefinitions`
+- event triggers including `startOfDay` and initial progression triggers
+- condition evaluator with typed leaf conditions and composition
+- action executor with explicit failure behavior
+- one-shot fired event guard
+- priority ordering
+- story flag persistence
+- fired event persistence
+- integration tests
+
+Future expansion remains allowed when host systems require additional triggers or action sinks.
 
 ---
 
 ### Phase 3 — Enemy Teams on Region Layer
-**Goal:** Enemy teams spawn, move, act, and occupy nodes according to the AI model in
-`docs/core_loop_rules.md` §12–18 and `README_DECISIONS.md` §93–102. Enemy team authoring
-(spawn, personality changes, alliance changes) draws on typed event actions established in
-Phase 2.
 
-Scope:
-- `src/gameplay/EnemyTeamState.h/cpp` — position, personality (Warrior/Builder/Explorer),
-  aggression (Berserk → Pacifist), patrol radius, alliance table
-- Action cadence: one action per enemy phase; acts after each player action that costs time;
-  fixed color order
-- AI priority pipeline: victory condition check → survival → logistics → personality goal
-- Actions in this phase: move toward goal node, occupy adjacent location nodes (making them
-  inaccessible to player), use region services (rest), idle
-- Occupation shown with visual indicator in `RegionRenderer`
-- Enemy team event actions defined in Phase 2 (spawn, personality change, alliance change)
-  wired to `EnemyTeamState`
-- `EnemyGroupDefinition` is composition-only (unit lists); runtime AI fields (personality,
-  aggression, patrol, energy, cooldown) live in `EnemyTeamState` and are set at spawn or
-  by event actions — not loaded from `EnemyGroupDefinition`
-- `tests/EnemyTeamTests.cpp` — spawn, movement rules, occupation, inaccessibility,
-  color-order action sequencing
+**Status:** Practical Phase 3 slice completed by M11-e.
 
-Out of scope: enemy recruitment and advanced AI service use (specified in
-`docs/core_loop_rules.md`; deferred beyond Phase 3), cross-Region enemy persistence. UI
-presentation of enemy team identity deferred to `docs/presentation_game_feel.md` guidance.
+**Goal:** Enemy teams spawn, move, act, occupy nodes, block player interaction, and can be cleared through contact battle.
 
-**Files:** `src/gameplay/EnemyTeamState.h/cpp`, `src/app/RegionController.h/cpp`,
-`src/rendering/RegionRenderer.h/cpp`, `src/data/ContentRepository.h/cpp` (extended
-EnemyGroupDefinition load), `tests/EnemyTeamTests.cpp`
+Completed baseline:
+
+- enemy team runtime state and container
+- fixed-color-order enemy phase
+- patrol-bounded movement
+- hostile occupation query
+- hostile occupation travel blocking with arrival-node exemption
+- preview/confirm alignment for hostile occupation
+- Region render-model hostile occupation flag
+- visible hostile marker in `RegionRenderer`
+- hostile contact battle using configured node `battleScenarioId`
+- no debug fallback for hostile contact
+- exact-team clearing by team color on victory
+- enemy-team save/load runtime state, including alliances
+- `spawnTeam`, `removeTeam`, and `changeAlliance` event actions
+- explicit failure behavior for event mutation actions
+- tests for movement, occupation, preview, event actions, persistence, and exact clear behavior
+
+Deferred beyond Phase 3:
+
+- advanced AI economy/service use
+- enemy recruitment
+- sabotage/destruction/restoration loops
+- cross-Region enemy persistence and travel
+- fog/visibility/scouting
+- full enemy army inspection UI
+- full auto-resolve
 
 ---
 
 ### Phase 4 — Victory and Defeat Conditions
-**Goal:** Scenarios end with authored win/loss outcomes. Condition evaluation reuses the typed
-condition evaluator from Phase 2; no new condition vocabulary needed.
 
-Scope (from `docs/core_loop_rules.md` §35–36, `README_DECISIONS.md` §44–45 and §160):
-- `src/gameplay/VictoryDefeatRules.h/cpp` — OR-based victory set, sequential defeat set;
-  default victory = all enemy teams defeated; condition types drawn from the Phase 2 condition
-  evaluator
-- Evaluated after each phase (player action, enemy action, day transition)
-- On victory: signal `GameSession` → scenario-end transition; on defeat: defeat transition
-- `tests/VictoryDefeatTests.cpp` — default victory, authored OR-victory set,
-  first-matching-defeat-condition triggers loss
+**Status:** Next phase.
 
-Presentation of victory/defeat screens deferred to `docs/game_shell_flow.md` and
-`docs/presentation_game_feel.md` guidance; transitions use placeholder screens for now.
+**Goal:** Scenarios end with deterministic authored or default win/loss outcomes.
 
-**Files:** `src/gameplay/VictoryDefeatRules.h/cpp`, `src/app/GameSession.h/cpp`,
-`tests/VictoryDefeatTests.cpp`
+Condition evaluation should reuse the typed condition evaluator from Phase 2 where practical.
+
+Scope:
+
+- pure `VictoryDefeatRules` / `ScenarioOutcomeRules`
+- default victory: all hostile enemy teams defeated/removed
+- minimal authored victory/defeat condition path
+- outcome evaluation after relevant state changes:
+  - hostile contact victory
+  - enemy phase
+  - start-of-day event mutations
+  - relevant Region-mode state changes
+- placeholder App feedback for victory/defeat
+- tests for default victory, authored victory, authored defeat, and no-outcome states
+
+Out of scope:
+
+- full result screen
+- campaign progression
+- rewards/carry-over
+- victory/defeat presentation polish
+- auto-resolve
+- diplomacy UI
+- advanced enemy AI
+- fog/scouting
+- inventory/equipment
 
 ---
 
 ### Phase 5 — Inventory and Artifacts
-**Goal:** Items and artifacts exist in runtime state; heroes equip artifacts; combination
-recipes work; leader item bonus closes the Energy formula gap from Section 2, item #1.
 
-Scope (from `docs/content_schema.md`):
-- C++ structs: `ItemDefinition`, `ArtifactDefinition` (slot: Attack/Defense/Misc×3, stat
-  bonuses), `RecipeDefinition` (2 inputs → 1 output)
-- `ContentRepository` extended to load all three
-- `src/gameplay/Inventory.h/cpp` — team-global item store, per-hero artifact slots
-- Leader artifact bonuses wired into Energy formula and battle stats
-- `src/core/SaveGame` extended for inventory state
-- `tests/InventoryTests.cpp`, `tests/ArtifactTests.cpp`
+**Goal:** Items and artifacts exist in runtime state; heroes equip artifacts; combination recipes work; leader item bonus closes the Energy formula gap.
 
-**Files:** `src/data/ItemDefinition.h`, `src/data/ArtifactDefinition.h`,
-`src/data/RecipeDefinition.h`, `src/gameplay/Inventory.h/cpp`, `src/core/SaveGame.h/cpp`,
-`tests/InventoryTests.cpp`, `tests/ArtifactTests.cpp`
+Scope:
+
+- `ItemDefinition`
+- `ArtifactDefinition`
+- `RecipeDefinition`
+- content loading for items/artifacts/recipes
+- team-global inventory
+- per-hero artifact slots
+- leader artifact bonuses wired into Energy formula and battle stats
+- save/load inventory state
+- `InventoryTests.cpp` and `ArtifactTests.cpp`
 
 ---
 
 ### Phase 6 — World Map Layer
-**Goal:** Multiple Regions per Scenario; player selects destination Region from World Map
-screen.
 
-Scope (from `docs/game_vision.md`, `docs/core_loop_rules.md`, and `docs/content_schema.md`;
-presentation rules from `docs/presentation_game_feel.md` apply here):
-- `WorldMapDefinition` C++ struct and `ContentRepository` load
-- `WorldMapController.h/cpp` and `WorldMapRenderer.h/cpp` implementing the `WorldMapMode`
-  enum slot already in `App.h`
-- Reuse Region HUD components (top info bar, bottom resource bar) as specified in
-  `docs/game_vision.md` and `docs/core_loop_rules.md`
-- Only unlocked Regions visible; warn before travel that generics remain in origin Region
-- 1000 Energy one-time cost at travel start; travel must begin before 11:00; travel duration is day-based and arrival is always 11:00
-- `tests/WorldMapTravelTests.cpp`
+**Goal:** Multiple Regions per Scenario; player selects destination Region from World Map screen.
 
-**Files:** `src/data/WorldMapDefinition.h`, `src/app/WorldMapController.h/cpp`,
-`src/rendering/WorldMapRenderer.h/cpp`, `src/app/App.h/cpp`,
-`tests/WorldMapTravelTests.cpp`
+Scope:
+
+- `WorldMapDefinition`
+- World Map controller/renderer for the existing `WorldMapMode` enum slot
+- unlocked Region visibility
+- Region-to-Region travel legality
+- 1000 Energy one-time travel cost
+- travel must begin before 11:00
+- day-based travel duration
+- arrival at 11:00
+- generics remain in origin Region unless future storage/carry rules allow otherwise
+- `WorldMapTravelTests.cpp`
 
 ---
 
 ### Phase 7 — Campaign System
-**Goal:** Scenarios sequence with authored carry-over rules; campaign selection added to shell
-flow.
+
+**Goal:** Scenarios sequence with authored carry-over rules; campaign selection is added to shell flow.
 
 Scope:
-- `CampaignDefinition` struct and load
-- `src/gameplay/CampaignCarryover.h/cpp` — explicit allowed list (heroes, items, gold cap,
-  story flags); disallowed values stripped at transition
-- Campaign → Scenario transitions with carry-over applied to save state
-- Shell flow entry point: Title → Main Menu → Campaign selection (partial shell; full
-  Character Creation and Load Game screens specified in `docs/game_shell_flow.md` remain out
-  of scope for this phase)
-- `tests/CampaignCarryoverTests.cpp`
 
-**Files:** `src/data/CampaignDefinition.h`, `src/gameplay/CampaignCarryover.h/cpp`,
-`tests/CampaignCarryoverTests.cpp`
+- `CampaignDefinition`
+- campaign transition graph
+- `CampaignCarryover`
+- explicit allow-list carry-over rules
+- Campaign -> Scenario transitions
+- partial shell entry point for campaign selection
+- `CampaignCarryoverTests.cpp`
+
+Full character creation, load UI, autosave slots, and settings remain out of scope unless explicitly selected.
 
 ---
 
 ## 4. Current Next Milestone
 
-### M11-e — Enemy Team Presence, Contact, and Phase 3 Closure
+### M12-a — Scenario Outcome Rules: Victory/Defeat Foundation
 
-Latest completed milestone: M11-d — Hostile Occupation Feedback.
+Latest completed milestone: **M11-e — Enemy Team Presence, Contact, and Phase 3 Closure**.
 
-Goal: complete Phase 3 by turning hostile occupation from hidden travel blocking into visible, contact-resolvable Region-layer enemy-team gameplay.
+M11-e completed the practical Phase 3 enemy-team Region-layer slice:
 
-Scope:
-- Extend the Region render model with visible enemy-team markers / hostile occupation state.
-- Make RegionModelMapper travel preview use the same hostile-occupation inputs as confirmed travel.
-- Draw hostile enemy teams on occupied Region nodes.
-- Add minimal contact behavior for hostile-occupied nodes:
-  - entering/confirming an occupied hostile node starts contact battle or explicit attack prompt;
-  - victory clears/deactivates/retreats the enemy team and unblocks the node.
-- Run enemy phase after every time-costing player action, not only Region travel.
-- Wire minimum event actions for enemy teams:
-  - spawn team;
-  - remove team;
-  - change alliance.
-- Persist enemy-team runtime state in save/load.
-- Add Catch2 coverage for preview legality, render-model occupation state, contact victory clearing occupation, event spawn, save/load, and non-travel time-cost enemy phase.
+- Region preview and confirmed travel now use the same hostile-occupation truth.
+- Hostile-occupied nodes are exposed in the Region render model and drawn with a danger marker.
+- Hostile-occupied destinations can start contact battles using the node's configured battle scenario.
+- Hostile contact has no debug battle fallback; missing encounters produce a diagnostic and leave the team uncleared.
+- Victory clears the exact engaged team by team color.
+- Enemy-team runtime state persists through save/load, including mutable alliances.
+- `spawnTeam`, `removeTeam`, and `changeAlliance` event actions exist with explicit failure behavior.
+- Enemy-phase trigger expectations are documented in code and covered by tests.
 
-Out of scope:
-- full fog-of-war implementation;
-- advanced AI economy/service use;
-- sabotage/destruction/restoration loops;
-- enemy recruitment;
-- cross-Region enemy travel;
-- full auto-resolve.
+**Goal for M12-a:**
+
+Add deterministic scenario outcome evaluation so scenarios can end via default victory, authored victory conditions, and authored defeat conditions.
+
+**Scope:**
+
+- Add pure scenario outcome rules.
+- Support default victory when all hostile enemy teams are defeated/removed.
+- Support a minimal authored victory/defeat condition path using existing condition concepts where practical.
+- Evaluate outcome after hostile contact victory, enemy phase, start-of-day event mutations, and relevant Region-mode state changes.
+- Surface placeholder victory/defeat feedback in App flow.
+
+**Pre-work check:**
+
+Before implementation, verify whether `regionNodeEntry` events execute through `GameSession::NotifyDestinationReached()`.
+
+If not, either:
+
+1. wire a narrow Region-node-entry event pass first, or
+2. explicitly constrain M12-a to currently wired trigger points and document that limitation.
+
+**Out of scope:**
+
+- full result screen
+- campaign progression
+- rewards/carry-over
+- auto-resolve
+- diplomacy UI
+- advanced enemy AI
+- fog/scouting
+- inventory/equipment
+- broad event-system rewrite
+- shell/menu work
 
 ---
 
 ## 5. Acceptance Checks Per Phase
 
 | Phase | Acceptance Check |
-|-------|-----------------|
-| 1 | `ContentValidatorTests` all pass; malformed JSON surfaces typed Error messages with correct dot-path; valid content loads without messages |
-| 2 | Authored event fires on trigger, evaluates a condition, executes an action; story flag persists across save/load; one-shot event does not re-fire |
-| 3 | Enemy team spawns at authored start node, moves one step per player turn, occupies an adjacent node; occupied node is inaccessible to player in UI; spawn event action creates a new team at runtime |
-| 4 | Authored victory condition fires scenario-end when met; default "all enemy teams defeated" works with no authored condition; first matching defeat condition triggers defeat transition |
-| 5 | Hero equips artifact, stat bonus reflected in battle damage; combine recipe produces output item; save/load round-trips inventory; leader item bonus updates Energy display |
-| 6 | World Map shows regions, travel costs 1000 Energy, start-before-11:00 legality is enforced, arrives at 11:00 on the correct day, generics stay in origin Region |
-| 7 | Two scenarios play sequentially; carry-over list applied; disallowed items absent after transition |
+|-------|------------------|
+| 1 | `ContentValidatorTests` pass for implemented validation rules; malformed JSON surfaces typed error messages with correct paths; valid content loads without blocking messages. |
+| 2 | Authored event fires on trigger, evaluates a condition, executes an action, persists story flags/fired event ids, and does not re-fire one-shot events. |
+| 3 | Enemy team spawns/moves/occupies on the Region layer; hostile occupation blocks player use; hostile marker is visible; contact battle can clear the exact occupying team; event actions can spawn/remove/change alliances; save/load round-trips enemy-team runtime state. |
+| 4 | Default victory fires when all hostile enemy teams are defeated/removed; authored victory condition can end the scenario; authored defeat condition can end the scenario; no-outcome states remain playable. |
+| 5 | Hero equips artifact; stat bonus affects relevant calculations; combine recipe produces output item; save/load round-trips inventory; leader item bonus updates Energy display. |
+| 6 | World Map shows Regions; travel costs 1000 Energy; start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day; generics remain in origin Region unless later rules change this. |
+| 7 | Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. |
 
 ---
 
 ## 6. Tests Needed
 
-- `ContentValidatorTests.cpp` — Phase 1
-- `EventEngineTests.cpp` — Phase 2 (trigger, condition composition, If/Else, one-shot, cycle
-  detection)
-- `EnemyTeamTests.cpp` — Phase 3 (movement, occupation, action cadence, color order)
-- `VictoryDefeatTests.cpp` — Phase 4
+- `VictoryDefeatTests.cpp` / `ScenarioOutcomeRulesTests.cpp` — Phase 4 / M12-a
 - `InventoryTests.cpp`, `ArtifactTests.cpp` — Phase 5
 - `WorldMapTravelTests.cpp` — Phase 6
 - `CampaignCarryoverTests.cpp` — Phase 7
 
-All follow existing Catch2 patterns. No rendering or input tests; pure logic only.
+Existing tests already cover much of the Phase 1-3 foundation. Continue using Catch2 and prefer pure-logic tests over rendering or input tests.
 
 ---
 
 ## 7. Explicit "Not Yet" Boundaries
 
-These are **specified at design level in the docs** but out of scope for this roadmap until explicitly requested:
+These are specified at design level in the docs but remain out of scope until explicitly selected:
 
-- **Skill system / status effects** — duration-by-affected-unit's-own-turns model specified
-  in `docs/combat_rules.md`; no implementation phase yet
-- **Enemy recruitment and advanced AI service use** — specified in
-  `docs/core_loop_rules.md`; deferred beyond Phase 3
-- **Enemy sabotage** (service destruction, storage attacks) — specified in
-  `docs/core_loop_rules.md`; deferred beyond Phase 3
-- **Fog of war per-team** — HoMM-like reveal model specified in `docs/core_loop_rules.md`;
-  depends on enemy teams (Phase 3+)
-- **Location expansion / multi-screen Locations** — specified in `docs/game_vision.md`,
-  `docs/content_schema.md`, and `docs/scenario_authoring.md`; not in current slice
-- **Full game shell** (Character Creation, Load UI, autosave slots, Settings) — fully
-  specified in `docs/game_shell_flow.md`; partially addressed in Phase 7, full shell deferred
-- **Presentation and audio implementation** — tone, animation, music, feedback layering fully
-  specified in `docs/presentation_game_feel.md`; active guidance but not an implementation
-  priority until Phase 6+ shell and UI work
-- **Mod loading** — `content/mods/<modName>/` path and override-by-kind+id specified in
-  `docs/content_schema.md`; no loader phase yet
-- **Cooking / crafting economy** — recipe types specified in `docs/content_schema.md`;
-  requires inventory (Phase 5) first, then a separate phase
-- **PvP mode** — specified as hidden-until-implemented in `docs/game_shell_flow.md`;
-  explicitly deferred
-- **Tutorial** — authored content type specified in `docs/game_shell_flow.md`; depends on
-  event system (Phase 2+) and a separate authoring effort
-- **Designer editor tool** — referenced in `docs/scenario_authoring.md`; future scope, out of
-  plan
+- **Skill system / status effects** — duration-by-affected-unit's-own-turns model specified in `docs/combat_rules.md`; no implementation phase yet.
+- **Enemy recruitment and advanced AI service use** — specified in `docs/core_loop_rules.md`; deferred beyond Phase 3.
+- **Enemy sabotage** — service destruction, storage attacks, and restoration loops are deferred beyond Phase 3.
+- **Fog of war per-team** — HoMM-like reveal model specified in `docs/core_loop_rules.md`; depends on enemy teams and later scouting/UI work.
+- **Location expansion / multi-screen Locations** — specified in `docs/game_vision.md`, `docs/content_schema.md`, and `docs/scenario_authoring.md`; not in current slice.
+- **Full game shell** — Character Creation, Load UI, autosave slots, Settings; fully specified in `docs/game_shell_flow.md`; partially addressed later, full shell deferred.
+- **Presentation and audio implementation** — tone, animation, music, and feedback layering are active guidance but not an implementation priority until relevant UI/presentation phases.
+- **Mod loading** — `content/mods/` path and override-by-kind+id are specified in `docs/content_schema.md`; no loader phase yet.
+- **Cooking / crafting economy** — recipe types require inventory first.
+- **PvP mode** — specified as hidden-until-implemented in `docs/game_shell_flow.md`; explicitly deferred.
+- **Tutorial** — authored content type depends on event system and a separate authoring effort.
+- **Designer editor tool** — future scope only.
