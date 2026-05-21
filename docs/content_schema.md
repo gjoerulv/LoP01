@@ -1,10 +1,9 @@
 # Content Schema
 
-This document defines the intended long-term authored data model for Ashvale.
-
-It is a conceptual schema guide, not a complete JSON Schema implementation.
+This document defines the intended long-term authored data model for Ashvale. It is a conceptual schema guide, not a complete JSON Schema implementation.
 
 Use this document when designing or modifying:
+
 - content JSON
 - content loaders
 - editor data models
@@ -14,6 +13,7 @@ Use this document when designing or modifying:
 - event, condition, and action schemas
 
 Related docs:
+
 - `docs/scenario_authoring.md`
 - `docs/validation_system.md`
 - `docs/game_vision.md`
@@ -37,9 +37,7 @@ Ashvale content should be:
 - deterministic to load
 - clear enough for AI agents to edit safely
 
-Content data configures supported systems.
-
-Content data should not create arbitrary new mechanics outside the typed systems implemented in code.
+Content data configures supported systems. Content data should not create arbitrary new mechanics outside the typed systems implemented in code.
 
 ---
 
@@ -151,7 +149,7 @@ The exact directory structure may evolve, but content should stay grouped by dom
 Mods live under:
 
 ```text
-content/mods/<modName>/
+content/mods/<mod-id>/
 ```
 
 Example:
@@ -302,9 +300,7 @@ Baseline resource enum:
 - `Clay`
 - `Gems`
 
-Resource enum validation should be strict.
-
-Mods may change content that uses resources, but should not add new resource types unless the code/schema explicitly expands the resource enum.
+Resource enum validation should be strict. Mods may change content that uses resources, but should not add new resource types unless the code/schema explicitly expands the resource enum.
 
 ---
 
@@ -328,8 +324,12 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Campaign",
   "id": "campaign_ashvale",
-  "name": { "en": "Ashvale" },
-  "description": { "en": "A campaign." },
+  "name": {
+    "en": "Ashvale"
+  },
+  "description": {
+    "en": "A campaign."
+  },
   "scenarios": [
     {
       "scenarioId": "scenario_intro",
@@ -337,9 +337,7 @@ Conceptual shape:
       "carryOverRuleId": "carry_intro_to_second"
     }
   ],
-  "campaignFlags": [
-    "flag_intro_complete"
-  ],
+  "campaignFlags": ["flag_intro_complete"],
   "carryOverRules": []
 }
 ```
@@ -380,8 +378,12 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Scenario",
   "id": "scenario_intro",
-  "name": { "en": "Intro Scenario" },
-  "description": { "en": "The first Scenario." },
+  "name": {
+    "en": "Intro Scenario"
+  },
+  "description": {
+    "en": "The first Scenario."
+  },
   "standaloneSelectable": true,
   "worldMap": {},
   "regions": [
@@ -395,15 +397,11 @@ Conceptual shape:
       }
     }
   ],
-  "storyFlags": [
-    "flag_market_built"
-  ],
+  "storyFlags": ["flag_market_built"],
   "variables": {
     "bridge_repaired": false
   },
-  "heroPool": [
-    "hero_jon"
-  ],
+  "heroPool": ["hero_jon"],
   "bannedSkills": [],
   "bannedArtifacts": [],
   "teams": [],
@@ -418,9 +416,7 @@ Conceptual shape:
 
 ## 10. Scenario Region Context
 
-Regions are reusable structural definitions.
-
-A Scenario controls how a Region behaves by passing Scenario context to it.
+Regions are reusable structural definitions. A Scenario controls how a Region behaves by passing Scenario context to it.
 
 Use **Scenario Region Context** rather than arbitrary shallow patching as the primary model.
 
@@ -437,58 +433,23 @@ Scenario Region Context may include:
 Rules:
 
 - Region files should not hard-own Scenario-level availability rules.
-- Scenario owns hero pools, banned artifacts, banned skills, team setup, and Scenario variables.
-- Region events, services, and conditions may read Scenario variables and flags.
-- Validation evaluates a Region in the Scenario context that loads it.
-
-Avoid broad arbitrary patches as the default authoring model.
-
-If a future patch/override system is needed, it should be typed and validated.
+- Scenario context should not mutate the reusable Region file directly.
+- Save data owns runtime state changes after play begins.
 
 ---
 
 ## 11. World Map schema
 
-The World Map is part of the Scenario.
+A World Map owns:
 
-It owns:
+- id
+- localized name
+- Region references
+- Region adjacency / route graph
+- unlock state
+- travel metadata
 
-- visual map data
-- Region markers / positions
-- manual Region adjacency
-- initial visibility/unlock state
-- enterable state
-- authored Region descriptions or summaries where needed
-
-Conceptual shape:
-
-```json
-{
-  "worldMap": {
-    "regions": [
-      {
-        "regionId": "region_mushville",
-        "position": { "x": 10, "y": 20 },
-        "initialVisibility": "visible",
-        "initialEnterable": true,
-        "description": {
-          "en": "A large mushroom-filled region."
-        }
-      }
-    ],
-    "adjacency": [
-      {
-        "fromRegionId": "region_mushville",
-        "toRegionId": "region_old_road"
-      }
-    ]
-  }
-}
-```
-
-World Map adjacency is bidirectional.
-
-The data may store one authored edge, but validation/runtime should treat it as bidirectional unless the design later explicitly supports directed World Map travel.
+World Map implementation is future scope. The current codebase is still a single-Region slice.
 
 ---
 
@@ -500,168 +461,81 @@ A Region owns:
 - localized name
 - localized description
 - nodes
-- routes
+- routes / links
 - arrival node
-- default reveal data
-- placed node content
-- placed Region services
-- neutral encounters
-- stationed guards
-- Region-level events
-- Region display metadata
+- local Region services
+- local Locations
+- optional presentation metadata
 
-Conceptual shape:
-
-```json
-{
-  "schemaVersion": 1,
-  "kind": "Region",
-  "id": "region_mushville",
-  "name": { "en": "Mushville" },
-  "description": { "en": "A strange fungal valley." },
-  "arrivalNodeId": "node_arrival",
-  "nodes": [],
-  "routes": [],
-  "services": [],
-  "events": []
-}
-```
-
-Region size label is derived from node count.
-
-Regions do not directly own Scenario-level availability rules.
+Region node ids should be stable and opaque.
 
 ---
 
-## 13. Node schema
+## 13. Region node schema
 
-Nodes are travel points.
-
-A node may have:
+A Region node owns:
 
 - id
-- optional localized display name
-- position
-- arrival flag where relevant
-- main node content
-- event references
-- reveal metadata where needed
+- localized name
+- node type / content type
+- optional content reference
+- position/presentation hints
+- flags such as arrival/safe-anchor/blocker/service/location where applicable
 
-Display name is optional.
+Node runtime state belongs in save data, not authored Region content.
 
-If a node has Service content, the Service name should usually take priority for display.
+---
 
-Conceptual shape:
+## 14. Region node content schema
+
+Node content should be a typed discriminated object.
+
+Example service node:
 
 ```json
 {
-  "id": "node_old_farm",
-  "name": { "en": "Old Farm" },
-  "position": { "x": 12, "y": 8 },
   "content": {
     "type": "service",
     "serviceId": "svc_old_farm"
-  },
-  "eventRefs": [
-    {
-      "eventId": "evt_old_farm_warning",
-      "priority": "beforeContent"
-    }
-  ]
+  }
 }
 ```
 
+Example Location node:
+
+```json
+{
+  "content": {
+    "type": "location",
+    "locationId": "location_old_house"
+  }
+}
+```
+
+Rules:
+
+- content type controls which reference field is valid
+- a node should not stack unrelated major roles unless a future rule explicitly supports it
+- arrival behavior is a node flag, not a separate node type
+
 ---
 
-## 14. Node content schema
+## 15. Region blocker schema
 
-Node content is a discriminated union.
-
-A node may contain at most one main content item.
+Blockers are authored node or route constraints that prevent movement until a condition is satisfied.
 
 Examples:
 
-```json
-{
-  "type": "resourcePickup",
-  "resource": "Wood",
-  "amount": 5
-}
-```
+- key/password gate
+- gold/resource payment gate
+- quest-state gate
+- hostile occupation at runtime
 
-```json
-{
-  "type": "artifactPickup",
-  "artifactId": "artifact_old_ring",
-  "quantity": 1
-}
-```
-
-```json
-{
-  "type": "service",
-  "serviceId": "svc_old_market"
-}
-```
-
-```json
-{
-  "type": "neutralEnemy",
-  "encounterId": "enc_bandits_01"
-}
-```
-
-```json
-{
-  "type": "special",
-  "specialId": "special_glowing_stone"
-}
-```
-
-Events are not main node content.
-
-Events are attached separately through `eventRefs`.
+Runtime hostile occupation is not authored blocker content; it is derived from enemy-team state.
 
 ---
 
-## 15. Node event references
-
-Node event references live on the node.
-
-Region owns event definitions.
-
-Event priority lives on the event attachment, not the event definition.
-
-Allowed priority values:
-
-- `beforeContent`
-- `afterContent`
-- `replacesContent`
-
-Default:
-
-- `beforeContent`
-
-Example:
-
-```json
-{
-  "eventRefs": [
-    {
-      "eventId": "evt_gate_warning",
-      "priority": "beforeContent"
-    }
-  ]
-}
-```
-
----
-
-## 16. Route schema
-
-Routes are explicit Region objects with ids.
-
-Region routes are bidirectional.
+## 16. Region route schema
 
 Conceptual shape:
 
@@ -685,11 +559,7 @@ Fields:
 - `terrain`
 - `initialState`
 
-Travel time and Energy cost are computed from route quality and distance.
-
-Routes may be authored as hidden/inactive and later restored or activated by events.
-
-Events should not create new route definitions from nothing at runtime.
+Travel time and Energy cost are computed from route quality and distance. Routes may be authored as hidden/inactive and later restored or activated by events. Events should not create new route definitions from nothing at runtime.
 
 ---
 
@@ -716,16 +586,16 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Location",
   "id": "location_old_house",
-  "name": { "en": "Old House" },
+  "name": {
+    "en": "Old House"
+  },
   "screens": [],
   "services": [],
   "events": []
 }
 ```
 
-Location mode is event-driven.
-
-Location interactables are event sprites, not hard-wired Region services.
+Location mode is event-driven. Location interactables are event sprites, not hard-wired Region services.
 
 ---
 
@@ -750,7 +620,9 @@ Conceptual shape:
 {
   "id": "svc_old_farm",
   "serviceType": "farming",
-  "name": { "en": "Old Farm" },
+  "name": {
+    "en": "Old Farm"
+  },
   "initialState": "active",
   "destroyable": true,
   "restorable": true,
@@ -761,11 +633,7 @@ Conceptual shape:
 }
 ```
 
-`settings` is a type-specific payload.
-
-Service state in content is initial state.
-
-Runtime state belongs in save data.
+`settings` is a type-specific payload. Service state in content is initial state. Runtime state belongs in save data.
 
 ---
 
@@ -840,9 +708,7 @@ Conceptual shape:
 }
 ```
 
-Event-level message is allowed only as an optional shorthand for design convenience.
-
-All messages should ultimately call the same message-display system as `showMessage`.
+Event-level message is allowed only as an optional shorthand for design convenience. All messages should ultimately call the same message-display system as `showMessage`.
 
 ---
 
@@ -906,11 +772,7 @@ Conceptual shape:
 }
 ```
 
-Eligibility is not the same as condition.
-
-Use eligibility for who may participate.
-
-Use condition for whether the world-state requirement is satisfied.
+Eligibility is not the same as condition. Use eligibility for who may participate. Use condition for whether the world-state requirement is satisfied.
 
 ---
 
@@ -939,8 +801,14 @@ Conditions support composition:
 ```json
 {
   "any": [
-    { "type": "storyFlagSet", "flag": "flag_bridge_repaired" },
-    { "type": "teamHasItem", "itemId": "item_bridge_key" }
+    {
+      "type": "storyFlagSet",
+      "flag": "flag_bridge_repaired"
+    },
+    {
+      "type": "teamHasItem",
+      "itemId": "item_bridge_key"
+    }
   ]
 }
 ```
@@ -954,17 +822,13 @@ Conditions support composition:
 }
 ```
 
-Leaf conditions must include `type`.
-
-Composition conditions use `all`, `any`, or `not`.
+Leaf conditions must include `type`. Composition conditions use `all`, `any`, or `not`.
 
 ---
 
 ## 24. Action schema
 
-Actions are typed objects.
-
-Every action has a `type`.
+Actions are typed objects. Every action has a `type`.
 
 Example:
 
@@ -984,11 +848,82 @@ Example:
 }
 ```
 
-Actions should be small, explicit, and validateable.
+Actions should be small, explicit, and validateable. Avoid generic script strings.
 
-Avoid generic script strings.
+Action failure behavior is normally determined by the target system rule, not by per-action configuration. Event action handlers should fail explicitly when required runtime context or required arguments are missing. Silent no-ops are not acceptable for implemented action types.
 
-Action failure behavior is normally determined by the target system rule, not by per-action configuration.
+### Enemy-team lifecycle actions
+
+The following action types are implemented for enemy-team runtime mutations. They mutate runtime state, not authored content. Runtime changes must be persisted by save data.
+
+#### `spawnTeam`
+
+Creates or reactivates a runtime enemy team at a Region node.
+
+```json
+{
+  "type": "spawnTeam",
+  "teamColor": "Red",
+  "nodeId": "node_forest_camp"
+}
+```
+
+Required fields:
+
+- `teamColor` — target team identity/color
+- `nodeId` — Region node where the team should appear
+
+Rules:
+
+- the action requires a team-mutation context
+- missing `teamColor` or `nodeId` is an explicit action failure
+- validation should ensure `nodeId` exists in the relevant Region when enough context is available
+
+#### `removeTeam`
+
+Deactivates a runtime enemy team.
+
+```json
+{
+  "type": "removeTeam",
+  "teamColor": "Red"
+}
+```
+
+Required fields:
+
+- `teamColor` — target team identity/color
+
+Rules:
+
+- the action requires a team-mutation context
+- missing `teamColor` is an explicit action failure
+- removal affects runtime team state and must survive save/load
+
+#### `changeAlliance`
+
+Adds or removes an alliance relationship for a runtime team.
+
+```json
+{
+  "type": "changeAlliance",
+  "teamColor": "Red",
+  "allyColor": "Blue",
+  "add": true
+}
+```
+
+Required fields:
+
+- `teamColor` — team to mutate
+- `allyColor` — team color to add/remove from the alliance set
+- `add` — `true` to add the alliance, `false` to remove it
+
+Rules:
+
+- the action requires a team-mutation context
+- missing `teamColor`, `allyColor`, or `add` is an explicit action failure
+- changed alliances are runtime state and must survive save/load
 
 ---
 
@@ -1030,9 +965,7 @@ Example:
 }
 ```
 
-Branches may be nested.
-
-Branches replace optional-action flags.
+Branches may be nested. Branches replace optional-action flags.
 
 ---
 
@@ -1087,11 +1020,7 @@ Examples:
 }
 ```
 
-Automatic event priority is a number.
-
-Lower number means earlier.
-
-Priority must be unique within the same automatic trigger group.
+Automatic event priority is a number. Lower number means earlier. Priority must be unique within the same automatic trigger group.
 
 ---
 
@@ -1116,9 +1045,7 @@ Conceptual shape:
 }
 ```
 
-A quest service may have zero quests.
-
-Zero quests are valid.
+A quest service may have zero quests. Zero quests are valid.
 
 ---
 
@@ -1177,19 +1104,13 @@ Conceptual shape:
 }
 ```
 
-Quest message fields are editor-facing shortcuts.
-
-They should use the same message-display function as `showMessage`.
+Quest message fields are editor-facing shortcuts. They should use the same message-display function as `showMessage`.
 
 ---
 
 ## 30. Victory and defeat condition schema
 
-Victory and defeat conditions use the shared condition model.
-
-Victory conditions are OR-based.
-
-Defeat conditions are OR-based.
+Victory and defeat conditions use the shared condition model. Victory conditions are OR-based. Defeat conditions are OR-based.
 
 Example:
 
@@ -1283,6 +1204,8 @@ AI teams add:
 }
 ```
 
+Authored team data defines initial state. Runtime fields such as current node, active/inactive state, cooldown, energy, and changed alliances belong in save data.
+
 ---
 
 ## 32. Unit stack and hero instance schema
@@ -1312,9 +1235,7 @@ Hero instance:
 }
 ```
 
-Hero id is enough as stable identity because heroes are unique pool entities.
-
-Do not create a separate hero instance id unless the design later supports duplicate hero identities.
+Hero id is enough as stable identity because heroes are unique pool entities. Do not create a separate hero instance id unless the design later supports duplicate hero identities.
 
 ---
 
@@ -1339,8 +1260,12 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "ItemDefinition",
   "id": "item_fish_soup",
-  "name": { "en": "Fish Soup" },
-  "description": { "en": "A warm meal." },
+  "name": {
+    "en": "Fish Soup"
+  },
+  "description": {
+    "en": "A warm meal."
+  },
   "icon": "icon_fish_soup",
   "subtype": "food",
   "stackCap": 999,
@@ -1350,17 +1275,13 @@ Conceptual shape:
 }
 ```
 
-Food is a normal item subtype.
-
-Food must be field-use only and hero-consumed.
+Food is a normal item subtype. Food must be field-use only and hero-consumed.
 
 ---
 
 ## 34. Effects schema
 
-Items should use shared typed effects.
-
-Artifacts should use typed modifiers and special effect enums.
+Items should use shared typed effects. Artifacts should use typed modifiers and special effect enums.
 
 Example item effect:
 
@@ -1391,9 +1312,7 @@ Example artifact special effect:
 }
 ```
 
-Special effects are enum-driven and handled by code.
-
-Artifacts may have multiple bonuses and effects.
+Special effects are enum-driven and handled by code. Artifacts may have multiple bonuses and effects.
 
 ---
 
@@ -1418,8 +1337,12 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "ArtifactDefinition",
   "id": "artifact_iron_sword",
-  "name": { "en": "Iron Sword" },
-  "description": { "en": "A simple weapon." },
+  "name": {
+    "en": "Iron Sword"
+  },
+  "description": {
+    "en": "A simple weapon."
+  },
   "icon": "icon_iron_sword",
   "allowedSlots": ["Attack"],
   "rarity": "minor",
@@ -1460,11 +1383,22 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Recipe",
   "id": "recipe_fish_soup",
-  "name": { "en": "Fish Soup" },
+  "name": {
+    "en": "Fish Soup"
+  },
   "ingredients": [
-    { "itemId": "item_potato", "quantity": 1 },
-    { "itemId": "item_tomato", "quantity": 1 },
-    { "itemId": "item_fish", "quantity": 2 }
+    {
+      "itemId": "item_potato",
+      "quantity": 1
+    },
+    {
+      "itemId": "item_tomato",
+      "quantity": 1
+    },
+    {
+      "itemId": "item_fish",
+      "quantity": 2
+    }
   ],
   "outputItemId": "item_fish_soup",
   "outputQuantity": 1,
@@ -1482,6 +1416,7 @@ The output item must be food subtype.
 Artifact combination recipes are always 2 inputs to 1 output.
 
 Inputs may be:
+
 - two of the exact same artifact
 - one artifact plus one other artifact type
 
@@ -1493,16 +1428,20 @@ Conceptual shape:
   "kind": "ArtifactCombinationRecipe",
   "id": "combo_iron_sword_plus_iron_sword",
   "inputs": [
-    { "artifactId": "artifact_iron_sword", "quantity": 1 },
-    { "artifactId": "artifact_iron_sword", "quantity": 1 }
+    {
+      "artifactId": "artifact_iron_sword",
+      "quantity": 1
+    },
+    {
+      "artifactId": "artifact_iron_sword",
+      "quantity": 1
+    }
   ],
   "outputArtifactId": "artifact_steel_sword"
 }
 ```
 
-A specific artifact handler service may deny selected recipes.
-
-The global recipe remains valid unless the recipe itself is invalid.
+A specific artifact handler service may deny selected recipes. The global recipe remains valid unless the recipe itself is invalid.
 
 ---
 
@@ -1565,18 +1504,13 @@ Suppression should match:
 - validation code
 - authored object path
 
-Suppression must include a reason.
-
-Suppressing one warning must not suppress unrelated future warnings.
-
+Suppression must include a reason. Suppressing one warning must not suppress unrelated future warnings.
 
 ---
 
 ## 40. Player character schema
 
-The player character is a normal unique hero unit with special human-team rules.
-
-For human teams, `playerCharacterHeroId` lives on the Team object.
+The player character is a normal unique hero unit with special human-team rules. For human teams, `playerCharacterHeroId` lives on the Team object.
 
 Example:
 
@@ -1590,6 +1524,7 @@ Example:
 ```
 
 Rules:
+
 - `playerCharacterHeroId` references a valid hero definition / hero identity.
 - the player character must be leader-capable.
 - the player character must be in that human team's traveling party.
@@ -1598,9 +1533,11 @@ Rules:
 - the player character must not appear in AI templates, recruit services, sealed hero services, neutral encounters, or AI-owned rosters.
 
 ### Character creation data
+
 Before a Scenario or Campaign starts, the player creates the player character.
 
 Character creation fills the stable player-character hero identity with:
+
 - name
 - sex
 - simple graphical representation
@@ -1632,22 +1569,18 @@ Example:
 Starting presets such as Warrior, Builder, and Explorer are presets only. They are not permanent class restrictions.
 
 ### Campaign carry-over
-The player-character identity always carries over in Campaigns.
 
-Campaign transition rules may still affect progression details such as level, skills, passive skills, equipment, or artifacts according to the normal carry-over rules.
+The player-character identity always carries over in Campaigns. Campaign transition rules may still affect progression details such as level, skills, passive skills, equipment, or artifacts according to the normal carry-over rules.
 
 ### Runtime boundary
-Player-character authored identity and creation defaults belong in content / campaign-start data.
 
-Current HP, KO recovery, equipment state, level changes, learned skills, and other playthrough state belong in save data.
+Player-character authored identity and creation defaults belong in content / campaign-start data. Current HP, KO recovery, equipment state, level changes, learned skills, and other playthrough state belong in save data.
 
 ---
 
 ## 41. Runtime save data boundary
 
-Authored content defines initial state.
-
-Save data owns runtime state.
+Authored content defines initial state. Save data owns runtime state.
 
 Examples of runtime state:
 
@@ -1662,11 +1595,10 @@ Examples of runtime state:
 - route destroyed/restored state
 - current ownership
 - stationed guards
-- Temporarily Unavailable heroes
+- temporarily unavailable heroes
+- enemy-team current node, active/inactive state, energy, cooldown, and runtime alliances
 
-Do not write runtime progression state back into authored content files.
-
-Editor tools may edit authored initial state, not live save state, unless explicitly in a save-editor mode.
+Do not write runtime progression state back into authored content files. Editor tools may edit authored initial state, not live save state, unless explicitly in a save-editor mode.
 
 ---
 
@@ -1688,4 +1620,5 @@ For AI agents and future implementation work:
 - keep event conditions/actions explicit and small
 - use `showMessage` as the shared message-display action path
 - keep validation suppressions Scenario-level
+- make implemented event actions fail explicitly when required context/arguments are missing
 - follow `docs/presentation_game_feel.md` for presentation asset ids and presentation event-action boundaries
