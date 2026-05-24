@@ -402,7 +402,9 @@ void GameSession::InitializeEventDefinitions(std::vector<events::EventDefinition
     eventDefinitions_ = std::move(definitions);
 }
 
-std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
+std::vector<events::ActionResult> GameSession::FireMatchingEvents(
+    const std::function<bool(const events::EventDefinition&)>& matches)
+{
     std::vector<events::ActionResult> allResults;
     std::vector<events::EnemyTeamMutation> pendingMutations;
 
@@ -414,7 +416,7 @@ std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
     });
 
     for (const auto& def : sorted) {
-        if (def.trigger.type != events::EventTriggerType::StartOfDay) continue;
+        if (!matches(def)) continue;
 
         const bool alreadyFired = std::ranges::any_of(firedEventIds_,
             [&](const auto& id) { return id == def.id; });
@@ -465,6 +467,19 @@ std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
     }
 
     return allResults;
+}
+
+std::vector<events::ActionResult> GameSession::NotifyStartOfDay() {
+    return FireMatchingEvents([](const events::EventDefinition& def) {
+        return def.trigger.type == events::EventTriggerType::StartOfDay;
+    });
+}
+
+std::vector<events::ActionResult> GameSession::NotifyRegionNodeEntry(const std::string& nodeId) {
+    return FireMatchingEvents([&nodeId](const events::EventDefinition& def) {
+        return def.trigger.type == events::EventTriggerType::RegionNodeEntry
+            && def.trigger.targetId == nodeId;
+    });
 }
 
 void GameSession::InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions) {

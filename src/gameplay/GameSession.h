@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <set>
 #include <vector>
@@ -113,6 +114,7 @@ public:
 
     void InitializeEventDefinitions(std::vector<events::EventDefinition> definitions);
     [[nodiscard]] std::vector<events::ActionResult> NotifyStartOfDay();
+    [[nodiscard]] std::vector<events::ActionResult> NotifyRegionNodeEntry(const std::string& nodeId);
 
     void SetEnemyTeams(std::vector<EnemyTeamState> teams);
     [[nodiscard]] std::vector<EnemyTeamActionResult> ProcessEnemyPhase(
@@ -186,6 +188,15 @@ private:
     [[nodiscard]] bool IsLeaderCapableUnitId(const std::string& unitId) const;
     [[nodiscard]] int ActiveLeaderCapableCountExcludingOrderedIndex(int excludedOrderedIndex) const;
     [[nodiscard]] int ActiveLeaderCapableCount() const;
+
+    // Shared firing loop for trigger-typed events. Called by NotifyStartOfDay and
+    // NotifyRegionNodeEntry. `matches` decides which event definitions are eligible
+    // (by trigger type and any per-trigger target match). Applies priority sort,
+    // one-shot guard, condition evaluation, action execution, story-flag / Gold
+    // persistence, and enemy-team mutation apply — mirroring the original
+    // NotifyStartOfDay flow.
+    [[nodiscard]] std::vector<events::ActionResult> FireMatchingEvents(
+        const std::function<bool(const events::EventDefinition&)>& matches);
 
     GameMode mode_;
     core::GameClock clock_;
