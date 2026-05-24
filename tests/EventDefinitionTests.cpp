@@ -413,7 +413,7 @@ TEST_CASE("ValidateEventDefinition - unknown action type produces EVENT_ACTION_T
 TEST_CASE("ValidateEventDefinition - all known action types are valid")
 {
     for (const auto& t : {"showMessage", "giveResource", "takeResource",
-                          "setStoryFlag", "clearStoryFlag", "if"}) {
+                          "setStoryFlag", "clearStoryFlag", "if", "spawnTeam", "removeTeam", "changeAlliance"}) {
         auto doc = ValidEvent();
         doc["actions"] = nlohmann::json::array({{{"type", t}}});
         auto msgs = ValidateEventDefinition(doc);

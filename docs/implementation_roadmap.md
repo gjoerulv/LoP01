@@ -40,6 +40,8 @@ Current stable foundation:
   - unknown condition/action type validation
   - story flags / fired event ids in save/load
   - start-of-day notification
+  - region-node-entry notification
+  - enemy-team mutation action validation for `spawnTeam`, `removeTeam`, and `changeAlliance`
   - integration tests
 - typed `EnemyGroupDefinition` composition loading
 - `EnemyTeamState` runtime fields:
@@ -100,7 +102,6 @@ Still incomplete / intentionally deferred:
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader combat command depth. Current battle code tracks a smaller baseline. | Gap; acceptable until skill/status phases. |
 | 6 | Player color is still hardcoded as `"Green"` in some Region/enemy-team paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
 | 7 | Hostile contact requires a configured node `battleScenarioId`. | Intentional post-M11-e rule. Missing encounters produce diagnostics, not fallback battles. Future validation should enforce this for hostile-contact-capable nodes. |
-| 8 | Verify whether `regionNodeEntry` events execute team mutations through `GameSession::NotifyDestinationReached()`. | Pre-work check for M12-a. If not wired, either add narrow trigger wiring first or explicitly constrain outcome checks to currently wired trigger points. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -138,7 +139,7 @@ Out of scope for initial validation foundation:
 Implemented/expected foundation:
 
 - `EventDefinition` and `EventDefinitions`
-- event triggers including `startOfDay` and initial progression triggers
+- event triggers including `startOfDay`, `regionNodeEntry`, and initial progression triggers
 - condition evaluator with typed leaf conditions and composition
 - action executor with explicit failure behavior
 - one-shot fired event guard
@@ -146,6 +147,7 @@ Implemented/expected foundation:
 - story flag persistence
 - fired event persistence
 - integration tests
+- event validation recognizes implemented enemy-team mutation actions: `spawnTeam`, `removeTeam`, and `changeAlliance`
 
 Future expansion remains allowed when host systems require additional triggers or action sinks.
 
@@ -202,11 +204,32 @@ Scope:
 - minimal authored victory/defeat condition path
 - outcome evaluation after relevant state changes:
   - hostile contact victory
+  - `regionNodeEntry` event mutations
   - enemy phase
   - start-of-day event mutations
   - relevant Region-mode state changes
 - placeholder App feedback for victory/defeat
 - tests for default victory, authored victory, authored defeat, and no-outcome states
+
+M12-a pre-work already completed:
+
+- `regionNodeEntry` events fire from `App::OnDestinationArrived()`.
+- `GameSession::NotifyRegionNodeEntry(nodeId)` reuses the shared event firing path.
+- Region-node-entry events can apply story/resource actions and enemy-team mutations.
+- Event validation recognizes `spawnTeam`, `removeTeam`, and `changeAlliance`.
+- Tests cover region-node-entry matching, non-matching, unmet conditions, once-mode, trigger isolation, priority ordering, team mutation application, and validation for enemy-team mutation actions.
+
+Outcome evaluation order for Region travel arrival:
+
+1. Apply travel time and destination change.
+2. Apply quest destination notification.
+3. Fire `regionNodeEntry` events.
+4. Evaluate scenario outcome.
+5. Run enemy phase.
+6. Evaluate scenario outcome again.
+7. Continue to node battle / Location transition only if no scenario outcome fired.
+
+Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If those events satisfy victory or defeat conditions, the scenario should end before enemy phase gets another action. Enemy phase can also create an outcome, so it needs a second check afterward.
 
 Out of scope:
 
@@ -292,6 +315,8 @@ M11-e completed the practical Phase 3 enemy-team Region-layer slice:
 - Victory clears the exact engaged team by team color.
 - Enemy-team runtime state persists through save/load, including mutable alliances.
 - `spawnTeam`, `removeTeam`, and `changeAlliance` event actions exist with explicit failure behavior.
+- Event validation recognizes `spawnTeam`, `removeTeam`, and `changeAlliance`.
+- `regionNodeEntry` events fire from Region arrival and can apply story/resource actions and enemy-team mutations.
 - Enemy-phase trigger expectations are documented in code and covered by tests.
 
 **Goal for M12-a:**
@@ -303,17 +328,28 @@ Add deterministic scenario outcome evaluation so scenarios can end via default v
 - Add pure scenario outcome rules.
 - Support default victory when all hostile enemy teams are defeated/removed.
 - Support a minimal authored victory/defeat condition path using existing condition concepts where practical.
-- Evaluate outcome after hostile contact victory, enemy phase, start-of-day event mutations, and relevant Region-mode state changes.
+- Evaluate outcome after hostile contact victory, `regionNodeEntry` event mutations, enemy phase, start-of-day event mutations, and relevant Region-mode state changes.
 - Surface placeholder victory/defeat feedback in App flow.
 
-**Pre-work check:**
+**Pre-work completed:**
 
-Before implementation, verify whether `regionNodeEntry` events execute through `GameSession::NotifyDestinationReached()`.
+- `regionNodeEntry` events now fire from `App::OnDestinationArrived()`.
+- `GameSession::NotifyRegionNodeEntry(nodeId)` reuses the shared event firing path.
+- Region-node-entry events can apply story/resource actions and enemy-team mutations.
+- Event validation recognizes `spawnTeam`, `removeTeam`, and `changeAlliance`.
+- Tests cover region-node-entry matching, non-matching, unmet conditions, once-mode, trigger isolation, priority ordering, team mutation application, and validation for enemy-team mutation actions.
 
-If not, either:
+**Outcome evaluation order for Region travel arrival:**
 
-1. wire a narrow Region-node-entry event pass first, or
-2. explicitly constrain M12-a to currently wired trigger points and document that limitation.
+1. Apply travel time and destination change.
+2. Apply quest destination notification.
+3. Fire `regionNodeEntry` events.
+4. Evaluate scenario outcome.
+5. Run enemy phase.
+6. Evaluate scenario outcome again.
+7. Continue to node battle / Location transition only if no scenario outcome fired.
+
+Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If those events satisfy victory or defeat conditions, the scenario should end before enemy phase gets another action. Enemy phase can also create an outcome, so it needs a second check afterward.
 
 **Out of scope:**
 
@@ -337,7 +373,7 @@ If not, either:
 | 1 | `ContentValidatorTests` pass for implemented validation rules; malformed JSON surfaces typed error messages with correct paths; valid content loads without blocking messages. |
 | 2 | Authored event fires on trigger, evaluates a condition, executes an action, persists story flags/fired event ids, and does not re-fire one-shot events. |
 | 3 | Enemy team spawns/moves/occupies on the Region layer; hostile occupation blocks player use; hostile marker is visible; contact battle can clear the exact occupying team; event actions can spawn/remove/change alliances; save/load round-trips enemy-team runtime state. |
-| 4 | Default victory fires when all hostile enemy teams are defeated/removed; authored victory condition can end the scenario; authored defeat condition can end the scenario; no-outcome states remain playable. |
+| 4 | Default victory fires when all hostile enemy teams are defeated/removed; authored victory condition can end the scenario; authored defeat condition can end the scenario; no-outcome states remain playable; Region arrival checks outcome after `regionNodeEntry` events and again after enemy phase before continuing to follow-up transitions. |
 | 5 | Hero equips artifact; stat bonus affects relevant calculations; combine recipe produces output item; save/load round-trips inventory; leader item bonus updates Energy display. |
 | 6 | World Map shows Regions; travel costs 1000 Energy; start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day; generics remain in origin Region unless later rules change this. |
 | 7 | Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. |

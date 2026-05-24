@@ -89,7 +89,8 @@ static bool IsKnownConditionLeafType(const std::string& t) {
 
 static bool IsKnownActionType(const std::string& t) {
     return t == "showMessage" || t == "giveResource" || t == "takeResource"
-        || t == "setStoryFlag" || t == "clearStoryFlag" || t == "if";
+        || t == "setStoryFlag" || t == "clearStoryFlag" || t == "if"
+        || t == "spawnTeam" || t == "removeTeam" || t == "changeAlliance";
 }
 
 void ValidateConditionNode(const nlohmann::json& cond,
