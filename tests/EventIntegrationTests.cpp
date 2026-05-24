@@ -52,6 +52,21 @@ EventDefinition MakeStartOfDayEvent(
     return def;
 }
 
+EventDefinition MakeRegionNodeEntryEvent(
+    const std::string& id,
+    const std::string& nodeId,
+    std::vector<EventAction> actions = {},
+    const std::string& repeatMode = "once")
+{
+    EventDefinition def;
+    def.id = id;
+    def.trigger.type = EventTriggerType::RegionNodeEntry;
+    def.trigger.targetId = nodeId;
+    def.actions = std::move(actions);
+    def.repeat.mode = repeatMode;
+    return def;
+}
+
 EventAction MakeAction(const nlohmann::json& j) {
     EventAction a;
     a.type = j.value("type", "");
@@ -364,6 +379,139 @@ TEST_CASE("GameSession - NotifyStartOfDay fires events in priority order (lower 
     session.InitializeEventDefinitions({evtPrio2, evtPrio1});
 
     const auto results = session.NotifyStartOfDay();
+    REQUIRE(results.size() == 2);
+
+    const auto saveData = session.ToSaveData();
+    REQUIRE(std::ranges::any_of(saveData.storyFlags,
+        [](const auto& f) { return f == "first_fired"; }));
+    REQUIRE(std::ranges::any_of(saveData.storyFlags,
+        [](const auto& f) { return f == "second_fired"; }));
+}
+
+// ---------------------------------------------------------------------------
+// GameSession — NotifyRegionNodeEntry (M12-a pre-work)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry fires event whose nodeId matches") {
+    gameplay::GameSession session;
+    session.InitializeEventDefinitions({MakeRegionNodeEntryEvent("evt_arrive_gate", "node_gate", {
+        MakeAction({{"type", "showMessage"}, {"text", {{"en", "You reach the gate."}}}})
+    })});
+
+    const auto results = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].success);
+    REQUIRE(results[0].message == "You reach the gate.");
+}
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry skips event whose nodeId does not match") {
+    gameplay::GameSession session;
+    session.InitializeEventDefinitions({MakeRegionNodeEntryEvent("evt_other", "node_other", {
+        MakeAction({{"type", "showMessage"}, {"text", {{"en", "Wrong node."}}}})
+    })});
+
+    const auto results = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(results.empty());
+}
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry skips event with unmet condition") {
+    gameplay::GameSession session;
+
+    EventCondition cond;
+    cond.kind = EventConditionKind::Leaf;
+    cond.leafType = "storyFlagSet";
+    cond.leafArgs = {{"type", "storyFlagSet"}, {"flag", "absent_flag"}};
+
+    EventDefinition def = MakeRegionNodeEntryEvent("evt_conditional", "node_gate", {
+        MakeAction({{"type", "showMessage"}, {"text", {{"en", "Should not fire."}}}})
+    });
+    def.condition = cond;
+
+    session.InitializeEventDefinitions({def});
+    const auto results = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(results.empty());
+}
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry once-mode event does not refire on second visit") {
+    gameplay::GameSession session;
+    session.InitializeEventDefinitions({MakeRegionNodeEntryEvent("evt_once_arrival", "node_gate", {
+        MakeAction({{"type", "showMessage"}, {"text", {{"en", "First time only."}}}})
+    })});
+
+    const auto firstResults = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(firstResults.size() == 1);
+
+    const auto secondResults = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(secondResults.empty());
+
+    const auto saveData = session.ToSaveData();
+    REQUIRE(std::ranges::any_of(saveData.firedEventIds,
+        [](const auto& id) { return id == "evt_once_arrival"; }));
+}
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry does not fire startOfDay events") {
+    gameplay::GameSession session;
+    session.InitializeEventDefinitions({MakeStartOfDayEvent("evt_sod", {
+        MakeAction({{"type", "showMessage"}, {"text", {{"en", "Wrong trigger."}}}})
+    })});
+
+    const auto results = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(results.empty());
+}
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry applies changeAlliance team mutation") {
+    gameplay::GameSession session;
+
+    gameplay::EnemyTeamState red;
+    red.teamColor = "Red";
+    red.active = true;
+    session.SetEnemyTeams({ red });
+
+    session.InitializeEventDefinitions({MakeRegionNodeEntryEvent("evt_pact", "node_pact", {
+        MakeAction({
+            {"type", "changeAlliance"},
+            {"teamColor", "Red"},
+            {"allyColor", "Green"},
+            {"add", true}
+        })
+    })});
+
+    const auto results = session.NotifyRegionNodeEntry("node_pact");
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].success);
+
+    const auto& teams = session.EnemyTeams();
+    REQUIRE(teams.size() == 1);
+    REQUIRE(std::ranges::find(teams.front().alliances, std::string{"Green"})
+        != teams.front().alliances.end());
+}
+
+TEST_CASE("GameSession - NotifyRegionNodeEntry fires matching events in priority order (lower first)") {
+    gameplay::GameSession session;
+
+    EventDefinition evtPrio2 = MakeRegionNodeEntryEvent("evt_prio2", "node_x", {
+        MakeAction({{"type", "setStoryFlag"}, {"flag", "second_fired"}})
+    }, "always");
+    evtPrio2.priority = 2;
+
+    EventCondition notSecond;
+    notSecond.kind = EventConditionKind::Not;
+    EventCondition leafSecond;
+    leafSecond.kind = EventConditionKind::Leaf;
+    leafSecond.leafType = "storyFlagSet";
+    leafSecond.leafArgs = {{"type", "storyFlagSet"}, {"flag", "second_fired"}};
+    notSecond.operands = {leafSecond};
+
+    EventDefinition evtPrio1 = MakeRegionNodeEntryEvent("evt_prio1", "node_x", {
+        MakeAction({{"type", "setStoryFlag"}, {"flag", "first_fired"}})
+    }, "always");
+    evtPrio1.priority = 1;
+    evtPrio1.condition = notSecond;
+
+    // Pass prio2 first to ensure sorting determines fire order.
+    session.InitializeEventDefinitions({evtPrio2, evtPrio1});
+
+    const auto results = session.NotifyRegionNodeEntry("node_x");
     REQUIRE(results.size() == 2);
 
     const auto saveData = session.ToSaveData();

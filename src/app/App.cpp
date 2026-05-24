@@ -634,6 +634,15 @@ void App::OnDestinationArrived(const std::string& destinationId) {
     if (!questUpdates.empty()) {
         statusMessage_ += " | " + questUpdates.front();
     }
+
+    // Fire authored regionNodeEntry events for this node. Quest notification runs
+    // first so quest-log updates appear before any event-driven status text.
+    const auto eventResults = session_.NotifyRegionNodeEntry(destinationId);
+    for (const auto& result : eventResults) {
+        if (!result.message.empty()) {
+            statusMessage_ += " | " + result.message;
+        }
+    }
 }
 
 MusteringCommand App::TranslateMusteringCommand(const input::InputState& input) const {
