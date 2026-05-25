@@ -14,6 +14,7 @@
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
+#include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "data/definitions/UnitDefinition.h"
 
 namespace data {
@@ -53,6 +54,8 @@ namespace data {
 
         [[nodiscard]] const std::vector<gameplay::events::EventDefinition>& EventDefinitions() const;
 
+        [[nodiscard]] const ScenarioOutcomeDefinition& ScenarioOutcome() const;
+
     private:
         std::vector<RegionDefinition> regions_;
         std::vector<LocationDefinition> locations_;
@@ -64,6 +67,7 @@ namespace data {
         std::vector<EnemyGroupDefinition> enemyGroups_;
         nlohmann::json quests_;
         std::vector<gameplay::events::EventDefinition> eventDefinitions_;
+        ScenarioOutcomeDefinition scenarioOutcome_;
         std::vector<ValidationMessage> messages_;
     };
 
