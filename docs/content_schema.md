@@ -67,10 +67,11 @@ Rules:
 - `id` should be an opaque stable string, not player-facing text.
 - display names must be separate from ids.
 
-Examples of `kind` values:
+Examples of long-term `kind` values:
 
 - `Campaign`
 - `Scenario`
+- `ScenarioOutcome`
 - `Region`
 - `Location`
 - `UnitDefinition`
@@ -80,6 +81,8 @@ Examples of `kind` values:
 - `ArtifactCombinationRecipe`
 - `ServiceDefinition`
 - `TeamTemplate`
+
+Not every listed kind has a loader today. Future phases add loaders when the corresponding runtime system exists.
 
 ---
 
@@ -91,14 +94,8 @@ Example:
 
 ```json
 {
-  "name": {
-    "en": "Old Market",
-    "nb": "Gammelt marked"
-  },
-  "description": {
-    "en": "A worn-down trading stall.",
-    "nb": "En slitt handelsbod."
-  }
+  "name": { "en": "Old Market", "nb": "Gammelt marked" },
+  "description": { "en": "A worn-down trading stall.", "nb": "En slitt handelsbod." }
 }
 ```
 
@@ -142,6 +139,8 @@ content/
 
 The exact directory structure may evolve, but content should stay grouped by domain.
 
+Current bounded-slice exception: M12 uses a single optional `content/scenario_outcome.json` file instead of a full per-Scenario directory structure.
+
 ---
 
 ## 5. Mods
@@ -173,9 +172,7 @@ Recommended `metadata.json` fields:
   "schemaVersion": 1,
   "kind": "ModMetadata",
   "id": "mymod",
-  "name": {
-    "en": "My Mod"
-  },
+  "name": { "en": "My Mod" },
   "author": "Author Name",
   "modVersion": "1.0.0",
   "targetGameVersion": "0.1.0",
@@ -227,22 +224,6 @@ Rules:
 - if filename and `id` disagree, validation should report it
 - if file directory and `kind` disagree, validation should report it
 
-Example override:
-
-```text
-content/scenarios/scenario_intro.json
-content/mods/mymod/scenarios/scenario_intro.json
-```
-
-The mod file overrides the official Scenario only if it also contains:
-
-```json
-{
-  "kind": "Scenario",
-  "id": "scenario_intro"
-}
-```
-
 ---
 
 ## 6. References
@@ -265,24 +246,11 @@ Example:
 
 ```json
 {
-  "target": {
-    "kind": "Service",
-    "id": "svc_old_market"
-  }
+  "target": { "kind": "Service", "id": "svc_old_market" }
 }
 ```
 
 Event actions and conditions should use typed fields rather than ambiguous generic ids.
-
-Example:
-
-```json
-{
-  "type": "giveItem",
-  "itemId": "item_potato",
-  "quantity": 1
-}
-```
 
 ---
 
@@ -324,12 +292,8 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Campaign",
   "id": "campaign_ashvale",
-  "name": {
-    "en": "Ashvale"
-  },
-  "description": {
-    "en": "A campaign."
-  },
+  "name": { "en": "Ashvale" },
+  "description": { "en": "A campaign." },
   "scenarios": [
     {
       "scenarioId": "scenario_intro",
@@ -342,9 +306,7 @@ Conceptual shape:
 }
 ```
 
-Standalone Scenarios are legal and do not require a Campaign.
-
-If a Scenario belongs to a Campaign, it should not be shown as a standalone selectable Scenario unless explicitly authored as standalone-selectable.
+Standalone Scenarios are legal and do not require a Campaign. If a Scenario belongs to a Campaign, it should not be shown as a standalone selectable Scenario unless explicitly authored as standalone-selectable.
 
 ---
 
@@ -378,12 +340,8 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Scenario",
   "id": "scenario_intro",
-  "name": {
-    "en": "Intro Scenario"
-  },
-  "description": {
-    "en": "The first Scenario."
-  },
+  "name": { "en": "Intro Scenario" },
+  "description": { "en": "The first Scenario." },
   "standaloneSelectable": true,
   "worldMap": {},
   "regions": [
@@ -391,16 +349,12 @@ Conceptual shape:
       "regionId": "region_mushville",
       "initialState": "unlocked",
       "context": {
-        "variables": {
-          "winter_mode": true
-        }
+        "variables": { "winter_mode": true }
       }
     }
   ],
   "storyFlags": ["flag_market_built"],
-  "variables": {
-    "bridge_repaired": false
-  },
+  "variables": { "bridge_repaired": false },
   "heroPool": ["hero_jon"],
   "bannedSkills": [],
   "bannedArtifacts": [],
@@ -412,13 +366,13 @@ Conceptual shape:
 }
 ```
 
+Current implementation note: the bounded slice does not yet load a full top-level `Scenario` content type. M12 outcome authoring is provided by `content/scenario_outcome.json`.
+
 ---
 
 ## 10. Scenario Region Context
 
-Regions are reusable structural definitions. A Scenario controls how a Region behaves by passing Scenario context to it.
-
-Use **Scenario Region Context** rather than arbitrary shallow patching as the primary model.
+Regions are reusable structural definitions. A Scenario controls how a Region behaves by passing Scenario context to it. Use **Scenario Region Context** rather than arbitrary shallow patching as the primary model.
 
 Scenario Region Context may include:
 
@@ -494,10 +448,7 @@ Example service node:
 
 ```json
 {
-  "content": {
-    "type": "service",
-    "serviceId": "svc_old_farm"
-  }
+  "content": { "type": "service", "serviceId": "svc_old_farm" }
 }
 ```
 
@@ -505,10 +456,7 @@ Example Location node:
 
 ```json
 {
-  "content": {
-    "type": "location",
-    "locationId": "location_old_house"
-  }
+  "content": { "type": "location", "locationId": "location_old_house" }
 }
 ```
 
@@ -586,9 +534,7 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Location",
   "id": "location_old_house",
-  "name": {
-    "en": "Old House"
-  },
+  "name": { "en": "Old House" },
   "screens": [],
   "services": [],
   "events": []
@@ -620,16 +566,11 @@ Conceptual shape:
 {
   "id": "svc_old_farm",
   "serviceType": "farming",
-  "name": {
-    "en": "Old Farm"
-  },
+  "name": { "en": "Old Farm" },
   "initialState": "active",
   "destroyable": true,
   "restorable": true,
-  "settings": {
-    "maxSeedQuantity": 999,
-    "allowFertilizer": true
-  }
+  "settings": { "maxSeedQuantity": 999, "allowFertilizer": true }
 }
 ```
 
@@ -645,16 +586,11 @@ Example:
 
 ```json
 {
-  "content": {
-    "type": "service",
-    "serviceId": "svc_old_farm"
-  }
+  "content": { "type": "service", "serviceId": "svc_old_farm" }
 }
 ```
 
-Location service calls are event actions.
-
-Example:
+Location service calls are future event actions. Example:
 
 ```json
 {
@@ -667,7 +603,7 @@ Rules:
 
 - Location service calls use Service instances.
 - Location-called services use the same rules as Region services where applicable.
-- Only whitelisted service types are callable from Locations.
+- Only whitelisted service types are callable from Location context.
 - One-time / single-use services should not be callable from Location events.
 - Location-owned service instances may live inside the Location file or in a Scenario-local service list if later needed.
 - Validation must ensure the referenced service is callable from Location context.
@@ -691,19 +627,10 @@ Conceptual shape:
 ```json
 {
   "id": "evt_build_market",
-  "trigger": {
-    "type": "locationConfirm",
-    "objectId": "obj_magic_stone"
-  },
-  "eligibility": {
-    "teamKinds": ["human"]
-  },
-  "condition": {
-    "type": "always"
-  },
-  "repeat": {
-    "mode": "once"
-  },
+  "trigger": { "type": "locationConfirm", "objectId": "obj_magic_stone" },
+  "eligibility": { "teamKinds": ["human"] },
+  "condition": { "type": "always" },
+  "repeat": { "mode": "once" },
   "actions": []
 }
 ```
@@ -719,37 +646,23 @@ Trigger is a typed object.
 Examples:
 
 ```json
-{
-  "type": "regionNodeEntry",
-  "nodeId": "node_old_gate"
-}
+{ "type": "regionNodeEntry", "nodeId": "node_old_gate" }
 ```
 
 ```json
-{
-  "type": "locationCollision",
-  "objectId": "obj_boy"
-}
+{ "type": "locationCollision", "objectId": "obj_boy" }
 ```
 
 ```json
-{
-  "type": "locationConfirm",
-  "objectId": "obj_magic_stone"
-}
+{ "type": "locationConfirm", "objectId": "obj_magic_stone" }
 ```
 
 ```json
-{
-  "type": "startOfDay"
-}
+{ "type": "startOfDay" }
 ```
 
 ```json
-{
-  "type": "neutralEncounterDefeated",
-  "encounterId": "enc_bandits_01"
-}
+{ "type": "neutralEncounterDefeated", "encounterId": "enc_bandits_01" }
 ```
 
 ---
@@ -765,10 +678,7 @@ Conceptual shape:
   "teamColors": ["Green"],
   "teamKinds": ["human"],
   "requiredHeroIds": ["hero_jon"],
-  "timeWindow": {
-    "startDay": 1,
-    "endDay": 10
-  }
+  "timeWindow": { "startDay": 1, "endDay": 10 }
 }
 ```
 
@@ -780,20 +690,28 @@ Eligibility is not the same as condition. Use eligibility for who may participat
 
 Conditions are typed objects.
 
-Conditions support composition:
+### Currently implemented leaves
+
+The current event/outcome condition evaluator supports exactly these leaf types:
+
+- `always`
+- `teamHasResource`
+- `teamHasHero`
+- `storyFlagSet`
+
+It also supports the composite forms:
+
+- `all`
+- `any`
+- `not`
+
+Example implemented condition:
 
 ```json
 {
   "all": [
-    {
-      "type": "teamHasResource",
-      "resource": "Wood",
-      "amount": 10
-    },
-    {
-      "type": "teamHasHero",
-      "heroId": "hero_jon"
-    }
+    { "type": "teamHasResource", "resource": "Wood", "amount": 10 },
+    { "type": "teamHasHero", "heroId": "hero_jon" }
   ]
 }
 ```
@@ -801,28 +719,23 @@ Conditions support composition:
 ```json
 {
   "any": [
-    {
-      "type": "storyFlagSet",
-      "flag": "flag_bridge_repaired"
-    },
-    {
-      "type": "teamHasItem",
-      "itemId": "item_bridge_key"
-    }
+    { "type": "storyFlagSet", "flag": "flag_bridge_repaired" },
+    { "type": "always" }
   ]
 }
 ```
 
 ```json
 {
-  "not": {
-    "type": "serviceDestroyed",
-    "serviceId": "svc_old_bridge"
-  }
+  "not": { "type": "storyFlagSet", "flag": "ashvale_lost" }
 }
 ```
 
 Leaf conditions must include `type`. Composition conditions use `all`, `any`, or `not`.
+
+### Future condition leaves
+
+Future phases may add leaves such as `teamHasItem`, `serviceDestroyed`, route state, ownership, time limits, unit counts, Region revealed, or scenario variable checks. These are design targets only until code and validation explicitly add them.
 
 ---
 
@@ -833,24 +746,30 @@ Actions are typed objects. Every action has a `type`.
 Example:
 
 ```json
-{
-  "type": "takeResource",
-  "resource": "Wood",
-  "amount": 10
-}
+{ "type": "takeResource", "resource": "Wood", "amount": 10 }
 ```
 
-```json
-{
-  "type": "giveItem",
-  "itemId": "item_potato",
-  "quantity": 1
-}
-```
+Actions should be small, explicit, and validateable. Avoid generic script strings. Action failure behavior is normally determined by the target system rule, not by per-action configuration.
 
-Actions should be small, explicit, and validateable. Avoid generic script strings.
+Event action handlers should fail explicitly when required runtime context or required arguments are missing. Silent no-ops are not acceptable for implemented action types.
 
-Action failure behavior is normally determined by the target system rule, not by per-action configuration. Event action handlers should fail explicitly when required runtime context or required arguments are missing. Silent no-ops are not acceptable for implemented action types.
+### Currently implemented action types
+
+The current event action executor/validator recognizes these action types:
+
+- `showMessage`
+- `giveResource`
+- `takeResource`
+- `setStoryFlag`
+- `clearStoryFlag`
+- `if`
+- `spawnTeam`
+- `removeTeam`
+- `changeAlliance`
+
+### Future action types
+
+Future phases may add actions such as `giveItem`, `takeItem`, `giveArtifact`, `triggerVictory`, `triggerDefeat`, `callService`, route mutation, service destruction/restoration, ownership changes, or AI behavior changes. These are not current M12-supported action types unless code explicitly implements them.
 
 ### Enemy-team lifecycle actions
 
@@ -936,31 +855,13 @@ Example:
 ```json
 {
   "type": "if",
-  "condition": {
-    "type": "teamHasResource",
-    "resource": "Wood",
-    "amount": 10
-  },
+  "condition": { "type": "teamHasResource", "resource": "Wood", "amount": 10 },
   "then": [
-    {
-      "type": "takeResource",
-      "resource": "Wood",
-      "amount": 10
-    },
-    {
-      "type": "showMessage",
-      "text": {
-        "en": "The market is rebuilt."
-      }
-    }
+    { "type": "takeResource", "resource": "Wood", "amount": 10 },
+    { "type": "showMessage", "text": { "en": "The market is rebuilt." } }
   ],
   "else": [
-    {
-      "type": "showMessage",
-      "text": {
-        "en": "You need more Wood."
-      }
-    }
+    { "type": "showMessage", "text": { "en": "You need more Wood." } }
   ]
 }
 ```
@@ -978,9 +879,7 @@ Example:
 ```json
 {
   "type": "showMessage",
-  "text": {
-    "en": "Jon joins you."
-  },
+  "text": { "en": "Jon joins you." },
   "portraitId": "portrait_jon"
 }
 ```
@@ -996,28 +895,15 @@ Use structured repeat data.
 Examples:
 
 ```json
-{
-  "repeat": {
-    "mode": "once"
-  }
-}
+{ "repeat": { "mode": "once" } }
 ```
 
 ```json
-{
-  "repeat": {
-    "mode": "always"
-  }
-}
+{ "repeat": { "mode": "always" } }
 ```
 
 ```json
-{
-  "repeat": {
-    "mode": "everyNDays",
-    "intervalDays": 7
-  }
-}
+{ "repeat": { "mode": "everyNDays", "intervalDays": 7 } }
 ```
 
 Automatic event priority is a number. Lower number means earlier. Priority must be unique within the same automatic trigger group.
@@ -1035,11 +921,7 @@ Conceptual shape:
   "id": "svc_old_man_quest",
   "serviceType": "questService",
   "settings": {
-    "emptyMessage": {
-      "text": {
-        "en": "This place seems abandoned."
-      }
-    },
+    "emptyMessage": { "text": { "en": "This place seems abandoned." } },
     "quests": []
   }
 }
@@ -1067,37 +949,15 @@ Conceptual shape:
 ```json
 {
   "id": "quest_bring_wood",
-  "eligibility": {
-    "teamKinds": ["human"]
-  },
-  "objective": {
-    "type": "teamHasResource",
-    "resource": "Wood",
-    "amount": 10
-  },
-  "startingMessage": {
-    "text": {
-      "en": "Bring me 10 Wood."
-    },
-    "portraitId": "portrait_old_man"
-  },
-  "progressMessage": {
-    "text": {
-      "en": "Still looking for Wood?"
-    },
-    "portraitId": "portrait_old_man"
-  },
+  "eligibility": { "teamKinds": ["human"] },
+  "objective": { "type": "teamHasResource", "resource": "Wood", "amount": 10 },
+  "startingMessage": { "text": { "en": "Bring me 10 Wood." }, "portraitId": "portrait_old_man" },
+  "progressMessage": { "text": { "en": "Still looking for Wood?" }, "portraitId": "portrait_old_man" },
   "completionPrompt": {
-    "text": {
-      "en": "Will you give 10 Wood?"
-    },
+    "text": { "en": "Will you give 10 Wood?" },
     "portraitId": "portrait_old_man",
     "yesActions": [
-      {
-        "type": "takeResource",
-        "resource": "Wood",
-        "amount": 10
-      }
+      { "type": "takeResource", "resource": "Wood", "amount": 10 }
     ],
     "noActions": []
   }
@@ -1110,35 +970,13 @@ Quest message fields are editor-facing shortcuts. They should use the same messa
 
 ## 30. Victory and defeat condition schema
 
-Victory and defeat conditions use the shared condition model. Victory conditions are OR-based. Defeat conditions are OR-based.
-
-Example:
-
-```json
-{
-  "id": "victory_defeat_red",
-  "condition": {
-    "type": "teamDefeated",
-    "teamColor": "Red"
-  },
-  "eligibleTeamColors": ["Green"],
-  "actions": [
-    {
-      "type": "triggerVictory"
-    }
-  ]
-}
-```
-
-If no victory condition is authored, runtime/validation expands the default:
-
-- defeat all enemy teams
-
-This expansion should produce an info validation message.
+Victory and defeat conditions use the shared condition model.
 
 ### Current authored shape (M12)
 
-Current implementation accepts an optional `content/scenario_outcome.json`. The file is a single document with the standard `schemaVersion` / `kind` / `id` identity fields plus two arrays. Each array element is an `EventCondition` tree using the same shape as event conditions (§23).
+Current implementation accepts an optional `content/scenario_outcome.json`.
+
+The file is a single document with the standard `schemaVersion` / `kind` / `id` identity fields plus two arrays. Each array element is an `EventCondition` tree using the same shape as event conditions (§23).
 
 ```json
 {
@@ -1156,12 +994,19 @@ Current implementation accepts an optional `content/scenario_outcome.json`. The 
 
 Rules:
 
-- Missing or empty file is legal — default victory ("no hostile teams remain") fires.
+- Missing or empty file is legal — default victory fires when no hostile teams remain.
+- Empty `victoryConditions` is legal — default victory remains active.
 - A non-empty `victoryConditions` list **disables default victory entirely**; designers must satisfy one of the authored conditions to win.
-- A non-empty `defeatConditions` list is OR-structured: any one match ends the scenario in defeat.
+- `victoryConditions` is OR-structured: any one match ends the scenario in victory, unless a defeat condition also matches.
+- `defeatConditions` is OR-structured: any one match ends the scenario in defeat.
 - Defeat wins over victory if both match in the same evaluation.
-- Supported leaf types are the four shared with events: `always`, `teamHasResource`, `teamHasHero`, `storyFlagSet`, plus the `all` / `any` / `not` composites. Richer leaves are deferred.
-- Per-scenario authoring (a top-level `ScenarioDefinition` content kind with embedded victory/defeat blocks) is deliberately deferred until campaigns or multi-scenario play arrive.
+- Supported condition leaves are the four shared with events: `always`, `teamHasResource`, `teamHasHero`, `storyFlagSet`, plus the `all` / `any` / `not` composites.
+- Richer outcome leaves are deferred.
+- Per-scenario authoring through a full top-level `ScenarioDefinition` content kind with embedded victory/defeat blocks is deliberately deferred until campaigns or multi-scenario play arrive.
+
+### Long-term victory/defeat model
+
+Long-term Scenario definitions may embed richer victory/defeat blocks, eligible teams, affected teams, and victory/defeat event chains. Those are design targets only. M12 only latches a terminal outcome and shows placeholder status feedback; it does not run victory event chains.
 
 ---
 
@@ -1222,11 +1067,7 @@ AI teams add:
   "ai": {
     "personality": "Builder",
     "aggression": "Careful",
-    "patrol": {
-      "enabled": true,
-      "centerNodeId": "node_camp",
-      "radius": 3
-    }
+    "patrol": { "enabled": true, "centerNodeId": "node_camp", "radius": 3 }
   }
 }
 ```
@@ -1240,10 +1081,7 @@ Authored team data defines initial state. Runtime fields such as current node, a
 Generic unit stack:
 
 ```json
-{
-  "unitId": "unit_bandit",
-  "quantity": 12
-}
+{ "unitId": "unit_bandit", "quantity": 12 }
 ```
 
 Generic units may have skills if their unit definition supports them.
@@ -1287,12 +1125,8 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "ItemDefinition",
   "id": "item_fish_soup",
-  "name": {
-    "en": "Fish Soup"
-  },
-  "description": {
-    "en": "A warm meal."
-  },
+  "name": { "en": "Fish Soup" },
+  "description": { "en": "A warm meal." },
   "icon": "icon_fish_soup",
   "subtype": "food",
   "stackCap": 999,
@@ -1313,30 +1147,19 @@ Items should use shared typed effects. Artifacts should use typed modifiers and 
 Example item effect:
 
 ```json
-{
-  "type": "recoverHp",
-  "target": "hero",
-  "amount": 50
-}
+{ "type": "recoverHp", "target": "hero", "amount": 50 }
 ```
 
 Example artifact modifier:
 
 ```json
-{
-  "type": "statBonus",
-  "stat": "Attack",
-  "amount": 2
-}
+{ "type": "statBonus", "stat": "Attack", "amount": 2 }
 ```
 
 Example artifact special effect:
 
 ```json
-{
-  "type": "specialEffect",
-  "effect": "DisableAllUsableSkillsInBattleForBothTeams"
-}
+{ "type": "specialEffect", "effect": "DisableAllUsableSkillsInBattleForBothTeams" }
 ```
 
 Special effects are enum-driven and handled by code. Artifacts may have multiple bonuses and effects.
@@ -1364,12 +1187,8 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "ArtifactDefinition",
   "id": "artifact_iron_sword",
-  "name": {
-    "en": "Iron Sword"
-  },
-  "description": {
-    "en": "A simple weapon."
-  },
+  "name": { "en": "Iron Sword" },
+  "description": { "en": "A simple weapon." },
   "icon": "icon_iron_sword",
   "allowedSlots": ["Attack"],
   "rarity": "minor",
@@ -1377,11 +1196,7 @@ Conceptual shape:
   "baseValue": 250,
   "combinable": true,
   "effects": [
-    {
-      "type": "statBonus",
-      "stat": "Attack",
-      "amount": 2
-    }
+    { "type": "statBonus", "stat": "Attack", "amount": 2 }
   ]
 }
 ```
@@ -1410,22 +1225,11 @@ Conceptual shape:
   "schemaVersion": 1,
   "kind": "Recipe",
   "id": "recipe_fish_soup",
-  "name": {
-    "en": "Fish Soup"
-  },
+  "name": { "en": "Fish Soup" },
   "ingredients": [
-    {
-      "itemId": "item_potato",
-      "quantity": 1
-    },
-    {
-      "itemId": "item_tomato",
-      "quantity": 1
-    },
-    {
-      "itemId": "item_fish",
-      "quantity": 2
-    }
+    { "itemId": "item_potato", "quantity": 1 },
+    { "itemId": "item_tomato", "quantity": 1 },
+    { "itemId": "item_fish", "quantity": 2 }
   ],
   "outputItemId": "item_fish_soup",
   "outputQuantity": 1,
@@ -1455,14 +1259,8 @@ Conceptual shape:
   "kind": "ArtifactCombinationRecipe",
   "id": "combo_iron_sword_plus_iron_sword",
   "inputs": [
-    {
-      "artifactId": "artifact_iron_sword",
-      "quantity": 1
-    },
-    {
-      "artifactId": "artifact_iron_sword",
-      "quantity": 1
-    }
+    { "artifactId": "artifact_iron_sword", "quantity": 1 },
+    { "artifactId": "artifact_iron_sword", "quantity": 1 }
   ],
   "outputArtifactId": "artifact_steel_sword"
 }
@@ -1486,10 +1284,7 @@ Conceptual shape:
   "message": "Referenced item `item_key_rusty` does not exist.",
   "suggestion": "Select a valid item id or remove the requirement.",
   "related": [
-    {
-      "kind": "QuestService",
-      "id": "svc_old_gate"
-    }
+    { "kind": "QuestService", "id": "svc_old_gate" }
   ]
 }
 ```
@@ -1561,9 +1356,7 @@ Rules:
 
 ### Character creation data
 
-Before a Scenario or Campaign starts, the player creates the player character.
-
-Character creation fills the stable player-character hero identity with:
+Before a Scenario or Campaign starts, the player creates the player character. Character creation fills the stable player-character hero identity with:
 
 - name
 - sex
@@ -1571,27 +1364,6 @@ Character creation fills the stable player-character hero identity with:
 - starting stats
 - starting skills
 - starting preset/template
-
-Example:
-
-```json
-{
-  "playerCharacter": {
-    "heroId": "hero_player",
-    "name": "Asha",
-    "sex": "female",
-    "appearance": {
-      "body": "body_01",
-      "hair": "hair_03",
-      "palette": "palette_02"
-    },
-    "startingPreset": "Warrior",
-    "stats": {},
-    "skills": [],
-    "passiveSkills": []
-  }
-}
-```
 
 Starting presets such as Warrior, Builder, and Explorer are presets only. They are not permanent class restrictions.
 
@@ -1624,6 +1396,7 @@ Examples of runtime state:
 - stationed guards
 - temporarily unavailable heroes
 - enemy-team current node, active/inactive state, energy, cooldown, and runtime alliances
+- latched scenario outcome
 
 Do not write runtime progression state back into authored content files. Editor tools may edit authored initial state, not live save state, unless explicitly in a save-editor mode.
 
@@ -1648,4 +1421,5 @@ For AI agents and future implementation work:
 - use `showMessage` as the shared message-display action path
 - keep validation suppressions Scenario-level
 - make implemented event actions fail explicitly when required context/arguments are missing
+- do not document future conditions/actions as implemented until code and validation actually support them
 - follow `docs/presentation_game_feel.md` for presentation asset ids and presentation event-action boundaries

@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a post-M12 bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed event foundation, the practical Phase 3 enemy-team Region-layer slice, and deterministic scenario outcome evaluation (default victory plus authored victory/defeat conditions).
+The current codebase is a post-M12 bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, and deterministic scenario outcome evaluation.
 
 The roadmap works from foundations outward:
 
@@ -14,9 +14,7 @@ The roadmap works from foundations outward:
 6. World Map
 7. Campaign
 
-`docs/presentation_game_feel.md` and `docs/game_shell_flow.md` are active guidance documents and must be respected when their subject matter is touched. They are not implementation priorities until shell, UI, and presentation phases are explicitly in scope.
-
-Work in earlier phases should not pre-implement shell screens or presentation behavior beyond what those phases strictly require.
+`docs/presentation_game_feel.md` and `docs/game_shell_flow.md` are active guidance documents and must be respected when their subject matter is touched. They are not implementation priorities until shell, UI, and presentation phases are explicitly in scope. Earlier phases should not pre-implement shell screens or presentation behavior beyond what those phases strictly require.
 
 ---
 
@@ -64,16 +62,6 @@ Current stable foundation:
   - `GameSession::HostileOccupiedNodeIds()` query
   - wired in `App::UpdateRegionMode` with arrival-node exemption
   - Catch2 test coverage
-- M12 scenario outcome foundation:
-  - pure `ScenarioOutcomeRules` evaluator (default victory, authored victory/defeat, defeat priority)
-  - `ScenarioOutcomeDefinition` content struct reusing the typed `EventCondition` tree
-  - optional `content/scenario_outcome.json` loaded via `ContentRepository`
-  - `changeAlliance` event action requires explicit `add` arg — no silent default
-  - latched terminal outcome on `GameSession` survives save/load (not re-evaluated on load)
-  - outcome checks at boundaries: end of `FireMatchingEvents`, `ProcessEnemyPhase`, `ClearEnemyTeamByColor`
-  - `App::UpdateRegionMode` enforces the documented order: travel apply → quest notify → `regionNodeEntry` events → outcome check #1 → enemy phase → outcome check #2 → battle/Location only if Ongoing
-  - placeholder status feedback: `Victory!` / `Defeat.` + matched reason appended to `statusMessage_`
-  - authored demo content: `evt_cleanse_at_sunken_ruin` (sets `ashvale_cleansed` → matches victory), `evt_trap_at_clocktower` (sets `ashvale_lost` → matches defeat)
 - post-M11-e enemy-team Region-layer features:
   - Region preview and confirmed travel use the same hostile-occupation truth
   - hostile-occupied nodes are exposed in the Region render model
@@ -84,12 +72,31 @@ Current stable foundation:
   - enemy-team runtime state persists through save/load, including mutable alliances
   - `spawnTeam`, `removeTeam`, and `changeAlliance` event actions exist with explicit failure behavior
   - enemy-phase trigger expectations are documented in code and covered by tests
-- Catch2 test coverage for core logic, validation, event foundation, enemy-team phase, Region mapper preview, event team mutations, and save/load runtime state
+- M12 scenario outcome foundation:
+  - pure `ScenarioOutcomeRules` evaluator
+  - default victory fallback when no authored victory condition exists
+  - authored victory conditions through `content/scenario_outcome.json`
+  - authored defeat conditions through `content/scenario_outcome.json`
+  - defeat priority when defeat and victory both match in the same evaluation
+  - non-empty `victoryConditions` disables the default victory fallback entirely
+  - `ScenarioOutcomeDefinition` content struct reusing the typed `EventCondition` tree
+  - optional `content/scenario_outcome.json` loaded via `ContentRepository`
+  - `changeAlliance` event action requires explicit `add` arg — no silent default
+  - latched terminal outcome on `GameSession` survives save/load and is not re-evaluated away on load
+  - outcome checks at relevant boundaries: end of `FireMatchingEvents`, `ProcessEnemyPhase`, and `ClearEnemyTeamByColor`
+  - `App::UpdateRegionMode` enforces the documented order: travel apply → quest notify → `regionNodeEntry` events → outcome check #1 → enemy phase → outcome check #2 → battle/Location only if ongoing
+  - placeholder status feedback: `Victory!` / `Defeat.` plus matched reason appended to `statusMessage_`
+  - authored demo content: `evt_cleanse_at_sunken_ruin` sets `ashvale_cleansed` and matches victory; `evt_trap_at_clocktower` sets `ashvale_lost` and matches defeat
+  - Catch2 coverage for pure outcome rules, authored content load/validation, ordered integration hooks, default-victory override semantics, and save/load persistence
 
 Still incomplete / intentionally deferred:
 
-- authored scenario victory/defeat outcome evaluation
 - proper scenario-end transitions beyond placeholder behavior
+- victory event chains
+- polished result screen / presentation flow
+- richer outcome condition leaves such as hero alive, route state, ownership, time limits, unit counts, and Region revealed
+- per-team / multi-human scenario outcome tracking
+- softlock / victory-reachability proof validation
 - advanced personality/aggression-driven AI beyond the current basic patrol/phase foundation
 - enemy recruitment and advanced AI service use
 - enemy sabotage/destruction/restoration loops
@@ -110,8 +117,9 @@ Still incomplete / intentionally deferred:
 | 3 | `docs/game_shell_flow.md` specifies full shell flow. Code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Continue expanding validation only when a phase requires it. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader combat command depth. Current battle code tracks a smaller baseline. | Gap; acceptable until skill/status phases. |
-| 6 | Player color is still hardcoded as `"Green"` in some Region/enemy-team paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
+| 6 | Player color is still hardcoded as `"Green"` in some Region/enemy-team/outcome paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
 | 7 | Hostile contact requires a configured node `battleScenarioId`. | Intentional post-M11-e rule. Missing encounters produce diagnostics, not fallback battles. Future validation should enforce this for hostile-contact-capable nodes. |
+| 8 | `scenario_outcome.json` is a single bounded-slice authoring file, not a full `ScenarioDefinition`. | Intentional M12 compromise. Full Scenario/Campaign authoring comes later. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -132,7 +140,7 @@ Scope from `docs/validation_system.md`:
 - rules for schema identity, required field presence, node uniqueness, adjacency references, arrival node, quest references, service legality, and related content references
 - validation levels: `SaveLevel`, `PlayableLevel`, `ReleaseLevel`
 
-Out of scope for initial validation foundation:
+Out of scope for the initial validation foundation:
 
 - full victory-path reachability graph analysis
 - full UI display of validation messages
@@ -201,33 +209,27 @@ Deferred beyond Phase 3:
 
 ### Phase 4 — Victory and Defeat Conditions
 
-**Status:** M12-a / M12-b / M12-c complete. Foundation usable; future expansion (richer condition leaves, victory event chains, polished result screen, campaign hand-off) deferred per the out-of-scope list below.
+**Status:** M12-a / M12-b / M12-c complete.
 
-**Goal:** Scenarios end with deterministic authored or default win/loss outcomes.
+**Goal:** Scenarios end with deterministic authored or default win/loss outcomes. Condition evaluation reuses the typed condition evaluator from Phase 2.
 
-Condition evaluation should reuse the typed condition evaluator from Phase 2 where practical.
+Completed foundation:
 
-Scope:
-
-- pure `VictoryDefeatRules` / `ScenarioOutcomeRules`
-- default victory: all hostile enemy teams defeated/removed
-- minimal authored victory/defeat condition path
+- pure `ScenarioOutcomeRules`
+- default victory fallback when no authored victory condition exists
+- authored victory and defeat conditions in optional `content/scenario_outcome.json`
+- default-victory override rule: a non-empty `victoryConditions` list disables default victory entirely
+- defeat priority: if defeat and victory both match in the same evaluation, defeat wins
+- outcome latching on `GameSession`
+- save/load persistence for latched outcomes
+- placeholder App feedback for victory/defeat
 - outcome evaluation after relevant state changes:
   - hostile contact victory
   - `regionNodeEntry` event mutations
   - enemy phase
-  - start-of-day event mutations
+  - start-of-day event mutations through the shared event path
   - relevant Region-mode state changes
-- placeholder App feedback for victory/defeat
-- tests for default victory, authored victory, authored defeat, and no-outcome states
-
-M12-a pre-work already completed:
-
-- `regionNodeEntry` events fire from `App::OnDestinationArrived()`.
-- `GameSession::NotifyRegionNodeEntry(nodeId)` reuses the shared event firing path.
-- Region-node-entry events can apply story/resource actions and enemy-team mutations.
-- Event validation recognizes `spawnTeam`, `removeTeam`, and `changeAlliance`.
-- Tests cover region-node-entry matching, non-matching, unmet conditions, once-mode, trigger isolation, priority ordering, team mutation application, and validation for enemy-team mutation actions.
+- tests for default victory, authored victory, authored defeat, no-outcome states, ordered arrival hooks, and save/load persistence
 
 Outcome evaluation order for Region travel arrival:
 
@@ -239,14 +241,16 @@ Outcome evaluation order for Region travel arrival:
 6. Evaluate scenario outcome again.
 7. Continue to node battle / Location transition only if no scenario outcome fired.
 
-Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If those events satisfy victory or defeat conditions, the scenario should end before enemy phase gets another action. Enemy phase can also create an outcome, so it needs a second check afterward.
+Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If those events satisfy victory or defeat conditions, the scenario should end before enemy phase gets another action. Enemy phase can also create an outcome in future richer systems, so it keeps a second boundary check after the current patrol-only phase.
 
 Out of scope:
 
 - full result screen
 - campaign progression
 - rewards/carry-over
-- victory/defeat presentation polish
+- victory event chains
+- polished victory/defeat presentation
+- richer outcome condition leaves
 - auto-resolve
 - diplomacy UI
 - advanced enemy AI
@@ -302,7 +306,7 @@ Scope:
 - campaign transition graph
 - `CampaignCarryover`
 - explicit allow-list carry-over rules
-- Campaign -> Scenario transitions
+- Campaign → Scenario transitions
 - partial shell entry point for campaign selection
 - `CampaignCarryoverTests.cpp`
 
@@ -312,79 +316,21 @@ Full character creation, load UI, autosave slots, and settings remain out of sco
 
 ## 4. Current Next Milestone
 
-### M13 — Phase 5 candidate (Inventory and Artifacts) or follow-up scenario outcome expansion
+### M13 — Phase 5 candidate: Inventory and Artifacts
 
 Latest completed milestone: **M12-c — Scenario Outcome content proof and end-to-end demo**.
 
-M12 closed the Phase 4 scenario-outcome foundation: pure rules, save/load-aware latching, ordered integration hooks in the Region travel flow, and authored demo content driving both an authored victory and an authored defeat path. The single-region slice can now end deterministically.
+M12 closed the Phase 4 scenario-outcome foundation: pure rules, save/load-aware latching, ordered integration hooks in the Region travel flow, and authored demo content driving both an authored victory and an authored defeat path. The single-Region slice can now end deterministically.
 
-Future scenario-outcome work (deferred, not in M12):
+Future scenario-outcome work is deferred, not part of M12:
 
-- Richer condition leaves: hero alive, route destroyed, ownership, time limits, unit counts, Region revealed, etc.
-- Victory event action chains (authored event hooks that fire on win).
-- Polished result screen, transition flow, campaign hand-off.
-- Per-team / multi-human outcome tracking.
-- Softlock / reachability proofs in validation.
+- richer condition leaves: hero alive, route destroyed, ownership, time limits, unit counts, Region revealed, etc.
+- victory event action chains
+- polished result screen, transition flow, campaign hand-off
+- per-team / multi-human outcome tracking
+- softlock / reachability proofs in validation
 
-### Historical: M12-a Foundation (completed)
-
-M11-e completed the practical Phase 3 enemy-team Region-layer slice:
-
-- Region preview and confirmed travel now use the same hostile-occupation truth.
-- Hostile-occupied nodes are exposed in the Region render model and drawn with a danger marker.
-- Hostile-occupied destinations can start contact battles using the node's configured battle scenario.
-- Hostile contact has no debug battle fallback; missing encounters produce a diagnostic and leave the team uncleared.
-- Victory clears the exact engaged team by team color.
-- Enemy-team runtime state persists through save/load, including mutable alliances.
-- `spawnTeam`, `removeTeam`, and `changeAlliance` event actions exist with explicit failure behavior.
-- Event validation recognizes `spawnTeam`, `removeTeam`, and `changeAlliance`.
-- `regionNodeEntry` events fire from Region arrival and can apply story/resource actions and enemy-team mutations.
-- Enemy-phase trigger expectations are documented in code and covered by tests.
-
-**Goal for M12-a:**
-
-Add deterministic scenario outcome evaluation so scenarios can end via default victory, authored victory conditions, and authored defeat conditions.
-
-**Scope:**
-
-- Add pure scenario outcome rules.
-- Support default victory when all hostile enemy teams are defeated/removed.
-- Support a minimal authored victory/defeat condition path using existing condition concepts where practical.
-- Evaluate outcome after hostile contact victory, `regionNodeEntry` event mutations, enemy phase, start-of-day event mutations, and relevant Region-mode state changes.
-- Surface placeholder victory/defeat feedback in App flow.
-
-**Pre-work completed:**
-
-- `regionNodeEntry` events now fire from `App::OnDestinationArrived()`.
-- `GameSession::NotifyRegionNodeEntry(nodeId)` reuses the shared event firing path.
-- Region-node-entry events can apply story/resource actions and enemy-team mutations.
-- Event validation recognizes `spawnTeam`, `removeTeam`, and `changeAlliance`.
-- Tests cover region-node-entry matching, non-matching, unmet conditions, once-mode, trigger isolation, priority ordering, team mutation application, and validation for enemy-team mutation actions.
-
-**Outcome evaluation order for Region travel arrival:**
-
-1. Apply travel time and destination change.
-2. Apply quest destination notification.
-3. Fire `regionNodeEntry` events.
-4. Evaluate scenario outcome.
-5. Run enemy phase.
-6. Evaluate scenario outcome again.
-7. Continue to node battle / Location transition only if no scenario outcome fired.
-
-Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If those events satisfy victory or defeat conditions, the scenario should end before enemy phase gets another action. Enemy phase can also create an outcome, so it needs a second check afterward.
-
-**Out of scope:**
-
-- full result screen
-- campaign progression
-- rewards/carry-over
-- auto-resolve
-- diplomacy UI
-- advanced enemy AI
-- fog/scouting
-- inventory/equipment
-- broad event-system rewrite
-- shell/menu work
+Recommended next major milestone is **M13 / Phase 5: Inventory and Artifacts**, unless a small post-M12 cleanup is selected first.
 
 ---
 
@@ -395,7 +341,7 @@ Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If 
 | 1 | `ContentValidatorTests` pass for implemented validation rules; malformed JSON surfaces typed error messages with correct paths; valid content loads without blocking messages. |
 | 2 | Authored event fires on trigger, evaluates a condition, executes an action, persists story flags/fired event ids, and does not re-fire one-shot events. |
 | 3 | Enemy team spawns/moves/occupies on the Region layer; hostile occupation blocks player use; hostile marker is visible; contact battle can clear the exact occupying team; event actions can spawn/remove/change alliances; save/load round-trips enemy-team runtime state. |
-| 4 | Default victory fires when all hostile enemy teams are defeated/removed; authored victory condition can end the scenario; authored defeat condition can end the scenario; no-outcome states remain playable; Region arrival checks outcome after `regionNodeEntry` events and again after enemy phase before continuing to follow-up transitions. |
+| 4 | If no authored victory condition exists, default victory fires when all hostile enemy teams are defeated/removed/allied; authored victory conditions can end the scenario and suppress default victory; authored defeat conditions can end the scenario; defeat wins over victory; no-outcome states remain playable; Region arrival checks outcome after `regionNodeEntry` events and again after enemy phase before continuing to follow-up transitions; latched outcomes survive save/load. |
 | 5 | Hero equips artifact; stat bonus affects relevant calculations; combine recipe produces output item; save/load round-trips inventory; leader item bonus updates Energy display. |
 | 6 | World Map shows Regions; travel costs 1000 Energy; start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day; generics remain in origin Region unless later rules change this. |
 | 7 | Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. |
@@ -404,12 +350,13 @@ Reason: `regionNodeEntry` events may remove, spawn, or change hostile teams. If 
 
 ## 6. Tests Needed
 
-- `VictoryDefeatTests.cpp` / `ScenarioOutcomeRulesTests.cpp` — Phase 4 / M12-a
+Future test suites still needed for upcoming phases:
+
 - `InventoryTests.cpp`, `ArtifactTests.cpp` — Phase 5
 - `WorldMapTravelTests.cpp` — Phase 6
 - `CampaignCarryoverTests.cpp` — Phase 7
 
-Existing tests already cover much of the Phase 1-3 foundation. Continue using Catch2 and prefer pure-logic tests over rendering or input tests.
+Existing tests already cover much of the Phase 1-4 foundation, including M12 scenario outcome rules, authored outcome content, integration hooks, and save/load persistence. Continue using Catch2 and prefer pure-logic tests over rendering or input tests.
 
 ---
 

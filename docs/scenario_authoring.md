@@ -2,11 +2,10 @@
 
 This document defines the intended long-term authoring model for Ashvale Scenarios, Regions, Locations, Services, events, quests, victory/defeat conditions, teams, items, artifacts, recipes, and validation.
 
-This is a design and tooling guide. Detailed validation levels, severities, gates, and validator categories live in `docs/validation_system.md`.
-
-Detailed content data shapes and schema conventions live in `docs/content_schema.md`.
+This is a design and tooling guide. Detailed validation levels, severities, gates, and validator categories live in `docs/validation_system.md`. Detailed content data shapes and schema conventions live in `docs/content_schema.md`.
 
 This document does not replace:
+
 - `docs/game_vision.md`
 - `docs/core_loop_rules.md`
 - `docs/combat_rules.md`
@@ -23,7 +22,7 @@ Use this document when designing content schemas, designer tools, validation rul
 
 Ashvale should be heavily data-driven.
 
-The following should be editable through a designer tool:
+The following should be editable through a designer tool eventually:
 
 - Campaigns
 - Scenarios
@@ -48,6 +47,7 @@ The following should be editable through a designer tool:
 The resource enum itself is code/schema-defined. Designers configure how resources are used, awarded, spent, traded, and produced; they do not add arbitrary new resource types unless the resource enum is explicitly expanded.
 
 Code defines:
+
 - allowed system types
 - runtime behavior
 - formulas
@@ -55,24 +55,20 @@ Code defines:
 - legal enum values
 - engine-level constraints
 
-Content configures those systems within legal limits.
-
-Content should not be able to invent arbitrary new mechanics without code support.
+Content configures those systems within legal limits. Content should not be able to invent arbitrary new mechanics without code support.
 
 ---
 
 ## 2. Validation philosophy
 
-Designer-authored content should be strict enough to prevent invalid content from being played.
-
-However, validation must not prevent a designer from saving unfinished work.
+Designer-authored content should be strict enough to prevent invalid content from being played. However, validation must not prevent a designer from saving unfinished work.
 
 ### Save versus play
-A designer may save an invalid or incomplete map for later work.
 
-An invalid map should not be playable in the game.
+A designer may save an invalid or incomplete map for later work. An invalid map should not be playable in the game.
 
 ### Harsh versus invalid
+
 Validation must distinguish between:
 
 - **invalid content**
@@ -82,7 +78,6 @@ Validation must distinguish between:
   - missing arrival node
   - missing required content ids
   - no valid win path where one is required
-
 - **harsh but legal content**
   - no safe anchor
   - scarce resources
@@ -91,9 +86,9 @@ Validation must distinguish between:
   - one missed opportunity causing defeat
   - no forgiving recovery path
 
-Harsh Scenarios are legal if they are structurally valid.
+Harsh Scenarios are legal if they are structurally valid. The designer is responsible for making harsh content fair or fun.
 
-The designer is responsible for making harsh content fair or fun.
+Current implementation note: not all long-term validation examples are implemented yet. M12 validates the current authored outcome shape structurally and through tests, but does not attempt full softlock proofing or complete instant-win/loss analysis.
 
 ---
 
@@ -150,39 +145,27 @@ The intended authoring hierarchy is:
   - condition types
   - templates
 
-Standalone Scenarios are legal.
+Standalone Scenarios are legal. Campaigns are not required.
 
-Campaigns are not required.
+Current bounded-slice exception: M12 does not introduce the full top-level `ScenarioDefinition` content kind. The current outcome authoring surface is the single optional `content/scenario_outcome.json` file.
 
 ---
 
 ## 4. Reusable Regions
 
-Regions may be reusable across Scenarios.
+Regions may be reusable across Scenarios. A World Map links to one or more Regions. A Scenario may define variables, flags, rules, or overrides that make a reused Region behave differently in that Scenario.
 
-A World Map links to one or more Regions.
-
-A Scenario may define variables, flags, rules, or overrides that make a reused Region behave differently in that Scenario.
-
-This allows shared authored spaces without requiring every Scenario to duplicate Region data.
-
-Validation must evaluate a Region in the context of the Scenario that uses it.
+This allows shared authored spaces without requiring every Scenario to duplicate Region data. Validation must evaluate a Region in the context of the Scenario that uses it.
 
 ---
 
 ## 5. World Map authoring
 
-World Map adjacency is manually authored.
+World Map adjacency is manually authored. The designer defines which Regions connect to which other Regions. The World Map should not rely on automatic polygon-border detection as the source of truth.
 
-The designer defines which Regions connect to which other Regions.
+A Scenario may start with multiple Regions defined, with some locked or hidden. Locked Regions are not shown to the player until unlocked. A Region may exist and remain non-enterable forever. This is legal if it is intentional and not required for victory.
 
-The World Map should not rely on automatic polygon-border detection as the source of truth.
-
-A Scenario may start with multiple Regions defined, with some locked or hidden.
-
-Locked Regions are not shown to the player until unlocked.
-
-A Region may exist and remain non-enterable forever. This is legal if it is intentional and not required for victory.
+World Map authoring is future scope. The current playable slice is single-Region.
 
 ---
 
@@ -204,14 +187,11 @@ Each Region should define at minimum:
 - ownership state where applicable
 - initial teams / stationed guards where applicable
 
-Every Region must contain at least one node.
-
-Every playable Region must have exactly one valid arrival node unless a later design explicitly supports multiple arrival nodes.
+Every Region must contain at least one node. Every playable Region must have exactly one valid arrival node unless a later design explicitly supports multiple arrival nodes.
 
 ### Region size
-Region size is derived from node count.
 
-The intended labels are:
+Region size is derived from node count. The intended labels are:
 
 - Tiny
 - Small
@@ -226,13 +206,10 @@ The exact thresholds can be tuned later.
 
 ## 7. Node authoring
 
-Nodes are fundamentally empty travel points.
-
-Avoid treating “node type” as the primary design truth.
-
-A node’s gameplay behavior is determined mostly by its **node content** and attached events.
+Nodes are fundamentally empty travel points. Avoid treating “node type” as the primary design truth. A node's gameplay behavior is determined mostly by its **node content** and attached events.
 
 ### Node content
+
 A node may contain at most one main content item.
 
 Examples:
@@ -246,16 +223,14 @@ Examples:
 A node may not contain both a resource pickup and a neutral hostile encounter.
 
 ### Events on nodes
-Events may be attached to nodes.
 
-A designer should be able to attach or edit node events easily, for example through a node context menu such as “Edit event...”.
-
-A node event may optionally take priority over the node’s normal content if authored to do so.
+Events may be attached to nodes. A designer should be able to attach or edit node events easily, for example through a node context menu such as “Edit event...”. A node event may optionally take priority over the node's normal content if authored to do so.
 
 ### Region node-entry event
-A **Region node-entry event** triggers when an eligible team arrives on the node.
 
-This is distinct from Location-mode collision or confirm-button events.
+A **Region node-entry event** triggers when an eligible team arrives on the node. This is distinct from Location-mode collision or confirm-button events.
+
+Current implementation supports `regionNodeEntry` and uses it for the M12 authored victory/defeat demo.
 
 ---
 
@@ -290,6 +265,7 @@ A route should define:
 Travel time and Energy cost are computed from route quality and distance.
 
 ### Route state
+
 Routes may be:
 
 - visible / active
@@ -297,33 +273,20 @@ Routes may be:
 - destroyed
 - restored
 
-Events may:
-- destroy a route
-- restore a route
-- reveal / activate a hidden route by restoring it
-
-Events do not create entirely new route definitions from nothing at runtime.
-
-If a route should appear later, it should exist as hidden or inactive authored data.
+Events may eventually destroy, restore, reveal, or activate routes. Events do not create entirely new route definitions from nothing at runtime. If a route should appear later, it should exist as hidden or inactive authored data.
 
 ---
 
 ## 10. Service authoring
 
-Region Services are predefined typed Services with editable legal settings.
-
-Service definitions are data-based and may be modded or overridden where legal.
-
-Code still defines the supported service type list and runtime behavior.
+Region Services are predefined typed Services with editable legal settings. Service definitions are data-based and may be modded or overridden where legal. Code still defines the supported service type list and runtime behavior.
 
 ### Service defaults
-Each service type should have global defaults.
 
-Defaults live in data and can be created or edited with the designer tool.
-
-Defaults are global, not per Scenario, although individual placed Services may override allowed fields.
+Each service type should have global defaults. Defaults live in data and can be created or edited with the designer tool. Defaults are global, not per Scenario, although individual placed Services may override allowed fields.
 
 ### Service validation
+
 Validation should be strict and service-type-specific.
 
 Examples:
@@ -339,10 +302,13 @@ Examples:
 - farming service must have valid seed/fertilizer/output settings
 
 ### Service visibility
+
 A Region Service becomes visible when its node is revealed.
 
 ### Service state
-Events may change Service state, including:
+
+Events may eventually change Service state, including:
+
 - destroyed
 - restored
 - settings override
@@ -353,15 +319,9 @@ Events may override authored service settings where such overrides are legal.
 
 ## 11. Location service calls
 
-Location-mode service use is event-driven.
+Location-mode service use is event-driven. A Location event may call a reusable service definition. Location service calls use the same service flow as predefined Region Services where allowed.
 
-A Location event may call a reusable service definition.
-
-Location service calls use the same service flow as predefined Region Services where allowed.
-
-Only a subset of service types should be callable from Locations. The exact allowed list can be finalized later.
-
-This keeps Location interactions flexible without creating separate incompatible service systems.
+The exact allowed list can be finalized later. This keeps Location interactions flexible without creating separate incompatible service systems.
 
 ---
 
@@ -385,15 +345,14 @@ Events are data-authored and should be editable through the designer tool.
 
 ## 13. Event triggers
 
-Supported trigger categories include:
+Currently implemented trigger categories include:
 
 - Region node-entry event
+- start-of-day automatic event
 - Location collision event
 - Location confirm-button event
-- start-of-day automatic event
 - neutral encounter defeated
 - service used
-- service restored
 - service destroyed
 - quest completion
 
@@ -413,9 +372,7 @@ Supported eligibility checks include:
 - required hero
 - combinations of the above
 
-Do not use eligibility for general world-state requirements.
-
-Those belong in conditions.
+Do not use eligibility for general world-state requirements. Those belong in conditions.
 
 ---
 
@@ -423,15 +380,28 @@ Those belong in conditions.
 
 Conditions define whether the actual requirement is satisfied.
 
-Event conditions may include checks such as:
+### Current implementation
+
+The current shared condition evaluator supports:
+
+- `always`
+- `teamHasResource`
+- `teamHasHero`
+- `storyFlagSet`
+- `all`
+- `any`
+- `not`
+
+These are the only condition leaves M12 outcome authoring should rely on.
+
+### Future condition targets
+
+Future event, quest, victory, and defeat conditions may include checks such as:
 
 - team has item
 - team has artifact
-- team has resources
-- team has hero in traveling party
 - team owns node or Service
 - team defeated another team
-- story flag state
 - day / week / month range
 - quest state
 - Region revealed
@@ -439,6 +409,8 @@ Event conditions may include checks such as:
 - Service state
 - route state
 - Scenario variable state
+
+Those leaves are design targets only until code and validation implement them.
 
 Quest objectives, event conditions, victory conditions, and defeat conditions should share the same broad typed condition model where practical.
 
@@ -448,15 +420,28 @@ Quest objectives, event conditions, victory conditions, and defeat conditions sh
 
 Event actions are the typed effects executed by an event.
 
-Known action categories include:
+### Current implementation
 
-- show message
-- give resources
-- take resources
-- give item
-- take item
-- give artifact
-- take artifact
+The current event system recognizes these action types:
+
+- `showMessage`
+- `giveResource`
+- `takeResource`
+- `setStoryFlag`
+- `clearStoryFlag`
+- `if`
+- `spawnTeam`
+- `removeTeam`
+- `changeAlliance`
+
+The action list should remain explicit and typed. Implemented action handlers must fail explicitly when required context or required arguments are missing.
+
+### Future action targets
+
+Future phases may add:
+
+- give/take item
+- give/take artifact
 - give troops
 - recover team
 - grant experience
@@ -464,40 +449,23 @@ Known action categories include:
 - remove skill
 - kill / remove unit
 - start fight
-- change alliance
 - change ownership
-- unlock Region
-- lock Region
-- spawn team
-- remove team
-- destroy Service
-- restore Service
-- set story flag
-- clear story flag
+- unlock/lock Region
+- destroy/restore Service
 - update guidance
-- trigger victory
-- trigger defeat
-- build Location service
-- restore Location service
-- upgrade Location service
-- change AI personality
-- change AI aggression
-- change AI patrol
-- destroy route
-- restore route
-- reveal / activate hidden route
+- trigger victory/defeat event chains
+- build/restore/upgrade Location service
+- change AI personality/aggression/patrol
+- destroy/restore route
+- reveal/activate hidden route
 
-The action list should remain explicit and typed.
+These are not current action types unless code and validation explicitly support them.
 
 ---
 
 ## 17. Event branches
 
-Events should support nested If / Else branches.
-
-Branches may go as deep as the designer needs.
-
-Branching is preferred over optional action flags.
+Events should support nested If / Else branches. Branches may go as deep as the designer needs. Branching is preferred over optional action flags.
 
 Example:
 
@@ -528,9 +496,11 @@ Rules:
 This is **Model A: non-atomic ordered actions**.
 
 ### Runtime event-action failure
+
 Event actions should not fail during normal intended play.
 
 Designers should use:
+
 - eligibility
 - conditions
 - If / Else branches
@@ -553,48 +523,34 @@ Examples:
 - “Could not take resource: not enough Wood.”
 
 ### Take actions
-Actions that take resources or items must re-check availability at execution time.
 
-If unavailable:
+Actions that take resources or items must re-check availability at execution time. If unavailable:
 
 - fail hard
 - do not clamp
 - do not allow negative resources
 
 ### Give actions and overflow
-Give actions must obey inventory and roster rules.
 
-If receiving rules cap or reject excess:
+Give actions must obey inventory and roster rules. If receiving rules cap or reject excess:
 
 - the system rule applies
 - excess may be discarded or capped where that is the defined rule
 - the player should receive popup/log feedback when reasonable
 
-Example:
-- artifact stacks cap at 999
-- attempting to add beyond the cap keeps the stack at 999
-- the excess is not added
-
 ---
 
 ## 19. Event repeatability and priority
 
-Manual events are one-shot by default.
-
-A manual event may be marked repeatable.
-
-Repeatable manual events do not require a cooldown by default.
+Manual events are one-shot by default. A manual event may be marked repeatable. Repeatable manual events do not require a cooldown by default.
 
 Automatic events may:
+
 - run at start of day
 - repeat every N days
 - run when conditions are true
 
-When multiple automatic events are eligible at the same time, use authored priority.
-
-The designer tool should allow moving automatic events up/down in priority.
-
-Newly created automatic events should be added to the bottom by default.
+When multiple automatic events are eligible at the same time, use authored priority. The designer tool should allow moving automatic events up/down in priority. Newly created automatic events should be added to the bottom by default.
 
 ---
 
@@ -603,11 +559,13 @@ Newly created automatic events should be added to the bottom by default.
 A quest service is a Service containing a quest chain.
 
 A quest service may contain:
+
 - zero quests
 - one quest
 - several quests in order
 
 ### Quest entry structure
+
 A quest entry should define:
 
 - starting message
@@ -618,67 +576,80 @@ A quest entry should define:
 - eligibility
 - repeatability where applicable
 
-Quest-service objectives use the same broad typed condition structure as events.
-
-Quest completion actions are event actions.
+Quest-service objectives use the same broad typed condition structure as events. Quest completion actions are event actions.
 
 ### Empty quest service
-A quest service may have zero quests.
 
-If it has no authored quests, it shows a default empty / abandoned message unless overridden.
+A quest service may have zero quests. If it has no authored quests, it shows a default empty / abandoned message unless overridden.
 
 ### Completion by other teams
+
 If another team completes a quest that is visible in the player's quest log, the player's entry becomes failed by default.
 
 ---
 
 ## 21. Victory and defeat authoring
 
-Victory and defeat conditions are Scenario-level rules.
+Victory and defeat conditions are Scenario-level rules. They are separate from quests, even when they reference quest-service completion.
 
-They are separate from quests, even when they reference quest-service completion.
+### Current M12 behavior
 
-### Victory
-Victory conditions are OR-based.
+The current implementation accepts a single optional `content/scenario_outcome.json`. Per-Scenario authoring through a full top-level `ScenarioDefinition` content kind is not yet introduced; the single file covers the bounded slice.
 
-Each victory condition should define:
+Both `victoryConditions` and `defeatConditions` reuse the same `EventCondition` tree shape as events. See `docs/content_schema.md` for the exact file shape.
+
+Supported condition leaves are exactly:
+
+- `always`
+- `teamHasResource`
+- `teamHasHero`
+- `storyFlagSet`
+
+Supported composites are:
+
+- `all`
+- `any`
+- `not`
+
+Authored victory conditions, when present, **disable default victory entirely**. To use the default “all hostile teams defeated/removed/allied” rule, leave `victoryConditions` empty or omit the file.
+
+Defeat conditions are OR-based. If both a defeat and a victory condition match in the same evaluation, **defeat wins** — consistent with §36 of `core_loop_rules.md`.
+
+Latched outcomes are persistent. Once victory or defeat is latched, later state changes and save/load should not re-evaluate it away.
+
+### Long-term victory model
+
+Long-term victory conditions are OR-based. Each victory condition may eventually define:
+
 - condition
 - eligible teams
 - victory event actions where authored
 
 Satisfying any one victory condition wins the Scenario for that team.
 
-If no victory condition is authored, the Scenario falls back to the default victory condition:
+If no authored victory condition exists, the Scenario falls back to the default victory condition:
 
-- defeat all enemy teams
+- defeat/remove/ally all hostile enemy teams
 
-If no authored victory condition exists and the default condition cannot make sense, validation should report an error.
+If no authored victory condition exists and the default condition cannot make sense, future validation should report a structural problem. Current M12 validation does not attempt full reachability or all impossible-victory proofs.
 
-### Defeat
-Defeat conditions are OR-based.
+### Long-term defeat model
 
-Each defeat condition should define:
+Long-term defeat conditions are OR-based. Each defeat condition may eventually define:
+
 - condition
 - affected team(s)
 - defeat event actions where authored
 
 If any defeat condition becomes true for a team, that team loses.
 
-Victory and defeat conditions should use the same broad typed condition system as events and quest objectives.
+### Instant win/loss validation
 
-### Instant win/loss
-Validation should detect instant win or instant loss states.
+Future validation should detect obvious instant win or instant loss states where practical. M12 does not implement full instant-win/loss or softlock proofing.
 
-These should be errors.
+### Future condition leaves
 
-### Current authored shape (M12)
-The current implementation accepts a single optional `content/scenario_outcome.json`. Per-Scenario authoring (a top-level `ScenarioDefinition` content kind) is not yet introduced; the single file covers the bounded slice. Both lists reuse the same `EventCondition` tree shape as events. See `docs/content_schema.md` for the file shape.
-
-Authored victory conditions, when present, **disable default victory entirely**. To use the default "all hostile teams defeated" rule, leave `victoryConditions` empty (or omit the file).
-
-If both a defeat and a victory condition match in the same evaluation, **defeat wins** — consistent with §36 of `core_loop_rules.md`.
-
-Currently supported condition leaves are the same four leaves supported by the event system: `always`, `teamHasResource`, `teamHasHero`, `storyFlagSet`, plus the `all` / `any` / `not` composites. Richer leaves (hero alive, route state, ownership, time limits, unit counts, Region revealed, etc.) are explicit future work.
+Richer leaves such as hero alive, route state, ownership, time limits, unit counts, Region revealed, party eliminated, or player leader dead are explicit future work. Do not add them casually to make one scenario demo richer.
 
 ---
 
@@ -703,7 +674,7 @@ A team definition may include:
 - patrol radius
 - initial revealed nodes
 
-Validation should enforce:
+Validation should eventually enforce:
 
 - max 8 teams per Region
 - unique colors where required
@@ -714,11 +685,13 @@ Validation should enforce:
 - valid AI settings
 
 ### Enemy team templates
+
 Enemy team templates should be based on hero units.
 
 A template includes:
+
 - 1 hero unit
-- 1-2 generic unit types
+- 1–2 generic unit types
 - small stack ranges by default
 - personality
 - aggression
@@ -726,15 +699,17 @@ A template includes:
 Enemy team templates do not include artifacts or resources by default.
 
 ### Team spawning
-Events may spawn teams from templates.
 
-Spawned teams may inherit Scenario defaults for AI, personality, resources, or other legal fields.
+Events may spawn teams from templates or mutate existing runtime enemy-team state. Spawned teams may inherit Scenario defaults for AI, personality, resources, or other legal fields in future systems.
+
+Current M12 enemy-team mutation actions are runtime mutations: `spawnTeam`, `removeTeam`, and `changeAlliance`.
 
 ---
 
 ## 23. Item, artifact, and recipe authoring
 
 ### Item definitions
+
 An item definition should include:
 
 - id
@@ -750,13 +725,16 @@ An item definition should include:
 Food is a normal item subtype.
 
 ### Food
+
 Food is:
+
 - field-use only
 - hero-consumed
 - produced by cooking recipes
 - defined as an item with food-specific effects and duration
 
 ### Cooking recipes
+
 A cooking recipe should define:
 
 - id
@@ -768,6 +746,7 @@ A cooking recipe should define:
 - output modifiers from passive skills where applicable
 
 ### Artifact definitions
+
 An artifact definition should include:
 
 - id
@@ -778,18 +757,19 @@ An artifact definition should include:
 - base value
 - combinable / upgradable flag
 
-Not all artifacts are combinable.
-
-Ultimate or final-form artifacts may set combinable / upgradable to false.
+Not all artifacts are combinable. Ultimate or final-form artifacts may set combinable / upgradable to false.
 
 ### Artifact combination recipes
+
 Artifact combination recipes are always **2 inputs to 1 output**.
 
 Inputs may be:
+
 - two of the exact same artifact
-- or one artifact plus one other artifact type
+- one artifact plus one other artifact type
 
 Combination recipes define:
+
 - input artifact ids / quantities
 - output artifact id
 - service restrictions where applicable
@@ -803,7 +783,8 @@ Artifact combination recipes are globally fixed, while specific services may den
 Validation should be strict but useful.
 
 ### Errors
-Examples of validation errors:
+
+Examples of long-term validation errors:
 
 - missing required references
 - invalid ids
@@ -820,7 +801,10 @@ Examples of validation errors:
 
 Errors prevent play.
 
+Current implementation note: this list includes future validation targets. Current code validates the implemented content systems and should expand only when a phase needs the deeper checks.
+
 ### Warnings
+
 Examples of validation warnings:
 
 - no safe anchor
@@ -833,15 +817,13 @@ Examples of validation warnings:
 - non-enterable Region exists forever
 - obscure but legal victory path
 
-Warnings do not prevent saving.
-
-Some warnings may still prevent marking a Scenario as release-ready if the designer chooses that workflow.
+Warnings do not prevent saving. Some warnings may still prevent marking a Scenario as release-ready if the designer chooses that workflow.
 
 ---
 
 ## 25. Softlock validation
 
-Validation should include best-effort softlock analysis.
+Validation should eventually include best-effort softlock analysis.
 
 This may include graph analysis for:
 
@@ -854,11 +836,9 @@ This may include graph analysis for:
 - route destruction / restoration logic
 - service availability needed for required progression
 
-Validation does not need to prove every possible scenario path correct.
+Validation does not need to prove every possible scenario path correct. The goal is to catch likely structural impossibilities and obvious softlocks. Designers remain responsible for the authored experience.
 
-The goal is to catch likely structural impossibilities and obvious softlocks.
-
-Designers remain responsible for the authored experience.
+Current implementation note: M12 does not implement full softlock or victory-reachability proofing.
 
 ---
 
@@ -900,9 +880,7 @@ The long-term designer tool should support:
 - content reference picker
 - test-play from selected Scenario / Region / node / day / team
 
-The tool should be designer-friendly, but content should also remain hand-editable where practical.
-
-JSON or similar data files should stay reasonably human-readable.
+The tool should be designer-friendly, but content should also remain hand-editable where practical. JSON or similar data files should stay reasonably human-readable.
 
 ---
 
@@ -916,29 +894,22 @@ Validation should run:
 - before marking content playable
 - before packaging or release
 
-Invalid content may be saved as work-in-progress.
-
-Invalid content should not be playable.
-
+Invalid content may be saved as work-in-progress. Invalid content should not be playable.
 
 ---
 
 ## 29. Player character authoring
 
-The player character is authored as a normal unique hero unit with special human-team rules.
+The player character is authored as a normal unique hero unit with special human-team rules. For human teams, the Team definition owns `playerCharacterHeroId`.
 
-For human teams, the Team definition owns `playerCharacterHeroId`.
-
-Single-player Scenarios must define exactly one player character for the human team.
-
-Multi-human / PvP Scenarios may define one player character per human team.
+Single-player Scenarios must define exactly one player character for the human team. Multi-human / PvP Scenarios may define one player character per human team.
 
 ### Character creation
-Before a Scenario or Campaign starts, the player creates the player character.
 
-The Scenario provides the stable hero identity, such as `hero_player`.
+Before a Scenario or Campaign starts, the player creates the player character. The Scenario provides the stable hero identity, such as `hero_player`.
 
 Character creation fills that identity with:
+
 - name
 - sex
 - simple graphical representation
@@ -949,7 +920,9 @@ Character creation fills that identity with:
 Starting presets such as Warrior, Builder, and Explorer are presets only. They are not permanent class restrictions.
 
 ### Authoring restrictions
+
 The player character:
+
 - must belong to the human team
 - must stay in the traveling party
 - may be active or reserve
@@ -965,9 +938,8 @@ The player character:
 The player character is a hero mechanically, but is not part of the recruitable hero pool.
 
 ### Events
-Events may modify player-character stats, skills, passives, appearance, name, equipment, or other authored properties.
 
-Events may not replace the player-character identity with a different hero id during a Scenario.
+Events may modify player-character stats, skills, passives, appearance, name, equipment, or other authored properties. Events may not replace the player-character identity with a different hero id during a Scenario.
 
 ---
 
@@ -984,3 +956,5 @@ For future implementation and AI-agent work:
 - let designers save unfinished content, but block invalid content from play
 - implement validation as both editor feedback and automated test/CI support
 - keep validation best-effort for softlocks; do not promise perfect proof of winnability
+- distinguish current implementation from long-term design targets when editing docs
+- do not describe future condition leaves/actions as available unless code and validation support them
