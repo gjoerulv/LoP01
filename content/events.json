@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "EventCollection",
+  "id": "events",
+  "events": [
+    {
+      "id": "evt_cleanse_at_sunken_ruin",
+      "trigger": { "type": "regionNodeEntry", "nodeId": "sunken_ruin" },
+      "actions": [
+        { "type": "showMessage", "text": { "en": "You perform the rite at the Sunken Ruin. Ashvale is cleansed." } },
+        { "type": "setStoryFlag", "flag": "ashvale_cleansed" }
+      ],
+      "repeat": { "mode": "once" }
+    },
+    {
+      "id": "evt_trap_at_clocktower",
+      "trigger": { "type": "regionNodeEntry", "nodeId": "clocktower_square" },
+      "actions": [
+        { "type": "showMessage", "text": { "en": "The clocktower's curse takes hold. Ashvale is lost." } },
+        { "type": "setStoryFlag", "flag": "ashvale_lost" }
+      ],
+      "repeat": { "mode": "once" }
+    }
+  ]
+}
