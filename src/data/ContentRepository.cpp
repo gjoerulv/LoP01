@@ -624,6 +624,18 @@ namespace data {
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
         messages_.clear();
 
+        // Reset optional-loader state up front. Required content files
+        // (regions, locations, units, etc.) are always cleared inside their
+        // own LoadXxxFile helpers — but optional loaders (events,
+        // scenario_outcome, items, artifacts) are only invoked when their
+        // file is present. If a caller reuses the same repository and the
+        // second load lacks an optional file, the old state would otherwise
+        // bleed through. Clear here so reloads are deterministic.
+        eventDefinitions_.clear();
+        scenarioOutcome_ = ScenarioOutcomeDefinition{};
+        items_.clear();
+        artifacts_.clear();
+
         ContentValidator validator;
 
         auto load = [&](const std::filesystem::path& path) -> std::optional<nlohmann::json> {
