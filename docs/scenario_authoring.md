@@ -671,6 +671,15 @@ Validation should detect instant win or instant loss states.
 
 These should be errors.
 
+### Current authored shape (M12)
+The current implementation accepts a single optional `content/scenario_outcome.json`. Per-Scenario authoring (a top-level `ScenarioDefinition` content kind) is not yet introduced; the single file covers the bounded slice. Both lists reuse the same `EventCondition` tree shape as events. See `docs/content_schema.md` for the file shape.
+
+Authored victory conditions, when present, **disable default victory entirely**. To use the default "all hostile teams defeated" rule, leave `victoryConditions` empty (or omit the file).
+
+If both a defeat and a victory condition match in the same evaluation, **defeat wins** — consistent with §36 of `core_loop_rules.md`.
+
+Currently supported condition leaves are the same four leaves supported by the event system: `always`, `teamHasResource`, `teamHasHero`, `storyFlagSet`, plus the `all` / `any` / `not` composites. Richer leaves (hero alive, route state, ownership, time limits, unit counts, Region revealed, etc.) are explicit future work.
+
 ---
 
 ## 22. Team and AI authoring

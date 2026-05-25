@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "ScenarioOutcome",
+  "id": "scenario_outcome",
+  "victoryConditions": [
+    { "type": "storyFlagSet", "flag": "ashvale_cleansed" }
+  ],
+  "defeatConditions": [
+    { "type": "storyFlagSet", "flag": "ashvale_lost" }
+  ]
+}

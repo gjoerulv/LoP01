@@ -1136,6 +1136,33 @@ If no victory condition is authored, runtime/validation expands the default:
 
 This expansion should produce an info validation message.
 
+### Current authored shape (M12)
+
+Current implementation accepts an optional `content/scenario_outcome.json`. The file is a single document with the standard `schemaVersion` / `kind` / `id` identity fields plus two arrays. Each array element is an `EventCondition` tree using the same shape as event conditions (§23).
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "ScenarioOutcome",
+  "id": "scenario_outcome",
+  "victoryConditions": [
+    { "type": "storyFlagSet", "flag": "ashvale_cleansed" }
+  ],
+  "defeatConditions": [
+    { "type": "storyFlagSet", "flag": "ashvale_lost" }
+  ]
+}
+```
+
+Rules:
+
+- Missing or empty file is legal — default victory ("no hostile teams remain") fires.
+- A non-empty `victoryConditions` list **disables default victory entirely**; designers must satisfy one of the authored conditions to win.
+- A non-empty `defeatConditions` list is OR-structured: any one match ends the scenario in defeat.
+- Defeat wins over victory if both match in the same evaluation.
+- Supported leaf types are the four shared with events: `always`, `teamHasResource`, `teamHasHero`, `storyFlagSet`, plus the `all` / `any` / `not` composites. Richer leaves are deferred.
+- Per-scenario authoring (a top-level `ScenarioDefinition` content kind with embedded victory/defeat blocks) is deliberately deferred until campaigns or multi-scenario play arrive.
+
 ---
 
 ## 31. Team schema

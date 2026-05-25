@@ -128,9 +128,12 @@ if (BUILD_TESTING)
     tests/ScenarioOutcomeRulesTests.cpp
     tests/ScenarioOutcomeContentTests.cpp
     tests/ScenarioOutcomeIntegrationTests.cpp
+    tests/ScenarioOutcomeEndToEndTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)
+  target_compile_definitions(ashvale_logic_tests PRIVATE
+    LOP01_PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
   include(Catch)
   catch_discover_tests(ashvale_logic_tests)

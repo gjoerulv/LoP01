@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a post-M11-e bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed event foundation, and the practical Phase 3 enemy-team Region-layer slice.
+The current codebase is a post-M12 bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed event foundation, the practical Phase 3 enemy-team Region-layer slice, and deterministic scenario outcome evaluation (default victory plus authored victory/defeat conditions).
 
 The roadmap works from foundations outward:
 
@@ -64,6 +64,16 @@ Current stable foundation:
   - `GameSession::HostileOccupiedNodeIds()` query
   - wired in `App::UpdateRegionMode` with arrival-node exemption
   - Catch2 test coverage
+- M12 scenario outcome foundation:
+  - pure `ScenarioOutcomeRules` evaluator (default victory, authored victory/defeat, defeat priority)
+  - `ScenarioOutcomeDefinition` content struct reusing the typed `EventCondition` tree
+  - optional `content/scenario_outcome.json` loaded via `ContentRepository`
+  - `changeAlliance` event action requires explicit `add` arg — no silent default
+  - latched terminal outcome on `GameSession` survives save/load (not re-evaluated on load)
+  - outcome checks at boundaries: end of `FireMatchingEvents`, `ProcessEnemyPhase`, `ClearEnemyTeamByColor`
+  - `App::UpdateRegionMode` enforces the documented order: travel apply → quest notify → `regionNodeEntry` events → outcome check #1 → enemy phase → outcome check #2 → battle/Location only if Ongoing
+  - placeholder status feedback: `Victory!` / `Defeat.` + matched reason appended to `statusMessage_`
+  - authored demo content: `evt_cleanse_at_sunken_ruin` (sets `ashvale_cleansed` → matches victory), `evt_trap_at_clocktower` (sets `ashvale_lost` → matches defeat)
 - post-M11-e enemy-team Region-layer features:
   - Region preview and confirmed travel use the same hostile-occupation truth
   - hostile-occupied nodes are exposed in the Region render model
@@ -191,7 +201,7 @@ Deferred beyond Phase 3:
 
 ### Phase 4 — Victory and Defeat Conditions
 
-**Status:** Next phase.
+**Status:** M12-a / M12-b / M12-c complete. Foundation usable; future expansion (richer condition leaves, victory event chains, polished result screen, campaign hand-off) deferred per the out-of-scope list below.
 
 **Goal:** Scenarios end with deterministic authored or default win/loss outcomes.
 
@@ -302,9 +312,21 @@ Full character creation, load UI, autosave slots, and settings remain out of sco
 
 ## 4. Current Next Milestone
 
-### M12-a — Scenario Outcome Rules: Victory/Defeat Foundation
+### M13 — Phase 5 candidate (Inventory and Artifacts) or follow-up scenario outcome expansion
 
-Latest completed milestone: **M11-e — Enemy Team Presence, Contact, and Phase 3 Closure**.
+Latest completed milestone: **M12-c — Scenario Outcome content proof and end-to-end demo**.
+
+M12 closed the Phase 4 scenario-outcome foundation: pure rules, save/load-aware latching, ordered integration hooks in the Region travel flow, and authored demo content driving both an authored victory and an authored defeat path. The single-region slice can now end deterministically.
+
+Future scenario-outcome work (deferred, not in M12):
+
+- Richer condition leaves: hero alive, route destroyed, ownership, time limits, unit counts, Region revealed, etc.
+- Victory event action chains (authored event hooks that fire on win).
+- Polished result screen, transition flow, campaign hand-off.
+- Per-team / multi-human outcome tracking.
+- Softlock / reachability proofs in validation.
+
+### Historical: M12-a Foundation (completed)
 
 M11-e completed the practical Phase 3 enemy-team Region-layer slice:
 
