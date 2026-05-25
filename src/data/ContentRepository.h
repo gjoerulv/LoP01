@@ -6,9 +6,11 @@
 #include <nlohmann/json.hpp>
 
 #include "data/ContentValidator.h"
+#include "data/definitions/ArtifactDefinition.h"
 #include "data/definitions/BattleScenarioDefinition.h"
 #include "data/definitions/EnemyGroupDefinition.h"
 #include "gameplay/events/EventParser.h"
+#include "data/definitions/ItemDefinition.h"
 #include "data/definitions/LocationDefinition.h"
 #include "data/definitions/LocationSceneDefinition.h"
 #include "data/definitions/LocationServiceDefinition.h"
@@ -56,6 +58,12 @@ namespace data {
 
         [[nodiscard]] const ScenarioOutcomeDefinition& ScenarioOutcome() const;
 
+        [[nodiscard]] const std::vector<ItemDefinition>& Items() const;
+        [[nodiscard]] const ItemDefinition* FindItemById(const std::string& id) const;
+
+        [[nodiscard]] const std::vector<ArtifactDefinition>& Artifacts() const;
+        [[nodiscard]] const ArtifactDefinition* FindArtifactById(const std::string& id) const;
+
     private:
         std::vector<RegionDefinition> regions_;
         std::vector<LocationDefinition> locations_;
@@ -68,6 +76,8 @@ namespace data {
         nlohmann::json quests_;
         std::vector<gameplay::events::EventDefinition> eventDefinitions_;
         ScenarioOutcomeDefinition scenarioOutcome_;
+        std::vector<ItemDefinition> items_;
+        std::vector<ArtifactDefinition> artifacts_;
         std::vector<ValidationMessage> messages_;
     };
 

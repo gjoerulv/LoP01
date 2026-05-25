@@ -129,6 +129,8 @@ if (BUILD_TESTING)
     tests/ScenarioOutcomeContentTests.cpp
     tests/ScenarioOutcomeIntegrationTests.cpp
     tests/ScenarioOutcomeEndToEndTests.cpp
+    tests/InventoryContentTests.cpp
+    tests/ArtifactContentTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

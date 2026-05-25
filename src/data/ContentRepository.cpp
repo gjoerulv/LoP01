@@ -355,6 +355,248 @@ namespace data {
             return true;
         }
 
+        // M13-a: items.json loader. Optional file; empty/absent is legal.
+        // Inline validation matches the EventParser pattern. Each error appends a
+        // typed ValidationMessage; invalid entries are skipped so a single bad
+        // item does not erase the rest of the collection.
+        //
+        // Unsupported in M13:
+        //   - Item `effects` field. Authoring an item with effects emits an
+        //     ITEM_EFFECTS_UNSUPPORTED error rather than a silent ignore. M13
+        //     intentionally implements no item-effect resolution.
+        bool LoadItemsFile(
+            const nlohmann::json& root,
+            std::vector<ItemDefinition>& output,
+            std::vector<ValidationMessage>& msgs)
+        {
+            if (!root.contains("items") || !root["items"].is_array())
+                return false;
+
+            output.clear();
+
+            for (size_t i = 0; i < root["items"].size(); ++i) {
+                const auto& entry = root["items"][i];
+                const std::string path = "items[" + std::to_string(i) + "]";
+                if (!entry.is_object()) {
+                    msgs.push_back({Severity::Error, "ITEM_ENTRY_NOT_OBJECT", path,
+                        "Item entry must be a JSON object.", ""});
+                    continue;
+                }
+
+                ItemDefinition def;
+                def.id   = entry.value("id",   "");
+                def.icon = entry.value("icon", "");
+                if (entry.contains("name") && entry["name"].is_object()) {
+                    def.name = entry["name"].value("en", "");
+                } else {
+                    def.name = entry.value("name", "");
+                }
+
+                if (def.id.empty()) {
+                    msgs.push_back({Severity::Error, "ITEM_ID_EMPTY", path + ".id",
+                        "Item \"id\" is required and must be a non-empty string.", ""});
+                    continue;
+                }
+
+                const std::string subtypeStr = entry.value("subtype", "");
+                if (!ItemSubtypeFromString(subtypeStr, def.subtype)) {
+                    msgs.push_back({Severity::Error, "ITEM_SUBTYPE_UNKNOWN",
+                        path + ".subtype",
+                        "Item subtype \"" + subtypeStr + "\" is not recognised. "
+                        "Known subtypes: consumable, quest, seed, ingredient, food, material.", ""});
+                    continue;
+                }
+
+                def.stackCap  = entry.value("stackCap",  999);
+                def.baseValue = entry.value("baseValue", 0);
+
+                if (def.stackCap <= 0) {
+                    msgs.push_back({Severity::Error, "ITEM_STACK_CAP_INVALID",
+                        path + ".stackCap",
+                        "Item \"stackCap\" must be a positive integer.", ""});
+                    continue;
+                }
+                if (def.baseValue < 0) {
+                    msgs.push_back({Severity::Error, "ITEM_BASE_VALUE_NEGATIVE",
+                        path + ".baseValue",
+                        "Item \"baseValue\" must be non-negative.", ""});
+                    continue;
+                }
+
+                // Explicit guardrail: M13 does not implement item effects. Any
+                // authored `effects` field is an error rather than a silent accept.
+                if (entry.contains("effects")) {
+                    msgs.push_back({Severity::Error, "ITEM_EFFECTS_UNSUPPORTED",
+                        path + ".effects",
+                        "Item \"effects\" are not supported in M13. Remove the field "
+                        "or wait for a later milestone that implements item effects.", ""});
+                    continue;
+                }
+
+                output.push_back(def);
+            }
+
+            return true;
+        }
+
+        // M13-a: artifacts.json loader. Optional file; empty/absent is legal.
+        //
+        // Effect-handling guardrail:
+        //   - Only `statBonus` effects are recognised in M13.
+        //   - Any other `effect.type` (including the doc's `specialEffect`)
+        //     produces an explicit ARTIFACT_EFFECT_TYPE_UNSUPPORTED error.
+        //   - Missing or malformed effect type produces ARTIFACT_EFFECT_TYPE_MISSING.
+        bool LoadArtifactsFile(
+            const nlohmann::json& root,
+            std::vector<ArtifactDefinition>& output,
+            std::vector<ValidationMessage>& msgs)
+        {
+            if (!root.contains("artifacts") || !root["artifacts"].is_array())
+                return false;
+
+            output.clear();
+
+            for (size_t i = 0; i < root["artifacts"].size(); ++i) {
+                const auto& entry = root["artifacts"][i];
+                const std::string path = "artifacts[" + std::to_string(i) + "]";
+                if (!entry.is_object()) {
+                    msgs.push_back({Severity::Error, "ARTIFACT_ENTRY_NOT_OBJECT", path,
+                        "Artifact entry must be a JSON object.", ""});
+                    continue;
+                }
+
+                ArtifactDefinition def;
+                def.id     = entry.value("id",     "");
+                def.icon   = entry.value("icon",   "");
+                def.rarity = entry.value("rarity", "");
+                if (entry.contains("name") && entry["name"].is_object()) {
+                    def.name = entry["name"].value("en", "");
+                } else {
+                    def.name = entry.value("name", "");
+                }
+                def.tier       = entry.value("tier",       0);
+                def.baseValue  = entry.value("baseValue",  0);
+                def.combinable = entry.value("combinable", false);
+
+                if (def.id.empty()) {
+                    msgs.push_back({Severity::Error, "ARTIFACT_ID_EMPTY", path + ".id",
+                        "Artifact \"id\" is required and must be a non-empty string.", ""});
+                    continue;
+                }
+
+                if (def.baseValue < 0) {
+                    msgs.push_back({Severity::Error, "ARTIFACT_BASE_VALUE_NEGATIVE",
+                        path + ".baseValue",
+                        "Artifact \"baseValue\" must be non-negative.", ""});
+                    continue;
+                }
+
+                // allowedSlots: required, must be a non-empty array of known slot
+                // kinds (Attack, Defense, Misc).
+                bool slotsOk = true;
+                if (!entry.contains("allowedSlots") || !entry["allowedSlots"].is_array()) {
+                    msgs.push_back({Severity::Error, "ARTIFACT_ALLOWED_SLOTS_MISSING",
+                        path + ".allowedSlots",
+                        "Artifact \"allowedSlots\" is required and must be a JSON array.", ""});
+                    slotsOk = false;
+                } else if (entry["allowedSlots"].empty()) {
+                    msgs.push_back({Severity::Error, "ARTIFACT_ALLOWED_SLOTS_EMPTY",
+                        path + ".allowedSlots",
+                        "Artifact \"allowedSlots\" must contain at least one slot.", ""});
+                    slotsOk = false;
+                } else {
+                    for (size_t s = 0; s < entry["allowedSlots"].size(); ++s) {
+                        const auto& slotEntry = entry["allowedSlots"][s];
+                        if (!slotEntry.is_string()) {
+                            msgs.push_back({Severity::Error, "ARTIFACT_ALLOWED_SLOT_NOT_STRING",
+                                path + ".allowedSlots[" + std::to_string(s) + "]",
+                                "Artifact allowed-slot entry must be a string.", ""});
+                            slotsOk = false;
+                            continue;
+                        }
+                        ArtifactSlotKind kind;
+                        const std::string slotStr = slotEntry.get<std::string>();
+                        if (!ArtifactSlotKindFromString(slotStr, kind)) {
+                            msgs.push_back({Severity::Error, "ARTIFACT_ALLOWED_SLOT_UNKNOWN",
+                                path + ".allowedSlots[" + std::to_string(s) + "]",
+                                "Artifact slot kind \"" + slotStr + "\" is not recognised. "
+                                "Known kinds: Attack, Defense, Misc.", ""});
+                            slotsOk = false;
+                            continue;
+                        }
+                        def.allowedSlots.push_back(kind);
+                    }
+                }
+                if (!slotsOk) continue;
+
+                // effects: optional, but every entry must be `statBonus` with a
+                // recognised stat and integer amount. Anything else is rejected.
+                bool effectsOk = true;
+                if (entry.contains("effects")) {
+                    if (!entry["effects"].is_array()) {
+                        msgs.push_back({Severity::Error, "ARTIFACT_EFFECTS_NOT_ARRAY",
+                            path + ".effects",
+                            "Artifact \"effects\" must be a JSON array.", ""});
+                        effectsOk = false;
+                    } else {
+                        for (size_t e = 0; e < entry["effects"].size(); ++e) {
+                            const auto& effectEntry = entry["effects"][e];
+                            const std::string ePath = path + ".effects[" + std::to_string(e) + "]";
+                            if (!effectEntry.is_object()) {
+                                msgs.push_back({Severity::Error, "ARTIFACT_EFFECT_NOT_OBJECT",
+                                    ePath, "Artifact effect entry must be a JSON object.", ""});
+                                effectsOk = false;
+                                continue;
+                            }
+                            if (!effectEntry.contains("type") || !effectEntry["type"].is_string()) {
+                                msgs.push_back({Severity::Error, "ARTIFACT_EFFECT_TYPE_MISSING",
+                                    ePath + ".type",
+                                    "Artifact effect is missing a \"type\" string.", ""});
+                                effectsOk = false;
+                                continue;
+                            }
+                            const std::string effectType = effectEntry["type"].get<std::string>();
+                            if (effectType != "statBonus") {
+                                msgs.push_back({Severity::Error, "ARTIFACT_EFFECT_TYPE_UNSUPPORTED",
+                                    ePath + ".type",
+                                    "Artifact effect type \"" + effectType + "\" is not supported in M13. "
+                                    "Supported effect types: statBonus.", ""});
+                                effectsOk = false;
+                                continue;
+                            }
+                            const std::string statStr = effectEntry.value("stat", "");
+                            ArtifactStatBonusStat stat;
+                            if (!ArtifactStatBonusStatFromString(statStr, stat)) {
+                                msgs.push_back({Severity::Error, "ARTIFACT_STAT_BONUS_STAT_UNKNOWN",
+                                    ePath + ".stat",
+                                    "Artifact statBonus stat \"" + statStr + "\" is not recognised. "
+                                    "Known stats: Attack, Defense, Magic, Resistance.", ""});
+                                effectsOk = false;
+                                continue;
+                            }
+                            if (!effectEntry.contains("amount")
+                                || !effectEntry["amount"].is_number_integer()) {
+                                msgs.push_back({Severity::Error, "ARTIFACT_STAT_BONUS_AMOUNT_INVALID",
+                                    ePath + ".amount",
+                                    "Artifact statBonus \"amount\" must be an integer.", ""});
+                                effectsOk = false;
+                                continue;
+                            }
+                            ArtifactStatBonus bonus;
+                            bonus.stat   = stat;
+                            bonus.amount = effectEntry["amount"].get<int>();
+                            def.statBonuses.push_back(bonus);
+                        }
+                    }
+                }
+                if (!effectsOk) continue;
+
+                output.push_back(def);
+            }
+
+            return true;
+        }
+
         bool LoadEnemyGroupsFile(const nlohmann::json& root, std::vector<EnemyGroupDefinition>& output) {
             if (!root.contains("enemy_groups") || !root["enemy_groups"].is_array()) {
                 return false;
@@ -431,6 +673,17 @@ namespace data {
         auto outcomeDoc = load(root / "scenario_outcome.json");
         if (outcomeDoc) {
             LoadScenarioOutcomeFile(*outcomeDoc, scenarioOutcome_, messages_);
+        }
+
+        // items.json and artifacts.json are optional (M13-a). Absent/empty is
+        // legal — runtime layers default to empty inventories.
+        auto itemsDoc = load(root / "items.json");
+        if (itemsDoc) {
+            LoadItemsFile(*itemsDoc, items_, messages_);
+        }
+        auto artifactsDoc = load(root / "artifacts.json");
+        if (artifactsDoc) {
+            LoadArtifactsFile(*artifactsDoc, artifacts_, messages_);
         }
 
         auto refMsgs = validator.ValidateReferences(
@@ -555,6 +808,32 @@ namespace data {
 
     const ScenarioOutcomeDefinition& ContentRepository::ScenarioOutcome() const {
         return scenarioOutcome_;
+    }
+
+    const std::vector<ItemDefinition>& ContentRepository::Items() const {
+        return items_;
+    }
+
+    const ItemDefinition* ContentRepository::FindItemById(const std::string& id) const {
+        for (const auto& item : items_) {
+            if (item.id == id) {
+                return &item;
+            }
+        }
+        return nullptr;
+    }
+
+    const std::vector<ArtifactDefinition>& ContentRepository::Artifacts() const {
+        return artifacts_;
+    }
+
+    const ArtifactDefinition* ContentRepository::FindArtifactById(const std::string& id) const {
+        for (const auto& artifact : artifacts_) {
+            if (artifact.id == id) {
+                return &artifact;
+            }
+        }
+        return nullptr;
     }
 
 } // namespace data
