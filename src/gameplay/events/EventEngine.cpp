@@ -163,7 +163,12 @@ ActionResult ExecuteAction(EventEvaluationContext& ctx, const EventAction& actio
             return {false, "changeAlliance: missing required arg 'teamColor'"};
         if (allyColor.empty())
             return {false, "changeAlliance: missing required arg 'allyColor'"};
-        const bool add = args.value("add", true);
+        // 'add' must be authored explicitly as a boolean. No silent default —
+        // omitting the field flipped behavior invisibly between add-alliance and
+        // remove-alliance, which contradicts Decision #155's explicit-failure rule.
+        if (!args.contains("add") || !args["add"].is_boolean())
+            return {false, "changeAlliance: missing required arg 'add' (boolean)"};
+        const bool add = args["add"].get<bool>();
         ctx.pendingTeamMutations->push_back(
             {EnemyTeamMutationType::ChangeAlliance, teamColor, {}, allyColor, add});
         return {true, ""};

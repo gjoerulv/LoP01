@@ -472,6 +472,43 @@ TEST_CASE("ExecuteAction - spawnTeam fails when required arg is missing")
     REQUIRE(mutations.empty());
 }
 
+TEST_CASE("ExecuteAction - changeAlliance fails when 'add' is missing")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    // Omitting 'add' must produce an explicit failure, not a silent default.
+    auto result = ExecuteAction(ctx, MakeAction(
+        {{"type", "changeAlliance"}, {"teamColor", "Red"}, {"allyColor", "Blue"}}));
+    REQUIRE_FALSE(result.success);
+    REQUIRE_FALSE(result.message.empty());
+    REQUIRE(mutations.empty());
+}
+
+TEST_CASE("ExecuteAction - changeAlliance fails when 'add' is not a boolean")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    auto result = ExecuteAction(ctx, MakeAction(
+        {{"type", "changeAlliance"}, {"teamColor", "Red"}, {"allyColor", "Blue"}, {"add", "yes"}}));
+    REQUIRE_FALSE(result.success);
+    REQUIRE(mutations.empty());
+}
+
+TEST_CASE("ExecuteAction - changeAlliance accepts add=false explicitly")
+{
+    std::vector<EnemyTeamMutation> mutations;
+    EventEvaluationContext ctx;
+    ctx.pendingTeamMutations = &mutations;
+    auto result = ExecuteAction(ctx, MakeAction(
+        {{"type", "changeAlliance"}, {"teamColor", "Red"}, {"allyColor", "Blue"}, {"add", false}}));
+    REQUIRE(result.success);
+    REQUIRE(mutations.size() == 1);
+    REQUIRE(mutations[0].type == EnemyTeamMutationType::ChangeAlliance);
+    REQUIRE_FALSE(mutations[0].addAlliance);
+}
+
 TEST_CASE("ExecuteActions - first action succeeds then second fails; first result persists (non-atomic)")
 {
     EventEvaluationContext ctx;

@@ -93,7 +93,9 @@ static bool IsKnownActionType(const std::string& t) {
         || t == "spawnTeam" || t == "removeTeam" || t == "changeAlliance";
 }
 
-void ValidateConditionNode(const nlohmann::json& cond,
+} // anonymous namespace
+
+void ValidateConditionTree(const nlohmann::json& cond,
                            const std::string& path,
                            std::vector<ValidationMessage>& msgs)
 {
@@ -126,14 +128,14 @@ void ValidateConditionNode(const nlohmann::json& cond,
 
     if (hasAll) {
         for (size_t i = 0; i < cond["all"].size(); ++i) {
-            ValidateConditionNode(cond["all"][i], path + ".all[" + std::to_string(i) + "]", msgs);
+            ValidateConditionTree(cond["all"][i], path + ".all[" + std::to_string(i) + "]", msgs);
         }
     } else if (hasAny) {
         for (size_t i = 0; i < cond["any"].size(); ++i) {
-            ValidateConditionNode(cond["any"][i], path + ".any[" + std::to_string(i) + "]", msgs);
+            ValidateConditionTree(cond["any"][i], path + ".any[" + std::to_string(i) + "]", msgs);
         }
     } else if (hasNot) {
-        ValidateConditionNode(cond["not"], path + ".not", msgs);
+        ValidateConditionTree(cond["not"], path + ".not", msgs);
     } else {
         // leaf — hasType && compositeCount == 0
         const std::string typeStr = cond["type"].get<std::string>();
@@ -144,8 +146,6 @@ void ValidateConditionNode(const nlohmann::json& cond,
         }
     }
 }
-
-} // anonymous namespace
 
 EventDefinition ParseEventDefinition(const nlohmann::json& doc)
 {
@@ -239,7 +239,7 @@ std::vector<ValidationMessage> ValidateEventDefinition(const nlohmann::json& doc
 
     // condition (optional — validated only when present)
     if (doc.contains("condition")) {
-        ValidateConditionNode(doc["condition"], "condition", msgs);
+        ValidateConditionTree(doc["condition"], "condition", msgs);
     }
 
     // actions

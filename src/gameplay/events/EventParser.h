@@ -11,6 +11,14 @@ namespace gameplay::events {
 // Parses a single condition JSON node (leaf or composite) into an EventCondition tree.
 EventCondition ParseCondition(const nlohmann::json& cond);
 
+// Validates the structure of a condition tree (leaf vs composite shape, known leaf types).
+// Appends Error messages to `msgs`. Reusable from any content loader that embeds
+// the typed condition shape (events, scenario outcome, future quest objectives).
+void ValidateConditionTree(
+    const nlohmann::json& cond,
+    const std::string& path,
+    std::vector<ValidationMessage>& msgs);
+
 // Parses a JSON array of action objects into a vector of EventAction.
 std::vector<EventAction> ParseActions(const nlohmann::json& actionsArray);
 

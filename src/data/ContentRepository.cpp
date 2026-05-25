@@ -326,6 +326,35 @@ namespace data {
             return true;
         }
 
+        bool LoadScenarioOutcomeFile(
+            const nlohmann::json& root,
+            ScenarioOutcomeDefinition& output,
+            std::vector<ValidationMessage>& msgs)
+        {
+            output = {};
+
+            auto loadList = [&](const char* key, const std::string& pathLabel,
+                                std::vector<gameplay::events::EventCondition>& dst)
+            {
+                if (!root.contains(key)) return;
+                if (!root[key].is_array()) {
+                    msgs.push_back({Severity::Error, "SCENARIO_OUTCOME_LIST_NOT_ARRAY",
+                        pathLabel,
+                        std::string{"\""} + key + "\" must be a JSON array.", ""});
+                    return;
+                }
+                for (size_t i = 0; i < root[key].size(); ++i) {
+                    const auto path = pathLabel + "[" + std::to_string(i) + "]";
+                    gameplay::events::ValidateConditionTree(root[key][i], path, msgs);
+                    dst.push_back(gameplay::events::ParseCondition(root[key][i]));
+                }
+            };
+
+            loadList("victoryConditions", "victoryConditions", output.victoryConditions);
+            loadList("defeatConditions",  "defeatConditions",  output.defeatConditions);
+            return true;
+        }
+
         bool LoadEnemyGroupsFile(const nlohmann::json& root, std::vector<EnemyGroupDefinition>& output) {
             if (!root.contains("enemy_groups") || !root["enemy_groups"].is_array()) {
                 return false;
@@ -395,6 +424,13 @@ namespace data {
         auto eventsDoc = load(root / "events.json");
         if (eventsDoc) {
             LoadEventDefinitionsFile(*eventsDoc, eventDefinitions_, messages_);
+        }
+
+        // scenario_outcome.json is optional. Absent/empty means default victory
+        // (no hostile teams remain) is the only win path.
+        auto outcomeDoc = load(root / "scenario_outcome.json");
+        if (outcomeDoc) {
+            LoadScenarioOutcomeFile(*outcomeDoc, scenarioOutcome_, messages_);
         }
 
         auto refMsgs = validator.ValidateReferences(
@@ -515,6 +551,10 @@ namespace data {
 
     const std::vector<gameplay::events::EventDefinition>& ContentRepository::EventDefinitions() const {
         return eventDefinitions_;
+    }
+
+    const ScenarioOutcomeDefinition& ContentRepository::ScenarioOutcome() const {
+        return scenarioOutcome_;
     }
 
 } // namespace data
