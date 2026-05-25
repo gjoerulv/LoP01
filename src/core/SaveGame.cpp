@@ -341,7 +341,10 @@ void to_json(json& j, const SaveData& data) {
         {"next_stack_id_counter", data.nextStackIdCounter},
         {"fired_event_ids", data.firedEventIds},
         {"story_flags", data.storyFlags},
-        {"enemy_teams", data.enemyTeams}
+        {"enemy_teams", data.enemyTeams},
+        {"scenario_outcome_state", data.scenarioOutcomeState},
+        {"scenario_outcome_matched_condition_index", data.scenarioOutcomeMatchedConditionIndex},
+        {"scenario_outcome_reason", data.scenarioOutcomeReason}
     };
 }
 
@@ -390,6 +393,10 @@ void from_json(const json& j, SaveData& data) {
     if (j.contains("enemy_teams") && j["enemy_teams"].is_array()) {
         data.enemyTeams = j["enemy_teams"].get<std::vector<EnemyTeamSaveState>>();
     }
+
+    data.scenarioOutcomeState = j.value("scenario_outcome_state", std::string{});
+    data.scenarioOutcomeMatchedConditionIndex = j.value("scenario_outcome_matched_condition_index", -1);
+    data.scenarioOutcomeReason = j.value("scenario_outcome_reason", std::string{});
 
     const bool hasCanonicalStructuralFields =
         j.contains("roster_stacks") &&

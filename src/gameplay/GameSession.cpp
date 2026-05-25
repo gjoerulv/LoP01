@@ -466,6 +466,11 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
         }
     }
 
+    // M12-b ordering boundary #1: any authored regionNodeEntry / startOfDay event
+    // may have removed teams, changed alliances, or set story flags that now
+    // satisfy victory/defeat. Latch before the caller proceeds to enemy phase.
+    CheckAndLatchOutcome();
+
     return allResults;
 }
 
@@ -1015,7 +1020,17 @@ core::SaveData GameSession::ToSaveData() const {
                     team.energy, team.cooldownExpiresAtMinutes, team.alliances});
             }
             return states;
-        }()
+        }(),
+        // Latched scenario outcome. Empty state string means "not latched".
+        latchedOutcome_.has_value()
+            ? (latchedOutcome_->state == scenario::ScenarioOutcomeState::Victory ? "victory"
+               : latchedOutcome_->state == scenario::ScenarioOutcomeState::Defeat ? "defeat"
+               : std::string{})
+            : std::string{},
+        latchedOutcome_.has_value() && latchedOutcome_->matchedConditionIndex.has_value()
+            ? static_cast<int>(*latchedOutcome_->matchedConditionIndex)
+            : -1,
+        latchedOutcome_.has_value() ? latchedOutcome_->reason : std::string{}
     };
 }
 
@@ -1162,6 +1177,21 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
                 break;
             }
         }
+    }
+    // Restore the latched scenario outcome. A saved "victory"/"defeat" state must
+    // never be re-evaluated away on load; the latch is persistent by design.
+    latchedOutcome_.reset();
+    if (saveData.scenarioOutcomeState == "victory" || saveData.scenarioOutcomeState == "defeat") {
+        scenario::ScenarioOutcome outcome;
+        outcome.state = saveData.scenarioOutcomeState == "victory"
+            ? scenario::ScenarioOutcomeState::Victory
+            : scenario::ScenarioOutcomeState::Defeat;
+        if (saveData.scenarioOutcomeMatchedConditionIndex >= 0) {
+            outcome.matchedConditionIndex =
+                static_cast<std::size_t>(saveData.scenarioOutcomeMatchedConditionIndex);
+        }
+        outcome.reason = saveData.scenarioOutcomeReason;
+        latchedOutcome_ = outcome;
     }
     MarkRosterProjectionDirty();
 }
@@ -1473,6 +1503,11 @@ std::vector<EnemyTeamActionResult> GameSession::ProcessEnemyPhase(
             }
         }
     }
+    // M12-b ordering boundary #2: enemy phase may flip outcome state through
+    // future mutating actions (current build only does patrol movement, so the
+    // typical case is "no change"). The latch call is here regardless so the
+    // call site contract holds as enemy-phase behavior expands.
+    CheckAndLatchOutcome();
     return results;
 }
 
@@ -1502,6 +1537,9 @@ void GameSession::ClearEnemyTeamByColor(const std::string& teamColor) {
             break;
         }
     }
+    // Hostile-contact victory route: clearing the last hostile team should
+    // latch default victory immediately after the contact battle resolves.
+    CheckAndLatchOutcome();
 }
 
 std::string GameSession::HostileTeamColorAtNode(
@@ -1512,6 +1550,52 @@ std::string GameSession::HostileTeamColorAtNode(
         return team.teamColor;
     }
     return "";
+}
+
+void GameSession::SetPlayerColor(std::string color) {
+    playerColor_ = std::move(color);
+}
+
+const std::string& GameSession::PlayerColor() const {
+    return playerColor_;
+}
+
+void GameSession::SetScenarioOutcomeDefinition(data::ScenarioOutcomeDefinition definition) {
+    scenarioOutcomeDefinition_ = std::move(definition);
+}
+
+const std::optional<scenario::ScenarioOutcome>& GameSession::CheckAndLatchOutcome() {
+    if (latchedOutcome_.has_value()) {
+        return latchedOutcome_;
+    }
+
+    events::EventEvaluationContext condCtx;
+    const auto snap = Snapshot();
+    condCtx.currentDay = snap.day;
+    condCtx.resources["Gold"] = snap.gold;
+    const auto& partyIds = ActivePartyUnitIds();
+    condCtx.heroIds = std::vector<std::string>(partyIds.begin(), partyIds.end());
+    condCtx.storyFlags = storyFlags_;
+
+    scenario::ScenarioOutcomeContext ctx;
+    ctx.playerColor = playerColor_;
+    ctx.enemyTeams = &enemyTeams_;
+    ctx.conditionContext = &condCtx;
+
+    const auto outcome = scenario::EvaluateScenarioOutcome(ctx, scenarioOutcomeDefinition_);
+    if (outcome.state != scenario::ScenarioOutcomeState::Ongoing) {
+        latchedOutcome_ = outcome;
+    }
+    return latchedOutcome_;
+}
+
+const std::optional<scenario::ScenarioOutcome>& GameSession::Outcome() const {
+    return latchedOutcome_;
+}
+
+bool GameSession::IsScenarioEnded() const {
+    return latchedOutcome_.has_value()
+        && latchedOutcome_->state != scenario::ScenarioOutcomeState::Ongoing;
 }
 
 } // namespace gameplay

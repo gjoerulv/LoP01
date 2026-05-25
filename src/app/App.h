@@ -55,6 +55,9 @@ namespace app {
         void UpdateRegionMode(const input::InputState& input);
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
+        // Appends "Victory!" / "Defeat." plus the latched reason to statusMessage_.
+        // No-op if the session is not in a latched outcome state.
+        void AppendScenarioEndedStatusIfLatched();
         [[nodiscard]] MusteringCommand TranslateMusteringCommand(const input::InputState& input) const;
         void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
