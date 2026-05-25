@@ -70,6 +70,10 @@ App::App() {
         }
 
         session_.InitializeQuestState(content_.QuestDefinitions());
+        session_.InitializeEventDefinitions(content_.EventDefinitions());
+        session_.SetScenarioOutcomeDefinition(content_.ScenarioOutcome());
+        // Player color is hardcoded "Green" project-wide (see roadmap debt #6).
+        session_.SetPlayerColor("Green");
     }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
     observedDay_ = session_.Snapshot().day;
@@ -327,6 +331,9 @@ void App::ResolveBattleOutcomeIfNeeded() {
                 ? "Hostile team defeated. Player recovered to 1 HP."
                 : "Hostile team defeated.";
             if (writeBackFailed) { statusMessage_ += " | Roster write-back failed"; }
+            // ClearEnemyTeamByColor latches default victory if this was the last
+            // hostile team. Surface it in status so the player sees the outcome.
+            AppendScenarioEndedStatusIfLatched();
             session_.EnterRegionMode();
             return;
         }
@@ -447,6 +454,11 @@ void App::Update() {
 }
 
 void App::UpdateRegionMode(const input::InputState& input) {
+    // Scenario ended: freeze region inputs. Player sees the last status message
+    // including the Victory!/Defeat. label appended at the latch boundary.
+    if (session_.IsScenarioEnded()) {
+        return;
+    }
     const auto snapshot = session_.Snapshot();
     const auto nodes = regionModelMapper_.BuildNodes(content_, snapshot.regionId, session_.ClearedCombatNodeIds());
     if (nodes.empty()) {
@@ -601,10 +613,26 @@ void App::UpdateRegionMode(const input::InputState& input) {
         }
         statusMessage_ = travelStatus;
         OnDestinationArrived(destination.id);
+        // M12-b outcome check #1: regionNodeEntry events may have removed teams,
+        // changed alliances, or set story flags satisfying victory/defeat.
+        // FireMatchingEvents already latched if appropriate; just observe and skip
+        // enemy phase + battle/location entry when ended.
+        if (session_.IsScenarioEnded()) {
+            AppendScenarioEndedStatusIfLatched();
+            return;
+        }
+
         // Contract: call after every Region-mode time-costing player action.
         // Location-mode time costs are intentionally excluded (core_loop_rules §12).
         // Extension point: add a call here when new Region-mode actions are introduced.
         static_cast<void>(session_.ProcessEnemyPhase(links));
+
+        // M12-b outcome check #2: enemy phase may flip outcome state. ProcessEnemyPhase
+        // already latched if appropriate; just observe and skip battle/location entry.
+        if (session_.IsScenarioEnded()) {
+            AppendScenarioEndedStatusIfLatched();
+            return;
+        }
 
         if (destination.supportsBattle && !destination.combatNodeCleared && !destination.battleScenarioId.empty()) {
             StartBattleScenario(destination.battleScenarioId, travelStatus + " | Encounter started at " + destination.label);
@@ -621,6 +649,20 @@ void App::UpdateRegionMode(const input::InputState& input) {
         StartBattleScenario(
             !destination.battleScenarioId.empty() ? destination.battleScenarioId : "debug_intro_battle",
             "Debug battle requested");
+    }
+}
+
+void App::AppendScenarioEndedStatusIfLatched() {
+    const auto& outcome = session_.Outcome();
+    if (!outcome.has_value()) return;
+    const std::string label =
+        outcome->state == gameplay::scenario::ScenarioOutcomeState::Victory ? "Victory!"
+      : outcome->state == gameplay::scenario::ScenarioOutcomeState::Defeat  ? "Defeat."
+      : std::string{};
+    if (label.empty()) return;
+    statusMessage_ += " | " + label;
+    if (!outcome->reason.empty()) {
+        statusMessage_ += " " + outcome->reason;
     }
 }
 

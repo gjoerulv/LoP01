@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <set>
 #include <vector>
@@ -10,10 +11,12 @@
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
+#include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/quests/QuestState.h"
+#include "gameplay/scenario/ScenarioOutcomeRules.h"
 #include "gameplay/world/NodeWorldState.h"
 
 namespace gameplay {
@@ -117,6 +120,18 @@ public:
     [[nodiscard]] std::vector<events::ActionResult> NotifyRegionNodeEntry(const std::string& nodeId);
 
     void SetEnemyTeams(std::vector<EnemyTeamState> teams);
+    void SetPlayerColor(std::string color);
+    [[nodiscard]] const std::string& PlayerColor() const;
+    void SetScenarioOutcomeDefinition(data::ScenarioOutcomeDefinition definition);
+    // Evaluates outcome against current session state. If non-Ongoing and the
+    // session has not yet latched, latches the outcome (and stays latched
+    // through save/load). Called automatically at the boundaries documented in
+    // implementation_roadmap.md §4: end of FireMatchingEvents (StartOfDay /
+    // RegionNodeEntry), end of ProcessEnemyPhase, and end of ClearEnemyTeamByColor.
+    // Safe to call repeatedly; a latched outcome never changes.
+    const std::optional<scenario::ScenarioOutcome>& CheckAndLatchOutcome();
+    [[nodiscard]] const std::optional<scenario::ScenarioOutcome>& Outcome() const;
+    [[nodiscard]] bool IsScenarioEnded() const;
     [[nodiscard]] std::vector<EnemyTeamActionResult> ProcessEnemyPhase(
         const std::vector<data::RegionLinkDefinition>& regionLinks);
     [[nodiscard]] const std::vector<EnemyTeamState>& EnemyTeams() const;
@@ -230,6 +245,10 @@ private:
 
     std::vector<EnemyTeamState> enemyTeams_;
     static const std::vector<std::string> kTeamColorOrder;
+
+    std::string playerColor_ = "Green";
+    data::ScenarioOutcomeDefinition scenarioOutcomeDefinition_;
+    std::optional<scenario::ScenarioOutcome> latchedOutcome_;
 };
 
 } // namespace gameplay

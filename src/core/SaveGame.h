@@ -66,6 +66,13 @@ struct SaveData {
     std::vector<std::string> firedEventIds;
     std::vector<std::string> storyFlags;
     std::vector<EnemyTeamSaveState> enemyTeams;
+
+    // Latched scenario outcome. State is "" (Ongoing / not latched), "victory",
+    // or "defeat". matchedConditionIndex is -1 when absent (default victory or
+    // unset). reason is the human-readable text captured at latch time.
+    std::string scenarioOutcomeState;
+    int scenarioOutcomeMatchedConditionIndex = -1;
+    std::string scenarioOutcomeReason;
 };
 
 class SaveGameRepository {
