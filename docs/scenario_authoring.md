@@ -433,15 +433,24 @@ The current event system recognizes these action types:
 - `spawnTeam`
 - `removeTeam`
 - `changeAlliance`
+- `giveItem`
+- `takeItem`
+- `giveArtifact`
+- `takeArtifact`
 
 The action list should remain explicit and typed. Implemented action handlers must fail explicitly when required context or required arguments are missing.
 
+M13 item/artifact actions cover event-driven acquisition and removal only. They do not implement item use, artifact equip actions, trader stock, spoils transfer, artifact combination, or scenario-outcome condition leaves.
+
 ### Future action targets
 
-Future phases may add:
+Future phases may add richer inventory and world actions such as:
 
-- give/take item
-- give/take artifact
+- item use / consume item
+- equip / unequip artifact as authorable event actions
+- trade / buy / sell item or artifact
+- battle spoils transfer
+- artifact combination
 - give troops
 - recover team
 - grant experience
