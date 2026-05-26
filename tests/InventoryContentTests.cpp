@@ -168,6 +168,35 @@ TEST_CASE("ContentRepository: item with effects field is rejected as unsupported
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("ContentRepository: duplicate item id produces ITEM_ID_DUPLICATE; first occurrence is kept") {
+    const std::filesystem::path root = "saves/inventory_items_duplicate_id_test";
+    WriteBaselineContent(root);
+    WriteTextFile(root / "items.json", R"({
+        "schemaVersion": 1,
+        "kind": "ItemCollection",
+        "id": "items",
+        "items": [
+            { "id": "item_dup", "name": {"en":"First"},     "icon": "x",
+              "subtype": "material", "stackCap": 10, "baseValue": 1 },
+            { "id": "item_dup", "name": {"en":"Duplicate"}, "icon": "x",
+              "subtype": "material", "stackCap": 20, "baseValue": 2 }
+        ]
+    })");
+
+    data::ContentRepository repo;
+    static_cast<void>(repo.LoadFromDirectory(root));
+    REQUIRE(HasMessageWithCode(repo.ValidationMessages(), "ITEM_ID_DUPLICATE"));
+
+    // The first occurrence stays in the loaded catalog; the duplicate does not
+    // erase it. This matches the EVENT_ID_DUPLICATE pattern.
+    REQUIRE(repo.Items().size() == 1);
+    REQUIRE(repo.Items()[0].id == "item_dup");
+    REQUIRE(repo.Items()[0].name == "First");
+    REQUIRE(repo.Items()[0].stackCap == 10);
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_CASE("ContentRepository: empty item id produces explicit validation error") {
     const std::filesystem::path root = "saves/inventory_items_empty_id_test";
     WriteBaselineContent(root);

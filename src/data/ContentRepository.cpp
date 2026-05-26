@@ -374,6 +374,11 @@ namespace data {
 
             output.clear();
 
+            // Track ids already accepted into `output` so a second occurrence
+            // can be rejected without erasing the first. Mirrors the
+            // EVENT_ID_DUPLICATE pattern in LoadEventDefinitionsFile.
+            std::set<std::string> seenItemIds;
+
             for (size_t i = 0; i < root["items"].size(); ++i) {
                 const auto& entry = root["items"][i];
                 const std::string path = "items[" + std::to_string(i) + "]";
@@ -395,6 +400,13 @@ namespace data {
                 if (def.id.empty()) {
                     msgs.push_back({Severity::Error, "ITEM_ID_EMPTY", path + ".id",
                         "Item \"id\" is required and must be a non-empty string.", ""});
+                    continue;
+                }
+
+                if (!seenItemIds.insert(def.id).second) {
+                    msgs.push_back({Severity::Error, "ITEM_ID_DUPLICATE", path + ".id",
+                        "Duplicate item id \"" + def.id + "\". "
+                        "Item ids must be unique within items.json.", ""});
                     continue;
                 }
 
@@ -456,6 +468,11 @@ namespace data {
 
             output.clear();
 
+            // Track ids already accepted into `output` so a second occurrence
+            // can be rejected without erasing the first. Mirrors the items
+            // duplicate-id pattern above and the EVENT_ID_DUPLICATE pattern.
+            std::set<std::string> seenArtifactIds;
+
             for (size_t i = 0; i < root["artifacts"].size(); ++i) {
                 const auto& entry = root["artifacts"][i];
                 const std::string path = "artifacts[" + std::to_string(i) + "]";
@@ -481,6 +498,13 @@ namespace data {
                 if (def.id.empty()) {
                     msgs.push_back({Severity::Error, "ARTIFACT_ID_EMPTY", path + ".id",
                         "Artifact \"id\" is required and must be a non-empty string.", ""});
+                    continue;
+                }
+
+                if (!seenArtifactIds.insert(def.id).second) {
+                    msgs.push_back({Severity::Error, "ARTIFACT_ID_DUPLICATE", path + ".id",
+                        "Duplicate artifact id \"" + def.id + "\". "
+                        "Artifact ids must be unique within artifacts.json.", ""});
                     continue;
                 }
 
