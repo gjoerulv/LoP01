@@ -239,6 +239,41 @@ TEST_CASE("ContentRepository: negative artifact baseValue is rejected") {
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("ContentRepository: duplicate artifact id produces ARTIFACT_ID_DUPLICATE; first occurrence is kept") {
+    const std::filesystem::path root = "saves/artifacts_duplicate_id_test";
+    WriteBaselineContent(root);
+    WriteTextFile(root / "artifacts.json", R"({
+        "schemaVersion": 1,
+        "kind": "ArtifactCollection",
+        "id": "artifacts",
+        "artifacts": [
+            { "id": "artifact_dup", "name": {"en":"First"}, "icon": "x",
+              "allowedSlots": ["Attack"], "rarity": "minor", "tier": 1, "baseValue": 10,
+              "combinable": true,
+              "effects": [ { "type": "statBonus", "stat": "Attack", "amount": 1 } ] },
+            { "id": "artifact_dup", "name": {"en":"Duplicate"}, "icon": "x",
+              "allowedSlots": ["Defense"], "rarity": "major", "tier": 2, "baseValue": 999,
+              "combinable": false,
+              "effects": [ { "type": "statBonus", "stat": "Defense", "amount": 5 } ] }
+        ]
+    })");
+
+    data::ContentRepository repo;
+    static_cast<void>(repo.LoadFromDirectory(root));
+    REQUIRE(HasMessageWithCode(repo.ValidationMessages(), "ARTIFACT_ID_DUPLICATE"));
+
+    // First occurrence kept; duplicate rejected without erasing it.
+    REQUIRE(repo.Artifacts().size() == 1);
+    REQUIRE(repo.Artifacts()[0].id == "artifact_dup");
+    REQUIRE(repo.Artifacts()[0].name == "First");
+    REQUIRE(repo.Artifacts()[0].tier == 1);
+    REQUIRE(repo.Artifacts()[0].combinable);
+    REQUIRE(repo.Artifacts()[0].allowedSlots.size() == 1);
+    REQUIRE(repo.Artifacts()[0].allowedSlots[0] == data::ArtifactSlotKind::Attack);
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_CASE("ContentRepository: statBonus missing amount is rejected") {
     const std::filesystem::path root = "saves/artifacts_missing_amount_test";
     WriteBaselineContent(root);

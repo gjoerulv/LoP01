@@ -778,7 +778,7 @@ Artifact combination recipes are globally fixed, while specific services may den
 
 ### Current authored shape (M13)
 
-The M13 implementation accepts the doc's full item/artifact schema shape but only implements a narrow runtime surface. See `docs/content_schema.md` §33–§35 "Current authored shape (M13)" subsections for the concrete JSON shapes and validation rules.
+The M13 implementation accepts a bounded M13 subset of the long-term item/artifact schema and only implements a narrow runtime surface. See `docs/content_schema.md` §33–§35 "Current authored shape (M13)" subsections for the concrete JSON shapes and validation rules.
 
 In short:
 
