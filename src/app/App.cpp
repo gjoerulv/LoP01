@@ -72,6 +72,10 @@ App::App() {
         session_.InitializeQuestState(content_.QuestDefinitions());
         session_.InitializeEventDefinitions(content_.EventDefinitions());
         session_.SetScenarioOutcomeDefinition(content_.ScenarioOutcome());
+        // M13-b: push item/artifact catalogs into the session so equip and
+        // event-action paths can look up authored metadata.
+        session_.SetItemCatalog(content_.Items());
+        session_.SetArtifactCatalog(content_.Artifacts());
         // Player color is hardcoded "Green" project-wide (see roadmap debt #6).
         session_.SetPlayerColor("Green");
     }
@@ -121,12 +125,18 @@ void App::InitializeBattleIfNeeded(const gameplay::SessionSnapshot& snapshot) {
     std::vector<gameplay::battle::PlayerBattleEntry> playerEntries;
     playerEntries.reserve(activeBattleEntries.size());
     for (const auto& entry : activeBattleEntries) {
-        playerEntries.push_back(gameplay::battle::PlayerBattleEntry{
-            entry.activeSlotIndex,
-            entry.stackId,
-            entry.unitId,
-            entry.quantity
-        });
+        gameplay::battle::PlayerBattleEntry pe;
+        pe.activeSlotIndex = entry.activeSlotIndex;
+        pe.stackId         = entry.stackId;
+        pe.unitId          = entry.unitId;
+        pe.quantity        = entry.quantity;
+        // M13-b: forward pre-summed equipped-artifact stat bonuses so they
+        // flow into per-battle hero stats via BattleFactory::BuildBattleUnit.
+        pe.artifactAttackBonus     = entry.artifactAttackBonus;
+        pe.artifactDefenseBonus    = entry.artifactDefenseBonus;
+        pe.artifactMagicBonus      = entry.artifactMagicBonus;
+        pe.artifactResistanceBonus = entry.artifactResistanceBonus;
+        playerEntries.push_back(std::move(pe));
     }
 
     const auto battle = gameplay::battle::BattleFactory::CreateFromScenario(

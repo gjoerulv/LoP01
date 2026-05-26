@@ -430,6 +430,13 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
         ctx.heroIds = std::vector<std::string>(partyIds.begin(), partyIds.end());
         ctx.storyFlags = storyFlags_;
         ctx.pendingTeamMutations = &pendingMutations;
+        // M13-b: wire inventory-action surface. Actions mutate items_ and
+        // artifacts_ directly through these pointers; catalogs supply
+        // authored metadata for id lookups + consumable / stackCap rules.
+        ctx.items           = &items_;
+        ctx.artifacts       = &artifacts_;
+        ctx.itemCatalog     = &itemCatalog_;
+        ctx.artifactCatalog = &artifactCatalog_;
 
         if (!events::EvaluateCondition(ctx, def.condition)) continue;
 
@@ -849,12 +856,24 @@ std::vector<ActiveBattleStackEntry> GameSession::BuildActiveBattleStackEntries()
             continue;
         }
 
-        entries.push_back(ActiveBattleStackEntry{
-            slotIndex,
-            stack->stackId,
+        ActiveBattleStackEntry entry;
+        entry.activeSlotIndex = slotIndex;
+        entry.stackId         = stack->stackId;
+        entry.unitId          = stack->unitId;
+        entry.quantity        = stack->quantity;
+
+        // M13-b: pre-sum equipped-artifact statBonus values for hero entries.
+        // Generic units cannot equip artifacts, so their entries leave the
+        // bonus fields at zero. SumEquippedArtifactBonuses tolerates a missing
+        // heroEquipment_ entry by returning all zeros.
+        SumEquippedArtifactBonuses(
             stack->unitId,
-            stack->quantity
-        });
+            entry.artifactAttackBonus,
+            entry.artifactDefenseBonus,
+            entry.artifactMagicBonus,
+            entry.artifactResistanceBonus);
+
+        entries.push_back(std::move(entry));
     }
 
     return entries;
@@ -1030,7 +1049,38 @@ core::SaveData GameSession::ToSaveData() const {
         latchedOutcome_.has_value() && latchedOutcome_->matchedConditionIndex.has_value()
             ? static_cast<int>(*latchedOutcome_->matchedConditionIndex)
             : -1,
-        latchedOutcome_.has_value() ? latchedOutcome_->reason : std::string{}
+        latchedOutcome_.has_value() ? latchedOutcome_->reason : std::string{},
+        [&]() {
+            std::vector<core::ItemSaveState> out;
+            out.reserve(items_.size());
+            for (const auto& s : items_) {
+                out.push_back({s.itemId, s.quantity});
+            }
+            return out;
+        }(),
+        [&]() {
+            std::vector<core::ArtifactSaveState> out;
+            out.reserve(artifacts_.size());
+            for (const auto& s : artifacts_) {
+                out.push_back({s.artifactId, s.quantity});
+            }
+            return out;
+        }(),
+        [&]() {
+            std::vector<core::HeroEquipmentSaveState> out;
+            out.reserve(heroEquipment_.size());
+            for (const auto& [heroId, equip] : heroEquipment_) {
+                core::HeroEquipmentSaveState entry;
+                entry.heroId             = heroId;
+                entry.attackArtifactId   = equip.attackArtifactId;
+                entry.defenseArtifactId  = equip.defenseArtifactId;
+                entry.misc1ArtifactId    = equip.misc1ArtifactId;
+                entry.misc2ArtifactId    = equip.misc2ArtifactId;
+                entry.misc3ArtifactId    = equip.misc3ArtifactId;
+                out.push_back(std::move(entry));
+            }
+            return out;
+        }()
     };
 }
 
@@ -1193,6 +1243,29 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
         outcome.reason = saveData.scenarioOutcomeReason;
         latchedOutcome_ = outcome;
     }
+
+    // M13-b: restore inventory and equipment.
+    items_.clear();
+    items_.reserve(saveData.items.size());
+    for (const auto& s : saveData.items) {
+        items_.push_back({s.itemId, s.quantity});
+    }
+    artifacts_.clear();
+    artifacts_.reserve(saveData.artifacts.size());
+    for (const auto& s : saveData.artifacts) {
+        artifacts_.push_back({s.artifactId, s.quantity});
+    }
+    heroEquipment_.clear();
+    for (const auto& entry : saveData.heroEquipment) {
+        HeroEquipmentState equip;
+        equip.attackArtifactId  = entry.attackArtifactId;
+        equip.defenseArtifactId = entry.defenseArtifactId;
+        equip.misc1ArtifactId   = entry.misc1ArtifactId;
+        equip.misc2ArtifactId   = entry.misc2ArtifactId;
+        equip.misc3ArtifactId   = entry.misc3ArtifactId;
+        heroEquipment_[entry.heroId] = std::move(equip);
+    }
+
     MarkRosterProjectionDirty();
 }
 
@@ -1596,6 +1669,224 @@ const std::optional<scenario::ScenarioOutcome>& GameSession::Outcome() const {
 bool GameSession::IsScenarioEnded() const {
     return latchedOutcome_.has_value()
         && latchedOutcome_->state != scenario::ScenarioOutcomeState::Ongoing;
+}
+
+// ---------------------------------------------------------------------------
+// M13-b — Inventory, artifact, and equipment runtime API.
+// ---------------------------------------------------------------------------
+
+void GameSession::SetItemCatalog(std::vector<data::ItemDefinition> catalog) {
+    itemCatalog_ = std::move(catalog);
+}
+
+void GameSession::SetArtifactCatalog(std::vector<data::ArtifactDefinition> catalog) {
+    artifactCatalog_ = std::move(catalog);
+}
+
+const std::vector<ItemStackState>& GameSession::Items() const {
+    return items_;
+}
+
+const std::vector<ArtifactStackState>& GameSession::Artifacts() const {
+    return artifacts_;
+}
+
+HeroEquipmentState GameSession::HeroEquipment(const std::string& heroId) const {
+    const auto it = heroEquipment_.find(heroId);
+    if (it == heroEquipment_.end()) {
+        return HeroEquipmentState{};
+    }
+    return it->second;
+}
+
+const data::ItemDefinition* GameSession::FindItemDefinition(const std::string& id) const {
+    for (const auto& def : itemCatalog_) {
+        if (def.id == id) return &def;
+    }
+    return nullptr;
+}
+
+const data::ArtifactDefinition* GameSession::FindArtifactDefinition(const std::string& id) const {
+    for (const auto& def : artifactCatalog_) {
+        if (def.id == id) return &def;
+    }
+    return nullptr;
+}
+
+namespace {
+
+// Maps an equip-slot to the matching allowed-slot kind. Misc1/Misc2/Misc3 all
+// accept the Misc kind from ArtifactDefinition::allowedSlots.
+data::ArtifactSlotKind RequiredSlotKindFor(ArtifactEquipSlot slot) {
+    switch (slot) {
+        case ArtifactEquipSlot::Attack:  return data::ArtifactSlotKind::Attack;
+        case ArtifactEquipSlot::Defense: return data::ArtifactSlotKind::Defense;
+        case ArtifactEquipSlot::Misc1:
+        case ArtifactEquipSlot::Misc2:
+        case ArtifactEquipSlot::Misc3:   return data::ArtifactSlotKind::Misc;
+    }
+    return data::ArtifactSlotKind::Misc;
+}
+
+std::string& SlotField(HeroEquipmentState& equipment, ArtifactEquipSlot slot) {
+    switch (slot) {
+        case ArtifactEquipSlot::Attack:  return equipment.attackArtifactId;
+        case ArtifactEquipSlot::Defense: return equipment.defenseArtifactId;
+        case ArtifactEquipSlot::Misc1:   return equipment.misc1ArtifactId;
+        case ArtifactEquipSlot::Misc2:   return equipment.misc2ArtifactId;
+        case ArtifactEquipSlot::Misc3:   return equipment.misc3ArtifactId;
+    }
+    return equipment.misc3ArtifactId;
+}
+
+const std::string& SlotField(const HeroEquipmentState& equipment, ArtifactEquipSlot slot) {
+    switch (slot) {
+        case ArtifactEquipSlot::Attack:  return equipment.attackArtifactId;
+        case ArtifactEquipSlot::Defense: return equipment.defenseArtifactId;
+        case ArtifactEquipSlot::Misc1:   return equipment.misc1ArtifactId;
+        case ArtifactEquipSlot::Misc2:   return equipment.misc2ArtifactId;
+        case ArtifactEquipSlot::Misc3:   return equipment.misc3ArtifactId;
+    }
+    return equipment.misc3ArtifactId;
+}
+
+} // namespace
+
+void GameSession::SumEquippedArtifactBonuses(
+    const std::string& heroId,
+    int& attackBonus,
+    int& defenseBonus,
+    int& magicBonus,
+    int& resistanceBonus) const
+{
+    attackBonus = 0;
+    defenseBonus = 0;
+    magicBonus = 0;
+    resistanceBonus = 0;
+
+    const auto it = heroEquipment_.find(heroId);
+    if (it == heroEquipment_.end()) return;
+
+    const HeroEquipmentState& equipment = it->second;
+    const std::string* slotIds[] = {
+        &equipment.attackArtifactId,
+        &equipment.defenseArtifactId,
+        &equipment.misc1ArtifactId,
+        &equipment.misc2ArtifactId,
+        &equipment.misc3ArtifactId,
+    };
+
+    for (const std::string* idPtr : slotIds) {
+        if (idPtr->empty()) continue;
+        const auto* def = FindArtifactDefinition(*idPtr);
+        if (def == nullptr) continue;
+        for (const auto& bonus : def->statBonuses) {
+            switch (bonus.stat) {
+                case data::ArtifactStatBonusStat::Attack:     attackBonus     += bonus.amount; break;
+                case data::ArtifactStatBonusStat::Defense:    defenseBonus    += bonus.amount; break;
+                case data::ArtifactStatBonusStat::Magic:      magicBonus      += bonus.amount; break;
+                case data::ArtifactStatBonusStat::Resistance: resistanceBonus += bonus.amount; break;
+            }
+        }
+    }
+}
+
+EquipResult GameSession::TryEquipArtifact(
+    const std::string& heroId,
+    ArtifactEquipSlot slot,
+    const std::string& artifactId)
+{
+    if (heroId.empty()) {
+        return {false, "TryEquipArtifact: heroId is empty"};
+    }
+    if (artifactId.empty()) {
+        return {false, "TryEquipArtifact: artifactId is empty"};
+    }
+
+    // The hero must be present on the traveling team. Heroes are unique and
+    // never stack, so OwnedUnitCount > 0 is the simplest presence check.
+    if (OwnedUnitCount(heroId) <= 0) {
+        return {false, "TryEquipArtifact: hero \"" + heroId + "\" is not on the traveling team"};
+    }
+
+    const auto* def = FindArtifactDefinition(artifactId);
+    if (def == nullptr) {
+        return {false, "TryEquipArtifact: unknown artifact id \"" + artifactId + "\""};
+    }
+
+    // Slot must be one of the artifact's allowed slots.
+    const data::ArtifactSlotKind required = RequiredSlotKindFor(slot);
+    const bool slotMatches = std::any_of(def->allowedSlots.begin(), def->allowedSlots.end(),
+        [required](data::ArtifactSlotKind k) { return k == required; });
+    if (!slotMatches) {
+        return {false, "TryEquipArtifact: artifact \"" + artifactId
+            + "\" cannot be equipped in slot " + ArtifactEquipSlotToString(slot)};
+    }
+
+    // Slot must not already hold something — caller must unequip first.
+    HeroEquipmentState& equipment = heroEquipment_[heroId];
+    std::string& slotRef = SlotField(equipment, slot);
+    if (!slotRef.empty()) {
+        return {false, "TryEquipArtifact: slot " + ArtifactEquipSlotToString(slot)
+            + " on hero \"" + heroId + "\" is already occupied by \"" + slotRef + "\""};
+    }
+
+    // At least one unequipped copy must be available.
+    auto stackIt = std::find_if(artifacts_.begin(), artifacts_.end(),
+        [&](const ArtifactStackState& s) { return s.artifactId == artifactId; });
+    if (stackIt == artifacts_.end() || stackIt->quantity <= 0) {
+        return {false, "TryEquipArtifact: no unequipped copy of artifact \"" + artifactId + "\""};
+    }
+
+    // Commit: move exactly one copy into the slot.
+    --stackIt->quantity;
+    if (stackIt->quantity == 0) {
+        artifacts_.erase(stackIt);
+    }
+    slotRef = artifactId;
+    return {true, ""};
+}
+
+EquipResult GameSession::UnequipArtifact(
+    const std::string& heroId,
+    ArtifactEquipSlot slot)
+{
+    if (heroId.empty()) {
+        return {false, "UnequipArtifact: heroId is empty"};
+    }
+
+    auto equipIt = heroEquipment_.find(heroId);
+    if (equipIt == heroEquipment_.end()) {
+        return {false, "UnequipArtifact: hero \"" + heroId + "\" has no equipped artifacts"};
+    }
+
+    std::string& slotRef = SlotField(equipIt->second, slot);
+    if (slotRef.empty()) {
+        return {false, "UnequipArtifact: slot " + ArtifactEquipSlotToString(slot)
+            + " on hero \"" + heroId + "\" is empty"};
+    }
+
+    const std::string artifactId = slotRef;
+    slotRef.clear();
+
+    // Return the artifact to the unequipped inventory, respecting the 999 cap.
+    auto stackIt = std::find_if(artifacts_.begin(), artifacts_.end(),
+        [&](const ArtifactStackState& s) { return s.artifactId == artifactId; });
+    if (stackIt == artifacts_.end()) {
+        artifacts_.push_back({artifactId, 1});
+    } else if (stackIt->quantity < 999) {
+        ++stackIt->quantity;
+    } else {
+        // Pathological: returning an unequipped copy would exceed 999. This
+        // should be unreachable in practice because equipping moved a copy
+        // out of the stack, so the cap had room. We still fail explicitly
+        // rather than silently dropping the artifact.
+        slotRef = artifactId;  // restore the slot to keep state consistent
+        return {false, "UnequipArtifact: returning artifact \"" + artifactId
+            + "\" to inventory would exceed the 999-copy cap"};
+    }
+
+    return {true, ""};
 }
 
 } // namespace gameplay

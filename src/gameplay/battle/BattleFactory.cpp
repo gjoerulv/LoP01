@@ -102,7 +102,11 @@ namespace gameplay::battle
             const data::UnitDefinition& definition,
             const TeamSide side,
             const int lifeOverride,
-            const std::string& rosterStackId)
+            const std::string& rosterStackId,
+            int artifactAttackBonus = 0,
+            int artifactDefenseBonus = 0,
+            int artifactMagicBonus = 0,
+            int artifactResistanceBonus = 0)
         {
             BattleUnit unit;
             unit.id = definition.id;
@@ -112,6 +116,15 @@ namespace gameplay::battle
             unit.category = ToBattleCategory(definition.category);
             unit.isPlayerCharacter = definition.isPlayerCharacter;
             unit.stats = ToBattleStats(definition.stats);
+            // M13-b: equipped-artifact statBonus values add on top of the
+            // unit's authored stats for this battle only. The persistent
+            // UnitDefinition is never mutated. Bonuses are pre-summed by
+            // GameSession::BuildActiveBattleStackEntries and forwarded
+            // through PlayerBattleEntry.
+            unit.stats.attack     += artifactAttackBonus;
+            unit.stats.defense    += artifactDefenseBonus;
+            unit.stats.magic      += artifactMagicBonus;
+            unit.stats.resistance += artifactResistanceBonus;
             unit.hp = unit.stats.maxHp;
             unit.mp = unit.stats.maxMp;
             unit.life = lifeOverride > 0 ? lifeOverride : unit.stats.life;
@@ -161,7 +174,15 @@ namespace gameplay::battle
 
             if (const auto* definition = content.FindUnitById(entry.unitId))
             {
-                resolvedActivePartyAllies.push_back(BuildBattleUnit(*definition, TeamSide::Allies, entry.quantity, entry.stackId));
+                resolvedActivePartyAllies.push_back(BuildBattleUnit(
+                    *definition,
+                    TeamSide::Allies,
+                    entry.quantity,
+                    entry.stackId,
+                    entry.artifactAttackBonus,
+                    entry.artifactDefenseBonus,
+                    entry.artifactMagicBonus,
+                    entry.artifactResistanceBonus));
             }
         }
 

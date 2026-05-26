@@ -113,13 +113,15 @@ bool IsKnownActionType(const std::string& t)
 {
     return t == "showMessage" || t == "giveResource" || t == "takeResource" || t == "setStoryFlag" ||
            t == "clearStoryFlag" || t == "if" || t == "spawnTeam" || t == "removeTeam" ||
-           t == "changeAlliance";
+           t == "changeAlliance" ||
+           t == "giveItem" || t == "takeItem" ||
+           t == "giveArtifact" || t == "takeArtifact";
 }
 
 const char* KnownActionTypesText()
 {
     return "Known types: showMessage, giveResource, takeResource, setStoryFlag, clearStoryFlag, if, "
-           "spawnTeam, removeTeam, changeAlliance.";
+           "spawnTeam, removeTeam, changeAlliance, giveItem, takeItem, giveArtifact, takeArtifact.";
 }
 
 } // anonymous namespace

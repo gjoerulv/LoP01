@@ -38,6 +38,29 @@ struct EnemyTeamSaveState {
     std::vector<std::string> alliances;
 };
 
+// M13-b runtime inventory persistence. items and artifacts are flat
+// {id, quantity} stacks. heroEquipment is per-hero with the five named slots
+// from gameplay::HeroEquipmentState. Legacy saves (no M13-b keys) load as
+// empty inventories and equipment — no schemaVersion bump.
+struct ItemSaveState {
+    std::string itemId;
+    int quantity = 0;
+};
+
+struct ArtifactSaveState {
+    std::string artifactId;
+    int quantity = 0;
+};
+
+struct HeroEquipmentSaveState {
+    std::string heroId;
+    std::string attackArtifactId;
+    std::string defenseArtifactId;
+    std::string misc1ArtifactId;
+    std::string misc2ArtifactId;
+    std::string misc3ArtifactId;
+};
+
 struct SaveData {
     int schemaVersion = 1;
     int day = 1;
@@ -73,6 +96,12 @@ struct SaveData {
     std::string scenarioOutcomeState;
     int scenarioOutcomeMatchedConditionIndex = -1;
     std::string scenarioOutcomeReason;
+
+    // M13-b runtime inventory + equipment. Each defaults to an empty vector
+    // so legacy saves without these keys load as fresh empty inventories.
+    std::vector<ItemSaveState> items;
+    std::vector<ArtifactSaveState> artifacts;
+    std::vector<HeroEquipmentSaveState> heroEquipment;
 };
 
 class SaveGameRepository {
