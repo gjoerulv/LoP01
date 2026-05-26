@@ -8,16 +8,21 @@
 
 #include "core/GameClock.h"
 #include "core/SaveGame.h"
+#include "data/definitions/ArtifactDefinition.h"
+#include "data/definitions/ItemDefinition.h"
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "gameplay/EnemyTeamState.h"
+#include "gameplay/InventoryState.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/quests/QuestState.h"
 #include "gameplay/scenario/ScenarioOutcomeRules.h"
 #include "gameplay/world/NodeWorldState.h"
+
+#include <map>
 
 namespace gameplay {
 
@@ -46,6 +51,64 @@ struct ActiveBattleStackEntry {
     std::string stackId;
     std::string unitId;
     int quantity = 0;
+    // Pre-summed equipped-artifact stat bonuses for hero entries (M13-b).
+    // Zero for generic-unit entries. The caller (BattleFactory via
+    // PlayerBattleEntry) adds these on top of the unit's authored stats.
+    int artifactAttackBonus = 0;
+    int artifactDefenseBonus = 0;
+    int artifactMagicBonus = 0;
+    int artifactResistanceBonus = 0;
+};
+
+// ItemStackState and ArtifactStackState live in gameplay/InventoryState.h so
+// EventEngine and other layers can depend on the shapes without including
+// GameSession.h (avoids circular dependency).
+
+// Hero artifact slots per docs/core_loop_rules.md §22:
+//   1 Attack slot + 1 Defense slot + 3 Misc slots.
+enum class ArtifactEquipSlot { Attack, Defense, Misc1, Misc2, Misc3 };
+
+inline bool ArtifactEquipSlotFromString(const std::string& value, ArtifactEquipSlot& out) {
+    if (value == "Attack")  { out = ArtifactEquipSlot::Attack;  return true; }
+    if (value == "Defense") { out = ArtifactEquipSlot::Defense; return true; }
+    if (value == "Misc1")   { out = ArtifactEquipSlot::Misc1;   return true; }
+    if (value == "Misc2")   { out = ArtifactEquipSlot::Misc2;   return true; }
+    if (value == "Misc3")   { out = ArtifactEquipSlot::Misc3;   return true; }
+    return false;
+}
+
+inline std::string ArtifactEquipSlotToString(ArtifactEquipSlot slot) {
+    switch (slot) {
+        case ArtifactEquipSlot::Attack:  return "Attack";
+        case ArtifactEquipSlot::Defense: return "Defense";
+        case ArtifactEquipSlot::Misc1:   return "Misc1";
+        case ArtifactEquipSlot::Misc2:   return "Misc2";
+        case ArtifactEquipSlot::Misc3:   return "Misc3";
+    }
+    return "";
+}
+
+// HeroEquipmentState holds one hero's equipped artifact ids. Empty string means
+// the slot is empty. heroEquipment_ is keyed by hero/unit id (heroes are unique
+// so unit id is their identity in M13).
+//
+// Hero-departure note (M13-b): if a hero leaves the team, their entry in
+// heroEquipment_ is retained, so the equipped artifacts are preserved if/when
+// the hero returns. No existing removal path in the codebase touches this map.
+// Full §28 battle-spoils transfer is deferred to a later milestone.
+struct HeroEquipmentState {
+    std::string attackArtifactId;
+    std::string defenseArtifactId;
+    std::string misc1ArtifactId;
+    std::string misc2ArtifactId;
+    std::string misc3ArtifactId;
+};
+
+// Result of TryEquipArtifact / UnequipArtifact, mirroring events::ActionResult
+// shape so the failure mode is identical across both surfaces.
+struct EquipResult {
+    bool success = true;
+    std::string message;   // populated on failure; empty on clean success
 };
 
 struct BattleStackLifeResult {
@@ -118,6 +181,30 @@ public:
     void InitializeEventDefinitions(std::vector<events::EventDefinition> definitions);
     [[nodiscard]] std::vector<events::ActionResult> NotifyStartOfDay();
     [[nodiscard]] std::vector<events::ActionResult> NotifyRegionNodeEntry(const std::string& nodeId);
+
+    // Catalogs feed equip/event-action lookups. Sets are copies; callers may
+    // re-set after a ContentRepository reload. Empty catalogs disable item /
+    // artifact operations (give/take/equip will fail with "unknown id").
+    void SetItemCatalog(std::vector<data::ItemDefinition> catalog);
+    void SetArtifactCatalog(std::vector<data::ArtifactDefinition> catalog);
+
+    [[nodiscard]] const std::vector<ItemStackState>& Items() const;
+    [[nodiscard]] const std::vector<ArtifactStackState>& Artifacts() const;
+    // Returns equipment for the given hero/unit id; default-constructed (all
+    // slots empty) if the hero has never been equipped.
+    [[nodiscard]] HeroEquipmentState HeroEquipment(const std::string& heroId) const;
+
+    // Equip moves one artifact stack-of-1 out of the unequipped Artifacts()
+    // container into the hero's named slot. Fails explicitly on unknown
+    // artifact, slot/allowedSlots mismatch, hero not in traveling roster, or
+    // the slot already being occupied. Unequip is the inverse.
+    EquipResult TryEquipArtifact(
+        const std::string& heroId,
+        ArtifactEquipSlot slot,
+        const std::string& artifactId);
+    EquipResult UnequipArtifact(
+        const std::string& heroId,
+        ArtifactEquipSlot slot);
 
     void SetEnemyTeams(std::vector<EnemyTeamState> teams);
     void SetPlayerColor(std::string color);
@@ -249,6 +336,25 @@ private:
     std::string playerColor_ = "Green";
     data::ScenarioOutcomeDefinition scenarioOutcomeDefinition_;
     std::optional<scenario::ScenarioOutcome> latchedOutcome_;
+
+    // M13-b runtime inventory + equipment state.
+    std::vector<ItemStackState>     items_;
+    std::vector<ArtifactStackState> artifacts_;          // unequipped only
+    std::map<std::string, HeroEquipmentState> heroEquipment_;
+    std::vector<data::ItemDefinition>     itemCatalog_;
+    std::vector<data::ArtifactDefinition> artifactCatalog_;
+
+    [[nodiscard]] const data::ItemDefinition*     FindItemDefinition(const std::string& id) const;
+    [[nodiscard]] const data::ArtifactDefinition* FindArtifactDefinition(const std::string& id) const;
+    // Sums equipped artifact statBonuses for a given hero across all equipped
+    // slots. Writes into the per-stat int outparams. Missing artifacts in the
+    // catalog (e.g. catalog not yet set) contribute zero.
+    void SumEquippedArtifactBonuses(
+        const std::string& heroId,
+        int& attackBonus,
+        int& defenseBonus,
+        int& magicBonus,
+        int& resistanceBonus) const;
 };
 
 } // namespace gameplay

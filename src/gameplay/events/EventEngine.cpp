@@ -4,6 +4,10 @@
 #include <algorithm>
 #include <string>
 
+#include "data/definitions/ArtifactDefinition.h"
+#include "data/definitions/ItemDefinition.h"
+#include "gameplay/InventoryState.h"
+
 namespace gameplay::events {
 
 bool EvaluateCondition(const EventEvaluationContext& ctx, const EventCondition& cond)
@@ -153,6 +157,173 @@ ActionResult ExecuteAction(EventEvaluationContext& ctx, const EventAction& actio
             {EnemyTeamMutationType::Remove, teamColor, {}, {}, true});
         return {true, ""};
     }
+
+    // ----- M13-b inventory actions ---------------------------------------
+    //
+    // All four actions follow the giveResource/takeResource failure-mode style:
+    // any unknown id, missing/invalid arg, insufficient quantity, or capacity
+    // overflow is an explicit hard failure. No silent clamping. No partial
+    // success. The four ctx pointers (items, artifacts, itemCatalog,
+    // artifactCatalog) must be wired by GameSession::FireMatchingEvents; if
+    // any is null the action fails with a "context unavailable" message.
+
+    if (type == "giveItem") {
+        if (ctx.items == nullptr || ctx.itemCatalog == nullptr)
+            return {false, "giveItem: inventory context unavailable"};
+        const std::string itemId = args.value("itemId", "");
+        if (itemId.empty())
+            return {false, "giveItem: missing required arg 'itemId'"};
+        if (!args.contains("amount") || !args["amount"].is_number_integer())
+            return {false, "giveItem: missing required arg 'amount' (integer)"};
+        const int amount = args["amount"].get<int>();
+        if (amount <= 0)
+            return {false, "giveItem: 'amount' must be a positive integer"};
+
+        const data::ItemDefinition* def = nullptr;
+        for (const auto& d : *ctx.itemCatalog) {
+            if (d.id == itemId) { def = &d; break; }
+        }
+        if (def == nullptr)
+            return {false, "giveItem: unknown item id \"" + itemId + "\""};
+
+        // Consumables enforce quantity == 1 and forbid duplicate-add.
+        auto existing = std::find_if(ctx.items->begin(), ctx.items->end(),
+            [&](const gameplay::ItemStackState& s) { return s.itemId == itemId; });
+
+        if (def->subtype == data::ItemSubtype::Consumable) {
+            if (amount != 1)
+                return {false, "giveItem: consumable \"" + itemId + "\" must be added with amount 1"};
+            if (existing != ctx.items->end())
+                return {false, "giveItem: consumable \"" + itemId + "\" already owned (duplicate-add is illegal)"};
+            ctx.items->push_back({itemId, 1});
+            return {true, ""};
+        }
+
+        const int currentQty = (existing != ctx.items->end()) ? existing->quantity : 0;
+        if (currentQty + amount > def->stackCap) {
+            return {false, "giveItem: \"" + itemId + "\" would exceed stackCap "
+                + std::to_string(def->stackCap) + " (have " + std::to_string(currentQty)
+                + ", trying to add " + std::to_string(amount) + ")"};
+        }
+        if (existing == ctx.items->end()) {
+            ctx.items->push_back({itemId, amount});
+        } else {
+            existing->quantity += amount;
+        }
+        return {true, ""};
+    }
+
+    if (type == "takeItem") {
+        if (ctx.items == nullptr || ctx.itemCatalog == nullptr)
+            return {false, "takeItem: inventory context unavailable"};
+        const std::string itemId = args.value("itemId", "");
+        if (itemId.empty())
+            return {false, "takeItem: missing required arg 'itemId'"};
+        if (!args.contains("amount") || !args["amount"].is_number_integer())
+            return {false, "takeItem: missing required arg 'amount' (integer)"};
+        const int amount = args["amount"].get<int>();
+        if (amount <= 0)
+            return {false, "takeItem: 'amount' must be a positive integer"};
+
+        // Unknown items still fail explicitly even if the inventory happens to
+        // be empty — matches the giveItem id-checking policy.
+        bool inCatalog = false;
+        for (const auto& d : *ctx.itemCatalog) {
+            if (d.id == itemId) { inCatalog = true; break; }
+        }
+        if (!inCatalog)
+            return {false, "takeItem: unknown item id \"" + itemId + "\""};
+
+        auto existing = std::find_if(ctx.items->begin(), ctx.items->end(),
+            [&](const gameplay::ItemStackState& s) { return s.itemId == itemId; });
+        const int currentQty = (existing != ctx.items->end()) ? existing->quantity : 0;
+        if (currentQty < amount) {
+            return {false, "takeItem: insufficient quantity of \"" + itemId
+                + "\" (have " + std::to_string(currentQty) + ", need "
+                + std::to_string(amount) + ")"};
+        }
+        existing->quantity -= amount;
+        if (existing->quantity == 0) {
+            ctx.items->erase(existing);
+        }
+        return {true, ""};
+    }
+
+    if (type == "giveArtifact") {
+        if (ctx.artifacts == nullptr || ctx.artifactCatalog == nullptr)
+            return {false, "giveArtifact: inventory context unavailable"};
+        const std::string artifactId = args.value("artifactId", "");
+        if (artifactId.empty())
+            return {false, "giveArtifact: missing required arg 'artifactId'"};
+        if (!args.contains("amount") || !args["amount"].is_number_integer())
+            return {false, "giveArtifact: missing required arg 'amount' (integer)"};
+        const int amount = args["amount"].get<int>();
+        if (amount <= 0)
+            return {false, "giveArtifact: 'amount' must be a positive integer"};
+
+        bool inCatalog = false;
+        for (const auto& d : *ctx.artifactCatalog) {
+            if (d.id == artifactId) { inCatalog = true; break; }
+        }
+        if (!inCatalog)
+            return {false, "giveArtifact: unknown artifact id \"" + artifactId + "\""};
+
+        // Cap per docs §22: artifacts stack up to 999 copies. Overflow is a
+        // hard failure (consistent with giveItem) rather than a silent clamp.
+        auto existing = std::find_if(ctx.artifacts->begin(), ctx.artifacts->end(),
+            [&](const gameplay::ArtifactStackState& s) { return s.artifactId == artifactId; });
+        const int currentQty = (existing != ctx.artifacts->end()) ? existing->quantity : 0;
+        constexpr int kArtifactStackCap = 999;
+        if (currentQty + amount > kArtifactStackCap) {
+            return {false, "giveArtifact: \"" + artifactId + "\" would exceed stack cap "
+                + std::to_string(kArtifactStackCap) + " (have " + std::to_string(currentQty)
+                + ", trying to add " + std::to_string(amount) + ")"};
+        }
+        if (existing == ctx.artifacts->end()) {
+            ctx.artifacts->push_back({artifactId, amount});
+        } else {
+            existing->quantity += amount;
+        }
+        return {true, ""};
+    }
+
+    if (type == "takeArtifact") {
+        if (ctx.artifacts == nullptr || ctx.artifactCatalog == nullptr)
+            return {false, "takeArtifact: inventory context unavailable"};
+        const std::string artifactId = args.value("artifactId", "");
+        if (artifactId.empty())
+            return {false, "takeArtifact: missing required arg 'artifactId'"};
+        if (!args.contains("amount") || !args["amount"].is_number_integer())
+            return {false, "takeArtifact: missing required arg 'amount' (integer)"};
+        const int amount = args["amount"].get<int>();
+        if (amount <= 0)
+            return {false, "takeArtifact: 'amount' must be a positive integer"};
+
+        bool inCatalog = false;
+        for (const auto& d : *ctx.artifactCatalog) {
+            if (d.id == artifactId) { inCatalog = true; break; }
+        }
+        if (!inCatalog)
+            return {false, "takeArtifact: unknown artifact id \"" + artifactId + "\""};
+
+        // M13-b contract: takeArtifact only removes from the unequipped
+        // inventory and never auto-unequips. Equipped copies are invisible to
+        // this action.
+        auto existing = std::find_if(ctx.artifacts->begin(), ctx.artifacts->end(),
+            [&](const gameplay::ArtifactStackState& s) { return s.artifactId == artifactId; });
+        const int currentQty = (existing != ctx.artifacts->end()) ? existing->quantity : 0;
+        if (currentQty < amount) {
+            return {false, "takeArtifact: insufficient unequipped copies of \"" + artifactId
+                + "\" (have " + std::to_string(currentQty) + ", need "
+                + std::to_string(amount) + "); equipped copies are not auto-unequipped"};
+        }
+        existing->quantity -= amount;
+        if (existing->quantity == 0) {
+            ctx.artifacts->erase(existing);
+        }
+        return {true, ""};
+    }
+    // ----- end M13-b inventory actions -----------------------------------
 
     if (type == "changeAlliance") {
         if (ctx.pendingTeamMutations == nullptr)

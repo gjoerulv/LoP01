@@ -14,6 +14,16 @@ namespace gameplay::battle
         std::string stackId;
         std::string unitId;
         int quantity = 0;
+        // M13-b: pre-summed equipped-artifact stat bonuses applied to per-battle
+        // hero stats during construction. Zero by default; the caller (App
+        // copies from GameSession::BuildActiveBattleStackEntries) sets these
+        // for hero entries that have equipped artifacts. The factory adds the
+        // bonuses on top of the unit's authored stats without mutating the
+        // persistent UnitDefinition.
+        int artifactAttackBonus = 0;
+        int artifactDefenseBonus = 0;
+        int artifactMagicBonus = 0;
+        int artifactResistanceBonus = 0;
     };
 
     class BattleFactory

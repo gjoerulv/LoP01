@@ -296,6 +296,50 @@ void from_json(const json& j, DailyServiceState& data) {
     j.at("last_refresh_day").get_to(data.lastRefreshDay);
 }
 
+void to_json(json& j, const ItemSaveState& data) {
+    j = json{
+        {"item_id", data.itemId},
+        {"quantity", data.quantity}
+    };
+}
+
+void from_json(const json& j, ItemSaveState& data) {
+    j.at("item_id").get_to(data.itemId);
+    j.at("quantity").get_to(data.quantity);
+}
+
+void to_json(json& j, const ArtifactSaveState& data) {
+    j = json{
+        {"artifact_id", data.artifactId},
+        {"quantity", data.quantity}
+    };
+}
+
+void from_json(const json& j, ArtifactSaveState& data) {
+    j.at("artifact_id").get_to(data.artifactId);
+    j.at("quantity").get_to(data.quantity);
+}
+
+void to_json(json& j, const HeroEquipmentSaveState& data) {
+    j = json{
+        {"hero_id", data.heroId},
+        {"attack_artifact_id",  data.attackArtifactId},
+        {"defense_artifact_id", data.defenseArtifactId},
+        {"misc1_artifact_id",   data.misc1ArtifactId},
+        {"misc2_artifact_id",   data.misc2ArtifactId},
+        {"misc3_artifact_id",   data.misc3ArtifactId}
+    };
+}
+
+void from_json(const json& j, HeroEquipmentSaveState& data) {
+    j.at("hero_id").get_to(data.heroId);
+    data.attackArtifactId  = j.value("attack_artifact_id",  std::string{});
+    data.defenseArtifactId = j.value("defense_artifact_id", std::string{});
+    data.misc1ArtifactId   = j.value("misc1_artifact_id",   std::string{});
+    data.misc2ArtifactId   = j.value("misc2_artifact_id",   std::string{});
+    data.misc3ArtifactId   = j.value("misc3_artifact_id",   std::string{});
+}
+
 void to_json(json& j, const EnemyTeamSaveState& data) {
     j = json{
         {"team_color", data.teamColor},
@@ -344,7 +388,10 @@ void to_json(json& j, const SaveData& data) {
         {"enemy_teams", data.enemyTeams},
         {"scenario_outcome_state", data.scenarioOutcomeState},
         {"scenario_outcome_matched_condition_index", data.scenarioOutcomeMatchedConditionIndex},
-        {"scenario_outcome_reason", data.scenarioOutcomeReason}
+        {"scenario_outcome_reason", data.scenarioOutcomeReason},
+        {"items", data.items},
+        {"artifacts", data.artifacts},
+        {"hero_equipment", data.heroEquipment}
     };
 }
 
@@ -397,6 +444,20 @@ void from_json(const json& j, SaveData& data) {
     data.scenarioOutcomeState = j.value("scenario_outcome_state", std::string{});
     data.scenarioOutcomeMatchedConditionIndex = j.value("scenario_outcome_matched_condition_index", -1);
     data.scenarioOutcomeReason = j.value("scenario_outcome_reason", std::string{});
+
+    // M13-b inventory + equipment. Missing keys load as empty (legacy saves).
+    data.items.clear();
+    if (j.contains("items") && j["items"].is_array()) {
+        data.items = j["items"].get<std::vector<ItemSaveState>>();
+    }
+    data.artifacts.clear();
+    if (j.contains("artifacts") && j["artifacts"].is_array()) {
+        data.artifacts = j["artifacts"].get<std::vector<ArtifactSaveState>>();
+    }
+    data.heroEquipment.clear();
+    if (j.contains("hero_equipment") && j["hero_equipment"].is_array()) {
+        data.heroEquipment = j["hero_equipment"].get<std::vector<HeroEquipmentSaveState>>();
+    }
 
     const bool hasCanonicalStructuralFields =
         j.contains("roster_stacks") &&
