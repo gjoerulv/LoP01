@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "ItemCollection",
+  "id": "items",
+  "items": [
+    {
+      "id": "item_traveler_ration",
+      "name": { "en": "Traveler's Ration" },
+      "icon": "icon_ration",
+      "subtype": "consumable",
+      "stackCap": 1,
+      "baseValue": 25
+    },
+    {
+      "id": "item_ashvale_token",
+      "name": { "en": "Ashvale Token" },
+      "icon": "icon_token",
+      "subtype": "quest",
+      "stackCap": 1,
+      "baseValue": 0
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "ArtifactCollection",
+  "id": "artifacts",
+  "artifacts": [
+    {
+      "id": "artifact_iron_sword",
+      "name": { "en": "Iron Sword" },
+      "icon": "icon_iron_sword",
+      "allowedSlots": ["Attack"],
+      "rarity": "minor",
+      "tier": 1,
+      "baseValue": 250,
+      "combinable": true,
+      "effects": [
+        { "type": "statBonus", "stat": "Attack", "amount": 2 }
+      ]
+    },
+    {
+      "id": "artifact_journeyman_charm",
+      "name": { "en": "Journeyman's Charm" },
+      "icon": "icon_charm",
+      "allowedSlots": ["Misc"],
+      "rarity": "minor",
+      "tier": 1,
+      "baseValue": 150,
+      "combinable": false,
+      "effects": [
+        { "type": "statBonus", "stat": "Defense", "amount": 1 }
+      ]
+    }
+  ]
+}

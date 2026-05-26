@@ -1138,6 +1138,37 @@ Conceptual shape:
 
 Food is a normal item subtype. Food must be field-use only and hero-consumed.
 
+### Current authored shape (M13)
+
+Current implementation accepts an optional `content/items.json` document with the standard `schemaVersion` / `kind` / `id` identity fields plus an `items` array. Each item entry includes:
+
+- `id` (string, non-empty, unique)
+- `name` (localized object `{"en": "..."}` or plain string)
+- `icon` (string, optional)
+- `subtype` (one of `consumable | quest | seed | ingredient | food | material`)
+- `stackCap` (positive integer, defaults to 999)
+- `baseValue` (non-negative integer, defaults to 0)
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "ItemCollection",
+  "id": "items",
+  "items": [
+    { "id": "item_traveler_ration", "name": { "en": "Traveler's Ration" }, "icon": "icon_ration",
+      "subtype": "consumable", "stackCap": 1, "baseValue": 25 }
+  ]
+}
+```
+
+M13 rules:
+
+- File is optional. Missing or empty file loads as an empty item catalog without error.
+- Reload-safe: `ContentRepository::LoadFromDirectory` clears the item container at the top of every load, so a re-load without `items.json` yields an empty inventory catalog rather than retaining stale state.
+- Runtime enforcement: `consumable` items are runtime-capped to quantity 1 in the team inventory (M13-b layer); duplicate-add is an explicit `giveItem` action failure rather than a silent no-op.
+- **Item `effects` are not implemented in M13.** Authoring any `effects` field on an item is an explicit `ITEM_EFFECTS_UNSUPPORTED` validation error and the item is rejected (not silently accepted with effects ignored). Item-effect resolution — including food effects, recoverHp, and consumable battle use — is deferred to a future cooking / item-use milestone.
+- Localized text is currently limited to the `en` key; full localization remains future work.
+
 ---
 
 ## 34. Effects schema
@@ -1163,6 +1194,20 @@ Example artifact special effect:
 ```
 
 Special effects are enum-driven and handled by code. Artifacts may have multiple bonuses and effects.
+
+### Current authored shape (M13)
+
+M13 implements only the `statBonus` artifact effect type. The four supported stats are `Attack`, `Defense`, `Magic`, and `Resistance`. The `amount` field is a required signed integer (negative amounts are allowed — the validation layer only rejects unsupported effect types and malformed args).
+
+Authoring any other effect type — including the doc's `specialEffect` enum and item-targeting effects like `recoverHp` — produces an explicit validation error:
+
+- `ARTIFACT_EFFECT_TYPE_UNSUPPORTED` for unknown effect `type` strings on an artifact
+- `ARTIFACT_STAT_BONUS_STAT_UNKNOWN` for unknown stat names on a `statBonus`
+- `ARTIFACT_STAT_BONUS_AMOUNT_INVALID` for missing or non-integer `amount`
+
+Item effects are not implemented at all in M13; see §33 "Current authored shape (M13)" for the `ITEM_EFFECTS_UNSUPPORTED` rule.
+
+Specialized artifact behaviour beyond `statBonus` (status effects, battle triggers, world-state effects, the doc's enumerated `specialEffect` cases) is deferred to a future milestone that pins down the effect-execution surface.
 
 ---
 
@@ -1202,6 +1247,45 @@ Conceptual shape:
 ```
 
 Ultimate or final-form artifacts should set `combinable: false`.
+
+### Current authored shape (M13)
+
+Current implementation accepts an optional `content/artifacts.json` document with the standard `schemaVersion` / `kind` / `id` identity fields plus an `artifacts` array. Each artifact entry includes:
+
+- `id` (string, non-empty, unique)
+- `name` (localized object `{"en": "..."}` or plain string)
+- `icon` (string, optional)
+- `allowedSlots` (non-empty array; each entry is one of `Attack`, `Defense`, `Misc`)
+- `rarity` (free-form string in M13; the `Ultimate` enum is not pinned down yet)
+- `tier` (integer)
+- `baseValue` (non-negative integer)
+- `combinable` (boolean)
+- `effects` (optional array of `statBonus` entries — see §34 "Current authored shape (M13)" for the supported effect surface)
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "ArtifactCollection",
+  "id": "artifacts",
+  "artifacts": [
+    { "id": "artifact_iron_sword", "name": { "en": "Iron Sword" }, "icon": "icon_iron_sword",
+      "allowedSlots": ["Attack"], "rarity": "minor", "tier": 1, "baseValue": 250,
+      "combinable": true,
+      "effects": [ { "type": "statBonus", "stat": "Attack", "amount": 2 } ] }
+  ]
+}
+```
+
+M13 runtime rules:
+
+- File is optional. Missing or empty file loads as an empty artifact catalog. Reload-safe (same as items — see §33).
+- Equipped-artifact ownership invariant: equipped artifacts live only in per-hero `HeroEquipmentState`, never simultaneously in the unequipped `artifacts_` inventory.
+- Five equip slots per hero: 1 `Attack` + 1 `Defense` + 3 Misc (`Misc1`, `Misc2`, `Misc3`). `allowedSlots: ["Misc"]` permits any of the three Misc slots.
+- Equipping moves a stack-of-1 copy from the unequipped inventory into the hero slot; unequipping moves it back. Equipping into an already-occupied slot fails explicitly (no auto-replace in M13).
+- Equipped-artifact `statBonus` values are added to the hero's per-battle `attack` / `defense` / `magic` / `resistance` at battle construction; the persistent `UnitDefinition` is never mutated. Enemy units never receive bonuses.
+- `takeArtifact` event action only removes copies from the unequipped inventory and does not auto-unequip — see §16 / §18 implications. Equipped copies are invisible to event-driven removal in M13.
+- The validation rule "ultimate artifact marked combinable" from `docs/validation_system.md` §20 is **deferred** in M13: rarity is a free-form string and no `Ultimate` value is pinned down in code.
+- Artifact combination, combination recipes, and artifact-handler services (§37) are deferred. Authored `combinable: true` only marks an artifact as eligible for a future combination flow.
 
 ---
 
