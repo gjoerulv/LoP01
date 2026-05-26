@@ -20,6 +20,16 @@
         { "type": "setStoryFlag", "flag": "ashvale_lost" }
       ],
       "repeat": { "mode": "once" }
+    },
+    {
+      "id": "evt_supply_cart_pickup",
+      "trigger": { "type": "regionNodeEntry", "nodeId": "supply_cart" },
+      "actions": [
+        { "type": "showMessage", "text": { "en": "The supply cart yields a traveler's ration and a worn iron sword." } },
+        { "type": "giveItem",     "itemId": "item_traveler_ration", "amount": 1 },
+        { "type": "giveArtifact", "artifactId": "artifact_iron_sword", "amount": 1 }
+      ],
+      "repeat": { "mode": "once" }
     }
   ]
 }

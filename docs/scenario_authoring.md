@@ -776,6 +776,18 @@ Combination recipes define:
 
 Artifact combination recipes are globally fixed, while specific services may deny selected recipes.
 
+### Current authored shape (M13)
+
+The M13 implementation accepts the doc's full item/artifact schema shape but only implements a narrow runtime surface. See `docs/content_schema.md` §33–§35 "Current authored shape (M13)" subsections for the concrete JSON shapes and validation rules.
+
+In short:
+
+- **Items:** authored in `content/items.json` with `id`, `name`, `icon`, `subtype`, `stackCap`, `baseValue`. Item `effects` are **not implemented** — authoring any `effects` field rejects the item with `ITEM_EFFECTS_UNSUPPORTED`. Food, cooking, recipes, item use (battle `Item` command and field-use food/consumables) are deferred.
+- **Artifacts:** authored in `content/artifacts.json` with `id`, `name`, `icon`, `allowedSlots`, `rarity` (free-form string), `tier`, `baseValue`, `combinable`, and an `effects` array. Only the `statBonus` effect type is implemented (Attack / Defense / Magic / Resistance). Other effect types — including the doc's `specialEffect` enum — are rejected with `ARTIFACT_EFFECT_TYPE_UNSUPPORTED`.
+- **Artifact combination, recipes, food, cooking, ingredient consumption, seeds growing, ultimate-rarity enforcement, and the trader-service item economy** are all deferred to future milestones. The authored schema in this section remains the design target; runtime support arrives incrementally.
+
+Acquisition and removal happen exclusively through the four typed event actions `giveItem`, `takeItem`, `giveArtifact`, `takeArtifact`. Equipping an artifact onto a hero is a `GameSession` method call (`TryEquipArtifact` / `UnequipArtifact`), not an authorable event action in M13.
+
 ---
 
 ## 24. Validation errors and warnings

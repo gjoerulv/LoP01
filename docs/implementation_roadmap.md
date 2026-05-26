@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a post-M12 bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, and deterministic scenario outcome evaluation.
+The current codebase is a post-M13 bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, deterministic scenario outcome evaluation, and a minimal inventory + artifact-equipping layer (items, unequipped artifacts, per-hero equipment slots, and equipped-artifact stat bonuses applied at battle setup).
 
 The roadmap works from foundations outward:
 
@@ -26,7 +26,7 @@ Current stable foundation:
 - controller / mapper / renderer split
 - battle engine, CTB, static formation, leader aura, deterministic damage, and battle write-back
 - persistent roster, active/reserve party, mustering, and save/load
-- daily clock, Energy, Region travel, wake/recovery penalty, and basic services
+- daily clock, Region travel, wake/recovery penalty, and basic services (no team Energy pool in code yet — the design-spec Energy formula is implementation-pending)
 - JSON content loading through `ContentRepository`
 - content validation foundation
 - typed event foundation:
@@ -88,6 +88,21 @@ Current stable foundation:
   - placeholder status feedback: `Victory!` / `Defeat.` plus matched reason appended to `statusMessage_`
   - authored demo content: `evt_cleanse_at_sunken_ruin` sets `ashvale_cleansed` and matches victory; `evt_trap_at_clocktower` sets `ashvale_lost` and matches defeat
   - Catch2 coverage for pure outcome rules, authored content load/validation, ordered integration hooks, default-victory override semantics, and save/load persistence
+- M13 inventory and artifact foundation:
+  - `data::ItemDefinition` with subtype enum (`consumable | quest | seed | ingredient | food | material`), `stackCap`, `baseValue`
+  - `data::ArtifactDefinition` with `allowedSlots`, `rarity` (free-form string), `tier`, `baseValue`, `combinable`, `statBonuses`
+  - only `statBonus` artifact effects implemented (Attack / Defense / Magic / Resistance); any other authored effect type is an explicit `ARTIFACT_EFFECT_TYPE_UNSUPPORTED` validation error
+  - any authored item `effects` field is an explicit `ITEM_EFFECTS_UNSUPPORTED` validation error (no item effects are implemented in M13)
+  - optional `content/items.json` and `content/artifacts.json` loaders, reload-safe (cleared at the top of `LoadFromDirectory`)
+  - `GameSession` runtime layer: team-shared `items_`, team-shared **unequipped** `artifacts_`, per-hero `heroEquipment_` with five slots (1 Attack + 1 Defense + 3 Misc)
+  - equipped-artifact ownership invariant: equipped artifacts live only in `HeroEquipmentState`, never simultaneously in `artifacts_`
+  - `TryEquipArtifact` / `UnequipArtifact` `GameSession` methods (not event actions) with explicit failure on illegal slot, allowedSlots mismatch, missing inventory copy, hero not on team, or slot already occupied
+  - four typed event actions `giveItem` / `takeItem` / `giveArtifact` / `takeArtifact` with the same explicit-failure semantics as `giveResource`/`takeResource`
+  - `takeArtifact` does **not** auto-unequip — it only removes from the unequipped inventory and fails explicitly when only equipped copies exist
+  - equipped artifact `statBonus` values added to per-battle hero `attack` / `defense` / `magic` / `resistance` via `PlayerBattleEntry` carried by `ActiveBattleStackEntry`; persistent `UnitDefinition` is never mutated; battle damage seed unchanged; enemy units never receive bonuses
+  - save/load round-trip for `items`, `artifacts` (unequipped only), `heroEquipment`; legacy saves without these keys load as empty inventories (no `schemaVersion` bump)
+  - authored demo content: `content/items.json` (consumable ration + quest token), `content/artifacts.json` (combinable Attack `artifact_iron_sword` + non-combinable Misc `artifact_journeyman_charm`), `evt_supply_cart_pickup` event on the `supply_cart` node grants the ration and the iron sword on first arrival
+  - Catch2 coverage for content load + validation, pure stack-cap / consumable-duplicate rules, equip/unequip rules, all four event-action contracts, save/load round-trip + legacy compatibility, effective-stat inspection through `BattleFactory`, and an end-to-end test that loads real `content/` and drives a session through `supply_cart`
 
 Still incomplete / intentionally deferred:
 
@@ -101,7 +116,14 @@ Still incomplete / intentionally deferred:
 - enemy recruitment and advanced AI service use
 - enemy sabotage/destruction/restoration loops
 - fog/visibility per team
-- inventory, artifacts, recipes, and item use
+- team Energy pool (the design-spec Energy formula and the leader-item Energy bonus)
+- item use, food consumption, cooking, recipes, seeds, ingredients
+- artifact combination and artifact-handler services
+- battle `Item` command and item use in battle
+- battle spoils transfer, gold steal, consumable steal
+- `teamHasItem` / `teamHasArtifact` condition leaves
+- Market / Black Market / Trading Post / Freelancer's Guild item economy
+- HUD / raylib inventory rendering and inventory render-model
 - World Map and cross-Region travel
 - Campaign carry-over
 - full shell/menu/character-creation/load/settings flow
@@ -112,7 +134,7 @@ Still incomplete / intentionally deferred:
 
 | # | Issue | Action |
 |---|-------|--------|
-| 1 | Energy formula includes leader item bonus; artifacts/items are not implemented yet, so the bonus is always zero. | Accept for now. Add or keep a code comment that leader item bonus is zero until artifact/item runtime exists. |
+| 1 | The team Energy pool described in `docs/core_loop_rules.md` §6 is not yet implemented in code: `GameSession` has no Energy field, `SessionSnapshot` has no Energy, and no App/render path references it. M13 adds inventory + equipped artifacts, but the leader-item Energy bonus the formula would apply to is therefore deferred along with the Energy pool itself. | Accept for now. Implement the Energy pool, the daily-starting-Energy formula, and the leader-item bonus together in a focused milestone before Phase 6 / World Map relies on the 1000-Energy travel rule. |
 | 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, `RecipeDefinition`, `WorldMapDefinition`, and `CampaignDefinition` are specified in docs but not all have load paths yet. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
 | 3 | `docs/game_shell_flow.md` specifies full shell flow. Code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Continue expanding validation only when a phase requires it. |
@@ -261,19 +283,39 @@ Out of scope:
 
 ### Phase 5 — Inventory and Artifacts
 
-**Goal:** Items and artifacts exist in runtime state; heroes equip artifacts; combination recipes work; leader item bonus closes the Energy formula gap.
+**Status:** M13-a / M13-b / M13-c complete. Foundation usable; richer follow-ups deferred per the explicit list below.
 
-Scope:
+**Goal:** Items and artifacts exist in runtime state; heroes equip artifacts; equipped-artifact stat bonuses flow into battle stats; inventory and equipment persist through save/load.
 
-- `ItemDefinition`
-- `ArtifactDefinition`
-- `RecipeDefinition`
-- content loading for items/artifacts/recipes
-- team-global inventory
-- per-hero artifact slots
-- leader artifact bonuses wired into Energy formula and battle stats
-- save/load inventory state
-- `InventoryTests.cpp` and `ArtifactTests.cpp`
+Completed foundation:
+
+- `ItemDefinition` (subtype enum, `stackCap`, `baseValue`) and `ArtifactDefinition` (`allowedSlots`, `rarity` string, `tier`, `baseValue`, `combinable`, `statBonuses`)
+- optional `content/items.json` and `content/artifacts.json` loaders with explicit validation errors for unsupported item `effects` and unsupported artifact effect types
+- reload-safe optional-loader state (cleared at the top of `LoadFromDirectory`)
+- team-shared `items_` (consumable max-1 enforced at runtime; non-consumables stack to authored `stackCap`)
+- team-shared **unequipped** `artifacts_` (stack cap 999)
+- per-hero `HeroEquipmentState` with five slots (1 Attack + 1 Defense + 3 Misc); equipped-artifact ownership invariant — equipped artifacts live only in `HeroEquipmentState`, never simultaneously in `artifacts_`
+- `TryEquipArtifact` / `UnequipArtifact` `GameSession` methods with explicit failure modes
+- four typed event actions `giveItem` / `takeItem` / `giveArtifact` / `takeArtifact` with explicit-failure semantics; `takeArtifact` does **not** auto-unequip
+- equipped artifact `statBonus` values added to per-battle hero stats through `ActiveBattleStackEntry` → `PlayerBattleEntry` → `BattleFactory::BuildBattleUnit`; persistent `UnitDefinition` is never mutated; enemy units never receive bonuses; deterministic damage seed unchanged
+- save/load round-trip for items, unequipped artifacts, and hero equipment; legacy saves without these keys load as empty inventories with no `schemaVersion` bump
+- authored demo content (`item_traveler_ration`, `item_ashvale_token`, `artifact_iron_sword`, `artifact_journeyman_charm`, `evt_supply_cart_pickup`)
+- Catch2 coverage across `InventoryContentTests`, `ArtifactContentTests`, `ContentRepositoryReloadTests`, `InventoryRulesTests`, `ArtifactRulesTests`, `InventoryEventActionsTests`, `InventorySaveGameTests`, `BattleArtifactStatTests`, and `InventoryEndToEndTests`
+
+Deferred from M13 (not part of Phase 5's M13 slice; future milestones):
+
+- team Energy pool and leader-item Energy bonus (Energy itself is not in code yet — see §2 debt #1)
+- `RecipeDefinition`, cooking, food effects, seeds, ingredients
+- artifact combination, combination recipes, artifact-handler services
+- item use / consumption (battle `Item` command, field-use food, consumable use)
+- Market / Black Market / Trading Post / Freelancer's Guild item economy
+- `teamHasItem` / `teamHasArtifact` condition leaves (deferred because the typed condition evaluator is shared with `ScenarioOutcomeRules`)
+- battle spoils transfer, gold steal, consumable steal
+- mod overrides for items/artifacts
+- `Ultimate`-rarity enforcement (rarity stays a free-form string until the enum is pinned down)
+- HUD / raylib inventory rendering and inventory render-model
+- per-region / per-storage inventory (team-shared only)
+- validation softlock checks (e.g. "quest-important artifact can be discarded")
 
 ---
 
@@ -316,21 +358,27 @@ Full character creation, load UI, autosave slots, and settings remain out of sco
 
 ## 4. Current Next Milestone
 
-### M13 — Phase 5 candidate: Inventory and Artifacts
+### M14 candidates — team Energy pool, or Phase 6 / World Map
 
-Latest completed milestone: **M12-c — Scenario Outcome content proof and end-to-end demo**.
+Latest completed milestone: **M13-c — Inventory and Artifacts content proof and end-to-end demo**.
 
-M12 closed the Phase 4 scenario-outcome foundation: pure rules, save/load-aware latching, ordered integration hooks in the Region travel flow, and authored demo content driving both an authored victory and an authored defeat path. The single-Region slice can now end deterministically.
+M13 closed the Phase 5 inventory + artifact foundation: typed item / artifact definitions, optional authored content with reload-safe loading, runtime team-shared inventory + per-hero equipment, four event actions for acquisition/removal, equipped-artifact stat bonuses flowing into battle stats, save/load round-trip with legacy compatibility, and authored demo content driving acquisition + equipping end-to-end. M12 outcome semantics remain frozen — M13 added no scenario outcome rule changes and no shared condition leaves.
 
-Future scenario-outcome work is deferred, not part of M12:
+Deferred from M13 to a future Phase 5 follow-up milestone (or specific small milestones), listed for orientation:
 
-- richer condition leaves: hero alive, route destroyed, ownership, time limits, unit counts, Region revealed, etc.
-- victory event action chains
-- polished result screen, transition flow, campaign hand-off
-- per-team / multi-human outcome tracking
-- softlock / reachability proofs in validation
+- team Energy pool, daily-starting-Energy formula, and leader-item Energy bonus
+- cooking, recipes, food effects, item use (battle `Item` command and field-use)
+- artifact combination, combination recipes, artifact-handler services
+- Market / Black Market / Trading Post / Freelancer's Guild item economy
+- battle spoils transfer, gold steal, consumable steal
+- `teamHasItem` / `teamHasArtifact` condition leaves and any scenario-outcome interaction
+- `Ultimate`-rarity / non-combinable enforcement
+- HUD / raylib inventory rendering
 
-Recommended next major milestone is **M13 / Phase 5: Inventory and Artifacts**, unless a small post-M12 cleanup is selected first.
+Two reasonable next-milestone candidates:
+
+1. **Team Energy pool milestone** — small and high-leverage. Implements `GameSession::Energy()` and friends, the daily-starting-Energy formula, the leader-item Energy bonus path, and persistence. Closes the §2 debt #1 gap and unblocks Phase 6's 1000-Energy travel rule.
+2. **M14 / Phase 6: World Map** — `WorldMapDefinition`, Region-to-Region travel, 1000-Energy travel cost (which depends on the Energy pool above), arrival-at-11:00 timing, generic-loss warning. Best preceded by the Energy milestone so the 1000-Energy cost has somewhere to land.
 
 ---
 
@@ -342,7 +390,7 @@ Recommended next major milestone is **M13 / Phase 5: Inventory and Artifacts**, 
 | 2 | Authored event fires on trigger, evaluates a condition, executes an action, persists story flags/fired event ids, and does not re-fire one-shot events. |
 | 3 | Enemy team spawns/moves/occupies on the Region layer; hostile occupation blocks player use; hostile marker is visible; contact battle can clear the exact occupying team; event actions can spawn/remove/change alliances; save/load round-trips enemy-team runtime state. |
 | 4 | If no authored victory condition exists, default victory fires when all hostile enemy teams are defeated/removed/allied; authored victory conditions can end the scenario and suppress default victory; authored defeat conditions can end the scenario; defeat wins over victory; no-outcome states remain playable; Region arrival checks outcome after `regionNodeEntry` events and again after enemy phase before continuing to follow-up transitions; latched outcomes survive save/load. |
-| 5 | Hero equips artifact; stat bonus affects relevant calculations; combine recipe produces output item; save/load round-trips inventory; leader item bonus updates Energy display. |
+| 5 | Hero equips artifact via `TryEquipArtifact` and the artifact moves from the team's unequipped inventory into the hero slot; equipped-artifact stat bonuses flow into per-battle hero `attack` / `defense` / `magic` / `resistance` at battle construction without mutating persistent `UnitDefinition`; save/load round-trips items, unequipped artifacts, and hero equipment; legacy saves without M13 keys load as empty inventories. (Combine recipe and leader-item Energy bonus criteria are explicitly deferred to a later cooking/combination/Energy milestone.) |
 | 6 | World Map shows Regions; travel costs 1000 Energy; start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day; generics remain in origin Region unless later rules change this. |
 | 7 | Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. |
 
@@ -352,11 +400,10 @@ Recommended next major milestone is **M13 / Phase 5: Inventory and Artifacts**, 
 
 Future test suites still needed for upcoming phases:
 
-- `InventoryTests.cpp`, `ArtifactTests.cpp` — Phase 5
 - `WorldMapTravelTests.cpp` — Phase 6
 - `CampaignCarryoverTests.cpp` — Phase 7
 
-Existing tests already cover much of the Phase 1-4 foundation, including M12 scenario outcome rules, authored outcome content, integration hooks, and save/load persistence. Continue using Catch2 and prefer pure-logic tests over rendering or input tests.
+Existing tests already cover the Phase 1-5 foundation, including M12 scenario outcome rules (pure rules, content load/validation, integration hooks, save/load) and M13 inventory + artifact rules (content load/validation with explicit unsupported-effect errors, optional-loader reload safety, stack-cap / consumable-duplicate runtime rules, equip/unequip rules, all four event-action contracts, save/load round-trip + legacy compatibility, effective-stat inspection through `BattleFactory`, and an end-to-end test that loads real `content/` and drives a session through `supply_cart`). Continue using Catch2 and prefer pure-logic tests over rendering or input tests.
 
 ---
 
@@ -372,7 +419,12 @@ These are specified at design level in the docs but remain out of scope until ex
 - **Full game shell** — Character Creation, Load UI, autosave slots, Settings; fully specified in `docs/game_shell_flow.md`; partially addressed later, full shell deferred.
 - **Presentation and audio implementation** — tone, animation, music, and feedback layering are active guidance but not an implementation priority until relevant UI/presentation phases.
 - **Mod loading** — `content/mods/` path and override-by-kind+id are specified in `docs/content_schema.md`; no loader phase yet.
-- **Cooking / crafting economy** — recipe types require inventory first.
+- **Team Energy pool** — design-spec daily-starting-Energy formula and leader-item Energy bonus are documented in `docs/core_loop_rules.md` §6 but the pool itself is not in code. Implementation pending; the M13 inventory layer is in place to feed the leader-item bonus once Energy lands.
+- **Cooking / recipes / food effects / item use / battle `Item` command** — `RecipeDefinition`, ingredient consumption, food effects, party-menu cooking, and the battle `Item` action all defer to future milestones. M13 grants and removes items but does not consume or use them.
+- **Artifact combination** — `ArtifactCombinationRecipeDefinition`, artifact-handler services, the irreversible 2-into-1 fusion flow.
+- **Market / Black Market / Trading Post / Freelancer's Guild item economy** — `docs/core_loop_rules.md` §23 trader services are their own milestone.
+- **`teamHasItem` / `teamHasArtifact` condition leaves** — deferred so scenario outcome semantics are not silently broadened (the typed condition evaluator is shared between events and `ScenarioOutcomeRules`).
+- **HUD / raylib inventory rendering** — render-model exposure and visual drawing.
 - **PvP mode** — specified as hidden-until-implemented in `docs/game_shell_flow.md`; explicitly deferred.
 - **Tutorial** — authored content type depends on event system and a separate authoring effort.
 - **Designer editor tool** — future scope only.
