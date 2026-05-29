@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "core/GameClock.h"
 #include "core/SaveGame.h"
 #include "data/definitions/UnitDefinition.h"
 #include "gameplay/EnergyRules.h"
@@ -187,4 +188,139 @@ TEST_CASE("GameSession - team energy save key does not disturb enemy-team energy
     REQUIRE(restored.CurrentEnergy() == 1800);
     REQUIRE(restored.EnemyTeams().size() == 1);
     REQUIRE(restored.EnemyTeams()[0].energy == 500);
+}
+
+// ---------------------------------------------------------------------------
+// M14-b — CanSpendEnergy
+// ---------------------------------------------------------------------------
+
+TEST_CASE("CanSpendEnergy - zero is always allowed") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.CanSpendEnergy(0));
+}
+
+TEST_CASE("CanSpendEnergy - negative is rejected") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy();
+    REQUIRE_FALSE(session.CanSpendEnergy(-1));
+}
+
+TEST_CASE("CanSpendEnergy - positive at or below current is allowed, above is rejected") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.CanSpendEnergy(1));
+    REQUIRE(session.CanSpendEnergy(1800));       // exactly current
+    REQUIRE_FALSE(session.CanSpendEnergy(1801)); // one over
+}
+
+// ---------------------------------------------------------------------------
+// M14-b — TrySpendEnergy
+// ---------------------------------------------------------------------------
+
+TEST_CASE("TrySpendEnergy - zero succeeds and mutates nothing") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(0));
+    REQUIRE(session.CurrentEnergy() == 1800);
+}
+
+TEST_CASE("TrySpendEnergy - negative fails loudly and mutates nothing") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE_FALSE(session.TrySpendEnergy(-100));
+    REQUIRE(session.CurrentEnergy() == 1800);
+}
+
+TEST_CASE("TrySpendEnergy - insufficient fails and mutates nothing") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE_FALSE(session.TrySpendEnergy(1801));
+    REQUIRE(session.CurrentEnergy() == 1800);
+}
+
+TEST_CASE("TrySpendEnergy - sufficient subtracts and returns true") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(1000));
+    REQUIRE(session.CurrentEnergy() == 800);
+    REQUIRE(session.TrySpendEnergy(800)); // exact remainder
+    REQUIRE(session.CurrentEnergy() == 0);
+}
+
+// ---------------------------------------------------------------------------
+// M14-b — RecoverEnergy
+// ---------------------------------------------------------------------------
+
+TEST_CASE("RecoverEnergy - non-positive is a no-op") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy();
+    REQUIRE(session.TrySpendEnergy(500)); // current 1300
+    session.RecoverEnergy(0);
+    REQUIRE(session.CurrentEnergy() == 1300);
+    session.RecoverEnergy(-50);
+    REQUIRE(session.CurrentEnergy() == 1300);
+}
+
+TEST_CASE("RecoverEnergy - positive recovers and clamps to the daily max") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // max 1800
+    REQUIRE(session.TrySpendEnergy(1000)); // current 800
+    session.RecoverEnergy(300);
+    REQUIRE(session.CurrentEnergy() == 1100);
+    session.RecoverEnergy(99999); // would overshoot
+    REQUIRE(session.CurrentEnergy() == 1800); // clamped to max
+}
+
+// ---------------------------------------------------------------------------
+// M14-b — day-boundary auto-reset
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Energy auto-resets when AddMinutes crosses a day boundary") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(1500)); // current 300
+    REQUIRE(session.CurrentEnergy() == 300);
+
+    session.AddMinutes(core::GameClock::kMinutesPerSliceDay); // cross one day
+    REQUIRE(session.CurrentEnergy() == 1800);
+    REQUIRE(session.MaxEnergy() == 1800);
+}
+
+TEST_CASE("Energy does NOT reset for a sub-day AddMinutes") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(1500)); // current 300
+
+    session.AddMinutes(60); // well within the same day
+    REQUIRE(session.CurrentEnergy() == 300); // unchanged
+}
+
+TEST_CASE("Energy auto-resets via RestToNextDayStart") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(1500)); // current 300
+
+    session.RestToNextDayStart();
+    REQUIRE(session.CurrentEnergy() == 1800);
+}
+
+TEST_CASE("Energy auto-resets via ApplyWakePenalty (wake next day with fresh Energy)") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(1500)); // current 300
+
+    session.ApplyWakePenalty();
+    REQUIRE(session.CurrentEnergy() == 1800);
+}
+
+TEST_CASE("Energy resets exactly once across a multi-day AddMinutes jump") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(1500)); // current 300
+
+    session.AddMinutes(core::GameClock::kMinutesPerSliceDay * 3); // jump 3 days
+    // Reset is "set to formula value", not additive per day -> still 1800.
+    REQUIRE(session.CurrentEnergy() == 1800);
+    REQUIRE(session.MaxEnergy() == 1800);
 }

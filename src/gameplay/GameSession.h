@@ -203,6 +203,14 @@ public:
     [[nodiscard]] int CurrentEnergy() const;
     [[nodiscard]] int MaxEnergy() const;
 
+    // M14-b spend / recover primitives. Negative spend fails loudly (returns
+    // false / does nothing) so a bad future caller cannot silently succeed;
+    // zero spend is a harmless success. Energy never exceeds dailyMaxEnergy_
+    // and never drops below 0.
+    [[nodiscard]] bool CanSpendEnergy(int amount) const;
+    bool TrySpendEnergy(int amount);
+    void RecoverEnergy(int amount);
+
     [[nodiscard]] const std::vector<ItemStackState>& Items() const;
     [[nodiscard]] const std::vector<ArtifactStackState>& Artifacts() const;
     // Returns equipment for the given hero/unit id; default-constructed (all
@@ -369,6 +377,14 @@ private:
     // resolved through unitCatalog_. Units missing from the catalog are skipped.
     // Returns 0 when no party agility is resolvable (empty party or no catalog).
     [[nodiscard]] int LowestTravelingPartyAgility() const;
+
+    // Single chokepoint for all time advances. Detects a day-boundary crossing
+    // and triggers ApplyDailyStartingEnergy() exactly once (a multi-day jump
+    // resets to the formula value, not per skipped day, because reset is
+    // "set to", not "add"). All three public time-advancing methods route
+    // through here so daily Energy reset is correct regardless of which path
+    // advanced the clock.
+    void AdvanceClock(int minutes);
 
     [[nodiscard]] const data::ItemDefinition*     FindItemDefinition(const std::string& id) const;
     [[nodiscard]] const data::ArtifactDefinition* FindArtifactDefinition(const std::string& id) const;
