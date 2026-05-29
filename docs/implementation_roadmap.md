@@ -26,7 +26,8 @@ Current stable foundation:
 - controller / mapper / renderer split
 - battle engine, CTB, static formation, leader aura, deterministic damage, and battle write-back
 - persistent roster, active/reserve party, mustering, and save/load
-- daily clock, Region travel, wake/recovery penalty, and basic services (no team Energy pool in code yet — the design-spec Energy formula is implementation-pending)
+- daily clock, Region travel, wake/recovery penalty, and basic services
+- team Energy pool (M14): daily-starting formula `1000 + lowestPartyAgility*100 + leaderPassive + leaderItem` with leader passive/item terms as zero-valued seams; auto-reset on day rollover via a single clock chokepoint; `CanSpendEnergy`/`TrySpendEnergy`/`RecoverEnergy` primitives (negative spend fails loudly, recover clamps to daily max); save/load with legacy-save recompute; exposed in `SessionSnapshot` and the HUD model
 - JSON content loading through `ContentRepository`
 - content validation foundation
 - typed event foundation:
@@ -116,7 +117,7 @@ Still incomplete / intentionally deferred:
 - enemy recruitment and advanced AI service use
 - enemy sabotage/destruction/restoration loops
 - fog/visibility per team
-- team Energy pool (the design-spec Energy formula and the leader-item Energy bonus)
+- Energy formula leader-bonus seams (`Y` leader passive-skill bonus, `Z` leader equipped-item/artifact bonus) — the team Energy pool itself ships in M14; only these two terms remain zero
 - item use, food consumption, cooking, recipes, seeds, ingredients
 - artifact combination and artifact-handler services
 - battle `Item` command and item use in battle
@@ -134,7 +135,7 @@ Still incomplete / intentionally deferred:
 
 | # | Issue | Action |
 |---|-------|--------|
-| 1 | The team Energy pool described in `docs/core_loop_rules.md` §6 is not yet implemented in code: `GameSession` has no Energy field, `SessionSnapshot` has no Energy, and no App/render path references it. M13 adds inventory + equipped artifacts, but the leader-item Energy bonus the formula would apply to is therefore deferred along with the Energy pool itself. | Accept for now. Implement the Energy pool, the daily-starting-Energy formula, and the leader-item bonus together in a focused milestone before Phase 6 / World Map relies on the 1000-Energy travel rule. |
+| 1 | The team Energy pool (`docs/core_loop_rules.md` §6) is implemented as of M14: state, daily-starting formula, spend/recover, day-rollover auto-reset, save/load, and `SessionSnapshot`/HUD exposure. The remaining gap is the formula's leader-bonus terms (`Y` leader passive-skill bonus, `Z` leader equipped-item/artifact bonus), which are zero-valued seams pending the skill system and an artifact/item Energy-effect type. | Close the seams when those systems land: a passive-skill Energy bonus (skill system milestone) and an artifact/item `energyBonus` effect (inventory-effects milestone) feed `ComputeDailyStartingEnergy`'s `leaderPassiveEnergyBonus` / `leaderItemEnergyBonus` arguments, which are already wired through at 0. |
 | 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, `RecipeDefinition`, `WorldMapDefinition`, and `CampaignDefinition` are specified in docs but not all have load paths yet. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
 | 3 | `docs/game_shell_flow.md` specifies full shell flow. Code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Continue expanding validation only when a phase requires it. |
@@ -304,7 +305,7 @@ Completed foundation:
 
 Deferred from M13 (not part of Phase 5's M13 slice; future milestones):
 
-- team Energy pool and leader-item Energy bonus (Energy itself is not in code yet — see §2 debt #1)
+- leader-item / leader-passive Energy bonus terms (the team Energy pool itself shipped in M14; only the formula's `Y`/`Z` seams remain — see §2 debt #1)
 - `RecipeDefinition`, cooking, food effects, seeds, ingredients
 - artifact combination, combination recipes, artifact-handler services
 - item use / consumption (battle `Item` command, field-use food, consumable use)
@@ -358,27 +359,18 @@ Full character creation, load UI, autosave slots, and settings remain out of sco
 
 ## 4. Current Next Milestone
 
-### M14 candidates — team Energy pool, or Phase 6 / World Map
+### Next: Phase 6 / World Map
 
-Latest completed milestone: **M13-c — Inventory and Artifacts content proof and end-to-end demo**.
+Latest completed milestone: **M14 — Team Energy Pool foundation (pre-Phase-6 setup)**.
 
-M13 closed the Phase 5 inventory + artifact foundation: typed item / artifact definitions, optional authored content with reload-safe loading, runtime team-shared inventory + per-hero equipment, four event actions for acquisition/removal, equipped-artifact stat bonuses flowing into battle stats, save/load round-trip with legacy compatibility, and authored demo content driving acquisition + equipping end-to-end. M12 outcome semantics remain frozen — M13 added no scenario outcome rule changes and no shared condition leaves.
+M14 built the team Energy pool the World Map travel rule depends on, as three tight slices:
+- **M14-a** — Energy state + daily-starting formula (`gameplay/EnergyRules.h`) + `SetUnitCatalog` + `ApplyDailyStartingEnergy` + save/load with legacy-save recompute.
+- **M14-b** — `CanSpendEnergy`/`TrySpendEnergy`/`RecoverEnergy` primitives (negative spend fails loudly; recover clamps to daily max) + day-boundary auto-reset via a single `AdvanceClock` chokepoint that all three time-advance paths route through.
+- **M14-c** — `SessionSnapshot` + HUD-model Energy exposure + these docs.
 
-Deferred from M13 to a future Phase 5 follow-up milestone (or specific small milestones), listed for orientation:
+The earlier M13 follow-ups remain deferred and are **not** part of M14: cooking, recipes, food effects, item use (battle `Item` command and field-use), artifact combination, the trader-service item economy, battle spoils/steal, `teamHasItem`/`teamHasArtifact` condition leaves, `Ultimate`-rarity enforcement, and HUD/raylib inventory rendering. The Energy formula's leader passive/item bonus terms are zero-valued seams (see §2 debt #1).
 
-- team Energy pool, daily-starting-Energy formula, and leader-item Energy bonus
-- cooking, recipes, food effects, item use (battle `Item` command and field-use)
-- artifact combination, combination recipes, artifact-handler services
-- Market / Black Market / Trading Post / Freelancer's Guild item economy
-- battle spoils transfer, gold steal, consumable steal
-- `teamHasItem` / `teamHasArtifact` condition leaves and any scenario-outcome interaction
-- `Ultimate`-rarity / non-combinable enforcement
-- HUD / raylib inventory rendering
-
-Two reasonable next-milestone candidates:
-
-1. **Team Energy pool milestone** — small and high-leverage. Implements `GameSession::Energy()` and friends, the daily-starting-Energy formula, the leader-item Energy bonus path, and persistence. Closes the §2 debt #1 gap and unblocks Phase 6's 1000-Energy travel rule.
-2. **M14 / Phase 6: World Map** — `WorldMapDefinition`, Region-to-Region travel, 1000-Energy travel cost (which depends on the Energy pool above), arrival-at-11:00 timing, generic-loss warning. Best preceded by the Energy milestone so the 1000-Energy cost has somewhere to land.
+**Next milestone — Phase 6 / World Map.** The 1000-Energy region-to-region travel cost can now consume `GameSession::CanSpendEnergy(1000)` / `TrySpendEnergy(1000)`, and the daily pool is observable through the snapshot/HUD. Phase 6 scope (per §3 Phase 6): `WorldMapDefinition`, World Map controller/renderer for the existing `WorldMapMode` slot, unlocked-Region visibility, Region-to-Region travel legality, the 1000-Energy cost, start-before-11:00 + arrival-at-11:00 timing, day-based travel duration, and the generic-unit-loss warning.
 
 ---
 
@@ -419,7 +411,7 @@ These are specified at design level in the docs but remain out of scope until ex
 - **Full game shell** — Character Creation, Load UI, autosave slots, Settings; fully specified in `docs/game_shell_flow.md`; partially addressed later, full shell deferred.
 - **Presentation and audio implementation** — tone, animation, music, and feedback layering are active guidance but not an implementation priority until relevant UI/presentation phases.
 - **Mod loading** — `content/mods/` path and override-by-kind+id are specified in `docs/content_schema.md`; no loader phase yet.
-- **Team Energy pool** — design-spec daily-starting-Energy formula and leader-item Energy bonus are documented in `docs/core_loop_rules.md` §6 but the pool itself is not in code. Implementation pending; the M13 inventory layer is in place to feed the leader-item bonus once Energy lands.
+- **Energy formula leader-bonus seams** — the team Energy pool shipped in M14 (state, daily formula, spend/recover, auto-reset, save/load, snapshot/HUD). What remains deferred is only the formula's leader passive-skill (`Y`) and leader equipped-item/artifact (`Z`) bonus terms, currently zero-valued seams pending the skill system and an artifact/item Energy-effect type.
 - **Cooking / recipes / food effects / item use / battle `Item` command** — `RecipeDefinition`, ingredient consumption, food effects, party-menu cooking, and the battle `Item` action all defer to future milestones. M13 grants and removes items but does not consume or use them.
 - **Artifact combination** — `ArtifactCombinationRecipeDefinition`, artifact-handler services, the irreversible 2-into-1 fusion flow.
 - **Market / Black Market / Trading Post / Freelancer's Guild item economy** — `docs/core_loop_rules.md` §23 trader services are their own milestone.

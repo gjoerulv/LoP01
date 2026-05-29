@@ -2,8 +2,10 @@
 
 #include <vector>
 
+#include "app/mappers/HudModelMapper.h"
 #include "core/GameClock.h"
 #include "core/SaveGame.h"
+#include "data/ContentRepository.h"
 #include "data/definitions/UnitDefinition.h"
 #include "gameplay/EnergyRules.h"
 #include "gameplay/EnemyTeamState.h"
@@ -323,4 +325,46 @@ TEST_CASE("Energy resets exactly once across a multi-day AddMinutes jump") {
     // Reset is "set to formula value", not additive per day -> still 1800.
     REQUIRE(session.CurrentEnergy() == 1800);
     REQUIRE(session.MaxEnergy() == 1800);
+}
+
+// ---------------------------------------------------------------------------
+// M14-c — SessionSnapshot exposure
+// ---------------------------------------------------------------------------
+
+TEST_CASE("SessionSnapshot reports current and max energy after a daily reset") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    const auto snap = session.Snapshot();
+    REQUIRE(snap.energy == 1800);
+    REQUIRE(snap.maxEnergy == 1800);
+}
+
+TEST_CASE("SessionSnapshot reflects a spend while max stays the daily ceiling") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy(); // 1800
+    REQUIRE(session.TrySpendEnergy(500));
+    const auto snap = session.Snapshot();
+    REQUIRE(snap.energy == 1300);
+    REQUIRE(snap.maxEnergy == 1800);
+}
+
+// ---------------------------------------------------------------------------
+// M14-c — HudModelMapper exposure
+// ---------------------------------------------------------------------------
+
+TEST_CASE("HudModelMapper copies current and max energy from the snapshot") {
+    // The mapper only reads content for area name lookups (falls back to ids
+    // when absent), so a default-constructed repository is sufficient here.
+    data::ContentRepository content;
+    gameplay::GameSession session;
+
+    auto snapshot = session.Snapshot();
+    snapshot.energy = 1234;
+    snapshot.maxEnergy = 1800;
+
+    app::mappers::HudModelMapper mapper;
+    const auto model = mapper.Map(content, session, snapshot, /*statusText=*/"", /*quests=*/{});
+
+    REQUIRE(model.energy == 1234);
+    REQUIRE(model.maxEnergy == 1800);
 }

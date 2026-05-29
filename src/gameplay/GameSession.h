@@ -130,6 +130,10 @@ struct SessionSnapshot {
     int gold = 2500;
     std::string regionId = "ashvale_heartland";
     std::string destinationId = "home_base";
+    // M14-c: team Energy pool exposed for render/HUD. currentEnergy and maxEnergy
+    // mirror GameSession::CurrentEnergy() / MaxEnergy().
+    int energy = 0;
+    int maxEnergy = 0;
 };
 
 class GameSession {
