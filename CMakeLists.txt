@@ -138,6 +138,7 @@ if (BUILD_TESTING)
     tests/InventorySaveGameTests.cpp
     tests/BattleArtifactStatTests.cpp
     tests/InventoryEndToEndTests.cpp
+    tests/EnergyRulesTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

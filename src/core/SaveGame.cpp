@@ -391,7 +391,9 @@ void to_json(json& j, const SaveData& data) {
         {"scenario_outcome_reason", data.scenarioOutcomeReason},
         {"items", data.items},
         {"artifacts", data.artifacts},
-        {"hero_equipment", data.heroEquipment}
+        {"hero_equipment", data.heroEquipment},
+        {"energy", data.energy},
+        {"max_energy", data.maxEnergy}
     };
 }
 
@@ -458,6 +460,12 @@ void from_json(const json& j, SaveData& data) {
     if (j.contains("hero_equipment") && j["hero_equipment"].is_array()) {
         data.heroEquipment = j["hero_equipment"].get<std::vector<HeroEquipmentSaveState>>();
     }
+
+    // M14-a team Energy. Absent keys keep the -1 sentinel so GameSession can
+    // distinguish a legacy save (recompute) from a real 0 (never written, since
+    // the floor is 1000).
+    data.energy = j.value("energy", -1);
+    data.maxEnergy = j.value("max_energy", -1);
 
     const bool hasCanonicalStructuralFields =
         j.contains("roster_stacks") &&

@@ -102,6 +102,13 @@ struct SaveData {
     std::vector<ItemSaveState> items;
     std::vector<ArtifactSaveState> artifacts;
     std::vector<HeroEquipmentSaveState> heroEquipment;
+
+    // M14-a team Energy pool. Sentinel -1 means "absent" (legacy save predating
+    // Energy); GameSession::ApplySaveData recomputes a fresh daily value in that
+    // case rather than loading a 0 pool. Distinct from the nested enemy-team
+    // energy field (enemy_teams[].energy).
+    int energy = -1;
+    int maxEnergy = -1;
 };
 
 class SaveGameRepository {
