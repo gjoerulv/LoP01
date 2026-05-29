@@ -101,6 +101,7 @@ if (BUILD_TESTING)
     tests/BattleFactoryTests.cpp
     src/app/BattleEventTextFormatter.cpp
     src/app/MusteringInteraction.cpp
+    src/app/mappers/HudModelMapper.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/RegionModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp

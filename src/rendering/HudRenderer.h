@@ -13,6 +13,8 @@ namespace ashvale::rendering
         int week = 1;
         std::string timeText = "06:00";
         int gold = 0;
+        int energy = 0;
+        int maxEnergy = 0;
         std::string questCompactText;
         std::vector<std::string> activeBuffIcons;
 

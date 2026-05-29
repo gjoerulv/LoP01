@@ -53,6 +53,8 @@ namespace app::mappers
         model.week = ((snapshot.day - 1) / 7) + 1;
         model.timeText = snapshot.time;
         model.gold = snapshot.gold;
+        model.energy = snapshot.energy;
+        model.maxEnergy = snapshot.maxEnergy;
         model.questCompactText = "Q" + std::to_string(completed) + "/" + std::to_string(quests.size());
         if (session.HasActiveSameDayTravelPrep()) {
             model.activeBuffIcons.push_back("travel_prep");

@@ -1008,7 +1008,9 @@ SessionSnapshot GameSession::Snapshot() const {
         clock_.TimeString(),
         gold_,
         regionId_,
-        destinationId_
+        destinationId_,
+        currentEnergy_,
+        dailyMaxEnergy_
     };
 }
 
