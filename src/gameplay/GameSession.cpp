@@ -1,9 +1,11 @@
 #include "gameplay/GameSession.h"
+#include "gameplay/EnergyRules.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
 #include "gameplay/region/RegionTravelRules.h"
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <set>
 
@@ -1080,7 +1082,10 @@ core::SaveData GameSession::ToSaveData() const {
                 out.push_back(std::move(entry));
             }
             return out;
-        }()
+        }(),
+        // M14-a team Energy pool.
+        currentEnergy_,
+        dailyMaxEnergy_
     };
 }
 
@@ -1264,6 +1269,18 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
         equip.misc2ArtifactId   = entry.misc2ArtifactId;
         equip.misc3ArtifactId   = entry.misc3ArtifactId;
         heroEquipment_[entry.heroId] = std::move(equip);
+    }
+
+    // M14-a: restore team Energy. The -1 sentinel marks a legacy save predating
+    // Energy; recompute a fresh daily value so it never loads to a 0 pool. The
+    // roster is already restored above, so ApplyDailyStartingEnergy can read the
+    // traveling party (agility resolves only if the unit catalog is set — the
+    // App sets it before loading; bare-session tests get the 1000 floor).
+    if (saveData.energy < 0 || saveData.maxEnergy < 0) {
+        ApplyDailyStartingEnergy();
+    } else {
+        dailyMaxEnergy_ = saveData.maxEnergy;
+        currentEnergy_ = std::clamp(saveData.energy, 0, saveData.maxEnergy);
     }
 
     MarkRosterProjectionDirty();
@@ -1681,6 +1698,64 @@ void GameSession::SetItemCatalog(std::vector<data::ItemDefinition> catalog) {
 
 void GameSession::SetArtifactCatalog(std::vector<data::ArtifactDefinition> catalog) {
     artifactCatalog_ = std::move(catalog);
+}
+
+void GameSession::SetUnitCatalog(std::vector<data::UnitDefinition> catalog) {
+    unitCatalog_ = std::move(catalog);
+}
+
+int GameSession::LowestTravelingPartyAgility() const {
+    // The traveling party is the active party plus the reserve. Both are
+    // referenced by slot-id vectors into rosterStacks_. Resolve each occupied
+    // slot to its unit, look up agility in the unit catalog, and take the
+    // minimum. Units not present in the catalog are skipped (cannot resolve
+    // agility). Returns 0 when nothing is resolvable so the formula floors at
+    // the base 1000.
+    int lowest = std::numeric_limits<int>::max();
+    bool found = false;
+
+    auto considerSlots = [&](const std::vector<std::string>& slotStackIds) {
+        for (const auto& stackId : slotStackIds) {
+            if (stackId.empty()) {
+                continue;
+            }
+            const auto* stack = FindStackById(stackId);
+            if (stack == nullptr || stack->quantity <= 0) {
+                continue;
+            }
+            const auto it = std::find_if(unitCatalog_.begin(), unitCatalog_.end(),
+                [&](const data::UnitDefinition& def) { return def.id == stack->unitId; });
+            if (it == unitCatalog_.end()) {
+                continue;
+            }
+            lowest = std::min(lowest, it->stats.agility);
+            found = true;
+        }
+    };
+
+    considerSlots(activeSlotStackIds_);
+    considerSlots(reserveSlotStackIds_);
+
+    return found ? lowest : 0;
+}
+
+void GameSession::ApplyDailyStartingEnergy() {
+    // Leader passive-skill (Y) and leader equipped-item/artifact (Z) Energy
+    // bonuses are zero-valued seams in M14 — those systems do not exist yet.
+    const int starting = ComputeDailyStartingEnergy(
+        LowestTravelingPartyAgility(),
+        /*leaderPassiveEnergyBonus=*/0,
+        /*leaderItemEnergyBonus=*/0);
+    dailyMaxEnergy_ = starting;
+    currentEnergy_ = starting;
+}
+
+int GameSession::CurrentEnergy() const {
+    return currentEnergy_;
+}
+
+int GameSession::MaxEnergy() const {
+    return dailyMaxEnergy_;
 }
 
 const std::vector<ItemStackState>& GameSession::Items() const {

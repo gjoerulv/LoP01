@@ -14,6 +14,7 @@
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
+#include "data/definitions/UnitDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
 #include "gameplay/events/EventDefinition.h"
@@ -187,6 +188,20 @@ public:
     // artifact operations (give/take/equip will fail with "unknown id").
     void SetItemCatalog(std::vector<data::ItemDefinition> catalog);
     void SetArtifactCatalog(std::vector<data::ArtifactDefinition> catalog);
+    // Unit catalog feeds the daily-starting Energy formula (needs per-unit
+    // agility). Mirrors the item/artifact catalog pattern; set by the App at
+    // startup. An empty catalog makes ApplyDailyStartingEnergy treat the party
+    // as having no resolvable agility (1000 floor).
+    void SetUnitCatalog(std::vector<data::UnitDefinition> catalog);
+
+    // Team Energy pool (docs/core_loop_rules.md §6). M14-a: state + daily reset.
+    // ApplyDailyStartingEnergy recomputes dailyMaxEnergy_ from the lowest agility
+    // across the entire traveling party (active + reserve) using the unit catalog,
+    // with leader passive/item bonuses as zero-valued seams, and sets
+    // currentEnergy_ to that value. Spend/recover primitives arrive in M14-b.
+    void ApplyDailyStartingEnergy();
+    [[nodiscard]] int CurrentEnergy() const;
+    [[nodiscard]] int MaxEnergy() const;
 
     [[nodiscard]] const std::vector<ItemStackState>& Items() const;
     [[nodiscard]] const std::vector<ArtifactStackState>& Artifacts() const;
@@ -343,6 +358,17 @@ private:
     std::map<std::string, HeroEquipmentState> heroEquipment_;
     std::vector<data::ItemDefinition>     itemCatalog_;
     std::vector<data::ArtifactDefinition> artifactCatalog_;
+    std::vector<data::UnitDefinition>     unitCatalog_;
+
+    // M14-a team Energy pool. dailyMaxEnergy_ is the day's ceiling and reset
+    // target; currentEnergy_ is the spendable amount, clamped to [0, max].
+    int currentEnergy_ = 0;
+    int dailyMaxEnergy_ = 0;
+
+    // Lowest agility across the entire traveling party (active + reserve),
+    // resolved through unitCatalog_. Units missing from the catalog are skipped.
+    // Returns 0 when no party agility is resolvable (empty party or no catalog).
+    [[nodiscard]] int LowestTravelingPartyAgility() const;
 
     [[nodiscard]] const data::ItemDefinition*     FindItemDefinition(const std::string& id) const;
     [[nodiscard]] const data::ArtifactDefinition* FindArtifactDefinition(const std::string& id) const;

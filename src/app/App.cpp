@@ -78,6 +78,11 @@ App::App() {
         session_.SetArtifactCatalog(content_.Artifacts());
         // Player color is hardcoded "Green" project-wide (see roadmap debt #6).
         session_.SetPlayerColor("Green");
+        // M14-a: feed the unit catalog (for the daily Energy agility term) and
+        // seed day-1 Energy now that the catalog and starting party are in place.
+        // Subsequent days auto-reset when the clock crosses a day boundary.
+        session_.SetUnitCatalog(content_.Units());
+        session_.ApplyDailyStartingEnergy();
     }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
     observedDay_ = session_.Snapshot().day;
