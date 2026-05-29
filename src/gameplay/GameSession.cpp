@@ -130,8 +130,18 @@ void GameSession::AdvanceMode() {
     }
 }
 
-void GameSession::AddMinutes(const int minutes) {
+void GameSession::AdvanceClock(const int minutes) {
+    const int dayBefore = clock_.Day();
     clock_.AdvanceMinutes(minutes);
+    if (clock_.Day() != dayBefore) {
+        // Day boundary crossed: refresh the daily Energy pool. A multi-day jump
+        // resets once to the formula value (reset is "set to", not "add").
+        ApplyDailyStartingEnergy();
+    }
+}
+
+void GameSession::AddMinutes(const int minutes) {
+    AdvanceClock(minutes);
 }
 
 bool GameSession::SpendGold(const int amount) {
@@ -195,7 +205,7 @@ void GameSession::ApplyDialogueChoiceCost() {
 
 void GameSession::RestToNextDayStart() {
     const int remainingMinutes = core::GameClock::kMinutesPerSliceDay - clock_.MinutesIntoSliceDay();
-    clock_.AdvanceMinutes(std::max(1, remainingMinutes));
+    AdvanceClock(std::max(1, remainingMinutes));
 }
 
 int GameSession::CurrentWeek() const {
@@ -363,7 +373,10 @@ int GameSession::ApplySameDayTravelPrepToTravelMinutes(const int baseTravelMinut
 
 void GameSession::ApplyWakePenalty() {
     gold_ = std::max(0, gold_ - 1000);
-    clock_.AdvanceMinutes(core::GameClock::kMinutesPerSliceDay);
+    // Advancing a full slice day rolls the day forward, which refreshes Energy
+    // via the chokepoint ("wake next day with fresh Energy"). SetToWakePenaltyStart
+    // only repositions the time within the new day; it does not change the day.
+    AdvanceClock(core::GameClock::kMinutesPerSliceDay);
     clock_.SetToWakePenaltyStart();
 }
 
@@ -1756,6 +1769,27 @@ int GameSession::CurrentEnergy() const {
 
 int GameSession::MaxEnergy() const {
     return dailyMaxEnergy_;
+}
+
+bool GameSession::CanSpendEnergy(const int amount) const {
+    if (amount == 0) return true;
+    if (amount < 0) return false;
+    return currentEnergy_ >= amount;
+}
+
+bool GameSession::TrySpendEnergy(const int amount) {
+    // Negative spend fails loudly (mutates nothing); zero spend is a harmless
+    // success; positive spend is all-or-nothing.
+    if (amount == 0) return true;
+    if (amount < 0) return false;
+    if (currentEnergy_ < amount) return false;
+    currentEnergy_ -= amount;
+    return true;
+}
+
+void GameSession::RecoverEnergy(const int amount) {
+    if (amount <= 0) return;
+    currentEnergy_ = std::min(dailyMaxEnergy_, currentEnergy_ + amount);
 }
 
 const std::vector<ItemStackState>& GameSession::Items() const {
