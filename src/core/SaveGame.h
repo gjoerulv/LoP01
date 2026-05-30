@@ -109,6 +109,12 @@ struct SaveData {
     // energy field (enemy_teams[].energy).
     int energy = -1;
     int maxEnergy = -1;
+
+    // M15-b World Map unlocked-region set. Absent (legacy) → empty vector, in
+    // which case GameSession::ApplySaveData keeps the authored seed rather than
+    // clearing unlock state. Every world map keeps the start region unlocked, so
+    // a non-empty vector unambiguously marks an M15+ save.
+    std::vector<std::string> unlockedRegionIds;
 };
 
 class SaveGameRepository {

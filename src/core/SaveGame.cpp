@@ -393,7 +393,8 @@ void to_json(json& j, const SaveData& data) {
         {"artifacts", data.artifacts},
         {"hero_equipment", data.heroEquipment},
         {"energy", data.energy},
-        {"max_energy", data.maxEnergy}
+        {"max_energy", data.maxEnergy},
+        {"unlocked_region_ids", data.unlockedRegionIds}
     };
 }
 
@@ -466,6 +467,13 @@ void from_json(const json& j, SaveData& data) {
     // the floor is 1000).
     data.energy = j.value("energy", -1);
     data.maxEnergy = j.value("max_energy", -1);
+
+    // M15-b World Map unlocked-region set. Absent key → empty vector (legacy);
+    // GameSession keeps the authored seed in that case.
+    data.unlockedRegionIds.clear();
+    if (j.contains("unlocked_region_ids") && j["unlocked_region_ids"].is_array()) {
+        data.unlockedRegionIds = j["unlocked_region_ids"].get<std::vector<std::string>>();
+    }
 
     const bool hasCanonicalStructuralFields =
         j.contains("roster_stacks") &&
