@@ -643,6 +643,157 @@ namespace data {
             return true;
         }
 
+        // M15-a: world_map.json loader. Optional file; empty/absent is legal
+        // (single-Region scenario, no inter-region travel). Carries inter-region
+        // travel metadata only — arrival nodes are owned by RegionDefinition and
+        // resolved at travel time. Structural validation resolves region/node ids
+        // against the already-loaded `regions`. Invalid entries are skipped so a
+        // single bad entry does not erase the rest.
+        bool LoadWorldMapFile(
+            const nlohmann::json& root,
+            WorldMapDefinition& output,
+            const std::vector<RegionDefinition>& regions,
+            std::vector<ValidationMessage>& msgs)
+        {
+            output = WorldMapDefinition{};
+
+            output.id = root.value("id", "");
+            if (root.contains("name") && root["name"].is_object()) {
+                output.name = root["name"].value("en", "");
+            } else {
+                output.name = root.value("name", "");
+            }
+
+            auto findRegion = [&](const std::string& regionId) -> const RegionDefinition* {
+                for (const auto& region : regions) {
+                    if (region.id == regionId) {
+                        return &region;
+                    }
+                }
+                return nullptr;
+            };
+
+            auto regionHasNode = [](const RegionDefinition& region, const std::string& nodeId) {
+                for (const auto& node : region.nodes) {
+                    if (node.locationId == nodeId) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            std::set<std::string> seenEntryIds;
+            if (root.contains("entries") && root["entries"].is_array()) {
+                for (size_t i = 0; i < root["entries"].size(); ++i) {
+                    const auto& entry = root["entries"][i];
+                    const std::string path = "entries[" + std::to_string(i) + "]";
+                    if (!entry.is_object()) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ENTRY_NOT_OBJECT", path,
+                            "World map entry must be a JSON object.", ""});
+                        continue;
+                    }
+
+                    WorldMapRegionEntry def;
+                    def.id       = entry.value("id", "");
+                    def.unlocked = entry.value("unlocked", false);
+                    def.x        = entry.value("x", 0.0f);
+                    def.y        = entry.value("y", 0.0f);
+                    if (entry.contains("exitNodeIds") && entry["exitNodeIds"].is_array()) {
+                        for (const auto& nodeId : entry["exitNodeIds"]) {
+                            if (nodeId.is_string()) {
+                                def.exitNodeIds.push_back(nodeId.get<std::string>());
+                            }
+                        }
+                    }
+
+                    if (def.id.empty()) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ENTRY_ID_EMPTY", path + ".id",
+                            "World map entry \"id\" is required and must be a non-empty string.", ""});
+                        continue;
+                    }
+
+                    if (!seenEntryIds.insert(def.id).second) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ENTRY_DUPLICATE", path + ".id",
+                            "Duplicate world map region entry \"" + def.id + "\".", ""});
+                        continue;
+                    }
+
+                    const RegionDefinition* region = findRegion(def.id);
+                    if (region == nullptr) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_REGION_UNKNOWN", path + ".id",
+                            "World map entry references unknown Region \"" + def.id + "\".", ""});
+                        continue;
+                    }
+
+                    // Arrival node is owned by RegionDefinition. It must be present
+                    // and resolve to a real node, since travel arrival lands there.
+                    if (region->arrivalNodeId.empty()) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ARRIVAL_NODE_MISSING", path + ".id",
+                            "Region \"" + def.id + "\" used on the world map has no arrivalNodeId "
+                            "(set it in regions.json).", ""});
+                        continue;
+                    }
+                    if (!regionHasNode(*region, region->arrivalNodeId)) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ARRIVAL_NODE_UNKNOWN", path + ".id",
+                            "Region \"" + def.id + "\" arrivalNodeId \"" + region->arrivalNodeId +
+                            "\" does not exist among its nodes.", ""});
+                        continue;
+                    }
+
+                    // Exit nodes must exist in this (source) Region.
+                    bool exitNodesOk = true;
+                    for (const auto& exitNodeId : def.exitNodeIds) {
+                        if (!regionHasNode(*region, exitNodeId)) {
+                            msgs.push_back({Severity::Error, "WORLDMAP_EXIT_NODE_UNKNOWN",
+                                path + ".exitNodeIds",
+                                "World map entry \"" + def.id + "\" exit node \"" + exitNodeId +
+                                "\" does not exist in that Region.", ""});
+                            exitNodesOk = false;
+                        }
+                    }
+                    if (!exitNodesOk) {
+                        continue;
+                    }
+
+                    output.entries.push_back(std::move(def));
+                }
+            }
+
+            // Adjacency: both endpoints must be present in the accepted entries.
+            if (root.contains("adjacency") && root["adjacency"].is_array()) {
+                for (size_t i = 0; i < root["adjacency"].size(); ++i) {
+                    const auto& pair = root["adjacency"][i];
+                    const std::string path = "adjacency[" + std::to_string(i) + "]";
+
+                    std::string regionA;
+                    std::string regionB;
+                    if (pair.is_array() && pair.size() >= 2) {
+                        regionA = pair[0].get<std::string>();
+                        regionB = pair[1].get<std::string>();
+                    } else if (pair.is_object()) {
+                        regionA = pair.value("from", "");
+                        regionB = pair.value("to", "");
+                    }
+
+                    if (regionA.empty() || regionB.empty()) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ADJACENCY_MALFORMED", path,
+                            "World map adjacency must reference two region ids.", ""});
+                        continue;
+                    }
+                    if (output.FindEntry(regionA) == nullptr || output.FindEntry(regionB) == nullptr) {
+                        msgs.push_back({Severity::Error, "WORLDMAP_ADJACENCY_UNKNOWN_ENTRY", path,
+                            "World map adjacency references a region not present in entries: \"" +
+                            regionA + "\" / \"" + regionB + "\".", ""});
+                        continue;
+                    }
+
+                    output.adjacency.push_back({regionA, regionB});
+                }
+            }
+
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -659,6 +810,7 @@ namespace data {
         scenarioOutcome_ = ScenarioOutcomeDefinition{};
         items_.clear();
         artifacts_.clear();
+        worldMap_ = WorldMapDefinition{};
 
         ContentValidator validator;
 
@@ -720,6 +872,13 @@ namespace data {
         auto artifactsDoc = load(root / "artifacts.json");
         if (artifactsDoc) {
             LoadArtifactsFile(*artifactsDoc, artifacts_, messages_);
+        }
+
+        // world_map.json is optional (M15-a). Absent/empty → single-Region
+        // scenario, no inter-region travel. Validated against loaded regions_.
+        auto worldMapDoc = load(root / "world_map.json");
+        if (worldMapDoc) {
+            LoadWorldMapFile(*worldMapDoc, worldMap_, regions_, messages_);
         }
 
         auto refMsgs = validator.ValidateReferences(
@@ -870,6 +1029,14 @@ namespace data {
             }
         }
         return nullptr;
+    }
+
+    const WorldMapDefinition& ContentRepository::WorldMap() const {
+        return worldMap_;
+    }
+
+    const WorldMapRegionEntry* ContentRepository::FindWorldMapRegionEntry(const std::string& regionId) const {
+        return worldMap_.FindEntry(regionId);
     }
 
 } // namespace data

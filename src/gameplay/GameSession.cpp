@@ -1100,7 +1100,9 @@ core::SaveData GameSession::ToSaveData() const {
         }(),
         // M14-a team Energy pool.
         currentEnergy_,
-        dailyMaxEnergy_
+        dailyMaxEnergy_,
+        // M15-b World Map unlocked-region set.
+        std::vector<std::string>(unlockedRegionIds_.begin(), unlockedRegionIds_.end())
     };
 }
 
@@ -1296,6 +1298,15 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     } else {
         dailyMaxEnergy_ = saveData.maxEnergy;
         currentEnergy_ = std::clamp(saveData.energy, 0, saveData.maxEnergy);
+    }
+
+    // M15-b: restore World Map unlocked-region set. An absent/empty saved set
+    // means a legacy save — keep the authored seed from SetWorldMap rather than
+    // wiping unlock state. A non-empty saved set replaces it (every world map
+    // keeps the start region unlocked, so non-empty unambiguously marks M15+).
+    if (!saveData.unlockedRegionIds.empty()) {
+        unlockedRegionIds_ = std::set<std::string>(
+            saveData.unlockedRegionIds.begin(), saveData.unlockedRegionIds.end());
     }
 
     MarkRosterProjectionDirty();
@@ -1717,6 +1728,143 @@ void GameSession::SetArtifactCatalog(std::vector<data::ArtifactDefinition> catal
 
 void GameSession::SetUnitCatalog(std::vector<data::UnitDefinition> catalog) {
     unitCatalog_ = std::move(catalog);
+}
+
+// ---------------------------------------------------------------------------
+// M15-b — World Map travel.
+// ---------------------------------------------------------------------------
+
+void GameSession::SetWorldMap(data::WorldMapDefinition worldMap) {
+    worldMap_ = std::move(worldMap);
+    // Seed the persisted runtime unlocked set from authored start state.
+    unlockedRegionIds_.clear();
+    for (const auto& entry : worldMap_.entries) {
+        if (entry.unlocked) {
+            unlockedRegionIds_.insert(entry.id);
+        }
+    }
+}
+
+void GameSession::SetRegionCatalog(std::vector<data::RegionDefinition> catalog) {
+    regionCatalog_ = std::move(catalog);
+}
+
+const data::WorldMapDefinition& GameSession::WorldMap() const {
+    return worldMap_;
+}
+
+bool GameSession::IsRegionUnlocked(const std::string& regionId) const {
+    return unlockedRegionIds_.contains(regionId);
+}
+
+const data::RegionDefinition* GameSession::FindRegionDefinition(const std::string& id) const {
+    for (const auto& region : regionCatalog_) {
+        if (region.id == id) {
+            return &region;
+        }
+    }
+    return nullptr;
+}
+
+bool GameSession::CanOpenWorldMapHere() const {
+    if (mode_ != GameMode::RegionMode) {
+        return false;
+    }
+    const auto* entry = worldMap_.FindEntry(regionId_);
+    if (entry == nullptr) {
+        return false;
+    }
+    return worldmap::IsWorldMapExitNode(*entry, destinationId_);
+}
+
+bool GameSession::IsHeroUnit(const std::string& unitId) const {
+    const auto it = std::find_if(unitCatalog_.begin(), unitCatalog_.end(),
+        [&](const data::UnitDefinition& def) { return def.id == unitId; });
+    if (it != unitCatalog_.end()) {
+        return it->category == data::UnitDefinitionCategory::Hero
+            || it->category == data::UnitDefinitionCategory::Leader;
+    }
+    // Not in catalog: fall back to the leader-capable signal (Hero/Leader units
+    // are leader-capable). Unknown units default to generic (dropped on travel).
+    return IsLeaderCapableUnitId(unitId);
+}
+
+int GameSession::RemoveGenericTravelingPartyUnits() {
+    // Collect generic stack ids first (don't mutate roster while scanning).
+    std::vector<std::string> genericStackIds;
+    int dropped = 0;
+    for (const auto& stack : rosterStacks_) {
+        if (!IsHeroUnit(stack.unitId)) {
+            genericStackIds.push_back(stack.stackId);
+            dropped += std::max(0, stack.quantity);
+        }
+    }
+
+    for (const auto& stackId : genericStackIds) {
+        for (auto& activeSlot : activeSlotStackIds_) {
+            if (activeSlot == stackId) {
+                activeSlot.clear();
+            }
+        }
+        for (auto& reserveSlot : reserveSlotStackIds_) {
+            if (reserveSlot == stackId) {
+                reserveSlot.clear();
+            }
+        }
+        std::erase_if(rosterStacks_, [&](const RosterStackState& entry) {
+            return entry.stackId == stackId;
+        });
+    }
+
+    if (dropped > 0) {
+        MarkRosterProjectionDirty();
+    }
+    return dropped;
+}
+
+GameSession::WorldMapTravelResult GameSession::TravelToRegion(
+    const std::string& destinationRegionId) {
+    using worldmap::WorldMapTravelBlockReason;
+
+    // Exit-node gate: must be on the Region layer standing on an authored exit
+    // node of the current region. (NotAtExitNode is a session-only reason.)
+    if (!CanOpenWorldMapHere()) {
+        return WorldMapTravelResult{ false, WorldMapTravelBlockReason::NotAtExitNode, 0, 0 };
+    }
+
+    const std::vector<std::string> unlocked(unlockedRegionIds_.begin(), unlockedRegionIds_.end());
+    const auto eval = worldmap::EvaluateWorldMapTravel(
+        regionId_,
+        destinationRegionId,
+        unlocked,
+        worldMap_.adjacency,
+        clock_.MinutesIntoSliceDay(),
+        CurrentEnergy());
+    if (!eval.legal) {
+        return WorldMapTravelResult{ false, eval.reason, eval.days, 0 };
+    }
+
+    // Arrival node is owned by RegionDefinition (validated to exist at content
+    // load). Defensive guard in case the region catalog is missing the entry.
+    const auto* destRegion = FindRegionDefinition(destinationRegionId);
+    if (destRegion == nullptr || destRegion->arrivalNodeId.empty()) {
+        return WorldMapTravelResult{ false, WorldMapTravelBlockReason::NoPath, eval.days, 0 };
+    }
+
+    // Commit. Order matters: drop generics before advancing the clock so the
+    // arrival-day Energy reset reflects the post-departure (heroes-only) party.
+    static_cast<void>(TrySpendEnergy(1000));  // gate guaranteed >= 1000 above
+    const int genericsDropped = RemoveGenericTravelingPartyUnits();
+
+    const int elevenHundredMinutes = (11 - core::GameClock::kDayStartHour) * 60;
+    const int delta = eval.days * core::GameClock::kMinutesPerSliceDay
+        + elevenHundredMinutes - clock_.MinutesIntoSliceDay();
+    AddMinutes(delta);  // day rollover → ApplyDailyStartingEnergy via the chokepoint
+
+    regionId_ = destinationRegionId;
+    destinationId_ = destRegion->arrivalNodeId;
+
+    return WorldMapTravelResult{ true, WorldMapTravelBlockReason::None, eval.days, genericsDropped };
 }
 
 int GameSession::LowestTravelingPartyAgility() const {

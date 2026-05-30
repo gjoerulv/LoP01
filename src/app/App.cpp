@@ -83,6 +83,10 @@ App::App() {
         // Subsequent days auto-reset when the clock crosses a day boundary.
         session_.SetUnitCatalog(content_.Units());
         session_.ApplyDailyStartingEnergy();
+        // M15-b: feed the World Map (seeds the unlocked-region set) and the
+        // region catalog (resolves a destination's arrival node at travel time).
+        session_.SetRegionCatalog(content_.Regions());
+        session_.SetWorldMap(content_.WorldMap());
     }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
     observedDay_ = session_.Snapshot().day;

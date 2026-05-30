@@ -15,12 +15,14 @@
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "data/definitions/UnitDefinition.h"
+#include "data/definitions/WorldMapDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/quests/QuestState.h"
 #include "gameplay/scenario/ScenarioOutcomeRules.h"
+#include "gameplay/worldmap/WorldMapTravelRules.h"
 #include "gameplay/world/NodeWorldState.h"
 
 #include <map>
@@ -198,6 +200,32 @@ public:
     // as having no resolvable agility (1000 floor).
     void SetUnitCatalog(std::vector<data::UnitDefinition> catalog);
 
+    // M15-b World Map. SetWorldMap seeds the persisted runtime unlocked-region
+    // set from the authored `unlocked` flags. SetRegionCatalog gives the session
+    // read access to region definitions (to resolve a destination's arrival node
+    // at travel time). Both mirror the catalog pattern; set by the App at startup.
+    void SetWorldMap(data::WorldMapDefinition worldMap);
+    void SetRegionCatalog(std::vector<data::RegionDefinition> catalog);
+    [[nodiscard]] const data::WorldMapDefinition& WorldMap() const;
+    [[nodiscard]] bool IsRegionUnlocked(const std::string& regionId) const;
+    // True iff on the Region layer and the current node is an authored exit node
+    // of the current region's World Map entry.
+    [[nodiscard]] bool CanOpenWorldMapHere() const;
+
+    struct WorldMapTravelResult {
+        bool success = false;
+        worldmap::WorldMapTravelBlockReason reason = worldmap::WorldMapTravelBlockReason::None;
+        int days = 0;
+        int genericsDropped = 0;
+    };
+    // Apply a World Map trip to session state. Re-checks legality (exit-node gate
+    // + pure rule); on any illegal case returns a result and mutates nothing.
+    // On success: spends 1000 Energy, drops generic traveling-party units (heroes
+    // persist), advances the clock to arrive at 11:00 after `days` (which refreshes
+    // Energy via the day-rollover chokepoint), and switches the current region to
+    // the destination's arrival node. Stays in RegionMode.
+    WorldMapTravelResult TravelToRegion(const std::string& destinationRegionId);
+
     // Team Energy pool (docs/core_loop_rules.md §6). M14-a: state + daily reset.
     // ApplyDailyStartingEnergy recomputes dailyMaxEnergy_ from the lowest agility
     // across the entire traveling party (active + reserve) using the unit catalog,
@@ -372,6 +400,11 @@ private:
     std::vector<data::ArtifactDefinition> artifactCatalog_;
     std::vector<data::UnitDefinition>     unitCatalog_;
 
+    // M15-b World Map state.
+    data::WorldMapDefinition              worldMap_;
+    std::vector<data::RegionDefinition>   regionCatalog_;   // for arrival-node lookup
+    std::set<std::string>                 unlockedRegionIds_;
+
     // M14-a team Energy pool. dailyMaxEnergy_ is the day's ceiling and reset
     // target; currentEnergy_ is the spendable amount, clamped to [0, max].
     int currentEnergy_ = 0;
@@ -381,6 +414,15 @@ private:
     // resolved through unitCatalog_. Units missing from the catalog are skipped.
     // Returns 0 when no party agility is resolvable (empty party or no catalog).
     [[nodiscard]] int LowestTravelingPartyAgility() const;
+
+    [[nodiscard]] const data::RegionDefinition* FindRegionDefinition(const std::string& id) const;
+    // True for Hero/Leader units (which travel between Regions); false for
+    // generics (which are dropped on World Map travel). Uses the unit catalog
+    // category, falling back to the leader-capable set when the unit is absent.
+    [[nodiscard]] bool IsHeroUnit(const std::string& unitId) const;
+    // Removes every generic stack from the traveling party (active + reserve),
+    // returning the total generic unit count dropped. Heroes are untouched.
+    int RemoveGenericTravelingPartyUnits();
 
     // Single chokepoint for all time advances. Detects a day-boundary crossing
     // and triggers ApplyDailyStartingEnergy() exactly once (a multi-day jump

@@ -33,6 +33,7 @@ add_library(ashvale_logic
   src/gameplay/region/RegionDeadEndRules.cpp
   src/gameplay/region/RegionTravelRules.cpp
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
+  src/gameplay/worldmap/WorldMapTravelRules.cpp
   src/gameplay/location/LocationScene.cpp
   src/gameplay/location/LocationServiceRules.cpp
   src/gameplay/battle/BattleFactory.cpp
@@ -140,6 +141,9 @@ if (BUILD_TESTING)
     tests/BattleArtifactStatTests.cpp
     tests/InventoryEndToEndTests.cpp
     tests/EnergyRulesTests.cpp
+    tests/WorldMapTravelRulesTests.cpp
+    tests/WorldMapContentTests.cpp
+    tests/WorldMapTravelTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

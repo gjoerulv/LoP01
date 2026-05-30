@@ -18,6 +18,7 @@
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "data/definitions/UnitDefinition.h"
+#include "data/definitions/WorldMapDefinition.h"
 
 namespace data {
 
@@ -64,6 +65,9 @@ namespace data {
         [[nodiscard]] const std::vector<ArtifactDefinition>& Artifacts() const;
         [[nodiscard]] const ArtifactDefinition* FindArtifactById(const std::string& id) const;
 
+        [[nodiscard]] const WorldMapDefinition& WorldMap() const;
+        [[nodiscard]] const WorldMapRegionEntry* FindWorldMapRegionEntry(const std::string& regionId) const;
+
     private:
         std::vector<RegionDefinition> regions_;
         std::vector<LocationDefinition> locations_;
@@ -78,6 +82,7 @@ namespace data {
         ScenarioOutcomeDefinition scenarioOutcome_;
         std::vector<ItemDefinition> items_;
         std::vector<ArtifactDefinition> artifacts_;
+        WorldMapDefinition worldMap_;
         std::vector<ValidationMessage> messages_;
     };
 
