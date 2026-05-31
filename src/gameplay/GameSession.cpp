@@ -113,7 +113,9 @@ void GameSession::AdvanceMode() {
         mode_ = GameMode::OpeningSequence;
         break;
     case GameMode::OpeningSequence:
-        mode_ = GameMode::WorldMapMode;
+        // M15-c: opening drops straight into Region mode. The World Map is no
+        // longer a front-end splash; it is opened on demand from an exit node.
+        mode_ = GameMode::RegionMode;
         break;
     case GameMode::WorldMapMode:
         mode_ = GameMode::RegionMode;
@@ -177,6 +179,10 @@ void GameSession::EnterLocationMode(const std::string& locationId) {
 
 void GameSession::EnterRegionMode() {
     mode_ = GameMode::RegionMode;
+}
+
+void GameSession::EnterWorldMapMode() {
+    mode_ = GameMode::WorldMapMode;
 }
 
 void GameSession::ExitLocationMode() {
@@ -1787,6 +1793,16 @@ bool GameSession::IsHeroUnit(const std::string& unitId) const {
     // Not in catalog: fall back to the leader-capable signal (Hero/Leader units
     // are leader-capable). Unknown units default to generic (dropped on travel).
     return IsLeaderCapableUnitId(unitId);
+}
+
+int GameSession::GenericTravelingPartyUnitCount() const {
+    int total = 0;
+    for (const auto& stack : rosterStacks_) {
+        if (!IsHeroUnit(stack.unitId)) {
+            total += std::max(0, stack.quantity);
+        }
+    }
+    return total;
 }
 
 int GameSession::RemoveGenericTravelingPartyUnits() {

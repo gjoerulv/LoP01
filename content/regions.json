@@ -7,6 +7,7 @@
       "id": "ashvale_heartland",
       "name": "Ashvale Heartland",
       "unlocked": true,
+      "arrivalNodeId": "home_base",
       "nodes": [
         {
           "location_id": "home_base",
@@ -90,6 +91,31 @@
         [ "bridge_checkpoint", "orchard_pass" ],
         [ "orchard_pass", "clocktower_square" ],
         [ "survivor_recruit_post", "bridge_checkpoint" ]
+      ]
+    },
+    {
+      "id": "riverside_vale",
+      "name": "Riverside Vale",
+      "unlocked": true,
+      "arrivalNodeId": "vale_landing",
+      "nodes": [
+        {
+          "location_id": "vale_landing",
+          "x": 180,
+          "y": 360,
+          "discovered": true,
+          "travel_available": true
+        },
+        {
+          "location_id": "vale_market",
+          "x": 360,
+          "y": 300,
+          "discovered": true,
+          "travel_available": true
+        }
+      ],
+      "links": [
+        [ "vale_landing", "vale_market" ]
       ]
     }
   ]

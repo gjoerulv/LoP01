@@ -10,6 +10,7 @@ namespace app::input
         bool toggleDebug = false;
         bool save = false;
         bool load = false;
+        bool openWorldMap = false;
 
         bool moveLeft = false;
         bool moveRight = false;

@@ -84,6 +84,22 @@
       "allows_sleep": false,
       "overworld_destination": true,
       "scene_id": "clocktower_square_proto"
+    },
+    {
+      "id": "vale_landing",
+      "name": "Vale Landing",
+      "type": "town",
+      "allows_sleep": false,
+      "overworld_destination": true,
+      "scene_id": "town_center_proto"
+    },
+    {
+      "id": "vale_market",
+      "name": "Vale Market",
+      "type": "town",
+      "allows_sleep": false,
+      "overworld_destination": true,
+      "scene_id": "town_center_proto"
     }
   ]
 }

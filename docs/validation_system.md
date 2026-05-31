@@ -233,6 +233,19 @@ Warnings:
 - optional Region is disconnected
 - Region is visible in authoring data but never unlockable
 
+### Implemented subset (M15)
+
+`content/world_map.json` loading enforces the **structural** subset:
+
+- duplicate World Map region entry (`WORLDMAP_ENTRY_DUPLICATE`)
+- entry references an unknown / not-loaded Region (`WORLDMAP_REGION_UNKNOWN`)
+- the entry's Region has a missing/empty `arrivalNodeId` (`WORLDMAP_ARRIVAL_NODE_MISSING`)
+- the Region's `arrivalNodeId` does not exist among its nodes (`WORLDMAP_ARRIVAL_NODE_UNKNOWN`)
+- an `exitNodeId` does not exist in the source Region (`WORLDMAP_EXIT_NODE_UNKNOWN`)
+- an `adjacency` pair references a region not present in `entries[]` (`WORLDMAP_ADJACENCY_UNKNOWN_ENTRY`)
+
+Adjacency is loaded as auto-symmetric, so "not bidirectional" cannot occur. The path-dependent checks (required Region unreachable, path through a permanently-locked Region) and the warnings above are **deferred**; M15 covers reachability only through the pure `WorldMapTravelRules` BFS used at travel time (and its tests).
+
 ---
 
 ## 9. Region validation

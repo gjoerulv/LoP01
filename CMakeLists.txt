@@ -50,6 +50,7 @@ add_library(ashvale_rendering
   src/rendering/DebugOverlay.cpp
   src/rendering/TitleRenderer.cpp
   src/rendering/RegionRenderer.cpp
+  src/rendering/WorldMapRenderer.cpp
   src/rendering/LocationRenderer.cpp
   src/rendering/BattleRenderer.cpp
 )
@@ -63,10 +64,12 @@ add_executable(ashvale_slice
   src/app/main.cpp
   src/app/input/InputTranslator.cpp
   src/app/RegionController.cpp
+  src/app/WorldMapController.cpp
   src/app/LocationController.cpp
   src/app/BattleController.cpp
   src/app/mappers/HudModelMapper.cpp
   src/app/mappers/RegionModelMapper.cpp
+  src/app/mappers/WorldMapModelMapper.cpp
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
   src/app/BattleEventTextFormatter.cpp
@@ -105,6 +108,8 @@ if (BUILD_TESTING)
     src/app/mappers/HudModelMapper.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/RegionModelMapper.cpp
+    src/app/mappers/WorldMapModelMapper.cpp
+    src/app/WorldMapController.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
@@ -144,6 +149,8 @@ if (BUILD_TESTING)
     tests/WorldMapTravelRulesTests.cpp
     tests/WorldMapContentTests.cpp
     tests/WorldMapTravelTests.cpp
+    tests/WorldMapControllerTests.cpp
+    tests/WorldMapEndToEndTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

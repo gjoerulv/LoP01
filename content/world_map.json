@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorldMap",
+  "id": "world_map",
+  "name": { "en": "Ashvale" },
+  "entries": [
+    {
+      "id": "ashvale_heartland",
+      "unlocked": true,
+      "exitNodeIds": ["home_base"],
+      "x": 200,
+      "y": 260
+    },
+    {
+      "id": "riverside_vale",
+      "unlocked": true,
+      "exitNodeIds": ["vale_landing"],
+      "x": 520,
+      "y": 320
+    }
+  ],
+  "adjacency": [
+    ["ashvale_heartland", "riverside_vale"]
+  ]
+}

@@ -4,11 +4,13 @@
 #include <vector>
 
 #include "app/RegionController.h"
+#include "app/WorldMapController.h"
 #include "app/LocationController.h"
 #include "app/BattleController.h"
 #include "app/MusteringInteraction.h"
 #include "app/input/InputTranslator.h"
 #include "app/mappers/RegionModelMapper.h"
+#include "app/mappers/WorldMapModelMapper.h"
 #include "app/mappers/LocationModelMapper.h"
 #include "app/mappers/HudModelMapper.h"
 #include "app/mappers/BattleModelMapper.h"
@@ -23,6 +25,7 @@
 #include "rendering/HudRenderer.h"
 #include "rendering/LocationRenderer.h"
 #include "rendering/RegionRenderer.h"
+#include "rendering/WorldMapRenderer.h"
 #include "rendering/RenderContext.h"
 #include "rendering/TitleRenderer.h"
 
@@ -53,6 +56,7 @@ namespace app {
         [[nodiscard]] std::string ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const;
 
         void UpdateRegionMode(const input::InputState& input);
+        void UpdateWorldMapMode(const input::InputState& input);
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
         // Appends "Victory!" / "Defeat." plus the latched reason to statusMessage_.
@@ -75,6 +79,7 @@ namespace app {
         ashvale::rendering::DebugOverlay debugOverlayRenderer_;
         ashvale::rendering::TitleRenderer titleRenderer_;
         ashvale::rendering::RegionRenderer regionRenderer_;
+        ashvale::rendering::WorldMapRenderer worldMapRenderer_;
         ashvale::rendering::LocationRenderer locationRenderer_;
         ashvale::rendering::BattleRenderer battleRenderer_;
 
@@ -83,12 +88,14 @@ namespace app {
         BattleControllerState battleControllerState_;
         LocationController locationController_;
         RegionController regionController_;
+        WorldMapController worldMapController_;
         MusteringInteraction musteringInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
         mappers::BattleModelMapper battleModelMapper_;
         mappers::LocationModelMapper locationModelMapper_;
         mappers::RegionModelMapper regionModelMapper_;
+        mappers::WorldMapModelMapper worldMapModelMapper_;
 
         BattleEventTextFormatter battleEventTextFormatter_;        
 
@@ -98,6 +105,7 @@ namespace app {
         bool debugOverlayVisible_ = false;
 
         int regionSelectedNodeIndex_ = 0;
+        int worldMapSelectedIndex_ = 0;
         int observedDay_ = -1;
         bool restedThisDay_ = false;
         gameplay::GameMode battleReturnMode_ = gameplay::GameMode::RegionMode;

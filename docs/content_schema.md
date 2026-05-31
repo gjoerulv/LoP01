@@ -403,7 +403,34 @@ A World Map owns:
 - unlock state
 - travel metadata
 
-World Map implementation is future scope. The current codebase is still a single-Region slice.
+### Current authored shape (M15)
+
+Implemented as an optional `content/world_map.json` carrying **inter-region travel metadata only**. Arrival nodes are owned by `regions.json` / `RegionDefinition.arrivalNodeId` (single source of truth) and are not repeated here.
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "WorldMap",
+  "id": "world_map",
+  "name": { "en": "Ashvale" },
+  "entries": [
+    { "id": "ashvale_heartland", "unlocked": true, "exitNodeIds": ["home_base"], "x": 200, "y": 260 },
+    { "id": "riverside_vale", "unlocked": true, "exitNodeIds": ["vale_landing"], "x": 520, "y": 320 }
+  ],
+  "adjacency": [ ["ashvale_heartland", "riverside_vale"] ]
+}
+```
+
+Per entry: `id` (references a Region), `unlocked` (authored start state, seeded into a persisted runtime set), `exitNodeIds` (Region nodes from which the World Map may be opened), and optional `x`/`y` layout hints. `adjacency` is a list of bidirectional region-id pairs.
+
+Rules:
+
+- File is optional. Missing/empty → single-Region scenario with no inter-region travel.
+- Reload-safe: cleared at the top of `ContentRepository::LoadFromDirectory`.
+- Travel costs 1000 Energy (M14 pool), must begin before 11:00, arrives at 11:00 after a day-based duration (BFS region hop count over unlocked adjacency; adjacent = 1 day, `1+N` for `N` intermediates), and drops generic traveling-party units with a warning (heroes persist).
+- Validation is structural (entry/region/exit-node/arrival-node existence + adjacency references); reachability/softlock graph proofs are deferred.
+
+Deferred: event-driven region unlock, per-region world/enemy state, generic origin-storage, and route-quality/terrain travel metadata. These remain design targets in this section but are not yet loaded.
 
 ---
 

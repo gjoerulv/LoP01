@@ -125,7 +125,7 @@ Still incomplete / intentionally deferred:
 - `teamHasItem` / `teamHasArtifact` condition leaves
 - Market / Black Market / Trading Post / Freelancer's Guild item economy
 - HUD / raylib inventory rendering and inventory render-model
-- World Map and cross-Region travel
+- event-driven region unlock, per-region world/enemy state, and generic origin-storage (World Map region-to-region travel itself shipped in M15)
 - Campaign carry-over
 - full shell/menu/character-creation/load/settings flow
 
@@ -136,7 +136,7 @@ Still incomplete / intentionally deferred:
 | # | Issue | Action |
 |---|-------|--------|
 | 1 | The team Energy pool (`docs/core_loop_rules.md` §6) is implemented as of M14: state, daily-starting formula, spend/recover, day-rollover auto-reset, save/load, and `SessionSnapshot`/HUD exposure. The remaining gap is the formula's leader-bonus terms (`Y` leader passive-skill bonus, `Z` leader equipped-item/artifact bonus), which are zero-valued seams pending the skill system and an artifact/item Energy-effect type. | Close the seams when those systems land: a passive-skill Energy bonus (skill system milestone) and an artifact/item `energyBonus` effect (inventory-effects milestone) feed `ComputeDailyStartingEnergy`'s `leaderPassiveEnergyBonus` / `leaderItemEnergyBonus` arguments, which are already wired through at 0. |
-| 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, `RecipeDefinition`, `WorldMapDefinition`, and `CampaignDefinition` are specified in docs but not all have load paths yet. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
+| 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, and `WorldMapDefinition` now have load paths (M13 / M15). `RecipeDefinition` and `CampaignDefinition` remain doc-specified without loaders. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
 | 3 | `docs/game_shell_flow.md` specifies full shell flow. Code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Continue expanding validation only when a phase requires it. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader combat command depth. Current battle code tracks a smaller baseline. | Gap; acceptable until skill/status phases. |
@@ -322,20 +322,25 @@ Deferred from M13 (not part of Phase 5's M13 slice; future milestones):
 
 ### Phase 6 — World Map Layer
 
-**Goal:** Multiple Regions per Scenario; player selects destination Region from World Map screen.
+**Status:** M15-a / M15-b / M15-c complete (minimal slice). Multiple Regions per Scenario with exit-node-gated region-to-region travel on the M14 Energy pool.
 
-Scope:
+**Goal:** Multiple Regions per Scenario; player selects destination Region from a World Map screen opened from an authored Region exit node.
 
-- `WorldMapDefinition`
-- World Map controller/renderer for the existing `WorldMapMode` enum slot
-- unlocked Region visibility
-- Region-to-Region travel legality
-- 1000 Energy one-time travel cost
-- travel must begin before 11:00
-- day-based travel duration
-- arrival at 11:00
-- generics remain in origin Region unless future storage/carry rules allow otherwise
-- `WorldMapTravelTests.cpp`
+Completed foundation (M15):
+
+- `data::WorldMapDefinition` (id, name, region entries with `unlocked` + `exitNodeIds`, adjacency pairs) — travel metadata only; arrival nodes stay in `RegionDefinition.arrivalNodeId`
+- optional `content/world_map.json` loader (reload-safe; absent = single-Region scenario) with structural validation (`WORLDMAP_ENTRY_DUPLICATE`, `WORLDMAP_REGION_UNKNOWN`, `WORLDMAP_ARRIVAL_NODE_MISSING`, `WORLDMAP_ARRIVAL_NODE_UNKNOWN`, `WORLDMAP_EXIT_NODE_UNKNOWN`, `WORLDMAP_ADJACENCY_UNKNOWN_ENTRY`)
+- pure `gameplay/worldmap/WorldMapTravelRules` (`EvaluateWorldMapTravel`, BFS region hop count over unlocked adjacency; reasons: AlreadyHere / DestinationLocked / NoPath / PastDepartureDeadline / InsufficientEnergy; `NotAtExitNode` is session-only)
+- `GameSession` World Map state: `SetWorldMap` (seeds persisted `unlockedRegionIds_`), `SetRegionCatalog`, `IsRegionUnlocked`, `CanOpenWorldMapHere`, `EnterWorldMapMode`, `TravelToRegion` (exit-node gate → `TrySpendEnergy(1000)` → drop generic traveling-party units → advance clock to next-day 11:00 → switch region + `RegionDefinition.arrivalNodeId`), generic-loss count/removal
+- save/load for `unlockedRegionIds` (absent → keep authored seed; no `schemaVersion` bump); current region/arrival node already persisted
+- before-11:00 start gate (`IsBeforeRegionTransferDeadline`) and arrive-at-11:00 (`days*1200 + 300 - minutes` via the M14 `AdvanceClock` chokepoint, which refreshes Energy on the arrival day)
+- `WorldMapController` / `WorldMapModelMapper` / minimal `WorldMapRenderer`; opened on demand (input `M`) from an exit node; opening sequence drops straight into Region mode
+- authored proof content (`riverside_vale` second Region + `content/world_map.json`) and `WorldMapEndToEndTests`
+- `WorldMapTravelRulesTests`, `WorldMapContentTests`, `WorldMapTravelTests`, `WorldMapControllerTests`, `WorldMapEndToEndTests`
+
+Generic-unit handling: M15 implements generic-unit **travel loss/removal with a warning** (generics in the traveling party are dropped on departure; heroes persist). Preserving generics via origin-Region storage is future work.
+
+Deferred from M15 (future milestones): event-driven region unlock (`unlockRegion`), per-region enemy-team / world-state partitioning, generic storage services, reachability/softlock validation graph proofs, start-of-day event firing on arrival, route-quality/terrain Energy modifiers, and World Map UI polish.
 
 ---
 
@@ -370,7 +375,9 @@ M14 built the team Energy pool the World Map travel rule depends on, as three ti
 
 The earlier M13 follow-ups remain deferred and are **not** part of M14: cooking, recipes, food effects, item use (battle `Item` command and field-use), artifact combination, the trader-service item economy, battle spoils/steal, `teamHasItem`/`teamHasArtifact` condition leaves, `Ultimate`-rarity enforcement, and HUD/raylib inventory rendering. The Energy formula's leader passive/item bonus terms are zero-valued seams (see §2 debt #1).
 
-**Next milestone — Phase 6 / World Map.** The 1000-Energy region-to-region travel cost can now consume `GameSession::CanSpendEnergy(1000)` / `TrySpendEnergy(1000)`, and the daily pool is observable through the snapshot/HUD. Phase 6 scope (per §3 Phase 6): `WorldMapDefinition`, World Map controller/renderer for the existing `WorldMapMode` slot, unlocked-Region visibility, Region-to-Region travel legality, the 1000-Energy cost, start-before-11:00 + arrival-at-11:00 timing, day-based travel duration, and the generic-unit-loss warning.
+**Phase 6 / World Map is complete (M15).** The minimal World Map slice shipped: exit-node-gated region-to-region travel consuming `GameSession::TrySpendEnergy(1000)`, before-11:00 / arrive-11:00 timing, day-based duration, generic-unit loss-with-warning, authored `content/world_map.json`, and an end-to-end proof. See §3 Phase 6 for the full feature list and M15 deferrals.
+
+**Next milestone — Phase 7 / Campaign** (or a follow-up that closes M15 deferrals: event-driven region unlock, per-region world state, generic storage). Phase 7 sequences scenarios with authored carry-over (`CampaignDefinition`, `CampaignCarryover`, scenario-transition graph) — the larger system M15 deliberately avoided.
 
 ---
 
@@ -383,7 +390,7 @@ The earlier M13 follow-ups remain deferred and are **not** part of M14: cooking,
 | 3 | Enemy team spawns/moves/occupies on the Region layer; hostile occupation blocks player use; hostile marker is visible; contact battle can clear the exact occupying team; event actions can spawn/remove/change alliances; save/load round-trips enemy-team runtime state. |
 | 4 | If no authored victory condition exists, default victory fires when all hostile enemy teams are defeated/removed/allied; authored victory conditions can end the scenario and suppress default victory; authored defeat conditions can end the scenario; defeat wins over victory; no-outcome states remain playable; Region arrival checks outcome after `regionNodeEntry` events and again after enemy phase before continuing to follow-up transitions; latched outcomes survive save/load. |
 | 5 | Hero equips artifact via `TryEquipArtifact` and the artifact moves from the team's unequipped inventory into the hero slot; equipped-artifact stat bonuses flow into per-battle hero `attack` / `defense` / `magic` / `resistance` at battle construction without mutating persistent `UnitDefinition`; save/load round-trips items, unequipped artifacts, and hero equipment; legacy saves without M13 keys load as empty inventories. (Combine recipe and leader-item Energy bonus criteria are explicitly deferred to a later cooking/combination/Energy milestone.) |
-| 6 | World Map shows Regions; travel costs 1000 Energy; start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day; generics remain in origin Region unless later rules change this. |
+| 6 | World Map (opened from an authored Region exit node) shows unlocked Regions; travel costs 1000 Energy (`TrySpendEnergy`); start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day-based duration; generic traveling-party units are dropped with a warning (heroes persist); current region + unlocked set round-trip through save/load. (Generic origin-storage preservation is deferred.) |
 | 7 | Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. |
 
 ---
@@ -392,8 +399,9 @@ The earlier M13 follow-ups remain deferred and are **not** part of M14: cooking,
 
 Future test suites still needed for upcoming phases:
 
-- `WorldMapTravelTests.cpp` — Phase 6
 - `CampaignCarryoverTests.cpp` — Phase 7
+
+Phase 6 World Map test coverage shipped in M15: `WorldMapTravelRulesTests`, `WorldMapContentTests`, `WorldMapTravelTests`, `WorldMapControllerTests`, `WorldMapEndToEndTests`.
 
 Existing tests already cover the Phase 1-5 foundation, including M12 scenario outcome rules (pure rules, content load/validation, integration hooks, save/load) and M13 inventory + artifact rules (content load/validation with explicit unsupported-effect errors, optional-loader reload safety, stack-cap / consumable-duplicate runtime rules, equip/unequip rules, all four event-action contracts, save/load round-trip + legacy compatibility, effective-stat inspection through `BattleFactory`, and an end-to-end test that loads real `content/` and drives a session through `supply_cart`). Continue using Catch2 and prefer pure-logic tests over rendering or input tests.
 

@@ -216,9 +216,10 @@ void App::AdvanceFrontEndModesIfRequested(
         return;
     }
 
+    // M15-c: WorldMapMode is no longer a front-end splash. Only Title and the
+    // OpeningSequence advance on confirm (OpeningSequence -> RegionMode directly).
     if (snapshot.mode == gameplay::GameMode::Title ||
-        snapshot.mode == gameplay::GameMode::OpeningSequence ||
-        snapshot.mode == gameplay::GameMode::WorldMapMode) {
+        snapshot.mode == gameplay::GameMode::OpeningSequence) {
         session_.AdvanceMode();
     }
 }
@@ -445,6 +446,10 @@ void App::Update() {
         UpdateRegionMode(input);
     }
 
+    if (snapshot.mode == gameplay::GameMode::WorldMapMode) {
+        UpdateWorldMapMode(input);
+    }
+
     if (snapshot.mode == gameplay::GameMode::LocationMode && locationInitialized_) {
         UpdateLocationScene(input, GetFrameTime());
     }
@@ -478,6 +483,16 @@ void App::UpdateRegionMode(const input::InputState& input) {
     if (session_.IsScenarioEnded()) {
         return;
     }
+
+    // M15-c: open the World Map only from an authored exit node on the Region
+    // layer. The World Map screen handles destination selection + travel.
+    if (input.openWorldMap && session_.CanOpenWorldMapHere()) {
+        session_.EnterWorldMapMode();
+        worldMapSelectedIndex_ = 0;
+        statusMessage_ = "World Map: choose a destination Region";
+        return;
+    }
+
     const auto snapshot = session_.Snapshot();
     const auto nodes = regionModelMapper_.BuildNodes(content_, snapshot.regionId, session_.ClearedCombatNodeIds());
     if (nodes.empty()) {
@@ -668,6 +683,38 @@ void App::UpdateRegionMode(const input::InputState& input) {
         StartBattleScenario(
             !destination.battleScenarioId.empty() ? destination.battleScenarioId : "debug_intro_battle",
             "Debug battle requested");
+    }
+}
+
+void App::UpdateWorldMapMode(const input::InputState& input) {
+    const auto model = worldMapModelMapper_.Map(content_, session_, worldMapSelectedIndex_);
+    const auto result = worldMapController_.Update(
+        input, static_cast<int>(model.destinations.size()), worldMapSelectedIndex_);
+    worldMapSelectedIndex_ = result.selectedIndex;
+
+    if (result.cancelled) {
+        session_.EnterRegionMode();
+        statusMessage_ = "Returned to Region";
+        return;
+    }
+
+    if (result.travelConfirmed &&
+        worldMapSelectedIndex_ >= 0 &&
+        worldMapSelectedIndex_ < static_cast<int>(model.destinations.size())) {
+        const auto& dest = model.destinations[worldMapSelectedIndex_];
+        const auto travel = session_.TravelToRegion(dest.regionId);
+        if (travel.success) {
+            const auto snapshot = session_.Snapshot();
+            std::string message = "Traveled to " + dest.name +
+                " (" + std::to_string(travel.days) + " day(s)). Arrived " + snapshot.time + ".";
+            if (travel.genericsDropped > 0) {
+                message += " Lost " + std::to_string(travel.genericsDropped) + " generic unit(s).";
+            }
+            statusMessage_ = message;
+            // TravelToRegion leaves the session in RegionMode at the arrival node.
+        } else {
+            statusMessage_ = "Travel to " + dest.name + " unavailable: " + dest.statusText;
+        }
     }
 }
 
@@ -976,7 +1023,11 @@ void App::Draw() const {
         DrawTextEx(font, "Press Enter to proceed to the World Map.", {80.0f, 230.0f}, context.normalFontSize, 1.0f, context.theme.mutedTextColor);
         break;
     }
-    case gameplay::GameMode::WorldMapMode:
+    case gameplay::GameMode::WorldMapMode: {
+        const auto model = worldMapModelMapper_.Map(content_, session_, worldMapSelectedIndex_);
+        worldMapRenderer_.Draw(context, model);
+        break;
+    }
     case gameplay::GameMode::RegionMode: {
         const auto model = regionModelMapper_.Map(
             content_,
