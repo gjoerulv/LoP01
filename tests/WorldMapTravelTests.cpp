@@ -153,6 +153,43 @@ TEST_CASE("WorldMapTravel - insufficient energy is rejected with no mutation") {
     REQUIRE(session.CurrentEnergy() == 900); // unchanged by the failed trip
 }
 
+TEST_CASE("WorldMapTravel - succeeds from WorldMapMode when on an exit node") {
+    // Regression: opening the World Map switches mode to WorldMapMode. Confirming
+    // travel must still succeed (the exit-node gate is mode-flexible: RegionMode
+    // OR WorldMapMode), not fail with NotAtExitNode.
+    auto session = MakeTravelReadySession();
+    session.EnterWorldMapMode();          // still standing on home_exit
+    REQUIRE_FALSE(session.CanOpenWorldMapHere()); // opening gate is RegionMode-only
+
+    const auto result = session.TravelToRegion("riverside_vale");
+    REQUIRE(result.success);
+    REQUIRE(result.days == 1);
+    REQUIRE(session.Snapshot().regionId == "riverside_vale");
+    REQUIRE(session.Snapshot().destinationId == "vale_arrival");
+}
+
+TEST_CASE("WorldMapTravel - WorldMapMode but not on an exit node fails with no mutation") {
+    auto session = MakeTravelReadySession();
+    session.SetDestination("home_arrival"); // not an exit node
+    session.EnterWorldMapMode();
+
+    const auto result = session.TravelToRegion("riverside_vale");
+    REQUIRE_FALSE(result.success);
+    REQUIRE(result.reason == WorldMapTravelBlockReason::NotAtExitNode);
+    REQUIRE(session.Snapshot().regionId == "ashvale_heartland");
+    REQUIRE(session.CurrentEnergy() == 1300);   // not spent
+    REQUIRE(session.OwnedUnitCount("grunt") == 1); // generics not dropped
+}
+
+TEST_CASE("WorldMapTravel - travel is illegal from Location or Battle mode") {
+    auto session = MakeTravelReadySession(); // on home_exit
+    session.EnterBattleMode();
+    REQUIRE_FALSE(session.TravelToRegion("riverside_vale").success);
+    REQUIRE(session.TravelToRegion("riverside_vale").reason
+        == WorldMapTravelBlockReason::NotAtExitNode);
+    REQUIRE(session.Snapshot().regionId == "ashvale_heartland");
+}
+
 TEST_CASE("WorldMapTravel - same region is AlreadyHere") {
     auto session = MakeTravelReadySession();
     const auto result = session.TravelToRegion("ashvale_heartland");

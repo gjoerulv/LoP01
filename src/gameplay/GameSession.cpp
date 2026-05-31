@@ -1772,15 +1772,17 @@ const data::RegionDefinition* GameSession::FindRegionDefinition(const std::strin
     return nullptr;
 }
 
-bool GameSession::CanOpenWorldMapHere() const {
-    if (mode_ != GameMode::RegionMode) {
-        return false;
-    }
+bool GameSession::IsOnWorldMapExitNode() const {
     const auto* entry = worldMap_.FindEntry(regionId_);
     if (entry == nullptr) {
         return false;
     }
     return worldmap::IsWorldMapExitNode(*entry, destinationId_);
+}
+
+bool GameSession::CanOpenWorldMapHere() const {
+    // Opening gate: only from the Region layer, standing on an exit node.
+    return mode_ == GameMode::RegionMode && IsOnWorldMapExitNode();
 }
 
 bool GameSession::IsHeroUnit(const std::string& unitId) const {
@@ -1842,9 +1844,14 @@ GameSession::WorldMapTravelResult GameSession::TravelToRegion(
     const std::string& destinationRegionId) {
     using worldmap::WorldMapTravelBlockReason;
 
-    // Exit-node gate: must be on the Region layer standing on an authored exit
-    // node of the current region. (NotAtExitNode is a session-only reason.)
-    if (!CanOpenWorldMapHere()) {
+    // Exit-node gate: legal from the Region layer OR the World Map screen (which
+    // is itself opened from the exit node), and the current node must still be an
+    // authored exit node. Battle / Location modes are rejected. NotAtExitNode is a
+    // session-only reason; on failure nothing is mutated (no Energy spend, no
+    // generic removal, no time advance, no region change).
+    const bool onTravelableLayer =
+        mode_ == GameMode::RegionMode || mode_ == GameMode::WorldMapMode;
+    if (!onTravelableLayer || !IsOnWorldMapExitNode()) {
         return WorldMapTravelResult{ false, WorldMapTravelBlockReason::NotAtExitNode, 0, 0 };
     }
 

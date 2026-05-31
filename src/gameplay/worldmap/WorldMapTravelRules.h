@@ -61,4 +61,9 @@ struct WorldMapTravelEvaluation {
     const data::WorldMapRegionEntry& entry,
     const std::string& currentNodeId);
 
+// Short player-facing explanation for a block reason (e.g. "Locked",
+// "Not enough Energy"). `None` returns "Travel available". Used for failure
+// messaging at the App/UI layer so the actual TravelToRegion reason is shown.
+[[nodiscard]] std::string DescribeWorldMapTravelBlockReason(WorldMapTravelBlockReason reason);
+
 } // namespace gameplay::worldmap

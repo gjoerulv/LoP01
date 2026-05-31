@@ -157,3 +157,14 @@ TEST_CASE("WorldMapTravelRules - FindRegionHopCount returns -1 when an endpoint 
     REQUIRE(FindRegionHopCount("region_a", "region_c",
         {"region_a", "region_b", "region_c"}, ChainAdjacency()) == 2);
 }
+
+TEST_CASE("WorldMapTravelRules - DescribeWorldMapTravelBlockReason maps every reason") {
+    using R = WorldMapTravelBlockReason;
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::None) == "Travel available");
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::AlreadyHere) == "Already in this region");
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::DestinationLocked) == "Region locked");
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::NoPath) == "No route");
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::PastDepartureDeadline) == "Too late (after 11:00)");
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::InsufficientEnergy) == "Not enough Energy");
+    REQUIRE(DescribeWorldMapTravelBlockReason(R::NotAtExitNode) == "Not at an exit node");
+}

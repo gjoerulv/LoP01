@@ -420,6 +420,11 @@ private:
     [[nodiscard]] int LowestTravelingPartyAgility() const;
 
     [[nodiscard]] const data::RegionDefinition* FindRegionDefinition(const std::string& id) const;
+    // True iff the current node (regardless of mode) is an authored World Map
+    // exit node of the current region's entry. The mode check lives in the
+    // callers: CanOpenWorldMapHere() gates opening from RegionMode; TravelToRegion
+    // additionally accepts WorldMapMode (the screen is opened from the exit node).
+    [[nodiscard]] bool IsOnWorldMapExitNode() const;
     // True for Hero/Leader units (which travel between Regions); false for
     // generics (which are dropped on World Map travel). Uses the unit catalog
     // category, falling back to the leader-capable set when the unit is absent.
