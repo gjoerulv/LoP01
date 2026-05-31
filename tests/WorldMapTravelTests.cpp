@@ -166,6 +166,8 @@ TEST_CASE("WorldMapTravel - succeeds from WorldMapMode when on an exit node") {
     REQUIRE(result.days == 1);
     REQUIRE(session.Snapshot().regionId == "riverside_vale");
     REQUIRE(session.Snapshot().destinationId == "vale_arrival");
+    // Arrival drops back onto the Region layer, not the World Map screen.
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::RegionMode);
 }
 
 TEST_CASE("WorldMapTravel - WorldMapMode but not on an exit node fails with no mutation") {
