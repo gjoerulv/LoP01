@@ -14,6 +14,19 @@ bool IsWorldMapExitNode(
         != entry.exitNodeIds.end();
 }
 
+std::string DescribeWorldMapTravelBlockReason(WorldMapTravelBlockReason reason) {
+    switch (reason) {
+        case WorldMapTravelBlockReason::None:                  return "Travel available";
+        case WorldMapTravelBlockReason::AlreadyHere:           return "Already in this region";
+        case WorldMapTravelBlockReason::DestinationLocked:     return "Region locked";
+        case WorldMapTravelBlockReason::NoPath:                return "No route";
+        case WorldMapTravelBlockReason::PastDepartureDeadline: return "Too late (after 11:00)";
+        case WorldMapTravelBlockReason::InsufficientEnergy:    return "Not enough Energy";
+        case WorldMapTravelBlockReason::NotAtExitNode:         return "Not at an exit node";
+    }
+    return "Travel unavailable";
+}
+
 int FindRegionHopCount(
     const std::string& fromRegionId,
     const std::string& toRegionId,

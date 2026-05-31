@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a post-M13 bounded single-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, deterministic scenario outcome evaluation, and a minimal inventory + artifact-equipping layer (items, unequipped artifacts, per-hero equipment slots, and equipped-artifact stat bonuses applied at battle setup).
+The current codebase is a post-M15 bounded multi-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, deterministic scenario outcome evaluation, a minimal inventory + artifact-equipping layer (items, unequipped artifacts, per-hero equipment slots, and equipped-artifact stat bonuses applied at battle setup), the team Energy pool (daily-starting formula, spend/recover, day-rollover reset), and a minimal World Map layer (exit-node-gated region-to-region travel on the Energy pool, with generic-unit loss-with-warning).
 
 The roadmap works from foundations outward:
 
@@ -364,20 +364,20 @@ Full character creation, load UI, autosave slots, and settings remain out of sco
 
 ## 4. Current Next Milestone
 
-### Next: Phase 6 / World Map
+### Next: Phase 7 / Campaign (or M15 follow-ups)
 
-Latest completed milestone: **M14 — Team Energy Pool foundation (pre-Phase-6 setup)**.
+Latest completed milestone: **M15 — Phase 6 / World Map (minimal slice)**.
 
-M14 built the team Energy pool the World Map travel rule depends on, as three tight slices:
-- **M14-a** — Energy state + daily-starting formula (`gameplay/EnergyRules.h`) + `SetUnitCatalog` + `ApplyDailyStartingEnergy` + save/load with legacy-save recompute.
-- **M14-b** — `CanSpendEnergy`/`TrySpendEnergy`/`RecoverEnergy` primitives (negative spend fails loudly; recover clamps to daily max) + day-boundary auto-reset via a single `AdvanceClock` chokepoint that all three time-advance paths route through.
-- **M14-c** — `SessionSnapshot` + HUD-model Energy exposure + these docs.
+M15 shipped the minimal World Map layer across three tight slices:
+- **M15-a** — `WorldMapDefinition` + optional `content/world_map.json` loader with structural validation + the pure `WorldMapTravelRules` (BFS region hop count over unlocked adjacency).
+- **M15-b** — `GameSession` World Map state (`SetWorldMap` seeding the persisted `unlockedRegionIds_`, `SetRegionCatalog`, `CanOpenWorldMapHere`, `TravelToRegion`), the 1000-Energy spend via the M14 pool, generic-unit loss-with-warning, arrival timing via the `AdvanceClock` chokepoint, and `unlockedRegionIds` save/load.
+- **M15-c** — exit-node-gated `WorldMapMode` (input `M`), `WorldMapController` / `WorldMapModelMapper` / minimal `WorldMapRenderer`, opening sequence dropping straight into Region mode, authored proof content (`riverside_vale` + `world_map.json`), and an end-to-end test.
 
-The earlier M13 follow-ups remain deferred and are **not** part of M14: cooking, recipes, food effects, item use (battle `Item` command and field-use), artifact combination, the trader-service item economy, battle spoils/steal, `teamHasItem`/`teamHasArtifact` condition leaves, `Ultimate`-rarity enforcement, and HUD/raylib inventory rendering. The Energy formula's leader passive/item bonus terms are zero-valued seams (see §2 debt #1).
+See §3 Phase 6 for the full feature list, acceptance, and M15 deferrals.
 
-**Phase 6 / World Map is complete (M15).** The minimal World Map slice shipped: exit-node-gated region-to-region travel consuming `GameSession::TrySpendEnergy(1000)`, before-11:00 / arrive-11:00 timing, day-based duration, generic-unit loss-with-warning, authored `content/world_map.json`, and an end-to-end proof. See §3 Phase 6 for the full feature list and M15 deferrals.
+**Next milestone — Phase 7 / Campaign**, or a smaller follow-up that closes M15 deferrals first (event-driven region unlock via an `unlockRegion` event action, per-region enemy/world state, generic origin-storage, or World Map UI polish). Phase 7 sequences scenarios with authored carry-over (`CampaignDefinition`, `CampaignCarryover`, scenario-transition graph) — the larger system M15 deliberately avoided.
 
-**Next milestone — Phase 7 / Campaign** (or a follow-up that closes M15 deferrals: event-driven region unlock, per-region world state, generic storage). Phase 7 sequences scenarios with authored carry-over (`CampaignDefinition`, `CampaignCarryover`, scenario-transition graph) — the larger system M15 deliberately avoided.
+The earlier M13 follow-ups also remain deferred: cooking, recipes, food effects, item use (battle `Item` command and field-use), artifact combination, the trader-service item economy, battle spoils/steal, `teamHasItem`/`teamHasArtifact` condition leaves, `Ultimate`-rarity enforcement, and HUD/raylib inventory rendering. The Energy formula's leader passive/item bonus terms remain zero-valued seams (see §2 debt #1).
 
 ---
 

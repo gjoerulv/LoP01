@@ -713,7 +713,9 @@ void App::UpdateWorldMapMode(const input::InputState& input) {
             statusMessage_ = message;
             // TravelToRegion leaves the session in RegionMode at the arrival node.
         } else {
-            statusMessage_ = "Travel to " + dest.name + " unavailable: " + dest.statusText;
+            // Report the actual commit-time reason, not the precomputed preview.
+            statusMessage_ = "Travel to " + dest.name + " unavailable: " +
+                gameplay::worldmap::DescribeWorldMapTravelBlockReason(travel.reason);
         }
     }
 }
@@ -1020,7 +1022,7 @@ void App::Draw() const {
         const Font font = ashvale::rendering::ResolveUiFont(context);
         DrawTextEx(font, "Opening Sequence", {80.0f, 120.0f}, context.titleFontSize, 1.0f, context.theme.highlightTextColor);
         DrawTextEx(font, "You wake in an abandoned town with no memory.", {80.0f, 190.0f}, context.normalFontSize, 1.0f, context.theme.textColor);
-        DrawTextEx(font, "Press Enter to proceed to the World Map.", {80.0f, 230.0f}, context.normalFontSize, 1.0f, context.theme.mutedTextColor);
+        DrawTextEx(font, "Press Enter to enter the Region. (Press M at an exit node to open the World Map.)", {80.0f, 230.0f}, context.normalFontSize, 1.0f, context.theme.mutedTextColor);
         break;
     }
     case gameplay::GameMode::WorldMapMode: {
