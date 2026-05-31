@@ -8,6 +8,7 @@
 #include "app/mappers/WorldMapModelMapper.h"
 #include "data/ContentRepository.h"
 #include "gameplay/GameSession.h"
+#include "gameplay/region/RegionTravelRules.h"
 #include "gameplay/worldmap/WorldMapTravelRules.h"
 
 #ifndef LOP01_PROJECT_ROOT
@@ -93,6 +94,9 @@ TEST_CASE("WorldMap end-to-end - traveling to riverside_vale arrives next-day 11
     auto session = MakeRealContentSession(repo);
     REQUIRE(session.CurrentEnergy() == 1800); // lowest agility 8 (hero) vs 10 (guard)
 
+    // Open the World Map (as the App does) so travel commits from WorldMapMode.
+    session.EnterWorldMapMode();
+
     const auto result = session.TravelToRegion("riverside_vale");
     REQUIRE(result.success);
     REQUIRE(result.days == 1);
@@ -103,6 +107,8 @@ TEST_CASE("WorldMap end-to-end - traveling to riverside_vale arrives next-day 11
     REQUIRE(snap.destinationId == "vale_landing"); // RegionDefinition.arrivalNodeId
     REQUIRE(snap.day == 2);
     REQUIRE(snap.time == "11:00");
+    // Arrival returns to the Region layer, not the World Map screen.
+    REQUIRE(snap.mode == gameplay::GameMode::RegionMode);
 
     // Generic dropped, hero retained; arrival-day Energy reset to hero-only max.
     REQUIRE(session.OwnedUnitCount("unit_guard") == 0);
@@ -111,4 +117,16 @@ TEST_CASE("WorldMap end-to-end - traveling to riverside_vale arrives next-day 11
 
     // M12 scenario outcome is unaffected by World Map travel.
     REQUIRE_FALSE(session.IsScenarioEnded());
+
+    // Normal in-Region travel works in the destination Region: from the arrival
+    // node (vale_landing) the player can reach vale_market.
+    const auto* vale = repo.FindRegionById("riverside_vale");
+    REQUIRE(vale != nullptr);
+    const auto regionTravel = gameplay::region::EvaluateTravel(
+        snap.destinationId,            // vale_landing
+        "vale_market",
+        /*destinationTravelAvailable=*/true,
+        snap.minutesIntoSliceDay,
+        vale->links);
+    REQUIRE(regionTravel.legal);
 }

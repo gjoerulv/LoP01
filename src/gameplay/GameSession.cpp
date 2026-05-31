@@ -1886,6 +1886,11 @@ GameSession::WorldMapTravelResult GameSession::TravelToRegion(
 
     regionId_ = destinationRegionId;
     destinationId_ = destRegion->arrivalNodeId;
+    // Arrival drops back onto the Region layer at the destination's arrival node.
+    // Travel can be committed from WorldMapMode, so the mode must be reset
+    // explicitly here; otherwise the player would remain on the World Map screen
+    // at 11:00 with every destination unavailable.
+    mode_ = GameMode::RegionMode;
 
     return WorldMapTravelResult{ true, WorldMapTravelBlockReason::None, eval.days, genericsDropped };
 }
