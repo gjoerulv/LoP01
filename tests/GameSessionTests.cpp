@@ -28,10 +28,18 @@ TEST_CASE("GameSession advance mode keeps front-end flow order") {
     session.AdvanceMode();
     REQUIRE(session.Snapshot().mode == gameplay::GameMode::OpeningSequence);
 
+    // M15-c: the opening sequence drops straight into Region mode. The World Map
+    // is no longer a front-end splash; it is opened on demand from an exit node.
     session.AdvanceMode();
-    REQUIRE(session.Snapshot().mode == gameplay::GameMode::WorldMapMode);
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::RegionMode);
+}
 
-    session.AdvanceMode();
+TEST_CASE("GameSession EnterWorldMapMode switches to the World Map screen") {
+    gameplay::GameSession session;
+    session.EnterRegionMode();
+    session.EnterWorldMapMode();
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::WorldMapMode);
+    session.EnterRegionMode();
     REQUIRE(session.Snapshot().mode == gameplay::GameMode::RegionMode);
 }
 

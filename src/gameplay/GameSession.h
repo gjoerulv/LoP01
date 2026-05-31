@@ -149,6 +149,7 @@ public:
 
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
+    void EnterWorldMapMode();
     void ExitLocationMode();
     void EnterBattleMode();
     [[nodiscard]] bool IsInLocationMode() const;
@@ -211,6 +212,9 @@ public:
     // True iff on the Region layer and the current node is an authored exit node
     // of the current region's World Map entry.
     [[nodiscard]] bool CanOpenWorldMapHere() const;
+    // Count of generic units in the traveling party (active + reserve) that would
+    // be lost on a World Map departure. Read-only; mirrors the removal helper.
+    [[nodiscard]] int GenericTravelingPartyUnitCount() const;
 
     struct WorldMapTravelResult {
         bool success = false;
