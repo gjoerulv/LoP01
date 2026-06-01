@@ -442,6 +442,11 @@ Warnings or errors depending on fallback:
 
 If a fallback exists, prefer warning. If no fallback exists and progression can break, prefer error.
 
+### Owned-service economy validation
+When owned mine/resource-service schemas are implemented, validation should ensure base output resources are valid and that any passive-skill production modifier references a valid resource, service/resource category, and passive skill. For production bonuses, validation should preserve the runtime rule that only the strongest applicable stationed passive counts per owned service instance and output resource.
+
+When trader ownership curves are implemented, validation should ensure ownership tiers are defined only for supported trader service types, do not exceed the tier-8 cap, and contain valid prices/exchange matrices. Trading Post resource-exchange matrices must reference only valid resources and must not define self-exchange. Omitted curves should resolve to legal defaults rather than invalid partial data.
+
 ---
 
 ## 14. Event validation

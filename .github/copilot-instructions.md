@@ -108,7 +108,7 @@ Read these before planning or making broad changes:
 12. `docs/terminology_map.md`
 13. milestone-specific doc/prompt if the task is tied to one
 14. `docs/technical_direction.md`
-15. `docs/content_scope_v0.md` as a scope cap, not as a checklist of implemented behavior
+15. `docs/content_scope_v1.md` as a scope cap, not as a checklist of implemented behavior
 
 If those sources disagree:
 
@@ -131,11 +131,11 @@ Use this order when there is ambiguity:
 8. `docs/presentation_game_feel.md`
 9. `docs/core_loop_rules.md` and `docs/combat_rules.md`
 10. `docs/technical_direction.md`
-11. `docs/content_scope_v0.md` as a bounded-scope cap only
+11. `docs/content_scope_v1.md` as a bounded-scope cap only
 12. `docs/terminology_map.md` as the source for terminology conflicts
 13. archived docs/prompts as historical context only
 
-`docs/content_scope_v0.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
+`docs/content_scope_v1.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
 
 ## Current baseline
 

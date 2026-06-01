@@ -340,7 +340,7 @@ public:
     // Evaluates outcome against current session state. If non-Ongoing and the
     // session has not yet latched, latches the outcome (and stays latched
     // through save/load). Called automatically at the boundaries documented in
-    // implementation_roadmap.md §4: end of FireMatchingEvents (StartOfDay /
+    // implementation_roadmap.md.00.archived end of FireMatchingEvents (StartOfDay /
     // RegionNodeEntry), end of ProcessEnemyPhase, and end of ClearEnemyTeamByColor.
     // Safe to call repeatedly; a latched outcome never changes.
     const std::optional<scenario::ScenarioOutcome>& CheckAndLatchOutcome();

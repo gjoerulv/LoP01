@@ -43,8 +43,8 @@ A **Scenario** is the top-level authored play unit.
 The **World Map** is the scenario-level Region selection layer.
 
 - Every Scenario has a World Map, even if it contains only one Region.
-- The World Map may always be opened outside battle while inside a Scenario.
-- World Map travel may be inspected at any time, but the travel action is disabled when illegal.
+- World Map travel is opened from authored Region exit nodes while on the Region layer.
+- The travel action is disabled when illegal; future inspection-only access must be implemented explicitly.
 
 ### Region
 A **Region** is the main in-scenario travel space.
@@ -989,7 +989,9 @@ Mines are resource-generating nodes.
 - They may be free to capture
 - They may be guarded by neutral hostile encounters
 - A team may station units there
-- Stationed units affect defense only, not production
+- Stationed units affect defense
+- Stationed units may affect production only through explicit passive skills
+- Production bonuses from stationed-unit passive skills do not stack. For each owned mine/service instance and each output resource, only the strongest applicable passive bonus from the owning team's stationed units applies
 - They do not block movement by themselves
 - For now, mines are the main baseline example of an **owned resource service**
 
@@ -1273,6 +1275,17 @@ If nothing was exchanged:
 - no time passes
 
 Trader services do **not** cost Energy directly.
+
+### Trader ownership benefits
+Trading Posts, Markets, Freelancer's Guilds, and Black Markets may be owned when authored as owned Services.
+
+Ownership benefits are counted per trader-service type. Owned Trading Posts improve Trading Post exchange/resource rates only. Owned Markets improve Market prices only. Owned Black Markets improve Black Market prices only. Owned Freelancer's Guilds improve Freelancer's Guild rates only.
+
+Each owned Service of the same type contributes one ownership tier for its owning team, capped at **8** owned Services. Benefits apply only when that team uses a Service of the same type that it owns. Allied ownership does not count unless a later rule explicitly says so.
+
+Ownership-tier curves are service-type-specific and capped by authored settings. If a curve is not authored, the service type uses its default curve. Trading Post resource exchange may use an authored matrix per ownership tier.
+
+Ownership never bypasses ordinary availability rules: stock, destroyed/restored state, hostile occupation, eligibility, and other blockers still apply.
 
 ### Trading Post
 Resource sending is part of the Trading Post role, not a separate trader-service type.

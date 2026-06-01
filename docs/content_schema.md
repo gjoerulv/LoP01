@@ -603,7 +603,12 @@ Conceptual shape:
 }
 ```
 
-`settings` is a type-specific payload. Service state in content is initial state. Runtime state belongs in save data.
+`settings` is a type-specific payload.
+
+### Owned service economy shape
+Owned Services may include ownership and stationed-guard state where the service type supports it. Mine/resource-service definitions should author their base daily outputs; stationed-unit production bonuses come from unit passive skills and are resolved at runtime as the strongest applicable bonus per owned service instance and output resource.
+
+Trader Services may author ownership-tier curves for prices or exchange rates. Curves are per service type, capped at 8 owned Services for the owning team. Trading Post exchange may use an authored matrix per tier. Legal default curves should exist for every trader service type, so omitted curves load to safe defaults. Service state in content is initial state. Runtime state belongs in save data.
 
 ---
 
