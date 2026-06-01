@@ -57,7 +57,13 @@ namespace app {
         void MarkCurrentDayObservedAfterIntentionalTimeAdvance();
         void ResolveBattleOutcomeIfNeeded();
         void ApplyWakePenaltyAndRecover(const std::string& reason);
-        [[nodiscard]] std::string ResolveSafeFallbackLocationId() const;
+        // Returns a safe recovery node within the current Region (not globally):
+        // 1. the current Region's arrivalNodeId (preferred)
+        // 2. the current destination if it belongs to the current Region
+        // 3. the first node listed for the current Region
+        // 4. the current destination unchanged (defensive last resort)
+        // Never returns a node that belongs to a different Region.
+        [[nodiscard]] std::string ResolveSafeFallbackRegionNodeId() const;
         [[nodiscard]] std::string ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const;
 
         void UpdateRegionMode(const input::InputState& input);

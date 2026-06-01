@@ -281,21 +281,44 @@ void App::MarkCurrentDayObservedAfterIntentionalTimeAdvance() {
     restedThisDay_ = false;
 }
 
-std::string App::ResolveSafeFallbackLocationId() const {
-    if (content_.FindLocationById("home_base") != nullptr) {
-        return "home_base";
+std::string App::ResolveSafeFallbackRegionNodeId() const {
+    const gameplay::SessionSnapshot snapshot = session_.Snapshot();
+    const auto* region = content_.FindRegionById(snapshot.regionId);
+
+    // Helper: true iff `nodeId` is a node in `region`.
+    auto nodeExistsInRegion = [&](const data::RegionDefinition* r, const std::string& nodeId) {
+        if (r == nullptr || nodeId.empty()) {
+            return false;
+        }
+        for (const auto& node : r->nodes) {
+            if (node.locationId == nodeId) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // 1. Prefer the current Region's authored arrival node — this is the
+    //    protected entry point and the natural post-travel recovery location.
+    if (region != nullptr &&
+        !region->arrivalNodeId.empty() &&
+        nodeExistsInRegion(region, region->arrivalNodeId)) {
+        return region->arrivalNodeId;
     }
 
-    if (content_.FindLocationById("old_inn") != nullptr) {
-        return "old_inn";
+    // 2. Fall back to the current destination if it belongs to the current Region
+    //    (preserves position when no arrival node is configured).
+    if (nodeExistsInRegion(region, snapshot.destinationId)) {
+        return snapshot.destinationId;
     }
 
-    const auto& locations = content_.Locations();
-    if (!locations.empty()) {
-        return locations.front().id;
+    // 3. First node of the current Region as a last-resort known-safe position.
+    if (region != nullptr && !region->nodes.empty()) {
+        return region->nodes.front().locationId;
     }
 
-    return session_.Snapshot().destinationId;
+    // 4. Defensive fallback: keep whatever the current destination is.
+    return snapshot.destinationId;
 }
 
 void App::ApplyWakePenaltyAndRecover(const std::string& reason) {
@@ -303,7 +326,7 @@ void App::ApplyWakePenaltyAndRecover(const std::string& reason) {
     pendingHostileContactNodeId_.clear();
     pendingHostileContactTeamColor_.clear();
 
-    const std::string fallbackLocationId = ResolveSafeFallbackLocationId();
+    const std::string fallbackLocationId = ResolveSafeFallbackRegionNodeId();
     session_.SetDestination(fallbackLocationId);
     session_.EnterRegionMode();
     ResetTransientModeState();
