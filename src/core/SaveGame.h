@@ -115,6 +115,15 @@ struct SaveData {
     // clearing unlock state. Every world map keeps the start region unlocked, so
     // a non-empty vector unambiguously marks an M15+ save.
     std::vector<std::string> unlockedRegionIds;
+
+    // M16-b campaign progression. All default to empty (legacy saves load as no
+    // campaign). campaignState is "" (none), "in_progress", "completed", or
+    // "failed". No schemaVersion bump — additive optional fields.
+    std::string campaignId;
+    std::string currentScenarioId;
+    std::vector<std::string> completedScenarioIds;
+    std::vector<std::string> campaignFlags;
+    std::string campaignState;
 };
 
 class SaveGameRepository {

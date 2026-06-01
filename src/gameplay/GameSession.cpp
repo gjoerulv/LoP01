@@ -1,5 +1,6 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/EnergyRules.h"
+#include "gameplay/campaign/CampaignProgressionRules.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
 #include "gameplay/region/RegionTravelRules.h"
@@ -516,6 +517,7 @@ std::vector<events::ActionResult> GameSession::NotifyRegionNodeEntry(const std::
 }
 
 void GameSession::InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions) {
+    questDefinitionSeed_ = questDefinitions;   // M16-b: kept for scenario-transition reset
     questState_.Initialize(questDefinitions);
 }
 
@@ -1016,7 +1018,10 @@ SessionSnapshot GameSession::Snapshot() const {
         regionId_,
         destinationId_,
         currentEnergy_,
-        dailyMaxEnergy_
+        dailyMaxEnergy_,
+        campaignId_,
+        currentScenarioId_,
+        campaignState_
     };
 }
 
@@ -1108,7 +1113,13 @@ core::SaveData GameSession::ToSaveData() const {
         currentEnergy_,
         dailyMaxEnergy_,
         // M15-b World Map unlocked-region set.
-        std::vector<std::string>(unlockedRegionIds_.begin(), unlockedRegionIds_.end())
+        std::vector<std::string>(unlockedRegionIds_.begin(), unlockedRegionIds_.end()),
+        // M16-b campaign progression.
+        campaignId_,
+        currentScenarioId_,
+        completedScenarioIds_,
+        std::vector<std::string>(campaignFlags_.begin(), campaignFlags_.end()),
+        CampaignStateToString(campaignState_)
     };
 }
 
@@ -1313,6 +1324,20 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     if (!saveData.unlockedRegionIds.empty()) {
         unlockedRegionIds_ = std::set<std::string>(
             saveData.unlockedRegionIds.begin(), saveData.unlockedRegionIds.end());
+    }
+
+    // M16-b: restore campaign progression. Absent/empty fields (legacy saves)
+    // load as no campaign. The active outcome definition is re-selected from the
+    // restored current scenario (inline if authored, else the global fallback)
+    // so a loaded campaign keeps evaluating the right win/loss conditions.
+    campaignId_ = saveData.campaignId;
+    currentScenarioId_ = saveData.currentScenarioId;
+    completedScenarioIds_ = saveData.completedScenarioIds;
+    campaignFlags_ = std::set<std::string>(
+        saveData.campaignFlags.begin(), saveData.campaignFlags.end());
+    campaignState_ = CampaignStateFromString(saveData.campaignState);
+    if (const data::ScenarioDefinition* scenario = FindScenarioDefinition(currentScenarioId_)) {
+        SelectActiveOutcomeForScenario(*scenario);
     }
 
     MarkRosterProjectionDirty();
@@ -1578,6 +1603,7 @@ const std::vector<std::string> GameSession::kTeamColorOrder =
 
 void GameSession::SetEnemyTeams(std::vector<EnemyTeamState> teams) {
     enemyTeams_ = std::move(teams);
+    enemyTeamSeed_ = enemyTeams_;   // M16-b: authored seed for scenario-transition reset
 }
 
 const std::vector<EnemyTeamState>& GameSession::EnemyTeams() const {
@@ -1683,7 +1709,15 @@ const std::string& GameSession::PlayerColor() const {
 }
 
 void GameSession::SetScenarioOutcomeDefinition(data::ScenarioOutcomeDefinition definition) {
-    scenarioOutcomeDefinition_ = std::move(definition);
+    // Standalone / no-campaign play (and the global fallback for campaigns):
+    // populate both. A campaign scenario start may later re-select the active
+    // definition via SelectActiveOutcomeForScenario.
+    globalScenarioOutcomeDefinition_ = definition;
+    activeScenarioOutcomeDefinition_ = std::move(definition);
+}
+
+const data::ScenarioOutcomeDefinition& GameSession::ActiveScenarioOutcomeDefinition() const {
+    return activeScenarioOutcomeDefinition_;
 }
 
 const std::optional<scenario::ScenarioOutcome>& GameSession::CheckAndLatchOutcome() {
@@ -1704,7 +1738,7 @@ const std::optional<scenario::ScenarioOutcome>& GameSession::CheckAndLatchOutcom
     ctx.enemyTeams = &enemyTeams_;
     ctx.conditionContext = &condCtx;
 
-    const auto outcome = scenario::EvaluateScenarioOutcome(ctx, scenarioOutcomeDefinition_);
+    const auto outcome = scenario::EvaluateScenarioOutcome(ctx, activeScenarioOutcomeDefinition_);
     if (outcome.state != scenario::ScenarioOutcomeState::Ongoing) {
         latchedOutcome_ = outcome;
     }
@@ -1718,6 +1752,299 @@ const std::optional<scenario::ScenarioOutcome>& GameSession::Outcome() const {
 bool GameSession::IsScenarioEnded() const {
     return latchedOutcome_.has_value()
         && latchedOutcome_->state != scenario::ScenarioOutcomeState::Ongoing;
+}
+
+// ---------------------------------------------------------------------------
+// M16-b — Campaign progression.
+// ---------------------------------------------------------------------------
+
+void GameSession::SetScenarioCatalog(std::vector<data::ScenarioDefinition> catalog) {
+    scenarioCatalog_ = std::move(catalog);
+    scenarioIndexById_.clear();
+    for (std::size_t i = 0; i < scenarioCatalog_.size(); ++i) {
+        scenarioIndexById_[scenarioCatalog_[i].id] = i;
+    }
+}
+
+void GameSession::SetCampaignCatalog(std::vector<data::CampaignDefinition> catalog) {
+    campaignCatalog_ = std::move(catalog);
+    campaignIndexById_.clear();
+    for (std::size_t i = 0; i < campaignCatalog_.size(); ++i) {
+        campaignIndexById_[campaignCatalog_[i].id] = i;
+    }
+}
+
+const std::vector<data::CampaignDefinition>& GameSession::CampaignCatalog() const {
+    return campaignCatalog_;
+}
+
+const data::ScenarioDefinition* GameSession::FindScenarioDefinition(const std::string& id) const {
+    const auto it = scenarioIndexById_.find(id);
+    return it == scenarioIndexById_.end() ? nullptr : &scenarioCatalog_[it->second];
+}
+
+const data::CampaignDefinition* GameSession::FindCampaignDefinition(const std::string& id) const {
+    const auto it = campaignIndexById_.find(id);
+    return it == campaignIndexById_.end() ? nullptr : &campaignCatalog_[it->second];
+}
+
+std::string GameSession::PlayerHeroUnitId() const {
+    for (const auto& unit : unitCatalog_) {
+        if (unit.isPlayerCharacter) {
+            return unit.id;
+        }
+    }
+    return {};
+}
+
+std::set<std::string> GameSession::ValidUnitIdSet() const {
+    std::set<std::string> ids;
+    for (const auto& unit : unitCatalog_) {
+        ids.insert(unit.id);
+    }
+    return ids;
+}
+
+campaign::CampaignCarrySet GameSession::CaptureCarrySet() const {
+    campaign::CampaignCarrySet s;
+    s.gold = gold_;
+    for (const auto& stack : rosterStacks_) {
+        s.rosterStacks.push_back({stack.stackId, stack.unitId, stack.quantity});
+    }
+    s.activeSlotStackIds = activeSlotStackIds_;
+    s.reserveSlotStackIds = reserveSlotStackIds_;
+    for (const auto& item : items_) {
+        s.items.push_back({item.itemId, item.quantity});
+    }
+    for (const auto& artifact : artifacts_) {
+        s.artifacts.push_back({artifact.artifactId, artifact.quantity});
+    }
+    for (const auto& [heroId, eq] : heroEquipment_) {
+        s.heroEquipment.push_back({heroId, eq.attackArtifactId, eq.defenseArtifactId,
+            eq.misc1ArtifactId, eq.misc2ArtifactId, eq.misc3ArtifactId});
+    }
+    s.storyFlags = storyFlags_;
+    return s;
+}
+
+void GameSession::ApplyCarrySet(const campaign::CampaignCarrySet& set) {
+    gold_ = set.gold;
+    rosterStacks_.clear();
+    for (const auto& stack : set.rosterStacks) {
+        rosterStacks_.push_back({stack.stackId, stack.unitId, stack.quantity});
+    }
+    // Slot vectors keep their fixed sizes through the carry filter; guard anyway.
+    activeSlotStackIds_ = set.activeSlotStackIds;
+    reserveSlotStackIds_ = set.reserveSlotStackIds;
+    activeSlotStackIds_.resize(kActiveSlotCount, "");
+    reserveSlotStackIds_.resize(kReserveSlotCount, "");
+
+    items_.clear();
+    for (const auto& item : set.items) {
+        items_.push_back({item.itemId, item.quantity});
+    }
+    artifacts_.clear();
+    for (const auto& artifact : set.artifacts) {
+        artifacts_.push_back({artifact.artifactId, artifact.quantity});
+    }
+    heroEquipment_.clear();
+    for (const auto& eq : set.heroEquipment) {
+        HeroEquipmentState state;
+        state.attackArtifactId  = eq.attackArtifactId;
+        state.defenseArtifactId = eq.defenseArtifactId;
+        state.misc1ArtifactId   = eq.misc1ArtifactId;
+        state.misc2ArtifactId   = eq.misc2ArtifactId;
+        state.misc3ArtifactId   = eq.misc3ArtifactId;
+        heroEquipment_[eq.heroId] = std::move(state);
+    }
+    // Carried scenario story flags are added on top of the persistent campaign
+    // flags already re-seeded into storyFlags_ by TransitionToScenario.
+    for (const auto& flag : set.storyFlags) {
+        storyFlags_.insert(flag);
+    }
+    MarkRosterProjectionDirty();
+}
+
+void GameSession::ReseedWorldMapUnlock() {
+    unlockedRegionIds_.clear();
+    for (const auto& entry : worldMap_.entries) {
+        if (entry.unlocked) {
+            unlockedRegionIds_.insert(entry.id);
+        }
+    }
+}
+
+void GameSession::SelectActiveOutcomeForScenario(const data::ScenarioDefinition& scenario) {
+    if (scenario.hasInlineOutcome) {
+        data::ScenarioOutcomeDefinition inlineDef;
+        inlineDef.victoryConditions = scenario.victoryConditions;
+        inlineDef.defeatConditions  = scenario.defeatConditions;
+        activeScenarioOutcomeDefinition_ = std::move(inlineDef);
+    } else {
+        activeScenarioOutcomeDefinition_ = globalScenarioOutcomeDefinition_;
+    }
+}
+
+void GameSession::TransitionToScenario(const std::string& scenarioId,
+                                       std::optional<campaign::CampaignCarrySet> carry) {
+    const data::ScenarioDefinition* scenario = FindScenarioDefinition(scenarioId);
+    if (scenario == nullptr) {
+        return;   // validated content should never hit this; mutate nothing.
+    }
+
+    const data::CampaignDefinition* campaign = FindCampaignDefinition(campaignId_);
+
+    // Step 3: record the completed old scenario, only on a real victory-advance.
+    if (carry.has_value() && !currentScenarioId_.empty() &&
+        std::find(completedScenarioIds_.begin(), completedScenarioIds_.end(),
+                  currentScenarioId_) == completedScenarioIds_.end()) {
+        completedScenarioIds_.push_back(currentScenarioId_);
+    }
+
+    // Step 4: reset scenario-local state. Promote any declared campaign flags
+    // currently set into the persistent campaign-flag set BEFORE clearing story
+    // flags. Roster is NOT reset here (no scenario-default roster in M16).
+    if (campaign != nullptr) {
+        for (const auto& declared : campaign->campaignFlags) {
+            if (storyFlags_.count(declared) > 0) {
+                campaignFlags_.insert(declared);
+            }
+        }
+    }
+    latchedOutcome_.reset();
+    storyFlags_.clear();
+    firedEventIds_.clear();
+    enemyTeams_ = enemyTeamSeed_;
+    nodeWorldState_ = world::NodeWorldState{};
+    questState_.Initialize(questDefinitionSeed_);
+    recruitServiceStates_.clear();
+    dailyServiceStates_.clear();
+
+    // Step 5 + 6: advance to the next scenario and set its start region/node.
+    currentScenarioId_ = scenarioId;
+    regionId_ = scenario->startRegionId;
+    if (!scenario->startNodeId.empty()) {
+        destinationId_ = scenario->startNodeId;
+    } else if (const data::RegionDefinition* region = FindRegionDefinition(scenario->startRegionId)) {
+        destinationId_ = region->arrivalNodeId;
+    } else {
+        destinationId_ = "";
+    }
+
+    // Step 7: seed scenario defaults (gold, active outcome, world-map unlock) and
+    // re-seed persistent campaign flags so conditions still see them.
+    gold_ = scenario->startGold.value_or(kDefaultStartGold);
+    SelectActiveOutcomeForScenario(*scenario);
+    ReseedWorldMapUnlock();
+    for (const auto& flag : campaignFlags_) {
+        storyFlags_.insert(flag);
+    }
+
+    // Step 8: apply carry-over (transition only). Overwrites the relevant defaults.
+    if (carry.has_value()) {
+        ApplyCarrySet(*carry);
+    }
+
+    // Step 9: recompute Energy LAST, after the final roster is settled.
+    ApplyDailyStartingEnergy();
+
+    // Step 10: clear the latch for the new scenario (idempotent with step 4).
+    latchedOutcome_.reset();
+
+    // Step 11: enter Region mode.
+    mode_ = GameMode::RegionMode;
+
+    MarkRosterProjectionDirty();
+}
+
+void GameSession::StartCampaign(const std::string& campaignId) {
+    const data::CampaignDefinition* campaign = FindCampaignDefinition(campaignId);
+    if (campaign == nullptr) {
+        return;
+    }
+    campaignId_ = campaignId;
+    campaignState_ = CampaignState::InProgress;
+    completedScenarioIds_.clear();
+    campaignFlags_.clear();
+    currentScenarioId_.clear();   // so the initial start records no completion
+    // Starts from the existing default startup roster (no carry on initial start).
+    TransitionToScenario(campaign->startScenarioId, std::nullopt);
+}
+
+void GameSession::AdvanceCampaignOnVictory() {
+    if (campaignState_ != CampaignState::InProgress || !latchedOutcome_.has_value() ||
+        latchedOutcome_->state != scenario::ScenarioOutcomeState::Victory) {
+        return;
+    }
+    const data::CampaignDefinition* campaign = FindCampaignDefinition(campaignId_);
+    if (campaign == nullptr) {
+        return;
+    }
+
+    const auto nextId = campaign::ResolveNextScenarioId(
+        *campaign, currentScenarioId_, scenario::ScenarioOutcomeState::Victory);
+    if (!nextId.has_value()) {
+        campaignState_ = CampaignState::Completed;   // final scenario won
+        return;
+    }
+
+    // Resolve the OLD scenario entry's carry-over rule (default: carry nothing
+    // but the player hero). fallbackGold targets the NEXT scenario's startGold.
+    data::CarryOverRule rule;
+    if (const data::CampaignScenarioEntry* entry = campaign->FindScenarioEntry(currentScenarioId_);
+        entry != nullptr && !entry->carryOverRuleId.empty()) {
+        if (const data::CarryOverRule* found = campaign->FindCarryOverRule(entry->carryOverRuleId)) {
+            rule = *found;
+        }
+    }
+    int fallbackGold = kDefaultStartGold;
+    if (const data::ScenarioDefinition* next = FindScenarioDefinition(*nextId);
+        next != nullptr && next->startGold.has_value()) {
+        fallbackGold = *next->startGold;
+    }
+
+    const campaign::CampaignCarrySet captured = CaptureCarrySet();
+    const campaign::CampaignCarrySet carried = campaign::ApplyCarryOver(
+        rule, captured, PlayerHeroUnitId(), fallbackGold, ValidUnitIdSet());
+
+    TransitionToScenario(*nextId, carried);
+}
+
+void GameSession::ResolveCampaignAfterOutcome() {
+    if (campaignState_ != CampaignState::InProgress || !latchedOutcome_.has_value()) {
+        return;
+    }
+    if (latchedOutcome_->state == scenario::ScenarioOutcomeState::Defeat) {
+        campaignState_ = CampaignState::Failed;   // defeat ends the campaign run
+        return;
+    }
+    if (latchedOutcome_->state == scenario::ScenarioOutcomeState::Victory) {
+        AdvanceCampaignOnVictory();
+    }
+}
+
+bool GameSession::IsCampaignActive() const {
+    return campaignState_ != CampaignState::None;
+}
+
+CampaignState GameSession::GetCampaignState() const {
+    return campaignState_;
+}
+
+const std::string& GameSession::CampaignId() const {
+    return campaignId_;
+}
+
+const std::string& GameSession::CurrentScenarioId() const {
+    return currentScenarioId_;
+}
+
+const std::vector<std::string>& GameSession::CompletedScenarioIds() const {
+    return completedScenarioIds_;
+}
+
+const std::set<std::string>& GameSession::CampaignFlags() const {
+    return campaignFlags_;
 }
 
 // ---------------------------------------------------------------------------

@@ -157,6 +157,9 @@ if (BUILD_TESTING)
     tests/CampaignContentTests.cpp
     tests/CampaignProgressionRulesTests.cpp
     tests/CampaignCarryoverTests.cpp
+    tests/CampaignTransitionTests.cpp
+    tests/CampaignSaveGameTests.cpp
+    tests/CampaignEndToEndTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

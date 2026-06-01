@@ -394,7 +394,12 @@ void to_json(json& j, const SaveData& data) {
         {"hero_equipment", data.heroEquipment},
         {"energy", data.energy},
         {"max_energy", data.maxEnergy},
-        {"unlocked_region_ids", data.unlockedRegionIds}
+        {"unlocked_region_ids", data.unlockedRegionIds},
+        {"campaign_id", data.campaignId},
+        {"current_scenario_id", data.currentScenarioId},
+        {"completed_scenario_ids", data.completedScenarioIds},
+        {"campaign_flags", data.campaignFlags},
+        {"campaign_state", data.campaignState}
     };
 }
 
@@ -473,6 +478,19 @@ void from_json(const json& j, SaveData& data) {
     data.unlockedRegionIds.clear();
     if (j.contains("unlocked_region_ids") && j["unlocked_region_ids"].is_array()) {
         data.unlockedRegionIds = j["unlocked_region_ids"].get<std::vector<std::string>>();
+    }
+
+    // M16-b campaign progression. Absent keys → empty (legacy = no campaign).
+    data.campaignId = j.value("campaign_id", std::string{});
+    data.currentScenarioId = j.value("current_scenario_id", std::string{});
+    data.campaignState = j.value("campaign_state", std::string{});
+    data.completedScenarioIds.clear();
+    if (j.contains("completed_scenario_ids") && j["completed_scenario_ids"].is_array()) {
+        data.completedScenarioIds = j["completed_scenario_ids"].get<std::vector<std::string>>();
+    }
+    data.campaignFlags.clear();
+    if (j.contains("campaign_flags") && j["campaign_flags"].is_array()) {
+        data.campaignFlags = j["campaign_flags"].get<std::vector<std::string>>();
     }
 
     const bool hasCanonicalStructuralFields =
