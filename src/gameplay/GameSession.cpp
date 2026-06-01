@@ -118,6 +118,9 @@ void GameSession::AdvanceMode() {
         // longer a front-end splash; it is opened on demand from an exit node.
         mode_ = GameMode::RegionMode;
         break;
+    case GameMode::CampaignSelectMode:
+        // M16-c: campaign selection is driven by the controller, not AdvanceMode.
+        break;
     case GameMode::WorldMapMode:
         mode_ = GameMode::RegionMode;
         break;
@@ -184,6 +187,14 @@ void GameSession::EnterRegionMode() {
 
 void GameSession::EnterWorldMapMode() {
     mode_ = GameMode::WorldMapMode;
+}
+
+void GameSession::EnterCampaignSelectMode() {
+    mode_ = GameMode::CampaignSelectMode;
+}
+
+void GameSession::EnterTitleMode() {
+    mode_ = GameMode::Title;
 }
 
 void GameSession::ExitLocationMode() {
@@ -1565,6 +1576,8 @@ std::string GameSession::ToString(const GameMode mode) {
         return "title";
     case GameMode::OpeningSequence:
         return "opening_sequence";
+    case GameMode::CampaignSelectMode:
+        return "campaign_select";
     case GameMode::WorldMapMode:
         return "overworld_selection";
     case GameMode::RegionMode:
@@ -1581,6 +1594,9 @@ std::string GameSession::ToString(const GameMode mode) {
 GameMode GameSession::FromString(const std::string& mode) {
     if (mode == "opening_sequence") {
         return GameMode::OpeningSequence;
+    }
+    if (mode == "campaign_select") {
+        return GameMode::CampaignSelectMode;
     }
     if (mode == "overworld_selection") {
         return GameMode::WorldMapMode;

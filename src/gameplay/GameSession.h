@@ -36,6 +36,7 @@ namespace gameplay {
 enum class GameMode {
     Title,
     OpeningSequence,
+    CampaignSelectMode,
     WorldMapMode,
     RegionMode,
     LocationMode,
@@ -180,6 +181,8 @@ public:
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
     void EnterWorldMapMode();
+    void EnterCampaignSelectMode();
+    void EnterTitleMode();
     void ExitLocationMode();
     void EnterBattleMode();
     [[nodiscard]] bool IsInLocationMode() const;

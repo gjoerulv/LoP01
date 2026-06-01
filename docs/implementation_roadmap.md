@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a post-M15 bounded multi-Region vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, deterministic scenario outcome evaluation, a minimal inventory + artifact-equipping layer (items, unequipped artifacts, per-hero equipment slots, and equipped-artifact stat bonuses applied at battle setup), the team Energy pool (daily-starting formula, spend/recover, day-rollover reset), and a minimal World Map layer (exit-node-gated region-to-region travel on the Energy pool, with generic-unit loss-with-warning).
+The current codebase is a post-M16 bounded multi-Region, multi-Scenario vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, deterministic scenario outcome evaluation, a minimal inventory + artifact-equipping layer (items, unequipped artifacts, per-hero equipment slots, and equipped-artifact stat bonuses applied at battle setup), the team Energy pool (daily-starting formula, spend/recover, day-rollover reset), a minimal World Map layer (exit-node-gated region-to-region travel on the Energy pool, with generic-unit loss-with-warning), and a minimal Campaign System (thin authored scenarios sequenced by a campaign transition graph with explicit allow-list carry-over and a presence-gated selection screen).
 
 The roadmap works from foundations outward:
 
@@ -126,7 +126,7 @@ Still incomplete / intentionally deferred:
 - Market / Black Market / Trading Post / Freelancer's Guild item economy
 - HUD / raylib inventory rendering and inventory render-model
 - event-driven region unlock, per-region world/enemy state, and generic origin-storage (World Map region-to-region travel itself shipped in M15)
-- Campaign carry-over
+- full per-Scenario `ScenarioDefinition` content kind (world map / region contexts / hero pools / banned skills / resource defaults), per-scenario region partitioning, and authored starting rosters (the minimal Campaign System — thin scenarios, transition graph, allow-list carry-over — shipped in M16)
 - full shell/menu/character-creation/load/settings flow
 
 ---
@@ -136,7 +136,7 @@ Still incomplete / intentionally deferred:
 | # | Issue | Action |
 |---|-------|--------|
 | 1 | The team Energy pool (`docs/core_loop_rules.md` §6) is implemented as of M14: state, daily-starting formula, spend/recover, day-rollover auto-reset, save/load, and `SessionSnapshot`/HUD exposure. The remaining gap is the formula's leader-bonus terms (`Y` leader passive-skill bonus, `Z` leader equipped-item/artifact bonus), which are zero-valued seams pending the skill system and an artifact/item Energy-effect type. | Close the seams when those systems land: a passive-skill Energy bonus (skill system milestone) and an artifact/item `energyBonus` effect (inventory-effects milestone) feed `ComputeDailyStartingEnergy`'s `leaderPassiveEnergyBonus` / `leaderItemEnergyBonus` arguments, which are already wired through at 0. |
-| 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, and `WorldMapDefinition` now have load paths (M13 / M15). `RecipeDefinition` and `CampaignDefinition` remain doc-specified without loaders. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
+| 2 | `ContentRepository` loads only what has C++ struct definitions. `ItemDefinition`, `ArtifactDefinition`, `WorldMapDefinition` (M13 / M15), and the thin `ScenarioDefinition` + `CampaignDefinition` (M16) now have load paths. `RecipeDefinition` and the full per-Scenario `ScenarioDefinition` (world map, region contexts, hero pools, etc.) remain doc-specified without loaders. | No conflict. Each future phase adds the relevant structs and load calls. Do not add speculative stubs. |
 | 3 | `docs/game_shell_flow.md` specifies full shell flow. Code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Continue expanding validation only when a phase requires it. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader combat command depth. Current battle code tracks a smaller baseline. | Gap; acceptable until skill/status phases. |
@@ -346,36 +346,39 @@ Deferred from M15 (future milestones): event-driven region unlock (`unlockRegion
 
 ### Phase 7 — Campaign System
 
+**Status:** M16-a / M16-b / M16-c complete (minimal slice). Authored scenarios sequence into a campaign with explicit allow-list carry-over; a minimal campaign-selection entry point is added to the shell.
+
 **Goal:** Scenarios sequence with authored carry-over rules; campaign selection is added to shell flow.
 
-Scope:
+Completed foundation (M16):
 
-- `CampaignDefinition`
-- campaign transition graph
-- `CampaignCarryover`
-- explicit allow-list carry-over rules
-- Campaign → Scenario transitions
-- partial shell entry point for campaign selection
-- `CampaignCarryoverTests.cpp`
+- thin `data::ScenarioDefinition` (start region/optional start node, optional `startGold`, optional inline victory/defeat conditions, `standaloneSelectable`) + optional `content/scenarios.json` loader with `SCENARIO_*` validation. Inline outcome by JSON key presence; absent ⇒ the global `scenario_outcome.json` fallback (M12 unchanged)
+- `data::CampaignDefinition` (transition graph of scenario entries + `nextScenarioIds`, `campaignFlags`, explicit allow-list `CarryOverRule`s) + optional `content/campaigns.json` loader with `CAMPAIGN_*` reference validation against the loaded scenarios
+- pure `gameplay/campaign/CampaignProgressionRules` (`ResolveNextScenarioId`: victory-only, linear) and `gameplay/campaign/CampaignCarryover` (`CampaignCarrySet` domain snapshot + `ApplyCarryOver`; player hero always retained; carryRoster/Items/Artifacts/Gold + named story-flag allow-list)
+- `GameSession` campaign runtime: global vs active outcome-definition separation; scenario/campaign catalogs with id→index maps; the single ordered `TransitionToScenario` chokepoint (reset → set scenario → seed defaults → apply carry-over → recompute Energy LAST → clear latch → RegionMode); `StartCampaign`, `AdvanceCampaignOnVictory`, `ResolveCampaignAfterOutcome` (victory advances, defeat ⇒ `Failed`, final victory ⇒ `Completed`); campaign flags persist across scenarios while scenario story flags reset except named carries
+- additive save/load for campaign id / current scenario / completed scenarios / campaign flags / state (legacy saves load as no campaign; no `schemaVersion` bump)
+- presence-gated `CampaignSelectMode` + `CampaignController` / `CampaignModelMapper` / `CampaignSelectRenderer`; Title routes to selection when campaigns exist (standalone still reachable), HUD shows a campaign/scenario status line
+- authored proof content: `content/scenarios.json` (`scenario_intro` → `scenario_second`), `content/campaigns.json` (`campaign_ashvale` with a carry rule), and `evt_secure_vale_market`
+- Catch2 coverage: `ScenarioContentTests`, `CampaignContentTests`, `CampaignProgressionRulesTests`, `CampaignCarryoverTests`, `CampaignTransitionTests`, `CampaignSaveGameTests`, `CampaignEndToEndTests`, `CampaignControllerTests`, `CampaignStartupTests`
 
-Full character creation, load UI, autosave slots, and settings remain out of scope unless explicitly selected.
+Deferred from M16 (future milestones): full per-Scenario `ScenarioDefinition` content kind (world map, region contexts, hero pools, banned skills/artifacts, resource defaults), per-scenario region partitioning and per-region enemy/world-state, authored starting roster / party setup, campaign branching-choice UI, full character creation / load UI / autosave slots / settings / save grouping, localized text objects, and mod overrides.
 
 ---
 
 ## 4. Current Next Milestone
 
-### Next: Phase 7 / Campaign (or M15 follow-ups)
+### Next: Phase 7 follow-ups or Phase 8
 
-Latest completed milestone: **M15 — Phase 6 / World Map (minimal slice)**.
+Latest completed milestone: **M16 — Phase 7 / Campaign (minimal slice)**.
 
-M15 shipped the minimal World Map layer across three tight slices:
-- **M15-a** — `WorldMapDefinition` + optional `content/world_map.json` loader with structural validation + the pure `WorldMapTravelRules` (BFS region hop count over unlocked adjacency).
-- **M15-b** — `GameSession` World Map state (`SetWorldMap` seeding the persisted `unlockedRegionIds_`, `SetRegionCatalog`, `CanOpenWorldMapHere`, `TravelToRegion`), the 1000-Energy spend via the M14 pool, generic-unit loss-with-warning, arrival timing via the `AdvanceClock` chokepoint, and `unlockedRegionIds` save/load.
-- **M15-c** — exit-node-gated `WorldMapMode` (input `M`), `WorldMapController` / `WorldMapModelMapper` / minimal `WorldMapRenderer`, opening sequence dropping straight into Region mode, authored proof content (`riverside_vale` + `world_map.json`), and an end-to-end test.
+M16 shipped the minimal Campaign System across three tight slices:
+- **M16-a** — thin `ScenarioDefinition` + `CampaignDefinition` content kinds, optional `content/scenarios.json` / `content/campaigns.json` loaders with `SCENARIO_*` / `CAMPAIGN_*` validation, and the pure `CampaignProgressionRules` + `CampaignCarryover` (`CampaignCarrySet` domain snapshot).
+- **M16-b** — `GameSession` campaign runtime: global/active outcome-definition separation, scenario/campaign id→index catalogs, the ordered `TransitionToScenario` chokepoint (Energy recomputed last), `StartCampaign` / `AdvanceCampaignOnVictory` / `ResolveCampaignAfterOutcome`, and additive campaign save/load.
+- **M16-c** — presence-gated `CampaignSelectMode` + `CampaignController` / `CampaignModelMapper` / `CampaignSelectRenderer`, Title routing (standalone still reachable), HUD campaign status, authored proof content (`campaign_ashvale`: `scenario_intro` → `scenario_second`), and docs cleanup.
 
-See §3 Phase 6 for the full feature list, acceptance, and M15 deferrals.
+See §3 Phase 7 for the full feature list and M16 deferrals.
 
-**Next milestone — Phase 7 / Campaign**, or a smaller follow-up that closes M15 deferrals first (event-driven region unlock via an `unlockRegion` event action, per-region enemy/world state, generic origin-storage, or World Map UI polish). Phase 7 sequences scenarios with authored carry-over (`CampaignDefinition`, `CampaignCarryover`, scenario-transition graph) — the larger system M15 deliberately avoided.
+**Next milestone** — either Phase 7 follow-ups (the full per-Scenario `ScenarioDefinition` content kind with world map / region contexts / hero pools, per-scenario region partitioning, authored starting rosters, campaign branching, fuller shell/character-creation), or a previously deferred M15 follow-up (event-driven region unlock via an `unlockRegion` event action, per-region enemy/world state, generic origin-storage, World Map UI polish).
 
 The earlier M13 follow-ups also remain deferred: cooking, recipes, food effects, item use (battle `Item` command and field-use), artifact combination, the trader-service item economy, battle spoils/steal, `teamHasItem`/`teamHasArtifact` condition leaves, `Ultimate`-rarity enforcement, and HUD/raylib inventory rendering. The Energy formula's leader passive/item bonus terms remain zero-valued seams (see §2 debt #1).
 
@@ -391,15 +394,15 @@ The earlier M13 follow-ups also remain deferred: cooking, recipes, food effects,
 | 4 | If no authored victory condition exists, default victory fires when all hostile enemy teams are defeated/removed/allied; authored victory conditions can end the scenario and suppress default victory; authored defeat conditions can end the scenario; defeat wins over victory; no-outcome states remain playable; Region arrival checks outcome after `regionNodeEntry` events and again after enemy phase before continuing to follow-up transitions; latched outcomes survive save/load. |
 | 5 | Hero equips artifact via `TryEquipArtifact` and the artifact moves from the team's unequipped inventory into the hero slot; equipped-artifact stat bonuses flow into per-battle hero `attack` / `defense` / `magic` / `resistance` at battle construction without mutating persistent `UnitDefinition`; save/load round-trips items, unequipped artifacts, and hero equipment; legacy saves without M13 keys load as empty inventories. (Combine recipe and leader-item Energy bonus criteria are explicitly deferred to a later cooking/combination/Energy milestone.) |
 | 6 | World Map (opened from an authored Region exit node) shows unlocked Regions; travel costs 1000 Energy (`TrySpendEnergy`); start-before-11:00 legality is enforced; travel arrives at 11:00 on the correct day-based duration; generic traveling-party units are dropped with a warning (heroes persist); current region + unlocked set round-trip through save/load. (Generic origin-storage preservation is deferred.) |
-| 7 | Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. |
+| 7 | **(M16 met)** Two scenarios play sequentially; carry-over allow-list is applied; disallowed state is absent after transition. Covered end-to-end by `CampaignEndToEndTests` + `CampaignTransitionTests` (carried roster/gold present, non-carried roster/flags absent, Energy recomputed after carry, latch cleared); defeat ends the run (`Failed`), final victory ⇒ `Completed`. |
 
 ---
 
 ## 6. Tests Needed
 
-Future test suites still needed for upcoming phases:
+All currently-planned phase test suites have shipped. Future per-Scenario / fuller-shell work will add its own suites when scoped.
 
-- `CampaignCarryoverTests.cpp` — Phase 7
+Phase 7 Campaign test coverage shipped in M16: `ScenarioContentTests`, `CampaignContentTests`, `CampaignProgressionRulesTests`, `CampaignCarryoverTests`, `CampaignTransitionTests`, `CampaignSaveGameTests`, `CampaignEndToEndTests`, `CampaignControllerTests`, `CampaignStartupTests`.
 
 Phase 6 World Map test coverage shipped in M15: `WorldMapTravelRulesTests`, `WorldMapContentTests`, `WorldMapTravelTests`, `WorldMapControllerTests`, `WorldMapEndToEndTests`.
 

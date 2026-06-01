@@ -87,6 +87,10 @@ App::App() {
         // region catalog (resolves a destination's arrival node at travel time).
         session_.SetRegionCatalog(content_.Regions());
         session_.SetWorldMap(content_.WorldMap());
+        // M16-c: feed the campaign/scenario catalogs (id->index maps) so campaign
+        // start/transition can resolve scenarios and rules without content access.
+        session_.SetScenarioCatalog(content_.Scenarios());
+        session_.SetCampaignCatalog(content_.Campaigns());
     }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
     observedDay_ = session_.Snapshot().day;
@@ -212,14 +216,25 @@ void App::InitializeLocationIfNeeded(const gameplay::SessionSnapshot& snapshot) 
 void App::AdvanceFrontEndModesIfRequested(
     const gameplay::SessionSnapshot& snapshot,
     const input::InputState& input) {
-    if (!input.confirm) {
+    // M16-c: Title is presence-gated. With campaigns installed, confirm opens
+    // Campaign Selection; cancel skips to standalone play (the existing flow), so
+    // standalone stays reachable. With no campaigns, confirm advances as before.
+    if (snapshot.mode == gameplay::GameMode::Title) {
+        if (input.confirm) {
+            if (!content_.Campaigns().empty()) {
+                session_.EnterCampaignSelectMode();
+                campaignSelectedIndex_ = 0;
+            } else {
+                session_.AdvanceMode();
+            }
+        } else if (input.cancel && !content_.Campaigns().empty()) {
+            session_.AdvanceMode();   // standalone path when campaigns exist
+        }
         return;
     }
 
-    // M15-c: WorldMapMode is no longer a front-end splash. Only Title and the
-    // OpeningSequence advance on confirm (OpeningSequence -> RegionMode directly).
-    if (snapshot.mode == gameplay::GameMode::Title ||
-        snapshot.mode == gameplay::GameMode::OpeningSequence) {
+    // OpeningSequence -> RegionMode on confirm (unchanged).
+    if (input.confirm && snapshot.mode == gameplay::GameMode::OpeningSequence) {
         session_.AdvanceMode();
     }
 }
@@ -483,6 +498,10 @@ void App::Update() {
         UpdateWorldMapMode(input);
     }
 
+    if (snapshot.mode == gameplay::GameMode::CampaignSelectMode) {
+        UpdateCampaignSelectMode(input);
+    }
+
     if (snapshot.mode == gameplay::GameMode::LocationMode && locationInitialized_) {
         UpdateLocationScene(input, GetFrameTime());
     }
@@ -511,6 +530,11 @@ void App::Update() {
 }
 
 void App::UpdateRegionMode(const input::InputState& input) {
+    // M16-c: if a scenario outcome latched while a campaign is active, advance
+    // the campaign (Victory transitions to the next scenario and clears the
+    // latch; Completed/Failed leave the latch in place).
+    HandleCampaignProgressIfLatched();
+
     // Scenario ended: freeze region inputs. Player sees the last status message
     // including the Victory!/Defeat. label appended at the latch boundary.
     if (session_.IsScenarioEnded()) {
@@ -753,6 +777,58 @@ void App::UpdateWorldMapMode(const input::InputState& input) {
             statusMessage_ = "Travel to " + dest.name + " unavailable: " +
                 gameplay::worldmap::DescribeWorldMapTravelBlockReason(travel.reason);
         }
+    }
+}
+
+void App::UpdateCampaignSelectMode(const input::InputState& input) {
+    const int campaignCount = static_cast<int>(content_.Campaigns().size());
+    const auto result = campaignController_.Update(input, campaignCount, campaignSelectedIndex_);
+    campaignSelectedIndex_ = result.selectedIndex;
+
+    if (result.cancelled) {
+        session_.EnterTitleMode();   // back to Title, no session mutation
+        statusMessage_ = "Campaign selection cancelled";
+        return;
+    }
+
+    if (result.confirmed && campaignSelectedIndex_ >= 0 && campaignSelectedIndex_ < campaignCount) {
+        const auto& campaign = content_.Campaigns()[campaignSelectedIndex_];
+        session_.StartCampaign(campaign.id);
+        // StartCampaign leaves the session in RegionMode at the start scenario.
+        MarkCurrentDayObservedAfterIntentionalTimeAdvance();
+        ResetTransientModeState();
+        statusMessage_ = "Campaign started: " +
+            (campaign.name.empty() ? campaign.id : campaign.name);
+    }
+}
+
+void App::HandleCampaignProgressIfLatched() {
+    if (!session_.IsCampaignActive() || !session_.IsScenarioEnded()) {
+        return;
+    }
+
+    const std::string previousScenarioId = session_.CurrentScenarioId();
+    session_.ResolveCampaignAfterOutcome();
+
+    switch (session_.GetCampaignState()) {
+    case gameplay::CampaignState::InProgress:
+        if (session_.CurrentScenarioId() != previousScenarioId) {
+            // Advanced to the next scenario: the latch is cleared and the session
+            // is back in RegionMode at the new start. Treat as an intentional
+            // time-neutral transition and reset transient battle/location state.
+            MarkCurrentDayObservedAfterIntentionalTimeAdvance();
+            ResetTransientModeState();
+            statusMessage_ = "Scenario complete. Now: " + session_.CurrentScenarioId();
+        }
+        break;
+    case gameplay::CampaignState::Completed:
+        statusMessage_ = "Campaign complete!";
+        break;
+    case gameplay::CampaignState::Failed:
+        statusMessage_ = "Campaign failed.";
+        break;
+    case gameplay::CampaignState::None:
+        break;
     }
 }
 
@@ -1061,6 +1137,11 @@ void App::Draw() const {
         DrawTextEx(font, "Press Enter to enter the Region. (Press M at an exit node to open the World Map.)", {80.0f, 230.0f}, context.normalFontSize, 1.0f, context.theme.mutedTextColor);
         break;
     }
+    case gameplay::GameMode::CampaignSelectMode: {
+        const auto model = campaignModelMapper_.Map(content_, campaignSelectedIndex_);
+        campaignSelectRenderer_.Draw(context, model);
+        break;
+    }
     case gameplay::GameMode::WorldMapMode: {
         const auto model = worldMapModelMapper_.Map(content_, session_, worldMapSelectedIndex_);
         worldMapRenderer_.Draw(context, model);
@@ -1101,7 +1182,8 @@ void App::Draw() const {
     }
     }
 
-    if (snapshot.mode != gameplay::GameMode::Title) {
+    if (snapshot.mode != gameplay::GameMode::Title &&
+        snapshot.mode != gameplay::GameMode::CampaignSelectMode) {
         hudRenderer_.Draw(context, hudModel);
     }
 

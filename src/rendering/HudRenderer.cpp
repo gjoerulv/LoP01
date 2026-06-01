@@ -26,6 +26,11 @@ namespace ashvale::rendering
 
         const Font font = ResolveUiFont(context);
 
+        if (!model.campaignText.empty())
+        {
+            DrawLabelValue(context, "Campaign:", model.campaignText, 16.0f, 10.0f);
+        }
+
         DrawLabelValue(context, "Day:", std::to_string(model.day), 260.0f, 10.0f);
         DrawLabelValue(context, "Week:", std::to_string(model.week), 340.0f, 10.0f);
         DrawLabelValue(context, "Time:", model.timeText, 430.0f, 10.0f);

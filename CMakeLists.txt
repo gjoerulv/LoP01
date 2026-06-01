@@ -53,6 +53,7 @@ add_library(ashvale_rendering
   src/rendering/TitleRenderer.cpp
   src/rendering/RegionRenderer.cpp
   src/rendering/WorldMapRenderer.cpp
+  src/rendering/CampaignSelectRenderer.cpp
   src/rendering/LocationRenderer.cpp
   src/rendering/BattleRenderer.cpp
 )
@@ -67,11 +68,13 @@ add_executable(ashvale_slice
   src/app/input/InputTranslator.cpp
   src/app/RegionController.cpp
   src/app/WorldMapController.cpp
+  src/app/CampaignController.cpp
   src/app/LocationController.cpp
   src/app/BattleController.cpp
   src/app/mappers/HudModelMapper.cpp
   src/app/mappers/RegionModelMapper.cpp
   src/app/mappers/WorldMapModelMapper.cpp
+  src/app/mappers/CampaignModelMapper.cpp
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
   src/app/BattleEventTextFormatter.cpp
@@ -112,6 +115,8 @@ if (BUILD_TESTING)
     src/app/mappers/RegionModelMapper.cpp
     src/app/mappers/WorldMapModelMapper.cpp
     src/app/WorldMapController.cpp
+    src/app/CampaignController.cpp
+    src/app/mappers/CampaignModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
@@ -160,6 +165,8 @@ if (BUILD_TESTING)
     tests/CampaignTransitionTests.cpp
     tests/CampaignSaveGameTests.cpp
     tests/CampaignEndToEndTests.cpp
+    tests/CampaignControllerTests.cpp
+    tests/CampaignStartupTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)

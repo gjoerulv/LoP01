@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "ScenarioCollection",
+  "id": "scenarios",
+  "scenarios": [
+    {
+      "id": "scenario_intro",
+      "name": "The Cleansing of Ashvale",
+      "startRegionId": "ashvale_heartland",
+      "standaloneSelectable": true
+    },
+    {
+      "id": "scenario_second",
+      "name": "Riverside Vale",
+      "startRegionId": "riverside_vale",
+      "startNodeId": "vale_landing",
+      "victoryConditions": [
+        { "type": "storyFlagSet", "flag": "vale_secured" }
+      ]
+    }
+  ]
+}

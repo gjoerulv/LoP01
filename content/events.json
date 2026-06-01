@@ -30,6 +30,15 @@
         { "type": "giveArtifact", "artifactId": "artifact_iron_sword", "amount": 1 }
       ],
       "repeat": { "mode": "once" }
+    },
+    {
+      "id": "evt_secure_vale_market",
+      "trigger": { "type": "regionNodeEntry", "nodeId": "vale_market" },
+      "actions": [
+        { "type": "showMessage", "text": { "en": "You rally the Riverside Vale market. The vale is secured." } },
+        { "type": "setStoryFlag", "flag": "vale_secured" }
+      ],
+      "repeat": { "mode": "once" }
     }
   ]
 }

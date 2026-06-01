@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "CampaignCollection",
+  "id": "campaigns",
+  "campaigns": [
+    {
+      "id": "campaign_ashvale",
+      "name": "Ashvale",
+      "description": { "en": "Cleanse the Ashvale Heartland, then secure the Riverside Vale." },
+      "startScenarioId": "scenario_intro",
+      "campaignFlags": [],
+      "carryOverRules": [
+        {
+          "id": "carry_intro_to_vale",
+          "carryGold": true,
+          "carryRoster": true,
+          "carryItems": true,
+          "carryArtifacts": true,
+          "carryStoryFlags": []
+        }
+      ],
+      "scenarios": [
+        {
+          "scenarioId": "scenario_intro",
+          "nextScenarioIds": ["scenario_second"],
+          "carryOverRuleId": "carry_intro_to_vale"
+        },
+        {
+          "scenarioId": "scenario_second",
+          "nextScenarioIds": [],
+          "carryOverRuleId": ""
+        }
+      ]
+    }
+  ]
+}

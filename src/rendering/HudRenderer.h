@@ -26,6 +26,9 @@ namespace ashvale::rendering
 
         std::string statusText;
         bool showStatus = true;
+
+        // M16-c: compact campaign/scenario status, empty for standalone play.
+        std::string campaignText;
     };
 
     class HudRenderer
