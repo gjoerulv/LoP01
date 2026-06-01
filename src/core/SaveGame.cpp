@@ -340,6 +340,34 @@ void from_json(const json& j, HeroEquipmentSaveState& data) {
     data.misc3ArtifactId   = j.value("misc3_artifact_id",   std::string{});
 }
 
+void to_json(json& j, const ResourceSaveState& data) {
+    j = json{
+        {"resource", data.resource},
+        {"amount", data.amount}
+    };
+}
+
+void from_json(const json& j, ResourceSaveState& data) {
+    j.at("resource").get_to(data.resource);
+    j.at("amount").get_to(data.amount);
+}
+
+void to_json(json& j, const OwnedServiceSaveState& data) {
+    j = json{
+        {"service_id", data.serviceId},
+        {"owner_team_color", data.ownerTeamColor},
+        {"locked", data.locked},
+        {"destroyed", data.destroyed}
+    };
+}
+
+void from_json(const json& j, OwnedServiceSaveState& data) {
+    j.at("service_id").get_to(data.serviceId);
+    data.ownerTeamColor = j.value("owner_team_color", std::string{});
+    data.locked = j.value("locked", false);
+    data.destroyed = j.value("destroyed", false);
+}
+
 void to_json(json& j, const EnemyTeamSaveState& data) {
     j = json{
         {"team_color", data.teamColor},
@@ -399,7 +427,9 @@ void to_json(json& j, const SaveData& data) {
         {"current_scenario_id", data.currentScenarioId},
         {"completed_scenario_ids", data.completedScenarioIds},
         {"campaign_flags", data.campaignFlags},
-        {"campaign_state", data.campaignState}
+        {"campaign_state", data.campaignState},
+        {"resources", data.resources},
+        {"owned_services", data.ownedServices}
     };
 }
 
@@ -491,6 +521,17 @@ void from_json(const json& j, SaveData& data) {
     data.campaignFlags.clear();
     if (j.contains("campaign_flags") && j["campaign_flags"].is_array()) {
         data.campaignFlags = j["campaign_flags"].get<std::vector<std::string>>();
+    }
+
+    // M17 owned-services / economy. Absent keys → empty (legacy saves load as no
+    // resources and no owned services). Gold is never read from here.
+    data.resources.clear();
+    if (j.contains("resources") && j["resources"].is_array()) {
+        data.resources = j["resources"].get<std::vector<ResourceSaveState>>();
+    }
+    data.ownedServices.clear();
+    if (j.contains("owned_services") && j["owned_services"].is_array()) {
+        data.ownedServices = j["owned_services"].get<std::vector<OwnedServiceSaveState>>();
     }
 
     const bool hasCanonicalStructuralFields =

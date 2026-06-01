@@ -176,6 +176,79 @@ bool GameSession::TrySpendGold(const int amount) {
     return true;
 }
 
+int GameSession::ResourceCount(const ResourceType type) const {
+    if (IsGoldResource(type)) {
+        return gold_;
+    }
+    return nonGoldResources_[NonGoldResourceIndex(type)];
+}
+
+void GameSession::AddResource(const ResourceType type, const int amount) {
+    if (IsGoldResource(type)) {
+        // Single source of truth: Gold lives in gold_, never the pool.
+        gold_ = std::max(0, gold_ + amount);
+        return;
+    }
+    int& slot = nonGoldResources_[NonGoldResourceIndex(type)];
+    slot = std::max(0, slot + amount);
+}
+
+bool GameSession::TrySpendResource(const ResourceType type, const int amount) {
+    if (amount <= 0) {
+        return true;
+    }
+    if (IsGoldResource(type)) {
+        return TrySpendGold(amount);
+    }
+    int& slot = nonGoldResources_[NonGoldResourceIndex(type)];
+    if (slot < amount) {
+        return false;
+    }
+    slot -= amount;
+    return true;
+}
+
+const std::vector<core::OwnedServiceSaveState>& GameSession::OwnedServices() const {
+    return ownedServices_;
+}
+
+const core::OwnedServiceSaveState* GameSession::FindOwnedService(
+    const std::string& serviceId) const {
+    for (const auto& owned : ownedServices_) {
+        if (owned.serviceId == serviceId) {
+            return &owned;
+        }
+    }
+    return nullptr;
+}
+
+void GameSession::SeedEventResourceContext(events::EventEvaluationContext& ctx) const {
+    ctx.resources[ResourceTypeToString(ResourceType::Gold)] = gold_;
+    for (const auto type : kNonGoldResourceTypes) {
+        ctx.resources[ResourceTypeToString(type)] =
+            nonGoldResources_[NonGoldResourceIndex(type)];
+    }
+}
+
+void GameSession::ApplyEventResourceContext(const events::EventEvaluationContext& ctx) {
+    const auto applyOne = [&](ResourceType type) {
+        const auto it = ctx.resources.find(ResourceTypeToString(type));
+        if (it == ctx.resources.end()) {
+            return;
+        }
+        const int value = std::max(0, it->second);
+        if (IsGoldResource(type)) {
+            gold_ = value;  // single source of truth
+        } else {
+            nonGoldResources_[NonGoldResourceIndex(type)] = value;
+        }
+    };
+    applyOne(ResourceType::Gold);
+    for (const auto type : kNonGoldResourceTypes) {
+        applyOne(type);
+    }
+}
+
 void GameSession::EnterLocationMode(const std::string& locationId) {
     destinationId_ = locationId;
     mode_ = GameMode::LocationMode;
@@ -458,7 +531,7 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
         events::EventEvaluationContext ctx;
         const auto snap = Snapshot();
         ctx.currentDay = snap.day;
-        ctx.resources["Gold"] = snap.gold;
+        SeedEventResourceContext(ctx);
         const auto& partyIds = ActivePartyUnitIds();
         ctx.heroIds = std::vector<std::string>(partyIds.begin(), partyIds.end());
         ctx.storyFlags = storyFlags_;
@@ -476,9 +549,7 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
         auto results = events::ExecuteActions(ctx, def.actions);
         allResults.insert(allResults.end(), results.begin(), results.end());
 
-        if (ctx.resources.count("Gold")) {
-            gold_ = ctx.resources.at("Gold");
-        }
+        ApplyEventResourceContext(ctx);
         storyFlags_ = ctx.storyFlags;
 
         if (def.repeat.mode == "once") {
@@ -1130,7 +1201,21 @@ core::SaveData GameSession::ToSaveData() const {
         currentScenarioId_,
         completedScenarioIds_,
         std::vector<std::string>(campaignFlags_.begin(), campaignFlags_.end()),
-        CampaignStateToString(campaignState_)
+        CampaignStateToString(campaignState_),
+        // M17 resources: persist only non-zero non-gold resources in canonical
+        // order. Gold is intentionally never written here (it stays in `gold`).
+        [&]() {
+            std::vector<core::ResourceSaveState> out;
+            for (const auto type : kNonGoldResourceTypes) {
+                const int amount = nonGoldResources_[NonGoldResourceIndex(type)];
+                if (amount != 0) {
+                    out.push_back({ResourceTypeToString(type), amount});
+                }
+            }
+            return out;
+        }(),
+        // M17 owned services: stable runtime state, persisted as-is.
+        ownedServices_
     };
 }
 
@@ -1350,6 +1435,21 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     if (const data::ScenarioDefinition* scenario = FindScenarioDefinition(currentScenarioId_)) {
         SelectActiveOutcomeForScenario(*scenario);
     }
+
+    // M17: restore the non-gold resource pool. Reset to zero, then apply saved
+    // entries. Unknown/Gold resource names are ignored so a stray "Gold" entry
+    // can never create a second gold store. Negative amounts clamp to zero.
+    nonGoldResources_.fill(0);
+    for (const auto& entry : saveData.resources) {
+        ResourceType type;
+        if (!TryResourceTypeFromString(entry.resource, type) || IsGoldResource(type)) {
+            continue;
+        }
+        nonGoldResources_[NonGoldResourceIndex(type)] = std::max(0, entry.amount);
+    }
+
+    // M17: restore owned-service runtime state (stable fields only).
+    ownedServices_ = saveData.ownedServices;
 
     MarkRosterProjectionDirty();
 }
@@ -1744,7 +1844,7 @@ const std::optional<scenario::ScenarioOutcome>& GameSession::CheckAndLatchOutcom
     events::EventEvaluationContext condCtx;
     const auto snap = Snapshot();
     condCtx.currentDay = snap.day;
-    condCtx.resources["Gold"] = snap.gold;
+    SeedEventResourceContext(condCtx);
     const auto& partyIds = ActivePartyUnitIds();
     condCtx.heroIds = std::vector<std::string>(partyIds.begin(), partyIds.end());
     condCtx.storyFlags = storyFlags_;

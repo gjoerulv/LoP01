@@ -132,7 +132,8 @@ if (BUILD_TESTING)
     tests/RegionModelMapperTests.cpp
     tests/RegionTravelRulesTests.cpp
     tests/QuestStateTests.cpp
-    tests/SaveGameTests.cpp    
+    tests/SaveGameTests.cpp
+    tests/ResourceStateTests.cpp
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
     tests/EventDefinitionTests.cpp

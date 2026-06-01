@@ -1,6 +1,7 @@
 #include "data/ContentValidator.h"
 
 #include <algorithm>
+#include <map>
 #include <string>
 
 std::vector<ValidationMessage> ContentValidator::ValidateIdentity(const nlohmann::json& doc) const
@@ -165,6 +166,32 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
         }
     }
 
+    // M17 owned-service instance-identity invariant (1 of 2): each location may
+    // be placed in at most one RegionNode across all Regions. This guarantees a
+    // service definition (bound to a location) resolves to exactly one placed
+    // instance, so LocationServiceDefinition::id is a safe global ownership key.
+    {
+        std::map<std::string, std::string> firstPlacementPath;
+        for (size_t i = 0; i < regions.size(); ++i) {
+            const auto& region = regions[i];
+            for (size_t j = 0; j < region.nodes.size(); ++j) {
+                const auto& node = region.nodes[j];
+                if (node.locationId.empty()) {
+                    continue;
+                }
+                const std::string path =
+                    "regions[" + std::to_string(i) + "].nodes[" + std::to_string(j) + "].location_id";
+                const auto [it, inserted] = firstPlacementPath.try_emplace(node.locationId, path);
+                if (!inserted) {
+                    msgs.push_back({Severity::Error, "LOCATION_MULTIPLY_PLACED", path,
+                        "Location \"" + node.locationId + "\" is placed in more than one region node "
+                        "(first at " + it->second + "). M17 owned-service ownership requires each "
+                        "location to map to a single placed instance.", ""});
+                }
+            }
+        }
+    }
+
     // Location scene and battle scenario reference checks
     for (size_t i = 0; i < locations.size(); ++i) {
         const auto& location = locations[i];
@@ -180,6 +207,27 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
             msgs.push_back({Severity::Error, "LOCATION_BATTLE_SCENARIO_NOT_FOUND",
                 li + ".battle_scenario_id",
                 "Location references unknown battle scenario \"" + location.battleScenarioId + "\".", ""});
+        }
+    }
+
+    // M17 owned-service instance-identity invariant (2 of 2): service ids must be
+    // globally unique. With the single-placement invariant above, this makes
+    // LocationServiceDefinition::id a provably-unique owned-service instance key.
+    {
+        std::map<std::string, size_t> firstServiceIndex;
+        for (size_t i = 0; i < services.size(); ++i) {
+            const auto& service = services[i];
+            if (service.id.empty()) {
+                continue;
+            }
+            const auto [it, inserted] = firstServiceIndex.try_emplace(service.id, i);
+            if (!inserted) {
+                msgs.push_back({Severity::Error, "SERVICE_ID_DUPLICATE",
+                    "services[" + std::to_string(i) + "].id",
+                    "Service id \"" + service.id + "\" is not unique (first defined at services["
+                    + std::to_string(it->second) + "]). Owned-service ownership requires globally "
+                    "unique service ids.", ""});
+            }
         }
     }
 

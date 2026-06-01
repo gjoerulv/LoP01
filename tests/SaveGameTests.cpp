@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 
@@ -80,6 +81,96 @@ TEST_CASE("SaveGameRepository writes and reads save data") {
 
     REQUIRE(loaded->ownedUnitCounts.empty());
     REQUIRE(loaded->activePartyUnitIds.empty());
+
+    std::filesystem::remove(testSavePath);
+}
+
+TEST_CASE("SaveGameRepository round-trips M17 resources and owned services") {
+    const std::filesystem::path testSavePath = "saves/test_slot_m17.json";
+
+    core::SaveGameRepository repository;
+    core::SaveData original;
+    original.schemaVersion = 5;
+    original.day = 2;
+    original.minutesIntoSliceDay = 0;
+    original.gold = 4200;
+    original.mode = "region_mode";
+    original.regionId = "ashvale_heartland";
+    original.destinationId = "home_base";
+    original.hasCanonicalRoster = true;
+    original.rosterStacks = { core::RosterStackSaveState{"stk_1", "unit_guard", 1} };
+    original.activeSlotStackIds = {"stk_1", "", "", "", ""};
+    original.reserveSlotStackIds = {"", "", "", "", "", "", "", ""};
+    original.nextStackIdCounter = 2;
+    original.resources = {
+        core::ResourceSaveState{"Wood", 5},
+        core::ResourceSaveState{"Gems", 2}
+    };
+    original.ownedServices = {
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false},
+        core::OwnedServiceSaveState{"vale_market_svc", "Green", true, true}
+    };
+
+    REQUIRE(repository.SaveToFile(original, testSavePath.string()));
+    const auto loaded = repository.LoadFromFile(testSavePath.string());
+    REQUIRE(loaded.has_value());
+
+    // Gold stays in the single gold field; never duplicated into resources.
+    REQUIRE(loaded->gold == 4200);
+    const bool goldEntry = std::ranges::any_of(loaded->resources,
+        [](const core::ResourceSaveState& r) { return r.resource == "Gold"; });
+    REQUIRE_FALSE(goldEntry);
+
+    REQUIRE(loaded->resources.size() == 2);
+    REQUIRE(loaded->resources[0].resource == "Wood");
+    REQUIRE(loaded->resources[0].amount == 5);
+    REQUIRE(loaded->resources[1].resource == "Gems");
+    REQUIRE(loaded->resources[1].amount == 2);
+
+    REQUIRE(loaded->ownedServices.size() == 2);
+    REQUIRE(loaded->ownedServices[0].serviceId == "stone_mine_svc");
+    REQUIRE(loaded->ownedServices[0].ownerTeamColor == "Green");
+    REQUIRE_FALSE(loaded->ownedServices[0].locked);
+    REQUIRE_FALSE(loaded->ownedServices[0].destroyed);
+    REQUIRE(loaded->ownedServices[1].serviceId == "vale_market_svc");
+    REQUIRE(loaded->ownedServices[1].locked);
+    REQUIRE(loaded->ownedServices[1].destroyed);
+
+    std::filesystem::remove(testSavePath);
+}
+
+TEST_CASE("SaveGameRepository legacy save without M17 keys loads empty resources and owned services") {
+    const std::filesystem::path testSavePath = "saves/test_slot_m17_legacy.json";
+
+    std::ofstream output(testSavePath, std::ios::trunc);
+    output << R"({
+  "schema_version": 5,
+  "day": 1,
+  "minutes_into_slice_day": 0,
+  "gold": 1000,
+  "mode": "region_mode",
+  "region_id": "ashvale_heartland",
+  "destination_id": "home_base",
+  "completed_quest_ids": [],
+  "cleared_combat_node_ids": [],
+  "recruit_service_states": [],
+  "daily_service_states": [],
+  "travel_prep_discount_minutes": 0,
+  "travel_prep_remaining_charges": 0,
+  "travel_prep_granted_day": 0,
+  "roster_stacks": [{"stack_id":"stk_1","unit_id":"unit_guard","quantity":1}],
+  "active_slot_stack_ids": ["stk_1", "", "", "", ""],
+  "reserve_slot_stack_ids": ["", "", "", "", "", "", "", ""],
+  "next_stack_id_counter": 2
+})";
+    output.close();
+
+    core::SaveGameRepository repository;
+    const auto loaded = repository.LoadFromFile(testSavePath.string());
+    REQUIRE(loaded.has_value());
+    REQUIRE(loaded->gold == 1000);
+    REQUIRE(loaded->resources.empty());
+    REQUIRE(loaded->ownedServices.empty());
 
     std::filesystem::remove(testSavePath);
 }

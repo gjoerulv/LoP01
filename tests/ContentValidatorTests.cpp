@@ -315,3 +315,60 @@ TEST_CASE("ContentValidator::ValidateReferences - quest target unknown location 
     REQUIRE(msgs[0].severity == Severity::Error);
     REQUIRE(msgs[0].path == "quests[0].target");
 }
+
+// ---------------------------------------------------------------------------
+// M17 owned-service instance-identity invariants.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ContentValidator::ValidateReferences - duplicate service id produces SERVICE_ID_DUPLICATE")
+{
+    const auto loc   = MakeLocation("loc1", "scene1");
+    const auto scene = MakeScene("scene1", {"zone_a", "zone_b"});
+    const auto svc1  = MakeService("dup_svc", "loc1", "zone_a");
+    const auto svc2  = MakeService("dup_svc", "loc1", "zone_b");
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc1, svc2}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "SERVICE_ID_DUPLICATE" && m.path == "services[1].id"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - same location in two region nodes produces LOCATION_MULTIPLY_PLACED")
+{
+    const auto loc    = MakeLocation("loc1", "scene1");
+    const auto scene  = MakeScene("scene1");
+    const auto region1 = MakeRegion("r1", {"loc1"});
+    const auto region2 = MakeRegion("r2", {"loc1"});
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({region1, region2}, {loc}, {scene}, {}, {}, {}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "LOCATION_MULTIPLY_PLACED"
+            && m.path == "regions[1].nodes[0].location_id"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - unique service ids and single placements produce no identity errors")
+{
+    const auto loc1  = MakeLocation("loc1", "scene1");
+    const auto loc2  = MakeLocation("loc2", "scene1");
+    const auto scene = MakeScene("scene1", {"zone_a"});
+    const auto region = MakeRegion("r1", {"loc1", "loc2"});
+    const auto svc1  = MakeService("svc_a", "loc1", "zone_a");
+    const auto svc2  = MakeService("svc_b", "loc2", "zone_a");
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({region}, {loc1, loc2}, {scene}, {}, {}, {svc1, svc2}, {});
+
+    const bool anyIdentityError = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "SERVICE_ID_DUPLICATE" || m.code == "LOCATION_MULTIPLY_PLACED";
+    });
+    REQUIRE_FALSE(anyIdentityError);
+}
