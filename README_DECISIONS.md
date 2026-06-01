@@ -928,12 +928,40 @@ Why:
 
 ### 70) Keep stationed mine units defensive only
 
+> **Superseded (M17).** This decision is retained for history but no longer
+> reflects current design. See the M17 amendment immediately below ("70a") and
+> the authoritative rules in `docs/content_scope_v1.md` §4 and
+> `docs/core_loop_rules.md` §18. Do not treat the original text as current truth.
+
 Decision:
 - Units stationed at a mine affect defense only, not production.
 
 Why:
 - Keeps production rules simple.
 - Prevents defensive assignment from becoming an economic multiplier system.
+
+### 70a) Stationed units may affect mine production only through explicit passives (supersedes #70)
+
+Decision:
+- Stationed units affect defense.
+- Stationed units may affect mine/resource-service production **only** through
+  explicit passive effects; absent such a passive, stationing has no production
+  effect.
+- Production passives do not stack. For each owned-service instance and each
+  output resource, only the single strongest applicable stationed passive
+  applies. Ties do not stack (`+2` and `+2` still gives only `+2`).
+- If a service outputs multiple resources, the strongest modifier is resolved
+  separately per resource.
+- Production behavior and defensive behavior remain separate systems.
+
+Why:
+- Reconciles the decision log with the authoritative M17 scope
+  (`docs/content_scope_v1.md` §4) and loop rules (`docs/core_loop_rules.md` §18),
+  which the original #70 contradicted.
+- Keeps the economic effect narrow and bounded (strongest-only, non-stacking,
+  per owned-service instance and output resource) rather than an open multiplier
+  system, preserving the original intent behind #70 while enabling authored
+  production passives.
 
 ### 71) Let resources, items, and artifacts participate directly in progression
 

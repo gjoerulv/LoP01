@@ -61,6 +61,26 @@ struct HeroEquipmentSaveState {
     std::string misc3ArtifactId;
 };
 
+// M17 team resource pool persistence. resource is a canonical non-gold resource
+// name ("Wood", "Stone", ...). Gold is NEVER persisted here — it lives solely in
+// SaveData::gold (single source of truth). Legacy saves (no M17 keys) load as an
+// empty resource vector — no schemaVersion bump.
+struct ResourceSaveState {
+    std::string resource;
+    int amount = 0;
+};
+
+// M17 owned-service runtime state. Stable fields only (Phase 1). Stationing is
+// deferred to a later milestone and added additively; no stationedUnits field
+// here. serviceId is the global owned-service instance key
+// (LocationServiceDefinition::id, validated unique). Legacy saves → empty vector.
+struct OwnedServiceSaveState {
+    std::string serviceId;
+    std::string ownerTeamColor;
+    bool locked = false;
+    bool destroyed = false;
+};
+
 struct SaveData {
     int schemaVersion = 1;
     int day = 1;
@@ -124,6 +144,13 @@ struct SaveData {
     std::vector<std::string> completedScenarioIds;
     std::vector<std::string> campaignFlags;
     std::string campaignState;
+
+    // M17 owned-services / economy foundation. Both default to empty so legacy
+    // saves load as no resources and no owned services. Additive optional fields
+    // — no schemaVersion bump. Gold is intentionally absent here; it remains the
+    // single `gold` field above.
+    std::vector<ResourceSaveState> resources;
+    std::vector<OwnedServiceSaveState> ownedServices;
 };
 
 class SaveGameRepository {

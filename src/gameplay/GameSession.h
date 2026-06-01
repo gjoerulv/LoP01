@@ -20,6 +20,7 @@
 #include "data/definitions/WorldMapDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
+#include "gameplay/ResourceState.h"
 #include "gameplay/campaign/CampaignCarryover.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
@@ -177,6 +178,25 @@ public:
     void AddMinutes(int minutes);
     bool SpendGold(int amount);
     [[nodiscard]] bool TrySpendGold(int amount);
+
+    // M17 team resource pool. ResourceType::Gold delegates to the existing
+    // gold_ field / gold APIs (single source of truth); it is never stored in
+    // the non-gold container. Non-gold counts never go below zero.
+    [[nodiscard]] int ResourceCount(ResourceType type) const;
+    // Adds `amount` of `type`. Negative amounts are clamped so the count never
+    // drops below zero (use TrySpendResource for guarded spends). Gold routes
+    // through gold_.
+    void AddResource(ResourceType type, int amount);
+    // Spends `amount` of `type` iff at least that much is held. Returns false
+    // and leaves state unchanged when insufficient. amount <= 0 is a no-op that
+    // returns true. Gold routes through TrySpendGold.
+    [[nodiscard]] bool TrySpendResource(ResourceType type, int amount);
+
+    // M17 owned-service runtime state (stable fields only). Read-only accessor;
+    // ownership mutation rules arrive in a later milestone.
+    [[nodiscard]] const std::vector<core::OwnedServiceSaveState>& OwnedServices() const;
+    [[nodiscard]] const core::OwnedServiceSaveState* FindOwnedService(
+        const std::string& serviceId) const;
 
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
@@ -427,6 +447,14 @@ private:
     [[nodiscard]] std::vector<events::ActionResult> FireMatchingEvents(
         const std::function<bool(const events::EventDefinition&)>& matches);
 
+    // M17 event-context resource bridge. Seeds ctx.resources with every resource
+    // (Gold from gold_, non-gold from nonGoldResources_) so event conditions and
+    // actions can read/modify any resource by canonical name. ApplyEventResource-
+    // Context writes the (possibly mutated) values back, routing Gold to gold_
+    // and non-gold to the pool — preserving the single-source-of-truth rule.
+    void SeedEventResourceContext(events::EventEvaluationContext& ctx) const;
+    void ApplyEventResourceContext(const events::EventEvaluationContext& ctx);
+
     GameMode mode_;
     core::GameClock clock_;
     std::vector<core::RecruitServiceState> recruitServiceStates_;
@@ -435,6 +463,11 @@ private:
     int travelPrepRemainingCharges_ = 0;
     int travelPrepGrantedDay_ = 0;
     int gold_;
+    // M17 non-gold resource pool, indexed by NonGoldResourceIndex(). Gold is
+    // never stored here — it lives solely in gold_. Default-zero.
+    std::array<int, kNonGoldResourceCount> nonGoldResources_{};
+    // M17 owned-service runtime state (stable fields only; no stationing yet).
+    std::vector<core::OwnedServiceSaveState> ownedServices_;
     std::string regionId_;
     std::string destinationId_;
 
