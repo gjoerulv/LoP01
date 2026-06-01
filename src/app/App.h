@@ -50,6 +50,11 @@ namespace app {
         void StartLocationMode(const std::string& locationId, const std::string& statusMessage);
         void ResetTransientModeState();
         void ApplyMissedSleepPenaltyIfNeeded();
+        // Call after any intentional day-advance that should not be treated as a
+        // missed-sleep (e.g. World Map travel). Sets observedDay_ to the current
+        // day so ApplyMissedSleepPenaltyIfNeeded() is a no-op for this transition.
+        // Deliberately does NOT set restedThisDay_ = true.
+        void MarkCurrentDayObservedAfterIntentionalTimeAdvance();
         void ResolveBattleOutcomeIfNeeded();
         void ApplyWakePenaltyAndRecover(const std::string& reason);
         [[nodiscard]] std::string ResolveSafeFallbackLocationId() const;
