@@ -271,6 +271,16 @@ void App::ApplyMissedSleepPenaltyIfNeeded() {
     observedDay_ = session_.Snapshot().day;
 }
 
+void App::MarkCurrentDayObservedAfterIntentionalTimeAdvance() {
+    // Advance the observed day to the session's current day without penalising
+    // the player. This is correct for World Map travel (and any future path that
+    // intentionally spans midnight) because the day advance was deliberate, not
+    // a missed sleep. Deliberately does NOT set restedThisDay_ = true — the
+    // player still needs to sleep before the next day ends normally.
+    observedDay_ = session_.Snapshot().day;
+    restedThisDay_ = false;
+}
+
 std::string App::ResolveSafeFallbackLocationId() const {
     if (content_.FindLocationById("home_base") != nullptr) {
         return "home_base";
@@ -712,6 +722,9 @@ void App::UpdateWorldMapMode(const input::InputState& input) {
             }
             statusMessage_ = message;
             // TravelToRegion leaves the session in RegionMode at the arrival node.
+            // Mark the new day as already observed so ApplyMissedSleepPenaltyIfNeeded
+            // does not treat the intentional day advance as a missed sleep.
+            MarkCurrentDayObservedAfterIntentionalTimeAdvance();
         } else {
             // Report the actual commit-time reason, not the precomputed preview.
             statusMessage_ = "Travel to " + dest.name + " unavailable: " +
