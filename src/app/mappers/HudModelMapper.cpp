@@ -76,6 +76,22 @@ namespace app::mappers
             model.secondaryAreaValue = snapshot.destinationId;
         }
 
+        // M16-c: compact campaign/scenario status when a campaign is active.
+        if (snapshot.campaignState != gameplay::CampaignState::None &&
+            !snapshot.campaignId.empty()) {
+            std::string stateLabel;
+            switch (snapshot.campaignState) {
+            case gameplay::CampaignState::InProgress: stateLabel = snapshot.currentScenarioId; break;
+            case gameplay::CampaignState::Completed:  stateLabel = "COMPLETE"; break;
+            case gameplay::CampaignState::Failed:     stateLabel = "FAILED"; break;
+            case gameplay::CampaignState::None:       break;
+            }
+            model.campaignText = snapshot.campaignId;
+            if (!stateLabel.empty()) {
+                model.campaignText += " - " + stateLabel;
+            }
+        }
+
         (void)statusText;
         (void)questInfo;
         model.showStatus = false;

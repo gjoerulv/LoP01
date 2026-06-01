@@ -308,6 +308,8 @@ Conceptual shape:
 
 Standalone Scenarios are legal and do not require a Campaign. If a Scenario belongs to a Campaign, it should not be shown as a standalone selectable Scenario unless explicitly authored as standalone-selectable.
 
+Current implementation note (M16): a minimal Campaign is loaded from an optional `content/campaigns.json` (`kind: "CampaignCollection"`). Each campaign owns `startScenarioId`, a `scenarios[]` transition graph (`scenarioId` + `nextScenarioIds[]` + `carryOverRuleId`), `campaignFlags[]`, and an explicit allow-list `carryOverRules[]` (`carryGold` / `carryRoster` / `carryItems` / `carryArtifacts` / `carryStoryFlags[]`). Progression is victory-only and linear (the first `nextScenarioIds` entry); defeat ends the run. The full campaign-variable model remains future work.
+
 ---
 
 ## 9. Scenario schema
@@ -366,7 +368,7 @@ Conceptual shape:
 }
 ```
 
-Current implementation note: the bounded slice does not yet load a full top-level `Scenario` content type. M12 outcome authoring is provided by `content/scenario_outcome.json`.
+Current implementation note (M16): a **thin** `Scenario` is loaded from an optional `content/scenarios.json` (`kind: "ScenarioCollection"`). Each thin scenario owns only `id`, `name`, `startRegionId`, optional `startNodeId` (defaults to the region's `arrivalNodeId`), optional `startGold`, `standaloneSelectable`, and optional inline `victoryConditions` / `defeatConditions`. When neither inline outcome key is present, the scenario uses the global `content/scenario_outcome.json` fallback exactly as M12 does. The full per-Scenario model above (world map, region references, Scenario Region Contexts, team setup, hero pool, banned skills/artifacts, resource defaults, validation suppressions) is not yet loaded — regions, units, and the World Map remain globally loaded across scenarios.
 
 ---
 

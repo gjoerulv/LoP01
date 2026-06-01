@@ -5,12 +5,14 @@
 
 #include "app/RegionController.h"
 #include "app/WorldMapController.h"
+#include "app/CampaignController.h"
 #include "app/LocationController.h"
 #include "app/BattleController.h"
 #include "app/MusteringInteraction.h"
 #include "app/input/InputTranslator.h"
 #include "app/mappers/RegionModelMapper.h"
 #include "app/mappers/WorldMapModelMapper.h"
+#include "app/mappers/CampaignModelMapper.h"
 #include "app/mappers/LocationModelMapper.h"
 #include "app/mappers/HudModelMapper.h"
 #include "app/mappers/BattleModelMapper.h"
@@ -26,6 +28,7 @@
 #include "rendering/LocationRenderer.h"
 #include "rendering/RegionRenderer.h"
 #include "rendering/WorldMapRenderer.h"
+#include "rendering/CampaignSelectRenderer.h"
 #include "rendering/RenderContext.h"
 #include "rendering/TitleRenderer.h"
 
@@ -68,6 +71,11 @@ namespace app {
 
         void UpdateRegionMode(const input::InputState& input);
         void UpdateWorldMapMode(const input::InputState& input);
+        void UpdateCampaignSelectMode(const input::InputState& input);
+        // If a campaign is active and a scenario outcome has latched, advance the
+        // campaign (Victory), or mark it Completed/Failed, and update the status
+        // message. No-op otherwise. Called at the top of UpdateRegionMode.
+        void HandleCampaignProgressIfLatched();
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
         // Appends "Victory!" / "Defeat." plus the latched reason to statusMessage_.
@@ -91,6 +99,7 @@ namespace app {
         ashvale::rendering::TitleRenderer titleRenderer_;
         ashvale::rendering::RegionRenderer regionRenderer_;
         ashvale::rendering::WorldMapRenderer worldMapRenderer_;
+        ashvale::rendering::CampaignSelectRenderer campaignSelectRenderer_;
         ashvale::rendering::LocationRenderer locationRenderer_;
         ashvale::rendering::BattleRenderer battleRenderer_;
 
@@ -100,6 +109,7 @@ namespace app {
         LocationController locationController_;
         RegionController regionController_;
         WorldMapController worldMapController_;
+        CampaignController campaignController_;
         MusteringInteraction musteringInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
@@ -107,6 +117,7 @@ namespace app {
         mappers::LocationModelMapper locationModelMapper_;
         mappers::RegionModelMapper regionModelMapper_;
         mappers::WorldMapModelMapper worldMapModelMapper_;
+        mappers::CampaignModelMapper campaignModelMapper_;
 
         BattleEventTextFormatter battleEventTextFormatter_;        
 
@@ -117,6 +128,7 @@ namespace app {
 
         int regionSelectedNodeIndex_ = 0;
         int worldMapSelectedIndex_ = 0;
+        int campaignSelectedIndex_ = 0;
         int observedDay_ = -1;
         bool restedThisDay_ = false;
         gameplay::GameMode battleReturnMode_ = gameplay::GameMode::RegionMode;
