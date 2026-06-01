@@ -1,10 +1,9 @@
 # Validation System
 
-This document defines the intended validation model for Ashvale content.
-
-Validation should validate the schema conventions defined in `docs/content_schema.md`.
+This document defines the intended validation model for Ashvale content. Validation should validate the schema conventions defined in `docs/content_schema.md`.
 
 Use this document when implementing or modifying:
+
 - content validation
 - editor validation
 - Scenario playability checks
@@ -14,6 +13,7 @@ Use this document when implementing or modifying:
 - reference cleanup tooling
 
 Related docs:
+
 - `docs/scenario_authoring.md`
 - `docs/presentation_game_feel.md`
 - `docs/content_schema.md`
@@ -26,9 +26,8 @@ Related docs:
 
 ## 1. Validation goals
 
-Validation exists to keep authored content playable, debuggable, and safe to iterate on.
+Validation exists to keep authored content playable, debuggable, and safe to iterate on. Validation should:
 
-Validation should:
 - catch broken references
 - catch invalid schemas
 - catch invalid system-specific settings
@@ -38,9 +37,7 @@ Validation should:
 - run headlessly in tests and CI
 - allow designers to save unfinished work
 
-Validation does **not** exist to forbid harsh design.
-
-A Scenario may be brutal, obscure, or unfair if it is structurally valid.
+Validation does **not** exist to forbid harsh design. A Scenario may be brutal, obscure, or unfair if it is structurally valid.
 
 ---
 
@@ -49,7 +46,9 @@ A Scenario may be brutal, obscure, or unfair if it is structurally valid.
 Use three validation levels.
 
 ### Save validation
+
 Save validation:
+
 - runs when content is saved in the editor
 - never blocks saving
 - reports errors, warnings, and info messages
@@ -57,7 +56,9 @@ Save validation:
 Designers may save invalid work-in-progress content.
 
 ### Playable validation
+
 Playable validation:
+
 - runs before content is played
 - runs on game startup for playable content
 - blocks play if any errors exist
@@ -66,7 +67,9 @@ Playable validation:
 Invalid content should not be playable.
 
 ### Release validation
+
 Release validation:
+
 - runs before content is packaged, published, or marked release-ready
 - blocks on errors
 - allows warnings only if they are acknowledged or suppressed with a reason
@@ -80,9 +83,11 @@ Release validation is stricter than playable validation but should still allow i
 Validation messages use three severities.
 
 ### Error
+
 An **Error** means content is structurally invalid and cannot be played.
 
 Examples:
+
 - missing required reference
 - invalid enum value
 - no valid arrival node in a playable Region
@@ -91,9 +96,11 @@ Examples:
 - player team has no legal leader
 
 ### Warning
+
 A **Warning** means content is playable but suspicious, risky, harsh, or possibly unintended.
 
 Examples:
+
 - no safe anchor
 - unused definition
 - quest-critical object is very hidden
@@ -102,9 +109,11 @@ Examples:
 - artifact-combination cycle exists
 
 ### Info
+
 An **Info** message is a helpful authoring note.
 
 Examples:
+
 - default victory condition was expanded
 - unused optional library content exists
 - Region size label was derived from node count
@@ -144,6 +153,7 @@ Editor UI should make the object path clickable where possible.
 The editor may offer safe reference cleanup when deleting content.
 
 Example:
+
 - designer deletes a unit
 - editor warns that the unit is used by events, quest services, teams, or conditions
 - designer may cancel or confirm deletion
@@ -152,6 +162,7 @@ Example:
 Automatic cleanup is an editor convenience, not a replacement for validation.
 
 Rules:
+
 - validation remains the authority
 - cleanup must not silently make ambiguous content playable
 - if a safe default is not possible, leave a validation error
@@ -165,11 +176,13 @@ Rules:
 Use scoped ids where appropriate.
 
 Recommended rules:
+
 - item ids are globally unique
 - artifact ids are globally unique
 - unit ids are globally unique
 - recipe ids are globally unique
 - Scenario ids are globally unique
+- Campaign ids are globally unique
 - Region ids are globally unique or library-unique
 - node ids are unique within a Region
 - route ids are unique within a Region
@@ -184,11 +197,10 @@ Duplicate ids inside their required scope are errors.
 
 ## 7. Reference and schema validation
 
-Validation should treat referenced presentation ids such as music, ambience, stinger, portrait, and visual effect ids as normal content references.
-
-Missing references are errors.
+Validation should treat referenced presentation ids such as music, ambience, stinger, portrait, and visual effect ids as normal content references. Missing references are errors.
 
 Validate references to:
+
 - Campaigns
 - Scenarios
 - Regions
@@ -212,9 +224,7 @@ Validate references to:
 - aggression levels
 - terrain types
 
-Unused definitions are warnings or info messages, not errors.
-
-Unused content may be legitimate library content.
+Unused definitions are warnings or info messages, not errors. Unused content may be legitimate library content.
 
 ---
 
@@ -223,12 +233,14 @@ Unused content may be legitimate library content.
 World Map adjacency is manually authored and bidirectional.
 
 Errors:
+
 - adjacency references missing Region
 - adjacency is not bidirectional
 - required Region has no valid path from the starting Region
 - travel path to required Region depends on a locked or unenterable Region with no unlock path
 
 Warnings:
+
 - non-enterable Region exists forever
 - optional Region is disconnected
 - Region is visible in authoring data but never unlockable
@@ -244,13 +256,47 @@ Warnings:
 - an `exitNodeId` does not exist in the source Region (`WORLDMAP_EXIT_NODE_UNKNOWN`)
 - an `adjacency` pair references a region not present in `entries[]` (`WORLDMAP_ADJACENCY_UNKNOWN_ENTRY`)
 
-Adjacency is loaded as auto-symmetric, so "not bidirectional" cannot occur. The path-dependent checks (required Region unreachable, path through a permanently-locked Region) and the warnings above are **deferred**; M15 covers reachability only through the pure `WorldMapTravelRules` BFS used at travel time (and its tests).
+Adjacency is loaded as auto-symmetric, so "not bidirectional" cannot occur.
+
+The path-dependent checks and warnings above are deferred; M15 covers reachability only through the pure `WorldMapTravelRules` BFS used at travel time and in tests.
 
 ---
 
-## 9. Region validation
+## 9. Scenario and Campaign validation
+
+Scenario and Campaign validation ensures that thin M16 Scenario definitions and Campaign definitions are structurally valid before play.
+
+### Implemented subset (M16)
+
+`content/scenarios.json` loading currently validates:
+
+- empty Scenario id (`SCENARIO_ID_EMPTY`)
+- duplicate Scenario id (`SCENARIO_DUPLICATE`)
+- unknown `startRegionId` (`SCENARIO_START_REGION_UNKNOWN`)
+- unknown `startNodeId` inside the referenced start Region (`SCENARIO_START_NODE_UNKNOWN`)
+- inline victory/defeat condition-tree structure using the existing typed condition validation path
+
+If `startNodeId` is omitted, runtime falls back to the referenced Region's `arrivalNodeId`; Region/world-map validation remains responsible for arrival-node validity.
+
+`content/campaigns.json` loading currently validates:
+
+- empty Campaign id (`CAMPAIGN_ID_EMPTY`)
+- duplicate Campaign id (`CAMPAIGN_DUPLICATE`)
+- duplicate Scenario entry inside a Campaign (`CAMPAIGN_SCENARIO_ENTRY_DUPLICATE`)
+- Campaign Scenario entry references unknown Scenario (`CAMPAIGN_SCENARIO_UNKNOWN`)
+- `nextScenarioIds[]` references unknown Scenario (`CAMPAIGN_NEXT_SCENARIO_UNKNOWN`)
+- `startScenarioId` references unknown Scenario (`CAMPAIGN_START_SCENARIO_UNKNOWN`)
+- Scenario entry references unknown carry-over rule (`CAMPAIGN_CARRYOVER_RULE_UNKNOWN`)
+- duplicate carry-over rule id (`CAMPAIGN_CARRYOVER_RULE_DUPLICATE`)
+
+M16 does **not** implement full campaign graph reachability proofing, branch-choice validation, per-scenario content-directory validation, authored starting roster validation, campaign reward validation, or softlock proofing.
+
+---
+
+## 10. Region validation
 
 A playable Region must define:
+
 - id
 - display name
 - description
@@ -261,6 +307,7 @@ A playable Region must define:
 - service and content references where used
 
 Errors:
+
 - no nodes
 - no valid arrival node
 - arrival node references missing node
@@ -272,14 +319,14 @@ Errors:
 - required node is unreachable from the arrival node
 
 Warnings:
+
 - non-critical node is disconnected
 - optional node is unreachable
 - Region has no meaningful content
 - Region has unusual size/content density
 
-Region size label is derived from node count.
+Region size label is derived from node count. Suggested labels:
 
-Suggested labels:
 - Tiny
 - Small
 - Medium
@@ -291,13 +338,12 @@ The exact thresholds may be tuned later.
 
 ---
 
-## 10. Node-content validation
+## 11. Node-content validation
 
-Nodes are travel points with authored content.
-
-Validation should enforce one main content item per node.
+Nodes are travel points with authored content. Validation should enforce one main content item per node.
 
 Main node content examples:
+
 - resource pickup
 - artifact pickup
 - Service
@@ -305,38 +351,38 @@ Main node content examples:
 - one-time special content
 
 Errors:
+
 - node has more than one main content item
 - node content references missing object
 - node content uses invalid resource/artifact/service/enemy data
 
-Events may be attached to any node.
+Events may be attached to any node. Valid node forms include:
 
-Valid node forms include:
 - empty node
 - node with content only
 - node with event only
 - node with content and attached event
 
 ### Event priority on nodes
-If a node has both attached event and main content, event priority must be explicit.
 
-Allowed values:
+If a node has both attached event and main content, event priority must be explicit. Allowed values:
+
 - `beforeContent`
 - `afterContent`
 - `replacesContent`
 
 Default:
+
 - `beforeContent`
 
 Validation should warn if legacy data omits event priority.
 
 ---
 
-## 11. Route validation
-
-Routes are authored and stateful.
+## 12. Route validation
 
 A route defines:
+
 - source node
 - destination node
 - road flag
@@ -345,6 +391,7 @@ A route defines:
 Travel time and Energy are computed from route quality and distance.
 
 Errors:
+
 - route references missing node
 - route duplicates another route illegally
 - route has invalid terrain
@@ -352,30 +399,29 @@ Errors:
 - route is required for progression but cannot become active
 
 Routes may be:
+
 - active
 - hidden
 - destroyed
 - restored
 
-Events may destroy, restore, reveal, or activate authored routes.
-
-Events do not create entirely new route definitions from nothing at runtime.
+Events may destroy, restore, reveal, or activate authored routes. Events do not create entirely new route definitions from nothing at runtime.
 
 ---
 
-## 12. Service validation
+## 13. Service validation
 
-Each Service type should have a type-specific validator.
-
-This can be refactored later if multiple validators become identical.
+Each Service type should have a type-specific validator. This can be refactored later if multiple validators become identical.
 
 Defaults:
+
 - every service type has global default data
 - omitted fields use legal defaults
 - invalid defaults are errors
 - overrides outside legal limits are errors
 
 Errors include:
+
 - storage capacity is invalid
 - mine resource is not in the resource set
 - Market stock references missing item
@@ -388,21 +434,20 @@ Errors include:
 - Location call references service type not callable from Location
 
 Warnings or errors depending on fallback:
+
 - destroyable service is required for victory
 - service needed for progression can be permanently destroyed
 - service is destroyable but not restorable
 - service is restorable but no restoration path exists
 
-If a fallback exists, prefer warning.
-If no fallback exists and progression can break, prefer error.
+If a fallback exists, prefer warning. If no fallback exists and progression can break, prefer error.
 
 ---
 
-## 13. Event validation
+## 14. Event validation
 
-Event trigger types are explicit enums.
+Event trigger types are explicit enums. Known trigger types include:
 
-Known trigger types:
 - Region node-entry
 - Location collision
 - Location confirm
@@ -423,6 +468,7 @@ Example:
 ```
 
 Errors:
+
 - unknown trigger type
 - unknown condition type
 - unknown action type
@@ -433,6 +479,7 @@ Errors:
 - event cycle or same-day repeat loop
 
 Warnings:
+
 - take/spend action without obvious guarding condition
 - give-hero or give-unit action without apparent capacity branch
 - branch condition checks content that may never exist
@@ -441,47 +488,33 @@ Warnings:
 
 ---
 
-## 14. Event priority validation
+## 15. Event priority validation
 
-Automatic events use authored priority.
-
-Priority must be unique inside the same trigger group.
-
-The designer tool may present automatic events as an ordered list.
-
-Moving events up or down should assign or reassign unique priority values.
-
-Saved data should not contain duplicate priority numbers in the same automatic trigger group.
-
-Duplicate priority in the same trigger group is an error.
-
-List order may still be used by the editor to manage priority assignment.
+Automatic events use authored priority. Priority must be unique inside the same trigger group. The designer tool may present automatic events as an ordered list. Moving events up or down should assign or reassign unique priority values. Saved data should not contain duplicate priority numbers in the same automatic trigger group. Duplicate priority in the same trigger group is an error. List order may still be used by the editor to manage priority assignment.
 
 ---
 
-## 15. Event cycle validation
+## 16. Event cycle validation
 
 Validation should detect event cycles.
 
 Errors:
+
 - event A directly triggers event A
 - event A triggers event B, and event B triggers event A
 - repeatable same-day loop can run indefinitely
 - automatic event chain can retrigger itself without a day or state boundary
 
-Cycles that are intentionally bounded by state changes may be allowed if validation can prove the boundary.
-
-If validation cannot prove the boundary, report an error or high warning depending on severity.
+Cycles that are intentionally bounded by state changes may be allowed if validation can prove the boundary. If validation cannot prove the boundary, report an error or high warning depending on severity.
 
 ---
 
-## 16. Runtime event-action validation
+## 17. Runtime event-action validation
 
-Event action chains are non-atomic ordered flows.
-
-Validation should encourage safe authoring, but runtime must still guard actions.
+Event action chains are non-atomic ordered flows. Validation should encourage safe authoring, but runtime must still guard actions.
 
 Rules:
+
 - take actions re-check availability at execution time
 - take actions fail hard if unavailable
 - take actions never clamp and never make resources negative
@@ -489,41 +522,36 @@ Rules:
 - failed actions should show/log a clear reason when reasonable
 - previous successful actions are not rolled back
 
-Validation should warn when an action chain appears to rely on failure behavior.
-
-Designers should use conditions and If / Else branches instead.
+Validation should warn when an action chain appears to rely on failure behavior. Designers should use conditions and If / Else branches instead.
 
 ---
 
-## 17. Quest validation
+## 18. Quest validation
 
-Quest services with zero quests are valid.
+Quest services with zero quests are valid. A zero-quest service may show the default empty / abandoned message. Validation may warn that a quest service has no quests.
 
-A zero-quest service may show the default empty / abandoned message.
-
-Validation may warn that a quest service has no quests.
-
-Quest objectives use the shared typed condition structure.
-
-Quest completion actions validate like event actions.
+Quest objectives use the shared typed condition structure. Quest completion actions validate like event actions.
 
 Warnings:
+
 - quest visible to player can be completed by other teams
 - enemy can permanently fail a player-visible quest
 - quest has no meaningful completion action
 - quest service has no quests
 
 High warning:
+
 - victory-critical quest can be completed by another team and no alternate victory path exists
 
 Error:
+
 - quest objective references missing content
 - quest chain references invalid quest
 - quest required for victory can never be completed
 
 ---
 
-## 18. Victory and defeat validation
+## 19. Victory and defeat validation
 
 If no victory condition is authored, validation/runtime expands the default victory condition:
 
@@ -532,6 +560,7 @@ If no victory condition is authored, validation/runtime expands the default vict
 This expansion should produce an info message.
 
 Errors:
+
 - no authored victory condition and no enemy teams exist
 - victory condition is true at Scenario start
 - defeat condition is true at Scenario start
@@ -540,15 +569,18 @@ Errors:
 - no legal winning team exists
 - all possible victory paths are structurally impossible
 
-Victory and defeat conditions use the shared typed condition model.
+Victory and defeat conditions use the shared typed condition model. Eligible and affected teams must be valid.
 
-Eligible and affected teams must be valid.
+### Implemented subset
+
+Current implementation validates the structure and known leaves/composites for authored outcome condition trees. It does not attempt full instant-win/loss, reachability, or softlock proofing.
 
 ---
 
-## 19. Team and AI validation
+## 20. Team and AI validation
 
 Player team errors:
+
 - no player team
 - more than one player team in single-player Scenario
 - invalid start Region
@@ -558,6 +590,7 @@ Player team errors:
 - player character missing where required
 
 AI team errors:
+
 - invalid personality
 - invalid aggression
 - invalid patrol radius
@@ -570,24 +603,23 @@ AI team errors:
 Team colors are limited to 8 teams per Region, including the player.
 
 ### Team templates
-Team templates are designer helpers, not direct Scenario runtime requirements.
 
-Enemy team templates always contain:
+Team templates are designer helpers, not direct Scenario runtime requirements. Enemy team templates always contain:
+
 - exactly 1 hero
-- 1-2 generic unit types
+- 1–2 generic unit types
 - valid stack ranges
 - personality
 - aggression
 
-Templates do not include artifacts or resources by default.
-
-Invalid templates are errors in the tool/template library, but not necessarily Scenario errors unless the Scenario uses them.
+Templates do not include artifacts or resources by default. Invalid templates are errors in the tool/template library, but not necessarily Scenario errors unless the Scenario uses them.
 
 ---
 
-## 20. Item, artifact, and recipe validation
+## 21. Item, artifact, and recipe validation
 
 Item errors:
+
 - invalid subtype
 - invalid stack cap
 - invalid base value
@@ -595,11 +627,13 @@ Item errors:
 - effect action references invalid content
 
 Food errors:
+
 - food is not field-use only
 - food does not target heroes correctly
 - food has invalid effect or duration
 
 Recipe errors:
+
 - input ingredient missing
 - output item missing
 - output item is not food subtype
@@ -608,6 +642,7 @@ Recipe errors:
 - output quantity <= 0
 
 Artifact errors:
+
 - invalid allowed slot
 - invalid effect
 - invalid base value
@@ -615,21 +650,38 @@ Artifact errors:
 - ultimate artifact marked combinable
 
 Artifact combination recipe errors:
+
 - not exactly 2 input artifacts
 - not exactly 1 output artifact
 - input artifact missing
 - output artifact missing
 - non-combinable artifact used as input
 
-Artifact combination cycles are warnings, not errors.
+Artifact combination cycles are warnings, not errors. Cycles may indicate poor design, but they are legal if intentionally authored and acknowledged.
 
-Cycles may indicate poor design, but they are legal if intentionally authored and acknowledged.
+### Implemented subset (M13)
+
+Current implementation validates the bounded M13 item/artifact surface only:
+
+- invalid item subtype
+- non-positive item `stackCap`
+- negative item `baseValue`
+- duplicate item id
+- unsupported item `effects`
+- invalid artifact allowed slot
+- unknown artifact `statBonus` stat
+- unsupported artifact effect type
+- negative artifact `baseValue`
+- duplicate artifact id
+
+Recipes, food effects, artifact combination recipes, ultimate-rarity enforcement, and trader-service stock validation are deferred.
 
 ---
 
-## 21. Playability validation gate
+## 22. Playability validation gate
 
 Content is playable if:
+
 - it has no validation errors
 - player team is valid
 - starting Scenario/Region/node is valid
@@ -638,19 +690,19 @@ Content is playable if:
 - default or authored victory can resolve structurally
 - required progression graph passes best-effort checks
 
-Warnings do not block play.
-
-Invalid content may be saved but must not be playable.
+Warnings do not block play. Invalid content may be saved but must not be playable.
 
 ---
 
-## 22. Release validation gate
+## 23. Release validation gate
 
 Release-ready content must:
+
 - have no errors
 - have all warnings resolved, acknowledged, or suppressed with a reason
 
 Suppressed warnings should store:
+
 - validation code
 - authored object path
 - designer reason
@@ -660,29 +712,25 @@ Suppressing a warning does not suppress future different warnings unless explici
 
 ---
 
-## 23. Softlock validation
+## 24. Softlock validation
 
-Softlock validation is best-effort.
+Softlock validation is best-effort. It should check:
 
-It should check:
 - required quest item reachability
 - victory target reachability
 - required hero availability
-- arrival node validity
+- arrival-node validity
 - Region path validity
 - route destruction/restoration dependencies
 - required service availability
 - required Region unlock path
 - generic-loss risk if required generic units must survive Region travel
 
-Softlock validation should not promise perfect proof of beatability.
-
-Validation catches likely structural impossibilities.
-Designers remain responsible for authored gameplay quality.
+Softlock validation should not promise perfect proof of beatability. Validation catches likely structural impossibilities. Designers remain responsible for authored gameplay quality.
 
 ---
 
-## 24. Validation output formats
+## 25. Validation output formats
 
 Validation should eventually support:
 
@@ -693,17 +741,16 @@ Validation should eventually support:
 - CI-friendly exit codes
 - test assertions
 
-Validation should be pure/headless.
-
-It should not require rendering.
+Validation should be pure/headless. It should not require rendering.
 
 ---
 
-## 25. Incremental validation
+## 26. Incremental validation
 
 The editor should support incremental validation.
 
 Recommended model:
+
 - validate edited object immediately
 - validate owning scope after edit
 - validate full Scenario on save
@@ -714,11 +761,12 @@ Incremental validation should not replace full validation.
 
 ---
 
-## 26. Quick fixes
+## 27. Quick fixes
 
 Validation messages may include quick-fix suggestions where practical.
 
 Examples:
+
 - add missing arrival node
 - select a valid referenced item
 - remove invalid service stock entry
@@ -726,19 +774,18 @@ Examples:
 - convert missing reference to default condition
 - add capacity branch around give-hero action
 
-Quick fixes should be explicit and reviewable.
-
-They should not silently change designer intent.
-
+Quick fixes should be explicit and reviewable. They should not silently change designer intent.
 
 ---
 
-## 27. Player character validation
+## 28. Player character validation
 
 Player-character validation applies to human teams.
 
 ### Errors
+
 Validation errors:
+
 - standalone Scenario has no player character for the human team
 - single-player human team has no player character
 - `playerCharacterHeroId` references missing hero identity
@@ -757,7 +804,9 @@ Validation errors:
 - player character is unavailable at Scenario start
 
 ### Warnings
+
 Validation warnings:
+
 - an event can move the player character out of the traveling party
 - an event can affect the player character with a kill/remove action
 - an escape/recovery path can fail because the respawn point may be blocked
@@ -765,7 +814,9 @@ Validation warnings:
 - a defeat condition depends on player-character loss but recovery rules may prevent that loss in normal play
 
 ### Character creation validation
+
 Character creation validation should ensure:
+
 - selected name is valid
 - selected sex value is valid
 - selected appearance values are valid
@@ -775,14 +826,18 @@ Character creation validation should ensure:
 - player character satisfies leader-capable hero requirements
 
 ### Campaign validation
+
 Campaign validation should ensure:
+
 - player-character identity carries over between Campaign Scenarios
 - Scenario transitions do not remove the player-character identity
 - progression carry-over rules are explicit when they reset level, skills, passives, equipment, or artifacts
 
+M16 enforces the practical player-character carry-over rule inside campaign carry-over logic; richer player-character validation remains future work.
+
 ---
 
-## 28. Agent / implementation guidance
+## 29. Agent / implementation guidance
 
 When implementing validation:
 
