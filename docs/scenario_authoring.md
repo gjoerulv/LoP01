@@ -352,6 +352,13 @@ Events may eventually change Service state, including:
 
 Events may override authored service settings where such overrides are legal.
 
+### Owned Services and stationed units
+Owned Services should be authored with explicit ownership and guard/stationing support only where the service type allows it, such as gates, mines, and storage. A team must own a mine or service before stationing guards there; hostile guards must be defeated before capture or stationing.
+
+For owned mine/resource Services, daily output starts from the authored base output. Stationed units may improve output only through explicit passive skills. For each owned service instance and output resource, only the strongest applicable stationed passive from the owning team applies; equal bonuses do not stack.
+
+Trader ownership bonuses are per service type. Owning more Markets affects owned Market pricing only; Trading Posts, Black Markets, and Freelancer's Guilds each use their own ownership tiering. Ownership does not bypass stock, destruction, hostile occupation, or eligibility rules.
+
 ---
 
 ## 11. Location service calls
