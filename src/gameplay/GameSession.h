@@ -9,15 +9,18 @@
 #include "core/GameClock.h"
 #include "core/SaveGame.h"
 #include "data/definitions/ArtifactDefinition.h"
+#include "data/definitions/CampaignDefinition.h"
 #include "data/definitions/ItemDefinition.h"
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
+#include "data/definitions/ScenarioDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "data/definitions/UnitDefinition.h"
 #include "data/definitions/WorldMapDefinition.h"
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
+#include "gameplay/campaign/CampaignCarryover.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/quests/QuestState.h"
@@ -26,6 +29,7 @@
 #include "gameplay/world/NodeWorldState.h"
 
 #include <map>
+#include <unordered_map>
 
 namespace gameplay {
 
@@ -37,6 +41,28 @@ enum class GameMode {
     LocationMode,
     BattleMode
 };
+
+// M16-b campaign run lifecycle. None = no campaign active (standalone play).
+// InProgress = a scenario of the campaign is being played. Completed = the final
+// scenario was won. Failed = a scenario was lost (defeat ends the campaign run).
+enum class CampaignState { None, InProgress, Completed, Failed };
+
+inline std::string CampaignStateToString(CampaignState state) {
+    switch (state) {
+        case CampaignState::InProgress: return "in_progress";
+        case CampaignState::Completed:  return "completed";
+        case CampaignState::Failed:     return "failed";
+        case CampaignState::None:       return "";
+    }
+    return "";
+}
+
+inline CampaignState CampaignStateFromString(const std::string& value) {
+    if (value == "in_progress") return CampaignState::InProgress;
+    if (value == "completed")   return CampaignState::Completed;
+    if (value == "failed")      return CampaignState::Failed;
+    return CampaignState::None;
+}
 
 struct OwnedUnitCountState {
     std::string unitId;
@@ -136,6 +162,10 @@ struct SessionSnapshot {
     // mirror GameSession::CurrentEnergy() / MaxEnergy().
     int energy = 0;
     int maxEnergy = 0;
+    // M16-b campaign status for render/HUD. campaignId is empty for standalone play.
+    std::string campaignId;
+    std::string currentScenarioId;
+    CampaignState campaignState = CampaignState::None;
 };
 
 class GameSession {
@@ -268,7 +298,42 @@ public:
     void SetEnemyTeams(std::vector<EnemyTeamState> teams);
     void SetPlayerColor(std::string color);
     [[nodiscard]] const std::string& PlayerColor() const;
+    // Sets BOTH the global fallback and the currently-active outcome definition.
+    // Preserves M12 / standalone behavior: a session with no campaign evaluates
+    // exactly this definition. During a campaign, scenario starts re-select the
+    // active definition (inline scenario conditions, else this global fallback).
     void SetScenarioOutcomeDefinition(data::ScenarioOutcomeDefinition definition);
+    // The definition CheckAndLatchOutcome currently evaluates. Exposed for
+    // inspection/tests (Correction 2: active vs global fallback separation).
+    [[nodiscard]] const data::ScenarioOutcomeDefinition& ActiveScenarioOutcomeDefinition() const;
+
+    // M16-b campaign catalogs. Stored once with id->index maps for O(1) lookup;
+    // no list scans in hot paths (campaign logic runs only at start/transition).
+    void SetScenarioCatalog(std::vector<data::ScenarioDefinition> catalog);
+    void SetCampaignCatalog(std::vector<data::CampaignDefinition> catalog);
+    [[nodiscard]] const std::vector<data::CampaignDefinition>& CampaignCatalog() const;
+
+    // M16-b campaign progression. StartCampaign begins from the EXISTING default
+    // startup roster (M16 keeps the default roster model; scenarios define no
+    // roster) and enters the campaign's startScenarioId in RegionMode. No-ops if
+    // the campaign id is unknown.
+    void StartCampaign(const std::string& campaignId);
+    // Call after an outcome latches while a campaign is active. Advances on
+    // Victory (applying the old scenario's carry-over rule), marks the run Failed
+    // on Defeat, Completed when the final scenario is won. One-shot per latch.
+    void ResolveCampaignAfterOutcome();
+    // Victory worker (also usable directly in tests after a latched Victory):
+    // captures + filters carry-over and transitions to the next scenario, or
+    // marks the run Completed when there is no next scenario.
+    void AdvanceCampaignOnVictory();
+
+    [[nodiscard]] bool IsCampaignActive() const;
+    [[nodiscard]] CampaignState GetCampaignState() const;
+    [[nodiscard]] const std::string& CampaignId() const;
+    [[nodiscard]] const std::string& CurrentScenarioId() const;
+    [[nodiscard]] const std::vector<std::string>& CompletedScenarioIds() const;
+    [[nodiscard]] const std::set<std::string>& CampaignFlags() const;
+
     // Evaluates outcome against current session state. If non-Ongoing and the
     // session has not yet latched, latches the outcome (and stays latched
     // through save/load). Called automatically at the boundaries documented in
@@ -393,8 +458,42 @@ private:
     static const std::vector<std::string> kTeamColorOrder;
 
     std::string playerColor_ = "Green";
-    data::ScenarioOutcomeDefinition scenarioOutcomeDefinition_;
+    // M16-b: global fallback (from scenario_outcome.json, never mutated) kept
+    // separate from the active definition CheckAndLatchOutcome evaluates.
+    data::ScenarioOutcomeDefinition globalScenarioOutcomeDefinition_;
+    data::ScenarioOutcomeDefinition activeScenarioOutcomeDefinition_;
     std::optional<scenario::ScenarioOutcome> latchedOutcome_;
+
+    // M16-b campaign runtime state + catalogs.
+    std::vector<data::ScenarioDefinition> scenarioCatalog_;
+    std::vector<data::CampaignDefinition> campaignCatalog_;
+    std::unordered_map<std::string, std::size_t> scenarioIndexById_;
+    std::unordered_map<std::string, std::size_t> campaignIndexById_;
+    std::string campaignId_;
+    std::string currentScenarioId_;
+    std::vector<std::string> completedScenarioIds_;
+    std::set<std::string> campaignFlags_;
+    CampaignState campaignState_ = CampaignState::None;
+    // Authored seeds captured so a scenario transition can reset scenario-local
+    // runtime to a clean baseline without an App callback.
+    std::vector<data::QuestDefinition> questDefinitionSeed_;
+    std::vector<EnemyTeamState>        enemyTeamSeed_;
+
+    static constexpr int kDefaultStartGold = 2500;
+
+    // The single ordered scenario-start/transition chokepoint (M16-b). carry is
+    // nullopt on initial campaign start (baseline roster kept) and present on a
+    // victory transition (filtered carry-over applied after reset/seeding).
+    void TransitionToScenario(const std::string& scenarioId,
+                              std::optional<campaign::CampaignCarrySet> carry);
+    [[nodiscard]] const data::ScenarioDefinition* FindScenarioDefinition(const std::string& id) const;
+    [[nodiscard]] const data::CampaignDefinition* FindCampaignDefinition(const std::string& id) const;
+    [[nodiscard]] std::string PlayerHeroUnitId() const;
+    [[nodiscard]] std::set<std::string> ValidUnitIdSet() const;
+    [[nodiscard]] campaign::CampaignCarrySet CaptureCarrySet() const;
+    void ApplyCarrySet(const campaign::CampaignCarrySet& set);
+    void ReseedWorldMapUnlock();
+    void SelectActiveOutcomeForScenario(const data::ScenarioDefinition& scenario);
 
     // M13-b runtime inventory + equipment state.
     std::vector<ItemStackState>     items_;
