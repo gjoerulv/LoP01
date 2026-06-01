@@ -794,6 +794,273 @@ namespace data {
             return true;
         }
 
+        // M16-a: scenarios.json loader. Optional file; absent/empty is legal
+        // (the slice runs as a single implicit scenario with no campaign).
+        // Thin Scenario model: a Scenario selects a starting Region/node and
+        // optionally its own win/loss conditions. Invalid entries are skipped so
+        // a single bad scenario does not erase the rest, mirroring the world-map
+        // and items loaders.
+        bool LoadScenariosFile(
+            const nlohmann::json& root,
+            std::vector<ScenarioDefinition>& output,
+            const std::vector<RegionDefinition>& regions,
+            std::vector<ValidationMessage>& msgs)
+        {
+            output.clear();
+            if (!root.contains("scenarios") || !root["scenarios"].is_array()) {
+                return true;
+            }
+
+            auto findRegion = [&](const std::string& regionId) -> const RegionDefinition* {
+                for (const auto& region : regions) {
+                    if (region.id == regionId) return &region;
+                }
+                return nullptr;
+            };
+            auto regionHasNode = [](const RegionDefinition& region, const std::string& nodeId) {
+                for (const auto& node : region.nodes) {
+                    if (node.locationId == nodeId) return true;
+                }
+                return false;
+            };
+
+            std::set<std::string> seenIds;
+            for (size_t i = 0; i < root["scenarios"].size(); ++i) {
+                const auto& entry = root["scenarios"][i];
+                const std::string path = "scenarios[" + std::to_string(i) + "]";
+                if (!entry.is_object()) {
+                    msgs.push_back({Severity::Error, "SCENARIO_NOT_OBJECT", path,
+                        "Scenario entry must be a JSON object.", ""});
+                    continue;
+                }
+
+                ScenarioDefinition def;
+                def.id            = entry.value("id", "");
+                if (entry.contains("name") && entry["name"].is_object()) {
+                    def.name = entry["name"].value("en", "");
+                } else {
+                    def.name = entry.value("name", "");
+                }
+                def.startRegionId = entry.value("startRegionId", "");
+                def.startNodeId   = entry.value("startNodeId", "");
+                def.standaloneSelectable = entry.value("standaloneSelectable", false);
+                if (entry.contains("startGold") && entry["startGold"].is_number_integer()) {
+                    def.startGold = entry["startGold"].get<int>();
+                }
+
+                if (def.id.empty()) {
+                    msgs.push_back({Severity::Error, "SCENARIO_ID_EMPTY", path + ".id",
+                        "Scenario \"id\" is required and must be a non-empty string.", ""});
+                    continue;
+                }
+                if (!seenIds.insert(def.id).second) {
+                    msgs.push_back({Severity::Error, "SCENARIO_DUPLICATE", path + ".id",
+                        "Duplicate scenario id \"" + def.id + "\".", ""});
+                    continue;
+                }
+
+                const RegionDefinition* region = findRegion(def.startRegionId);
+                if (region == nullptr) {
+                    msgs.push_back({Severity::Error, "SCENARIO_START_REGION_UNKNOWN",
+                        path + ".startRegionId",
+                        "Scenario \"" + def.id + "\" references unknown start Region \"" +
+                        def.startRegionId + "\".", ""});
+                    continue;
+                }
+                if (!def.startNodeId.empty() && !regionHasNode(*region, def.startNodeId)) {
+                    msgs.push_back({Severity::Error, "SCENARIO_START_NODE_UNKNOWN",
+                        path + ".startNodeId",
+                        "Scenario \"" + def.id + "\" start node \"" + def.startNodeId +
+                        "\" does not exist in Region \"" + def.startRegionId + "\".", ""});
+                    continue;
+                }
+
+                // Inline outcome (optional). Key presence selects inline vs the
+                // global M12 fallback. Reuses the shared condition tree exactly.
+                const bool hasVictory = entry.contains("victoryConditions");
+                const bool hasDefeat  = entry.contains("defeatConditions");
+                def.hasInlineOutcome = hasVictory || hasDefeat;
+                auto loadConditions = [&](const char* key, const std::string& label,
+                                          std::vector<gameplay::events::EventCondition>& dst) {
+                    if (!entry.contains(key)) return;
+                    if (!entry[key].is_array()) {
+                        msgs.push_back({Severity::Error, "SCENARIO_OUTCOME_LIST_NOT_ARRAY",
+                            path + "." + label,
+                            std::string{"\""} + key + "\" must be a JSON array.", ""});
+                        return;
+                    }
+                    for (size_t j = 0; j < entry[key].size(); ++j) {
+                        const auto condPath = path + "." + label + "[" + std::to_string(j) + "]";
+                        gameplay::events::ValidateConditionTree(entry[key][j], condPath, msgs);
+                        dst.push_back(gameplay::events::ParseCondition(entry[key][j]));
+                    }
+                };
+                loadConditions("victoryConditions", "victoryConditions", def.victoryConditions);
+                loadConditions("defeatConditions",  "defeatConditions",  def.defeatConditions);
+
+                output.push_back(std::move(def));
+            }
+            return true;
+        }
+
+        // M16-a: campaigns.json loader. Optional file; absent/empty means no
+        // campaign (standalone startup is preserved). References are validated
+        // against the already-loaded scenarios. Campaign-level id problems skip
+        // the whole campaign; bad scenario entries / refs emit errors but keep
+        // the surrounding valid data.
+        bool LoadCampaignsFile(
+            const nlohmann::json& root,
+            std::vector<CampaignDefinition>& output,
+            const std::vector<ScenarioDefinition>& scenarios,
+            std::vector<ValidationMessage>& msgs)
+        {
+            output.clear();
+            if (!root.contains("campaigns") || !root["campaigns"].is_array()) {
+                return true;
+            }
+
+            auto scenarioExists = [&](const std::string& id) {
+                for (const auto& s : scenarios) {
+                    if (s.id == id) return true;
+                }
+                return false;
+            };
+
+            std::set<std::string> seenCampaignIds;
+            for (size_t i = 0; i < root["campaigns"].size(); ++i) {
+                const auto& entry = root["campaigns"][i];
+                const std::string path = "campaigns[" + std::to_string(i) + "]";
+                if (!entry.is_object()) {
+                    msgs.push_back({Severity::Error, "CAMPAIGN_NOT_OBJECT", path,
+                        "Campaign entry must be a JSON object.", ""});
+                    continue;
+                }
+
+                CampaignDefinition def;
+                def.id = entry.value("id", "");
+                if (entry.contains("name") && entry["name"].is_object()) {
+                    def.name = entry["name"].value("en", "");
+                } else {
+                    def.name = entry.value("name", "");
+                }
+                if (entry.contains("description") && entry["description"].is_object()) {
+                    def.description = entry["description"].value("en", "");
+                } else {
+                    def.description = entry.value("description", "");
+                }
+                def.startScenarioId = entry.value("startScenarioId", "");
+
+                if (def.id.empty()) {
+                    msgs.push_back({Severity::Error, "CAMPAIGN_ID_EMPTY", path + ".id",
+                        "Campaign \"id\" is required and must be a non-empty string.", ""});
+                    continue;
+                }
+                if (!seenCampaignIds.insert(def.id).second) {
+                    msgs.push_back({Severity::Error, "CAMPAIGN_DUPLICATE", path + ".id",
+                        "Duplicate campaign id \"" + def.id + "\".", ""});
+                    continue;
+                }
+
+                if (entry.contains("campaignFlags") && entry["campaignFlags"].is_array()) {
+                    for (const auto& flag : entry["campaignFlags"]) {
+                        if (flag.is_string()) def.campaignFlags.push_back(flag.get<std::string>());
+                    }
+                }
+
+                // Carry-over rules (defined before scenario entries reference them).
+                std::set<std::string> seenRuleIds;
+                if (entry.contains("carryOverRules") && entry["carryOverRules"].is_array()) {
+                    for (size_t r = 0; r < entry["carryOverRules"].size(); ++r) {
+                        const auto& ruleJson = entry["carryOverRules"][r];
+                        const std::string rpath = path + ".carryOverRules[" + std::to_string(r) + "]";
+                        if (!ruleJson.is_object()) continue;
+                        CarryOverRule rule;
+                        rule.id            = ruleJson.value("id", "");
+                        rule.carryGold     = ruleJson.value("carryGold", false);
+                        rule.carryRoster   = ruleJson.value("carryRoster", false);
+                        rule.carryItems    = ruleJson.value("carryItems", false);
+                        rule.carryArtifacts= ruleJson.value("carryArtifacts", false);
+                        if (ruleJson.contains("carryStoryFlags") && ruleJson["carryStoryFlags"].is_array()) {
+                            for (const auto& f : ruleJson["carryStoryFlags"]) {
+                                if (f.is_string()) rule.carryStoryFlags.push_back(f.get<std::string>());
+                            }
+                        }
+                        if (rule.id.empty()) continue;
+                        if (!seenRuleIds.insert(rule.id).second) {
+                            msgs.push_back({Severity::Error, "CAMPAIGN_CARRYOVER_RULE_DUPLICATE",
+                                rpath + ".id",
+                                "Duplicate carry-over rule id \"" + rule.id + "\" in campaign \"" +
+                                def.id + "\".", ""});
+                            continue;
+                        }
+                        def.carryOverRules.push_back(std::move(rule));
+                    }
+                }
+
+                // Scenario entries (transition graph nodes).
+                std::set<std::string> seenEntryIds;
+                if (entry.contains("scenarios") && entry["scenarios"].is_array()) {
+                    for (size_t s = 0; s < entry["scenarios"].size(); ++s) {
+                        const auto& sJson = entry["scenarios"][s];
+                        const std::string spath = path + ".scenarios[" + std::to_string(s) + "]";
+                        if (!sJson.is_object()) continue;
+                        CampaignScenarioEntry sEntry;
+                        sEntry.scenarioId     = sJson.value("scenarioId", "");
+                        sEntry.carryOverRuleId= sJson.value("carryOverRuleId", "");
+                        if (sJson.contains("nextScenarioIds") && sJson["nextScenarioIds"].is_array()) {
+                            for (const auto& n : sJson["nextScenarioIds"]) {
+                                if (n.is_string()) sEntry.nextScenarioIds.push_back(n.get<std::string>());
+                            }
+                        }
+
+                        if (sEntry.scenarioId.empty()) continue;
+                        if (!seenEntryIds.insert(sEntry.scenarioId).second) {
+                            msgs.push_back({Severity::Error, "CAMPAIGN_SCENARIO_ENTRY_DUPLICATE",
+                                spath + ".scenarioId",
+                                "Duplicate scenario entry \"" + sEntry.scenarioId + "\" in campaign \"" +
+                                def.id + "\".", ""});
+                            continue;
+                        }
+                        if (!scenarioExists(sEntry.scenarioId)) {
+                            msgs.push_back({Severity::Error, "CAMPAIGN_SCENARIO_UNKNOWN",
+                                spath + ".scenarioId",
+                                "Campaign \"" + def.id + "\" references unknown scenario \"" +
+                                sEntry.scenarioId + "\".", ""});
+                        }
+                        for (const auto& nextId : sEntry.nextScenarioIds) {
+                            if (!scenarioExists(nextId)) {
+                                msgs.push_back({Severity::Error, "CAMPAIGN_NEXT_SCENARIO_UNKNOWN",
+                                    spath + ".nextScenarioIds",
+                                    "Campaign \"" + def.id + "\" next scenario \"" + nextId +
+                                    "\" is unknown.", ""});
+                            }
+                        }
+                        if (!sEntry.carryOverRuleId.empty() &&
+                            def.FindCarryOverRule(sEntry.carryOverRuleId) == nullptr) {
+                            msgs.push_back({Severity::Error, "CAMPAIGN_CARRYOVER_RULE_UNKNOWN",
+                                spath + ".carryOverRuleId",
+                                "Campaign \"" + def.id + "\" scenario \"" + sEntry.scenarioId +
+                                "\" references unknown carry-over rule \"" + sEntry.carryOverRuleId +
+                                "\".", ""});
+                        }
+                        def.scenarios.push_back(std::move(sEntry));
+                    }
+                }
+
+                // Start scenario must be present and a node in this campaign.
+                if (def.startScenarioId.empty() ||
+                    def.FindScenarioEntry(def.startScenarioId) == nullptr) {
+                    msgs.push_back({Severity::Error, "CAMPAIGN_START_SCENARIO_UNKNOWN",
+                        path + ".startScenarioId",
+                        "Campaign \"" + def.id + "\" startScenarioId \"" + def.startScenarioId +
+                        "\" is empty or not one of its scenario entries.", ""});
+                }
+
+                output.push_back(std::move(def));
+            }
+            return true;
+        }
+
     } // namespace
 
     bool ContentRepository::LoadFromDirectory(const std::filesystem::path& root) {
@@ -811,6 +1078,8 @@ namespace data {
         items_.clear();
         artifacts_.clear();
         worldMap_ = WorldMapDefinition{};
+        scenarios_.clear();
+        campaigns_.clear();
 
         ContentValidator validator;
 
@@ -879,6 +1148,18 @@ namespace data {
         auto worldMapDoc = load(root / "world_map.json");
         if (worldMapDoc) {
             LoadWorldMapFile(*worldMapDoc, worldMap_, regions_, messages_);
+        }
+
+        // scenarios.json and campaigns.json are optional (M16-a). Absent/empty →
+        // no campaign; standalone startup is preserved. Scenarios load first so
+        // campaign references resolve against them.
+        auto scenariosFileDoc = load(root / "scenarios.json");
+        if (scenariosFileDoc) {
+            LoadScenariosFile(*scenariosFileDoc, scenarios_, regions_, messages_);
+        }
+        auto campaignsDoc = load(root / "campaigns.json");
+        if (campaignsDoc) {
+            LoadCampaignsFile(*campaignsDoc, campaigns_, scenarios_, messages_);
         }
 
         auto refMsgs = validator.ValidateReferences(
@@ -1037,6 +1318,32 @@ namespace data {
 
     const WorldMapRegionEntry* ContentRepository::FindWorldMapRegionEntry(const std::string& regionId) const {
         return worldMap_.FindEntry(regionId);
+    }
+
+    const std::vector<ScenarioDefinition>& ContentRepository::Scenarios() const {
+        return scenarios_;
+    }
+
+    const ScenarioDefinition* ContentRepository::FindScenarioById(const std::string& id) const {
+        for (const auto& scenario : scenarios_) {
+            if (scenario.id == id) {
+                return &scenario;
+            }
+        }
+        return nullptr;
+    }
+
+    const std::vector<CampaignDefinition>& ContentRepository::Campaigns() const {
+        return campaigns_;
+    }
+
+    const CampaignDefinition* ContentRepository::FindCampaignById(const std::string& id) const {
+        for (const auto& campaign : campaigns_) {
+            if (campaign.id == id) {
+                return &campaign;
+            }
+        }
+        return nullptr;
     }
 
 } // namespace data

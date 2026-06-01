@@ -33,6 +33,8 @@ add_library(ashvale_logic
   src/gameplay/region/RegionDeadEndRules.cpp
   src/gameplay/region/RegionTravelRules.cpp
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
+  src/gameplay/campaign/CampaignProgressionRules.cpp
+  src/gameplay/campaign/CampaignCarryover.cpp
   src/gameplay/worldmap/WorldMapTravelRules.cpp
   src/gameplay/location/LocationScene.cpp
   src/gameplay/location/LocationServiceRules.cpp
@@ -151,6 +153,10 @@ if (BUILD_TESTING)
     tests/WorldMapTravelTests.cpp
     tests/WorldMapControllerTests.cpp
     tests/WorldMapEndToEndTests.cpp
+    tests/ScenarioContentTests.cpp
+    tests/CampaignContentTests.cpp
+    tests/CampaignProgressionRulesTests.cpp
+    tests/CampaignCarryoverTests.cpp
   )
 
   target_link_libraries(ashvale_logic_tests PRIVATE ashvale_logic ashvale_rendering Catch2::Catch2WithMain)
