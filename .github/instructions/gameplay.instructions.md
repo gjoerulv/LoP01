@@ -4,31 +4,45 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 
 # Gameplay implementation instructions
 
-- Treat the repository and the current design docs as the source of truth.
-- Respect the time and travel rules exactly as described in `docs/core_loop_rules.md`.
+- Treat the repository and the current active design docs as the source of truth.
+- Respect `docs/implementation_roadmap.md` for current sequencing and not-yet boundaries.
+- Respect `docs/content_scope_v1.md` for post-M16 content-scope limits.
+- Respect `docs/technical_direction.md` for architecture, state ownership, and performance principles.
+- Respect the time, travel, Energy, service, ownership, and economy rules in `docs/core_loop_rules.md`.
 - Respect battle logic exactly as described in `docs/combat_rules.md`.
 - Respect the current high-level design intent in `docs/game_vision.md`.
 - Respect content authoring rules in `docs/scenario_authoring.md` when changing content schemas, events, quests, or Services.
 - Respect validation levels, severities, and gates in `docs/validation_system.md` when changing validators or validation reports.
 - Respect content schema conventions in `docs/content_schema.md` when changing content JSON, loaders, schemas, or validation.
 - Use `docs/terminology_map.md` when legacy runtime or content names differ from current design language.
+- Treat archived docs as historical context only.
+
+## Current baseline
+
+The project is post-M16. Battle, roster, save/load, typed events, scenario outcomes, inventory/artifacts, team Energy, minimal World Map travel, and minimal Campaign foundations exist.
+
+Do not write guidance or implementation assumptions as if the project is still post-M8, post-M11, or single-Region only.
 
 ## Terminology
 
-- Use current design terminology in discussion and new docs:
-  - `World Map` = the scenario-level region selection and information layer
-  - `Region` = the main in-scenario travel layer
-  - `Location` = an entered place inside a Region
-  - `Service` = an interaction available directly in a Region or inside a Location
-- Runtime code or serialized values may still contain legacy names. Do not broaden or reinforce outdated terminology in new design work.
+Use current design terminology in discussion and new docs:
+
+- `World Map` = the scenario-level Region selection and information layer.
+- `Region` = the main in-scenario travel layer.
+- `Location` = an entered place inside a Region.
+- `Service` = an interaction available directly in a Region or inside a Location.
+
+Runtime code or serialized values may still contain legacy names. Do not broaden or reinforce outdated terminology in new design work.
 
 ## Layer separation
 
-- Keep the four major gameplay layers distinct:
-  - `World Map`
-  - `Region`
-  - `Location`
-  - `Battle`
+- Keep the major gameplay layers distinct:
+  - World Map;
+  - Region;
+  - Location;
+  - Battle;
+  - Progression;
+  - Campaign.
 - Do not collapse Region mode and Location mode into one system.
 - Battles must remain a separate reusable module shared by Region and Location encounters.
 - Do not assume a Location is just a flavored Region node. Entering a Location is a real layer transition.
@@ -59,20 +73,23 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - The player may select any reachable node directly.
 - Same-node travel is not a meaningful move and should not be treated as normal travel.
 - Blocked nodes remain visible even when travel to them is illegal.
-- Routes have terrain or road quality, and route quality affects both travel time and Energy cost.
+- Routes have terrain or road quality, and route quality affects both travel time and Energy cost when implemented.
 - Energy belongs to the traveling party, not to individual units.
-- Daily starting Energy is based on the current traveling party rules in `docs/core_loop_rules.md`.
+- Daily starting Energy is based on the current traveling-party rules in `docs/core_loop_rules.md`.
 - World Map travel uses the shortest valid contiguous path through enterable Regions and costs the settled one-time Energy amount when travel begins.
 - Do not reintroduce the old "one region-travel allowance per day" rule.
 
 ## Party and storage assumptions
 
-- Respect the settled party model:
-  - `Active party` = the current battle-legal party, up to 5 units
-  - `Reserve` = additional traveling units, up to 7
-  - `Traveling party` = active party + reserve
-  - `Stored units` = units tied to a specific storage service and not traveling with the player
-- Hero units and stackable generic units must continue to be modeled differently.
+Respect the settled party model:
+
+- `Active party` = the current battle-legal party, up to 5 units.
+- `Reserve` = additional traveling units, up to 7.
+- `Traveling party` = active party + reserve.
+- `Stored units` = units tied to a specific storage service and not traveling with the player.
+
+Hero units and stackable generic units must continue to be modeled differently.
+
 - Do not assume traveling generic units survive Region transfer.
 - Do not assume stored units are interchangeable with reserve units.
 - Storage may exist in a Location or as a direct Region service.
@@ -87,16 +104,35 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 - If an enemy team occupies a Location node, the Location is inaccessible until that team is defeated.
 - When design docs and current runtime disagree on future enemy-team behavior, preserve current behavior unless the task explicitly includes a design-alignment refactor.
 
+## Owned services and economy
+
+When touching owned services or economy:
+
+- Mines can be owned and generate passive daily resources for the owning team.
+- Stationed guards can increase mine output only through explicit passive effects.
+- Mine production passives do not stack.
+- For each owned service instance and output resource, only the strongest applicable stationed passive counts.
+- Ties do not stack.
+- Heroes and generic units are both valid if they have the applicable passive.
+- Trader ownership benefits are per service type.
+- Owning more Markets affects Market pricing only; owning more Trading Posts affects Trading Post rates only.
+- Ownership benefits apply only when the owning team uses a service of the same type that it owns.
+- Allied-owned services do not count.
+- Ownership tiers cap at 8 owned services of the same type.
+- Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
+
+M17 should implement the narrow foundation for these rules. Do not implement a full AI economy or broad skill tree unless explicitly selected.
+
 ## General implementation guidance
 
 - Keep game rules data-driven where practical.
-- Prefer explicit mode-entry helpers for World Map, Region, Location, and Battle transitions instead of chaining generic mode advancement.
+- Prefer explicit mode-entry helpers for World Map, Region, Location, Battle, and Campaign transitions instead of chaining generic mode advancement.
 - Prefer a single source of truth for status or event text; remove duplicate shadow strings once event-driven text exists.
 - Player defeat, sleep-failure penalties, temporary hero unavailability, and post-battle fallout must stay consistent with the current design docs.
 - Do not invent major story elements that contradict `docs/game_vision.md`.
 - Prefer a playable incomplete feature over a broad unfinished feature.
 - When terminology migration is the task, keep it behavior-preserving and avoid unrelated gameplay refactors.
-- When a historical milestone doc conflicts with the current design docs, follow the current design docs.
+- When a historical milestone doc conflicts with current design docs, follow the current design docs.
 - Respect player-character rules: the player character is a unique hero with special human-team rules and must remain in the traveling party.
 - Respect `docs/game_shell_flow.md` for game start, character creation entry flow, save/load shell rules, and settings categories.
 - Respect `docs/presentation_game_feel.md` for feedback, pacing, mode transitions, battle intro/result presentation, and accessibility-sensitive presentation actions.

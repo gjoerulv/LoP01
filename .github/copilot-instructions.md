@@ -8,87 +8,127 @@ Use these rules when working in this repository.
 - Keep gameplay logic deterministic, testable, and readable.
 - Extend the game through bounded milestones, not broad speculative systems.
 - Prefer clear architecture and content-driven rules over generic frameworks.
-- Treat the repository and active design docs as the source of truth.
+- Treat the repository and the active design docs as the source of truth.
+
+## Current baseline
+
+The current codebase should be treated as a post-M16 bounded multi-Region, multi-Scenario vertical slice.
+
+Completed foundations include:
+
+- explicit `App` / `GameSession` flow;
+- controller / mapper / renderer split;
+- typed Regions, Locations, Services, quests, events, units, battles, items, artifacts, World Map, scenarios, and campaigns;
+- route-aware Region travel and hostile-occupation blocking;
+- enemy-team Region-layer foundation through the practical M11-e slice;
+- deterministic scenario outcome rules with authored victory and defeat conditions;
+- persistent roster, active party, reserve, battle write-back, and save/load;
+- inventory and artifact foundation, including per-hero equipment and battle stat bonuses;
+- team Energy pool with daily reset, spend/recover primitives, save/load, and HUD exposure;
+- minimal World Map region-to-region travel from authored exit nodes;
+- minimal Campaign System with thin scenarios, transition graph, explicit carry-over, and campaign selection.
+
+Do not describe the project as post-M8, post-M11, or a single-Region-only slice. Those were older baselines.
+
+## Current planning posture
+
+Current implementation sequencing lives in `docs/implementation_roadmap.md`.
+
+The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects. M17 should establish the smallest coherent owned-service/economy foundation needed for the v1 content goal:
+
+- owned service runtime state;
+- mine/resource-service passive daily output;
+- stationed guard hooks through explicit passive effects;
+- non-stacking strongest-applicable production passives;
+- trader-service ownership tiers by service type;
+- authored/default service-type curves;
+- validation and tests for the above.
+
+M17 must not become a broad economy simulation, full skill tree, full AI economy, full storage overhaul, or large content expansion.
 
 ## Terminology source of truth
 
 Before making terminology-sensitive changes, read `docs/terminology_map.md`.
 
-That file defines the current intended design terms and explains how they map to any legacy runtime, content, or serialized names still present in the repository. Prefer the terminology in `docs/terminology_map.md` for design discussion, documentation updates, and new work unless the task is explicitly a legacy-compatibility change.
+Use current design terminology in discussion, docs, and new code where practical:
+
+- Campaign
+- Scenario
+- World Map
+- Region
+- node
+- Location
+- Service
+- Scenario Info screen
+- Adventure button strip
+- traveling party
+- player character
+- Scenario Region Context
+
+Runtime code and serialized values may still contain legacy names such as `overworld`, `overworld_mode`, or `overworld_selection`. Treat those as compatibility names, not current design language. Do not reintroduce old terms as current design truth.
 
 ## Design pillars
 
-- strong Scenario and Region identity
-- readable tactical CTB combat
-- meaningful route / time / service planning
-- durable party consequence
-- restoration and safe-anchor fantasy
-- explicit, data-driven gameplay rules
+- strong scenario and region identity;
+- readable tactical CTB combat;
+- meaningful route, time, Energy, service, and resource planning;
+- durable party consequence;
+- restoration and safe-anchor fantasy;
+- explicit, data-driven gameplay rules.
 
 ## Technical rules
 
+Read `docs/technical_direction.md` before architecture or system work.
+
 - Keep gameplay rules out of rendering and input layers.
-- Keep input polling / translation in `src/app`, not in renderers.
+- Keep input polling and translation in `src/app`, not in renderers.
 - Keep renderers focused on drawing from view/state models.
 - Keep pure logic pure where practical.
 - Prefer explicit state and explicit transitions over hidden chaining.
 - Preserve clear ownership and leak-resistant C++ code.
-- Avoid unnecessary allocations and repeated parsing in the main loop.
+- Avoid unnecessary allocations, repeated parsing, repeated graph rebuilds, and per-frame scans.
 - Keep authored static content separate from runtime mutable state.
 - Prefer incremental schema evolution over ad hoc special cases.
-- Prefer Catch2 tests for pure logic and mapper behavior over rendering/input tests.
+- Do not add generic engine infrastructure before the current milestone needs it.
 
 ## Combat system implementation
 
 Battle assumptions are settled unless the user explicitly reopens them:
 
-- battle is static-formation CTB, not grid combat
-- teams field up to 5 active units
-- the Leader position is inside the 5, not an extra slot
-- only hero units can be leaders
-- targeting is free; row depth affects agility penalty rather than target legality
-- agility penalty uses the target's effective row depth
-- leader aura is a baseline hard rule
-- hero HP persists
-- generic stack HP resets
-- stack counts persist
-- MP persists for all units
-- battle UI should favor readable turn-order preview and min/max outcome visibility over exposing hidden math
+- battle is static formation CTB, not grid combat;
+- teams field up to 5 active units;
+- the Leader position is inside the 5, not an extra slot;
+- only hero units can be leaders;
+- targeting is free;
+- row depth affects agility penalty rather than target legality;
+- agility penalty uses the target's effective row depth;
+- leader aura is a baseline hard rule;
+- hero HP persists, generic stack HP resets, stack counts persist, and MP persists for all units;
+- battle UI should favor readable turn-order preview and min/max outcome visibility over exposing hidden math.
 
 Detailed combat rules live in `docs/combat_rules.md`.
 
-## Working style
+## Owned service and economy rules
 
-- Make the smallest clean change that solves the task.
-- Prefer narrow, test-backed iterations over broad rewrites.
-- Call out doc/code mismatches explicitly.
-- If a design area is ambiguous, tighten docs/vision before implementing broad behavior.
-- Do not silently invent large systems when the vision is underspecified.
-- When changing durable behavior, update the relevant docs/tests in the same pass.
-- Do not ask the user to restate an accepted plan as a prompt; wait for the next explicit implementation instruction.
+When touching owned services or economy systems, follow `docs/core_loop_rules.md`, `docs/content_schema.md`, `docs/content_scope_v1.md`, and `docs/implementation_roadmap.md`.
 
-## Current bounded scope
+Settled rules:
 
-The current codebase is a post-M11-e bounded single-Region slice.
-
-That means:
-
-- enemy teams can exist, move, occupy Region nodes, block travel, be shown on the Region map, be engaged through configured contact battles, and be cleared by victory
-- enemy-team runtime state, including alliances, persists through save/load
-- typed event actions exist for `spawnTeam`, `removeTeam`, and `changeAlliance`
-- the full World Map / cross-Region rules are not implemented
-- campaign carry-over is not implemented
-- final out-of-battle party-management UX is not implemented
-- inventory, artifacts, recipes, skill/status depth, fog/scouting, advanced AI economy, and sabotage systems are not implemented
-
-Use the settled terminology and design direction consistently in planning and docs:
-
-- Campaign -> Scenario -> World Map -> Region -> node -> Location
-- use `Region` as the main design term instead of `overworld`
-- `traveling party` = active party + reserve
-- stored units are distinct from reserve
-- all traveling heroes cross Regions; traveling generic units do not unless stored
-- region hero offerings reroll on Region entry from heroes who are not traveling, stored, or temporarily unavailable
+- Mines can be owned and generate passive daily resources for the owning team.
+- Stationed guards can increase mine output only through explicit passive skills/effects.
+- Mine production passives do not stack.
+- For each owned service instance and output resource, only the strongest applicable stationed passive counts.
+- Ties do not stack; `+2` and `+2` still gives only `+2`.
+- Heroes and generic units are both valid stationed units if they have the applicable passive.
+- Trader services can be owned: Trading Post, Market, Freelancer's Guild, Black Market.
+- Ownership benefits are per service type.
+- Owning more Markets affects Market pricing only; owning more Trading Posts affects Trading Post rates only.
+- Ownership benefits apply only when the owning team uses a service of the same type that it owns.
+- Allied-owned services do not count.
+- Ownership tiers cap at 8 owned services of the same type.
+- Resource exchange uses an authored matrix per tier.
+- Other services use service-type-specific authored/default curves.
+- Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
 
 ## Key docs to follow
 
@@ -97,105 +137,62 @@ Read these before planning or making broad changes:
 1. `README.md`
 2. `README_DECISIONS.md`
 3. `docs/implementation_roadmap.md`
-4. `docs/game_vision.md`
-5. `docs/game_shell_flow.md`
-6. `docs/presentation_game_feel.md`
-7. `docs/core_loop_rules.md`
-8. `docs/combat_rules.md`
-9. `docs/scenario_authoring.md`
-10. `docs/validation_system.md`
-11. `docs/content_schema.md`
-12. `docs/terminology_map.md`
-13. milestone-specific doc/prompt if the task is tied to one
-14. `docs/technical_direction.md`
-15. `docs/content_scope_v1.md` as a scope cap, not as a checklist of implemented behavior
-
-If those sources disagree:
-
-- prefer the current codebase for already implemented behavior
-- prefer explicit current-task requirements from the user for the active task
-- prefer the most recently settled design docs for long-term design intent
-- flag the mismatch explicitly rather than guessing
-
-## Document precedence
-
-Use this order when there is ambiguity:
-
-1. current codebase for already implemented behavior
-2. explicit current-task requirements from the user
-3. active milestone doc/prompt for the task, if one exists
-4. `README_DECISIONS.md`
-5. `docs/implementation_roadmap.md` for sequencing and “not yet” boundaries
+4. `docs/content_scope_v1.md`
+5. `docs/technical_direction.md`
 6. `docs/game_vision.md`
 7. `docs/game_shell_flow.md`
 8. `docs/presentation_game_feel.md`
-9. `docs/core_loop_rules.md` and `docs/combat_rules.md`
-10. `docs/technical_direction.md`
-11. `docs/content_scope_v1.md` as a bounded-scope cap only
-12. `docs/terminology_map.md` as the source for terminology conflicts
-13. archived docs/prompts as historical context only
+9. `docs/core_loop_rules.md`
+10. `docs/combat_rules.md`
+11. `docs/scenario_authoring.md`
+12. `docs/validation_system.md`
+13. `docs/content_schema.md`
+14. `docs/terminology_map.md`
+15. milestone-specific docs or prompts if the task is tied to one.
 
-`docs/content_scope_v1.md` should be used to avoid scope creep, not as a checklist for what is already implemented and not as the primary behavior spec.
+Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implementation_roadmap.md.00.archived`, are historical context only. Do not use archived files as active scope caps, current implementation baselines, or behavior specs.
 
-## Current baseline
+## Document precedence
 
-M11-e is complete on the current branch.
+When sources disagree:
 
-Assume the current baseline already includes:
+1. current codebase for already implemented behavior;
+2. explicit current-task requirements from the user;
+3. active milestone doc for the task, if one exists;
+4. `docs/implementation_roadmap.md` for sequencing and explicit not-yet boundaries;
+5. `docs/content_scope_v1.md` for current content-scope limits;
+6. `README_DECISIONS.md` for durable decisions;
+7. `docs/game_vision.md`;
+8. `docs/game_shell_flow.md`;
+9. `docs/presentation_game_feel.md`;
+10. `docs/core_loop_rules.md` and `docs/combat_rules.md`;
+11. `docs/technical_direction.md`;
+12. `docs/content_schema.md` and `docs/validation_system.md`;
+13. `docs/terminology_map.md` for terminology conflicts;
+14. archived docs/prompts as historical context only.
 
-- explicit `App` / `GameSession` flow
-- controller / mapper / renderer split
-- typed Regions, Locations, battle scenarios, Services, quests, and content definitions
-- route-aware and blocker-aware Region travel inside the current single-Region slice
-- save/load for current slice state plus lightweight world/progression/service state
-- canonical roster stack/slot model
-- persistent owned roster plus active-party state
-- battle quantity persistence and battle write-back into roster state
-- active party size of 5, with Leader inside the 5
-- leader / aura baseline
-- player team requiring a legal leader
-- enemy teams optionally having a leader
-- player-character seeding into the human team's traveling party
-- player-character recovery to 1 HP at battle end if KO'd
-- KO non-player heroes leaving the party on allied win if not revived before battle end
-- typed event foundation with story flags and fired-event persistence
-- enemy-team Region-layer foundation
-- hostile occupation blocking
-- preview/confirmed-travel alignment for hostile occupation
-- visible hostile-occupation marker in Region rendering
-- hostile contact battle through configured node `battleScenarioId`
-- exact-team clearing by team color after hostile-contact victory
-- enemy-team save/load runtime state, including alliances
-- `spawnTeam`, `removeTeam`, and `changeAlliance` event actions with explicit failure behavior
+If the conflict affects behavior, stop and report it instead of guessing.
 
-The current codebase is still a bounded single-Region slice and does not yet implement the full World Map / cross-Region travel layer.
+## Working style
 
-## Current planning posture
-
-Current implementation sequencing lives in `docs/implementation_roadmap.md`. Use the roadmap's **Current Next Milestone** section for the next proposed implementation slice.
-
-At the post-M11-e baseline:
-
-- preserve the current single-Region slice
-- treat Phase 4 / M12-a scenario outcome rules as the next likely step unless the user explicitly chooses a different path
-- do not reopen settled battle rules unless explicitly requested
-- prefer bounded milestone planning and small consistency cleanups over broad new feature work
-- keep future milestone proposals tightly scoped and compatible with the current vertical slice unless the user explicitly widens scope
-- respect player-character rules as defined in `docs/core_loop_rules.md`, `docs/combat_rules.md`, and `docs/content_schema.md`
-- use `docs/implementation_roadmap.md` for milestone order and explicit “not yet” boundaries
+- Make the smallest clean change that solves the task.
+- Prefer narrow, test-backed iterations over broad rewrites.
+- Move faster than the early M12-M16 micro-slices only when the phase remains coherent and testable.
+- Call out doc/code mismatches explicitly.
+- If a design area is still ambiguous, tighten the docs/vision before implementing broad behavior.
+- Do not silently invent large systems when the vision is underspecified.
+- When changing durable behavior, update the relevant docs/tests in the same pass.
+- Avoid demo-specific source branches; prove systems through generic data and tests.
+- Preserve save/load compatibility unless the task explicitly includes migration work.
 
 ## Avoid
 
-- broad content growth disconnected from the current milestone or task
-- extra Regions or World Map systems unless explicitly requested
-- major combat redesign unless the task explicitly reopens battle rules
-- generic inventory/equipment/event/service frameworks before they are needed
-- large architectural rewrites
-- premature editor tooling
-- mixing input logic with rendering code
-- speculative campaign-scale systems that bypass the current slice
-- silently ignoring event/action failures
-- debug fallback battles as real content behavior
-- adding new build/toolchain discovery instructions to docs unless the user asks for build docs specifically
-
-When in doubt, prefer the smallest clean implementation that preserves the existing vertical-slice foundation and strengthens authored progression, consequence, and safe-anchor identity.
+- broad content growth disconnected from the current milestone;
+- extra campaign/scenario/world content volume before system foundations need it;
+- major combat redesign unless the task explicitly reopens battle rules;
+- generic inventory/equipment/event/service frameworks beyond current milestone needs;
+- large architectural rewrites;
+- premature editor tooling;
+- mixing input logic with rendering code;
+- speculative campaign-scale systems that bypass the current slice;
+- performance-hostile patterns such as repeated per-frame content scans, repeated parsing, avoidable large copies, or unnecessary graph rebuilds.

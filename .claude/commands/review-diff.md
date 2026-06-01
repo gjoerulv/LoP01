@@ -1,10 +1,9 @@
 # Review current diff
 
-Review the current git diff for correctness, scope, and consistency with project docs.
+Review the current git diff for correctness, scope, and consistency with project docs. Do not edit files unless explicitly asked.
 
-Do not edit files unless explicitly asked.
+## Check
 
-Check:
 1. Does the diff stay within the requested scope?
 2. Does it contradict any authoritative docs?
 3. Does it introduce stale terminology?
@@ -15,12 +14,19 @@ Check:
    - `docs/content_schema.md`
    - `docs/validation_system.md`
    - `docs/scenario_authoring.md`
-8. Are UI/presentation changes consistent with:
+   - `docs/content_scope_v1.md`
+8. Are architecture/performance choices consistent with:
+   - `docs/technical_direction.md`
+9. Are UI/presentation changes consistent with:
    - `docs/game_shell_flow.md`
    - `docs/presentation_game_feel.md`
    - `.github/instructions/ui.instructions.md`
+10. Does the diff preserve the post-M16 baseline and avoid treating completed M12-M16 systems as future work?
+11. Does the diff avoid demo-specific source hardcoding where generic data/rules should be used?
+12. Does the diff preserve save/load compatibility or explicitly test migration behavior?
 
-Report:
+## Report
+
 - OK to commit / not OK to commit
 - blockers
 - recommended fixes
