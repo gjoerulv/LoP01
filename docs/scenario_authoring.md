@@ -1,6 +1,6 @@
 # Scenario Authoring and Validation
 
-This document defines the intended long-term authoring model for Ashvale Scenarios, Regions, Locations, Services, events, quests, victory/defeat conditions, teams, items, artifacts, recipes, and validation.
+This document defines the intended long-term authoring model for Ashvale Scenarios, Campaigns, Regions, Locations, Services, events, quests, victory/defeat conditions, teams, items, artifacts, recipes, and validation.
 
 This is a design and tooling guide. Detailed validation levels, severities, gates, and validator categories live in `docs/validation_system.md`. Detailed content data shapes and schema conventions live in `docs/content_schema.md`.
 
@@ -88,7 +88,7 @@ Validation must distinguish between:
 
 Harsh Scenarios are legal if they are structurally valid. The designer is responsible for making harsh content fair or fun.
 
-Current implementation note: not all long-term validation examples are implemented yet. M12 validates the current authored outcome shape structurally and through tests, but does not attempt full softlock proofing or complete instant-win/loss analysis.
+Current implementation note: not all long-term validation examples are implemented yet. M12 validates the current authored outcome shape structurally and through tests, but does not attempt full softlock proofing or complete instant-win/loss analysis. M16 adds thin Scenario and Campaign validation, but still does not attempt full campaign reachability or softlock proofs.
 
 ---
 
@@ -147,7 +147,35 @@ The intended authoring hierarchy is:
 
 Standalone Scenarios are legal. Campaigns are not required.
 
-Current bounded-slice exception: M12 does not introduce the full top-level `ScenarioDefinition` content kind. The current outcome authoring surface is the single optional `content/scenario_outcome.json` file.
+### Current authored shape (M16)
+
+M16 introduces a **thin** `content/scenarios.json` and `content/campaigns.json` implementation.
+
+Current thin Scenario definitions support:
+
+- `id`
+- `name`
+- `startRegionId`
+- optional `startNodeId` (fallback: the referenced Region's `arrivalNodeId`)
+- optional `startGold`
+- `standaloneSelectable`
+- optional inline `victoryConditions` / `defeatConditions` using the same typed `EventCondition` tree as events and `scenario_outcome.json`
+
+If a Scenario has no inline outcome conditions, it uses the global `content/scenario_outcome.json` exactly as M12 did. M16 does **not** change default-victory semantics.
+
+Current Campaign definitions support:
+
+- `id`
+- `name`
+- `description`
+- `startScenarioId`
+- `scenarios[]` entries with `scenarioId`, `nextScenarioIds[]`, and `carryOverRuleId`
+- `campaignFlags[]`
+- `carryOverRules[]`
+
+Campaigns are optional. When no campaigns are authored, standalone play remains legal. When campaigns are authored, the game can show the minimal campaign-selection screen. M16's selection screen is presence-gated and generic; it must not special-case demo campaign ids.
+
+M16 deliberately keeps Regions, World Map, units, items, artifacts, events, quests, and services globally loaded. It does **not** implement per-scenario content directories, per-scenario Region partitioning, Scenario Region Contexts, authored starting rosters, scenario hero pools, banned skills/artifacts, full resource defaults, campaign branching-choice UI, full shell flow, or campaign save-slot grouping.
 
 ---
 
@@ -155,7 +183,7 @@ Current bounded-slice exception: M12 does not introduce the full top-level `Scen
 
 Regions may be reusable across Scenarios. A World Map links to one or more Regions. A Scenario may define variables, flags, rules, or overrides that make a reused Region behave differently in that Scenario.
 
-This allows shared authored spaces without requiring every Scenario to duplicate Region data. Validation must evaluate a Region in the context of the Scenario that uses it.
+This allows shared authored spaces without requiring every Scenario to duplicate Region data. Validation must eventually evaluate a Region in the context of the Scenario that uses it. M16 still uses globally loaded Regions and does not introduce Scenario Region Contexts.
 
 ---
 
@@ -170,8 +198,9 @@ A Scenario may start with multiple Regions defined, with some locked or hidden. 
 M15 supports a minimal `content/world_map.json` for inter-region travel. The file is optional; absent means a single-Region scenario with no World Map travel.
 
 Each World Map entry contains:
+
 - `id` — references a `RegionDefinition` id in `regions.json`
-- `unlocked` — authored initial unlock state (seeded into a persisted runtime set)
+- `unlocked` — authored initial unlock state, seeded into a persisted runtime set
 - `exitNodeIds` — Region nodes from which the player may open the World Map screen
 - `x`, `y` — optional layout hints for future map rendering
 
@@ -179,7 +208,7 @@ Adjacency is a list of bidirectional `[regionA, regionB]` pairs.
 
 Arrival nodes are **owned by `regions.json` / `RegionDefinition.arrivalNodeId`**, not by `world_map.json`. The World Map file carries travel metadata only; `TravelToRegion` resolves the destination's arrival node from the destination `RegionDefinition` at travel time.
 
-Deferred from M15: event-driven region unlock, hidden-region visibility, per-region world state, per-region enemy state, and generic origin-storage. These remain design targets but are not yet implemented.
+Deferred from M15/M16: event-driven region unlock, hidden-region visibility, per-region world state, per-region enemy state, and generic origin-storage. These remain design targets but are not yet implemented.
 
 ---
 
@@ -224,9 +253,7 @@ Nodes are fundamentally empty travel points. Avoid treating “node type” as t
 
 ### Node content
 
-A node may contain at most one main content item.
-
-Examples:
+A node may contain at most one main content item. Examples:
 
 - resource pickup
 - artifact pickup
@@ -242,17 +269,13 @@ Events may be attached to nodes. A designer should be able to attach or edit nod
 
 ### Region node-entry event
 
-A **Region node-entry event** triggers when an eligible team arrives on the node. This is distinct from Location-mode collision or confirm-button events.
-
-Current implementation supports `regionNodeEntry` and uses it for the M12 authored victory/defeat demo.
+A **Region node-entry event** triggers when an eligible team arrives on the node. This is distinct from Location-mode collision or confirm-button events. Current implementation supports `regionNodeEntry` and uses it for authored victory/defeat and item/artifact demo content.
 
 ---
 
 ## 8. Blocker behavior
 
-A blocker is usually behavior created by content, not an intrinsic node category.
-
-Examples of blocker behavior include:
+A blocker is usually behavior created by content, not an intrinsic node category. Examples of blocker behavior include:
 
 - gate service
 - quest gate
@@ -333,9 +356,9 @@ Events may override authored service settings where such overrides are legal.
 
 ## 11. Location service calls
 
-Location-mode service use is event-driven. A Location event may call a reusable service definition. Location service calls use the same service flow as predefined Region Services where allowed.
+Location-mode service use is event-driven. A Location event may call a reusable service definition. Location service calls use the same service flow as predefined Region Services where allowed. The exact allowed list can be finalized later.
 
-The exact allowed list can be finalized later. This keeps Location interactions flexible without creating separate incompatible service systems.
+This keeps Location interactions flexible without creating separate incompatible service systems.
 
 ---
 
@@ -368,6 +391,7 @@ Currently implemented trigger categories include:
 - neutral encounter defeated
 - service used
 - service destroyed
+- service restored
 - quest completion
 
 More triggers may be added later, but they should remain typed and explicit.
@@ -406,7 +430,7 @@ The current shared condition evaluator supports:
 - `any`
 - `not`
 
-These are the only condition leaves M12 outcome authoring should rely on.
+These are the only condition leaves current event and outcome authoring should rely on.
 
 ### Future condition targets
 
@@ -520,16 +544,7 @@ This is **Model A: non-atomic ordered actions**.
 
 ### Runtime event-action failure
 
-Event actions should not fail during normal intended play.
-
-Designers should use:
-
-- eligibility
-- conditions
-- If / Else branches
-- validation
-
-to prevent illegal actions from being reached.
+Event actions should not fail during normal intended play. Designers should use eligibility, conditions, If / Else branches, and validation to prevent illegal actions from being reached.
 
 If an action still fails at runtime:
 
@@ -579,9 +594,7 @@ When multiple automatic events are eligible at the same time, use authored prior
 
 ## 20. Quest service authoring
 
-A quest service is a Service containing a quest chain.
-
-A quest service may contain:
+A quest service is a Service containing a quest chain. A quest service may contain:
 
 - zero quests
 - one quest
@@ -615,13 +628,16 @@ If another team completes a quest that is visible in the player's quest log, the
 
 Victory and defeat conditions are Scenario-level rules. They are separate from quests, even when they reference quest-service completion.
 
-### Current M12 behavior
+### Current M16 behavior
 
-The current implementation accepts a single optional `content/scenario_outcome.json`. Per-Scenario authoring through a full top-level `ScenarioDefinition` content kind is not yet introduced; the single file covers the bounded slice.
+The current implementation supports two outcome authoring surfaces:
 
-Both `victoryConditions` and `defeatConditions` reuse the same `EventCondition` tree shape as events. See `docs/content_schema.md` for the exact file shape.
+1. A global optional `content/scenario_outcome.json`, introduced in M12.
+2. Optional inline `victoryConditions` / `defeatConditions` on a thin `ScenarioDefinition` in `content/scenarios.json`, introduced in M16.
 
-Supported condition leaves are exactly:
+If a `ScenarioDefinition` contains inline outcome conditions, that scenario uses those conditions. If it does not, the scenario uses the global `content/scenario_outcome.json` definition exactly as M12 did.
+
+Both `victoryConditions` and `defeatConditions` reuse the same `EventCondition` tree shape as events. Supported condition leaves are exactly:
 
 - `always`
 - `teamHasResource`
@@ -634,11 +650,9 @@ Supported composites are:
 - `any`
 - `not`
 
-Authored victory conditions, when present, **disable default victory entirely**. To use the default “all hostile teams defeated/removed/allied” rule, leave `victoryConditions` empty or omit the file.
+Authored victory conditions, when present, **disable default victory entirely**. To use the default “all hostile teams defeated/removed/allied” rule, leave `victoryConditions` empty. Defeat conditions are OR-based.
 
-Defeat conditions are OR-based. If both a defeat and a victory condition match in the same evaluation, **defeat wins** — consistent with §36 of `core_loop_rules.md`.
-
-Latched outcomes are persistent. Once victory or defeat is latched, later state changes and save/load should not re-evaluate it away.
+If both a defeat and a victory condition match in the same evaluation, **defeat wins** — consistent with §36 of `core_loop_rules.md`. Latched outcomes are persistent. Once victory or defeat is latched, later state changes and save/load should not re-evaluate it away.
 
 ### Long-term victory model
 
@@ -654,7 +668,9 @@ If no authored victory condition exists, the Scenario falls back to the default 
 
 - defeat/remove/ally all hostile enemy teams
 
-If no authored victory condition exists and the default condition cannot make sense, future validation should report a structural problem. Current M12 validation does not attempt full reachability or all impossible-victory proofs.
+If no authored victory condition exists and the default condition cannot make sense, future validation should report a structural problem.
+
+Current validation does not attempt full reachability or all impossible-victory proofs.
 
 ### Long-term defeat model
 
@@ -668,7 +684,7 @@ If any defeat condition becomes true for a team, that team loses.
 
 ### Instant win/loss validation
 
-Future validation should detect obvious instant win or instant loss states where practical. M12 does not implement full instant-win/loss or softlock proofing.
+Future validation should detect obvious instant win or instant loss states where practical. Current implementation does not implement full instant-win/loss or softlock proofing.
 
 ### Future condition leaves
 
@@ -709,9 +725,7 @@ Validation should eventually enforce:
 
 ### Enemy team templates
 
-Enemy team templates should be based on hero units.
-
-A template includes:
+Enemy team templates should be based on hero units. A template includes:
 
 - 1 hero unit
 - 1–2 generic unit types
@@ -725,7 +739,7 @@ Enemy team templates do not include artifacts or resources by default.
 
 Events may spawn teams from templates or mutate existing runtime enemy-team state. Spawned teams may inherit Scenario defaults for AI, personality, resources, or other legal fields in future systems.
 
-Current M12 enemy-team mutation actions are runtime mutations: `spawnTeam`, `removeTeam`, and `changeAlliance`.
+Current enemy-team mutation actions are runtime mutations: `spawnTeam`, `removeTeam`, and `changeAlliance`.
 
 ---
 
@@ -784,9 +798,7 @@ Not all artifacts are combinable. Ultimate or final-form artifacts may set combi
 
 ### Artifact combination recipes
 
-Artifact combination recipes are always **2 inputs to 1 output**.
-
-Inputs may be:
+Artifact combination recipes are always **2 inputs to 1 output**. Inputs may be:
 
 - two of the exact same artifact
 - one artifact plus one other artifact type
@@ -801,15 +813,19 @@ Artifact combination recipes are globally fixed, while specific services may den
 
 ### Current authored shape (M13)
 
-The M13 implementation accepts a bounded M13 subset of the long-term item/artifact schema and only implements a narrow runtime surface. See `docs/content_schema.md` §33–§35 "Current authored shape (M13)" subsections for the concrete JSON shapes and validation rules.
+The M13 implementation accepts a bounded subset of the long-term item/artifact schema and only implements a narrow runtime surface. See `docs/content_schema.md` §33–§35 "Current authored shape (M13)" subsections for the concrete JSON shapes and validation rules.
 
 In short:
 
-- **Items:** authored in `content/items.json` with `id`, `name`, `icon`, `subtype`, `stackCap`, `baseValue`. Item `effects` are **not implemented** — authoring any `effects` field rejects the item with `ITEM_EFFECTS_UNSUPPORTED`. Food, cooking, recipes, item use (battle `Item` command and field-use food/consumables) are deferred.
-- **Artifacts:** authored in `content/artifacts.json` with `id`, `name`, `icon`, `allowedSlots`, `rarity` (free-form string), `tier`, `baseValue`, `combinable`, and an `effects` array. Only the `statBonus` effect type is implemented (Attack / Defense / Magic / Resistance). Other effect types — including the doc's `specialEffect` enum — are rejected with `ARTIFACT_EFFECT_TYPE_UNSUPPORTED`.
-- **Artifact combination, recipes, food, cooking, ingredient consumption, seeds growing, ultimate-rarity enforcement, and the trader-service item economy** are all deferred to future milestones. The authored schema in this section remains the design target; runtime support arrives incrementally.
+- **Items:** authored in `content/items.json` with `id`, `name`, `icon`, `subtype`, `stackCap`, `baseValue`.
+- Item `effects` are **not implemented** — authoring any `effects` field rejects the item with `ITEM_EFFECTS_UNSUPPORTED`.
+- Food, cooking, recipes, item use, battle `Item` command, and field-use food/consumables are deferred.
+- **Artifacts:** authored in `content/artifacts.json` with `id`, `name`, `icon`, `allowedSlots`, `rarity`, `tier`, `baseValue`, `combinable`, and an `effects` array.
+- Only the `statBonus` effect type is implemented for artifacts.
+- Other effect types are rejected with `ARTIFACT_EFFECT_TYPE_UNSUPPORTED`.
+- Artifact combination, recipes, food, cooking, ingredient consumption, seeds growing, ultimate-rarity enforcement, and the trader-service item economy are deferred.
 
-Acquisition and removal happen exclusively through the four typed event actions `giveItem`, `takeItem`, `giveArtifact`, `takeArtifact`. Equipping an artifact onto a hero is a `GameSession` method call (`TryEquipArtifact` / `UnequipArtifact`), not an authorable event action in M13.
+Acquisition and removal happen exclusively through `giveItem`, `takeItem`, `giveArtifact`, and `takeArtifact`. Equipping an artifact onto a hero is a `GameSession` method call (`TryEquipArtifact` / `UnequipArtifact`), not an authorable event action in M13.
 
 ---
 
@@ -858,9 +874,7 @@ Warnings do not prevent saving. Some warnings may still prevent marking a Scenar
 
 ## 25. Softlock validation
 
-Validation should eventually include best-effort softlock analysis.
-
-This may include graph analysis for:
+Validation should eventually include best-effort softlock analysis. This may include graph analysis for:
 
 - required quest item reachability
 - victory target reachability
@@ -873,7 +887,7 @@ This may include graph analysis for:
 
 Validation does not need to prove every possible scenario path correct. The goal is to catch likely structural impossibilities and obvious softlocks. Designers remain responsible for the authored experience.
 
-Current implementation note: M12 does not implement full softlock or victory-reachability proofing.
+Current implementation note: current validation does not implement full softlock or victory-reachability proofing.
 
 ---
 
@@ -915,7 +929,7 @@ The long-term designer tool should support:
 - content reference picker
 - test-play from selected Scenario / Region / node / day / team
 
-The tool should be designer-friendly, but content should also remain hand-editable where practical. JSON or similar data files should stay reasonably human-readable.
+JSON or similar data files should stay reasonably human-readable.
 
 ---
 
@@ -935,9 +949,9 @@ Invalid content may be saved as work-in-progress. Invalid content should not be 
 
 ## 29. Player character authoring
 
-The player character is authored as a normal unique hero unit with special human-team rules. For human teams, the Team definition owns `playerCharacterHeroId`.
+The player character is authored as a normal unique hero unit with special human-team rules.
 
-Single-player Scenarios must define exactly one player character for the human team. Multi-human / PvP Scenarios may define one player character per human team.
+For human teams, the Team definition owns `playerCharacterHeroId`. Single-player Scenarios must define exactly one player character for the human team. Multi-human / PvP Scenarios may define one player character per human team.
 
 ### Character creation
 
