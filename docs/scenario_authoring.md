@@ -165,7 +165,21 @@ World Map adjacency is manually authored. The designer defines which Regions con
 
 A Scenario may start with multiple Regions defined, with some locked or hidden. Locked Regions are not shown to the player until unlocked. A Region may exist and remain non-enterable forever. This is legal if it is intentional and not required for victory.
 
-World Map authoring is future scope. The current playable slice is single-Region.
+### Current authored shape (M15)
+
+M15 supports a minimal `content/world_map.json` for inter-region travel. The file is optional; absent means a single-Region scenario with no World Map travel.
+
+Each World Map entry contains:
+- `id` — references a `RegionDefinition` id in `regions.json`
+- `unlocked` — authored initial unlock state (seeded into a persisted runtime set)
+- `exitNodeIds` — Region nodes from which the player may open the World Map screen
+- `x`, `y` — optional layout hints for future map rendering
+
+Adjacency is a list of bidirectional `[regionA, regionB]` pairs.
+
+Arrival nodes are **owned by `regions.json` / `RegionDefinition.arrivalNodeId`**, not by `world_map.json`. The World Map file carries travel metadata only; `TravelToRegion` resolves the destination's arrival node from the destination `RegionDefinition` at travel time.
+
+Deferred from M15: event-driven region unlock, hidden-region visibility, per-region world state, per-region enemy state, and generic origin-storage. These remain design targets but are not yet implemented.
 
 ---
 
