@@ -8,6 +8,7 @@
 #include "data/ContentValidator.h"
 #include "data/definitions/ArtifactDefinition.h"
 #include "data/definitions/BattleScenarioDefinition.h"
+#include "data/definitions/CampaignDefinition.h"
 #include "data/definitions/EnemyGroupDefinition.h"
 #include "gameplay/events/EventParser.h"
 #include "data/definitions/ItemDefinition.h"
@@ -16,6 +17,7 @@
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
+#include "data/definitions/ScenarioDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
 #include "data/definitions/UnitDefinition.h"
 #include "data/definitions/WorldMapDefinition.h"
@@ -68,6 +70,12 @@ namespace data {
         [[nodiscard]] const WorldMapDefinition& WorldMap() const;
         [[nodiscard]] const WorldMapRegionEntry* FindWorldMapRegionEntry(const std::string& regionId) const;
 
+        [[nodiscard]] const std::vector<ScenarioDefinition>& Scenarios() const;
+        [[nodiscard]] const ScenarioDefinition* FindScenarioById(const std::string& id) const;
+
+        [[nodiscard]] const std::vector<CampaignDefinition>& Campaigns() const;
+        [[nodiscard]] const CampaignDefinition* FindCampaignById(const std::string& id) const;
+
     private:
         std::vector<RegionDefinition> regions_;
         std::vector<LocationDefinition> locations_;
@@ -83,6 +91,8 @@ namespace data {
         std::vector<ItemDefinition> items_;
         std::vector<ArtifactDefinition> artifacts_;
         WorldMapDefinition worldMap_;
+        std::vector<ScenarioDefinition> scenarios_;
+        std::vector<CampaignDefinition> campaigns_;
         std::vector<ValidationMessage> messages_;
     };
 
