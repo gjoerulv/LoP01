@@ -145,6 +145,7 @@ if (BUILD_TESTING)
     tests/MinePayoutTests.cpp
     tests/TraderOwnershipRulesTests.cpp
     tests/TraderTierTests.cpp
+    tests/EconomyEndToEndTests.cpp
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
     tests/EventDefinitionTests.cpp

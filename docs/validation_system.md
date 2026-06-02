@@ -443,9 +443,9 @@ Warnings or errors depending on fallback:
 If a fallback exists, prefer warning. If no fallback exists and progression can break, prefer error.
 
 ### Owned-service economy validation
-When owned mine/resource-service schemas are implemented, validation should ensure base output resources are valid and that any passive-skill production modifier references a valid resource, service/resource category, and passive skill. For production bonuses, validation should preserve the runtime rule that only the strongest applicable stationed passive counts per owned service instance and output resource.
+Owned mine/resource-service validation enforces: service ids are globally unique and each location is placed in at most one Region node (so a service id is a stable owned-service instance key); mine outputs reference valid resources with positive amounts and no duplicate output resource per service; a mine service must define outputs and a non-mine service must not. Unit mine-production passives must reference a valid resource, a positive amount, and a known target. The runtime rule that only the strongest applicable stationed passive counts per owned service instance and output resource is preserved by the production calculation; stationed references must be stack-backed (a live roster stack whose unit matches).
 
-When trader ownership curves are implemented, validation should ensure ownership tiers are defined only for supported trader service types, do not exceed the tier-8 cap, and contain valid prices/exchange matrices. Trading Post resource-exchange matrices must reference only valid resources and must not define self-exchange. Omitted curves should resolve to legal defaults rather than invalid partial data.
+Trader ownership-curve validation ensures curves are defined only for supported trader service types, with no duplicate type and no duplicate tier within a curve, and tiers within the 0..8 cap. Trading Post exchange matrices must reference valid resources, must not define self-exchange, must have positive costs, and an authored tier matrix must not be empty. Omitted curves resolve to legal defaults (the default barter table for Trading Post; a neutral price factor otherwise) rather than invalid partial data.
 
 ---
 
