@@ -9,6 +9,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <unordered_map>
 
 namespace gameplay {
 
@@ -223,25 +224,35 @@ const core::OwnedServiceSaveState* GameSession::FindOwnedService(
 }
 
 void GameSession::NormalizeStationedUnits() {
-    // Drop stationed refs that no longer resolve. A ref is valid iff:
-    //   * unitId is non-empty and a unit definition with that id exists; AND
-    //   * if stackId is set, a roster stack with that id exists and its unitId
-    //     matches the ref (a stale/mismatched generic-stack ref is dropped).
-    // Heroes typically carry only unitId (stackId empty); generics carry both.
+    // M17 stationed-ref invariant: every stationed ref must be STACK-BACKED.
+    // A ref is valid iff:
+    //   * unitId is non-empty; AND
+    //   * stackId is non-empty; AND
+    //   * stackId resolves to an existing roster stack; AND
+    //   * that roster stack's unitId equals the ref's unitId.
+    // Anything else (empty stackId, missing stack, mismatched unitId) is stale
+    // and dropped. This binds stationing to live roster units and prevents
+    // catalog-only unit injection — a unit must actually be in the roster (as a
+    // stack) to station, for both heroes and generics. Passive lookup uses
+    // unitId, but only after this validation.
+    //
+    // Build a stackId -> unitId lookup once per pass so each ref is an O(1)
+    // check rather than a linear roster scan (keeps Phase 3b payout cheap).
+    std::unordered_map<std::string, std::string> stackUnitById;
+    stackUnitById.reserve(rosterStacks_.size());
+    for (const auto& stack : rosterStacks_) {
+        stackUnitById.emplace(stack.stackId, stack.unitId);
+    }
+
     for (auto& owned : ownedServices_) {
         auto& refs = owned.stationedUnits;
         refs.erase(std::remove_if(refs.begin(), refs.end(),
             [&](const core::StationedUnitSaveState& ref) {
-                if (ref.unitId.empty() || FindUnitDefinition(ref.unitId) == nullptr) {
-                    return true;  // stale hero/unit ref
+                if (ref.unitId.empty() || ref.stackId.empty()) {
+                    return true;  // not stack-backed
                 }
-                if (!ref.stackId.empty()) {
-                    const auto* stack = FindStackById(ref.stackId);
-                    if (stack == nullptr || stack->unitId != ref.unitId) {
-                        return true;  // stale/mismatched generic-stack ref
-                    }
-                }
-                return false;
+                const auto it = stackUnitById.find(ref.stackId);
+                return it == stackUnitById.end() || it->second != ref.unitId;
             }),
             refs.end());
     }
@@ -251,18 +262,40 @@ std::vector<economy::MineProductionPassive>
 GameSession::CollectStationedMineProductionPassives(
     const std::string& serviceId, const data::LocationServiceKind serviceKind) const {
     const auto* owned = FindOwnedService(serviceId);
-    if (owned == nullptr) {
+    if (owned == nullptr || owned->stationedUnits.empty()) {
         return {};
+    }
+
+    // Build a unitId -> definition lookup once per call so each stationed ref is
+    // an O(1) resolve rather than a full catalog scan (Phase 3b payout may call
+    // this per owned service). Refs are assumed already normalized: stack-backed
+    // and matching. We still re-check the stack here so a stale ref can never
+    // contribute a passive even if normalization has not run since a roster
+    // change; unresolved unit/stack refs are skipped.
+    std::unordered_map<std::string, std::string> stackUnitById;
+    stackUnitById.reserve(rosterStacks_.size());
+    for (const auto& stack : rosterStacks_) {
+        stackUnitById.emplace(stack.stackId, stack.unitId);
+    }
+    std::unordered_map<std::string, const data::UnitDefinition*> defById;
+    defById.reserve(unitCatalog_.size());
+    for (const auto& unit : unitCatalog_) {
+        defById.emplace(unit.id, &unit);
     }
 
     std::vector<const data::UnitDefinition*> stationedDefs;
     stationedDefs.reserve(owned->stationedUnits.size());
     for (const auto& ref : owned->stationedUnits) {
-        // unitId is the sole passive key (heroes and generics alike); category
-        // is never consulted. Unresolved refs are skipped (normalization should
-        // already have removed them).
-        if (const auto* def = FindUnitDefinition(ref.unitId)) {
-            stationedDefs.push_back(def);
+        if (ref.unitId.empty() || ref.stackId.empty()) {
+            continue;  // not stack-backed
+        }
+        const auto stackIt = stackUnitById.find(ref.stackId);
+        if (stackIt == stackUnitById.end() || stackIt->second != ref.unitId) {
+            continue;  // stale/mismatched -> never contributes
+        }
+        const auto defIt = defById.find(ref.unitId);
+        if (defIt != defById.end()) {
+            stationedDefs.push_back(defIt->second);
         }
     }
 
@@ -1496,9 +1529,9 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     }
 
     // M17: restore owned-service runtime state (Phase 1 stable fields + Phase 3a
-    // stationing). Roster and unit catalog are already in place (roster restored
-    // above; the app sets the catalog before loading), so normalize stationing
-    // now to drop any stale unit/stack references.
+    // stationing). The roster is already restored above, so normalize stationing
+    // now to drop any ref that is not stack-backed (the invariant depends only on
+    // the roster, not the unit catalog).
     ownedServices_ = saveData.ownedServices;
     NormalizeStationedUnits();
 
