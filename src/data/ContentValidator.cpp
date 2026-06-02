@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <string>
 
 #include "gameplay/ResourceState.h"
@@ -288,6 +289,30 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
     for (size_t i = 0; i < services.size(); ++i) {
         const auto& service = services[i];
         const std::string si = "services[" + std::to_string(i) + "]";
+        const bool isMine = service.kind == data::LocationServiceKind::Mine;
+
+        // Phase 2b: enforce the service-kind <-> mine_outputs relationship.
+        // A mine must produce something; a non-mine service must not carry
+        // mine outputs at all (existing non-mine services have none, so they
+        // stay valid).
+        if (isMine && service.mineOutputs.empty()) {
+            msgs.push_back({Severity::Error, "MINE_OUTPUTS_REQUIRED_FOR_MINE",
+                si + ".mine_outputs",
+                "Mine service \"" + service.id + "\" must define at least one mine output.", ""});
+        }
+        if (!isMine && !service.mineOutputs.empty()) {
+            msgs.push_back({Severity::Error, "MINE_OUTPUTS_FOR_NON_MINE_SERVICE",
+                si + ".mine_outputs",
+                "Service \"" + service.id + "\" is not a mine but defines mine outputs.", ""});
+        }
+
+        // Phase 2b: a given ResourceType may appear at most once per service.
+        // ComputeMineDailyOutput resolves strongest-only per output resource, so
+        // duplicate authored lines would let a same-resource passive apply more
+        // than once at payout time. Tracked by parsed type so an unparseable
+        // name reports as RESOURCE_INVALID rather than masking as a duplicate.
+        std::set<int> seenResources;
+
         for (size_t k = 0; k < service.mineOutputs.size(); ++k) {
             const auto& output = service.mineOutputs[k];
             const std::string oi = si + ".mine_outputs[" + std::to_string(k) + "]";
@@ -298,6 +323,13 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
                     oi + ".resource",
                     "Mine output references invalid resource \"" + output.resource
                     + "\". Must be a canonical ResourceType name.", ""});
+            }
+            else if (!seenResources.insert(static_cast<int>(parsed)).second) {
+                msgs.push_back({Severity::Error, "MINE_OUTPUT_RESOURCE_DUPLICATE",
+                    oi + ".resource",
+                    "Mine output resource \"" + output.resource
+                    + "\" appears more than once in this service. Each resource may "
+                    "appear at most once.", ""});
             }
 
             // Authored base outputs must be strictly positive — a zero or
