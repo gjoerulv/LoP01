@@ -457,7 +457,62 @@ TEST_CASE("ContentValidator::ValidateReferences - service without mine outputs r
     auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
 
     const bool anyMineError = std::ranges::any_of(msgs, [](const auto& m) {
-        return m.code == "MINE_OUTPUT_RESOURCE_INVALID" || m.code == "MINE_OUTPUT_AMOUNT_INVALID";
+        return m.code == "MINE_OUTPUT_RESOURCE_INVALID" || m.code == "MINE_OUTPUT_AMOUNT_INVALID"
+            || m.code == "MINE_OUTPUT_RESOURCE_DUPLICATE" || m.code == "MINE_OUTPUTS_REQUIRED_FOR_MINE"
+            || m.code == "MINE_OUTPUTS_FOR_NON_MINE_SERVICE";
     });
     REQUIRE_FALSE(anyMineError);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - duplicate mine output resource produces MINE_OUTPUT_RESOURCE_DUPLICATE")
+{
+    const auto loc   = MakeLocation("mine_loc", "scene1");
+    const auto scene = MakeScene("scene1", {"mine_face"});
+    const auto svc   = MakeMineService("dup_out_mine", "mine_loc", "mine_face",
+        {{"Stone", 2}, {"Stone", 3}});
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUT_RESOURCE_DUPLICATE"
+            && m.path == "services[0].mine_outputs[1].resource"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - mine service without outputs produces MINE_OUTPUTS_REQUIRED_FOR_MINE")
+{
+    const auto loc   = MakeLocation("mine_loc", "scene1");
+    const auto scene = MakeScene("scene1", {"mine_face"});
+    const auto svc   = MakeMineService("empty_mine", "mine_loc", "mine_face", {});  // kind Mine, no outputs
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUTS_REQUIRED_FOR_MINE"
+            && m.path == "services[0].mine_outputs"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - non-mine service with outputs produces MINE_OUTPUTS_FOR_NON_MINE_SERVICE")
+{
+    const auto loc   = MakeLocation("loc1", "scene1");
+    const auto scene = MakeScene("scene1", {"zone_a"});
+    auto svc = MakeService("shop_svc", "loc1", "zone_a");  // kind Shop
+    svc.mineOutputs = {{"Stone", 2}};
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUTS_FOR_NON_MINE_SERVICE"
+            && m.path == "services[0].mine_outputs"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
 }

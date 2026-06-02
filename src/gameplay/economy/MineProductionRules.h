@@ -39,6 +39,11 @@ struct MineProductionPassive {
 //
 // Deterministic and allocation-light: one pass over base outputs, each doing a
 // linear scan of the (small) passive list. No global state, no I/O.
+//
+// Assumes normalized, validated input: ContentValidator guarantees each
+// ResourceType appears at most once across a mine's authored base outputs
+// (MINE_OUTPUT_RESOURCE_DUPLICATE), so this function does not defensively
+// deduplicate base outputs.
 [[nodiscard]] std::vector<MineResourceOutput> ComputeMineDailyOutput(
     const std::vector<MineResourceOutput>& baseOutputs,
     const std::vector<MineProductionPassive>& applicableStationedPassives);
