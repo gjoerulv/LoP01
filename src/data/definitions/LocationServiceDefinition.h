@@ -12,21 +12,37 @@ namespace data
         Shop,
         Recruit,
         Muster,
-        // M17 Phase 2: a resource-producing mine/resource service. Distinguishes
-        // economy-foundation services from the existing interaction services
-        // above. Trader service types (Market, Trading Post, ...) are a later
-        // phase and are intentionally not represented here yet.
-        Mine
+        // M17 Phase 2: a resource-producing mine/resource service.
+        Mine,
+        // M17 Phase 4: trader service types whose ownership grants per-type
+        // economy tiers. Behavior of the services above is unaffected.
+        TradingPost,
+        Market,
+        FreelancersGuild,
+        BlackMarket
     };
 
     inline LocationServiceKind LocationServiceKindFromString(const std::string& value)
     {
-        if (value == "rest")    return LocationServiceKind::Rest;
-        if (value == "shop")    return LocationServiceKind::Shop;
-        if (value == "recruit") return LocationServiceKind::Recruit;
-        if (value == "muster")  return LocationServiceKind::Muster;
-        if (value == "mine")    return LocationServiceKind::Mine;
+        if (value == "rest")              return LocationServiceKind::Rest;
+        if (value == "shop")              return LocationServiceKind::Shop;
+        if (value == "recruit")           return LocationServiceKind::Recruit;
+        if (value == "muster")            return LocationServiceKind::Muster;
+        if (value == "mine")              return LocationServiceKind::Mine;
+        if (value == "trading_post")      return LocationServiceKind::TradingPost;
+        if (value == "market")            return LocationServiceKind::Market;
+        if (value == "freelancers_guild") return LocationServiceKind::FreelancersGuild;
+        if (value == "black_market")      return LocationServiceKind::BlackMarket;
         return LocationServiceKind::Unknown;
+    }
+
+    // M17 Phase 4: true for the four ownership-tiered trader service types.
+    inline bool IsTraderServiceKind(LocationServiceKind kind)
+    {
+        return kind == LocationServiceKind::TradingPost
+            || kind == LocationServiceKind::Market
+            || kind == LocationServiceKind::FreelancersGuild
+            || kind == LocationServiceKind::BlackMarket;
     }
 
     // M17 Phase 2: one authored base daily output line for a mine/resource

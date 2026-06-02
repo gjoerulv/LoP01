@@ -36,6 +36,7 @@ add_library(ashvale_logic
   src/gameplay/economy/MineProductionRules.cpp
   src/gameplay/economy/StationedProductionRules.cpp
   src/gameplay/economy/MinePayoutRules.cpp
+  src/gameplay/economy/TraderOwnershipRules.cpp
   src/gameplay/campaign/CampaignProgressionRules.cpp
   src/gameplay/campaign/CampaignCarryover.cpp
   src/gameplay/worldmap/WorldMapTravelRules.cpp
@@ -142,6 +143,8 @@ if (BUILD_TESTING)
     tests/StationedUnitsTests.cpp
     tests/MinePayoutRulesTests.cpp
     tests/MinePayoutTests.cpp
+    tests/TraderOwnershipRulesTests.cpp
+    tests/TraderTierTests.cpp
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
     tests/EventDefinitionTests.cpp

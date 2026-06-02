@@ -19,6 +19,7 @@
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
+#include "data/definitions/TraderOwnershipCurve.h"
 #include "data/definitions/UnitDefinition.h"
 #include "data/definitions/WorldMapDefinition.h"
 
@@ -57,6 +58,9 @@ namespace data {
             const std::string& locationId,
             const std::string& zoneId) const;
 
+        // M17 Phase 4: authored trader ownership curves (optional content).
+        [[nodiscard]] const std::vector<TraderOwnershipCurve>& TraderCurves() const;
+
         [[nodiscard]] const std::vector<gameplay::events::EventDefinition>& EventDefinitions() const;
 
         [[nodiscard]] const ScenarioOutcomeDefinition& ScenarioOutcome() const;
@@ -84,6 +88,7 @@ namespace data {
         std::vector<BattleScenarioDefinition> battleScenarios_;
         std::vector<QuestDefinition> questDefinitions_;
         std::vector<LocationServiceDefinition> locationServices_;
+        std::vector<TraderOwnershipCurve> traderCurves_;
         std::vector<EnemyGroupDefinition> enemyGroups_;
         nlohmann::json quests_;
         std::vector<gameplay::events::EventDefinition> eventDefinitions_;

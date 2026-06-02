@@ -607,3 +607,102 @@ TEST_CASE("ContentValidator::ValidateReferences - unit without a mine passive re
     });
     REQUIRE_FALSE(anyPassiveError);
 }
+
+// ---------------------------------------------------------------------------
+// M17 Phase 4 trader ownership curve validation.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+data::TraderOwnershipCurve MakeTradingPostCurve(
+    int tier, std::vector<data::TraderExchangeEntry> matrix) {
+    data::TraderOwnershipCurve curve;
+    curve.kind = data::LocationServiceKind::TradingPost;
+    curve.rawType = "trading_post";
+    data::TraderTierEntry entry;
+    entry.tier = tier;
+    entry.exchangeMatrix = std::move(matrix);
+    curve.tiers = {entry};
+    return curve;
+}
+
+bool HasCode(const std::vector<ValidationMessage>& msgs, const std::string& code) {
+    return std::ranges::any_of(msgs, [&](const auto& m) {
+        return m.code == code && m.severity == Severity::Error;
+    });
+}
+
+} // namespace
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - empty input produces no messages")
+{
+    ContentValidator v;
+    REQUIRE(v.ValidateTraderOwnershipCurves({}).empty());
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - valid curves produce no messages")
+{
+    const auto tp = MakeTradingPostCurve(1, {{"Wood", "Stone", 8}});
+    data::TraderOwnershipCurve market;
+    market.kind = data::LocationServiceKind::Market;
+    market.rawType = "market";
+    data::TraderTierEntry m1; m1.tier = 2; m1.priceFactor = 95;
+    market.tiers = {m1};
+
+    ContentValidator v;
+    REQUIRE(v.ValidateTraderOwnershipCurves({tp, market}).empty());
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - unsupported type produces TRADER_CURVE_TYPE_INVALID")
+{
+    data::TraderOwnershipCurve curve;
+    curve.kind = data::LocationServiceKind::Shop;  // not a trader type
+    curve.rawType = "shop";
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_CURVE_TYPE_INVALID"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - tier above the cap produces TRADER_CURVE_TIER_OUT_OF_RANGE")
+{
+    const auto curve = MakeTradingPostCurve(9, {{"Wood", "Stone", 8}});  // > 8
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_CURVE_TIER_OUT_OF_RANGE"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - invalid exchange resource produces TRADER_EXCHANGE_RESOURCE_INVALID")
+{
+    const auto curve = MakeTradingPostCurve(1, {{"Mithril", "Stone", 8}});
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_RESOURCE_INVALID"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - self-exchange produces TRADER_EXCHANGE_SELF")
+{
+    const auto curve = MakeTradingPostCurve(1, {{"Stone", "Stone", 8}});
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_SELF"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - non-positive exchange cost produces TRADER_EXCHANGE_COST_INVALID")
+{
+    const auto curve = MakeTradingPostCurve(1, {{"Wood", "Stone", 0}});
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_COST_INVALID"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - non-positive price factor produces TRADER_CURVE_PRICE_FACTOR_INVALID")
+{
+    data::TraderOwnershipCurve market;
+    market.kind = data::LocationServiceKind::Market;
+    market.rawType = "market";
+    data::TraderTierEntry m1; m1.tier = 1; m1.priceFactor = 0;
+    market.tiers = {m1};
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({market}), "TRADER_CURVE_PRICE_FACTOR_INVALID"));
+}
