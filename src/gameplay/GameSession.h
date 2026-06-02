@@ -199,30 +199,23 @@ public:
     [[nodiscard]] const core::OwnedServiceSaveState* FindOwnedService(
         const std::string& serviceId) const;
 
-    // M17 Phase 3a: resolve an owned service's stationed units to the mine-
-    // production passives they contribute, for a producing service of
-    // `serviceKind`. Assumes stationed refs are normalized (stack-backed; see
-    // NormalizeStationedUnits) and re-checks the stack-backing defensively so a
-    // stale ref can never contribute. The service catalog lives in
-    // ContentRepository, so the caller supplies the kind. Pure read — no payout,
-    // no resource mutation, no clock advance. Returns the list consumed by
-    // ComputeMineDailyOutput.
-    //
-    // Phase 3b note: this builds its roster/catalog lookup maps once per call. A
-    // daily payout pass over many owned services should NOT call this per service
-    // if it can instead build the roster/catalog/service lookups once and reuse
-    // them across all owned services in a single pass. No per-frame work.
-    [[nodiscard]] std::vector<economy::MineProductionPassive>
-        CollectStationedMineProductionPassives(
-            const std::string& serviceId, data::LocationServiceKind serviceKind) const;
+    // M17 Phase 3a: resolve an owned service's normalized stack-backed stationed
+	// units to the mine-production passives they contribute, for a producing
+	// service of `serviceKind`. The service catalog lives in ContentRepository,
+	// so the caller supplies the kind. Pure read — no payout, no resource
+	// mutation, no clock advance. Returns the list consumed by
+	// ComputeMineDailyOutput.
+	[[nodiscard]] std::vector<economy::MineProductionPassive>
+	CollectStationedMineProductionPassives(
+		const std::string& serviceId,
+		data::LocationServiceKind serviceKind) const;
 
-    // M17 Phase 3a: enforce the stack-backed stationed-ref invariant. Every
-    // stationed ref must have a non-empty unitId and non-empty stackId, the
-    // stackId must resolve to a live roster stack, and that stack's unitId must
-    // match the ref's unitId. Any ref that fails this (not stack-backed, missing
-    // stack, or mismatched unitId) is dropped. Idempotent. Runs automatically on
-    // ApplySaveData; exposed for explicit re-normalization after roster changes.
-    void NormalizeStationedUnits();
+	// M17 Phase 3a: drop stationed refs that are not stack-backed. A valid ref
+	// must have a non-empty unitId and stackId, stackId must resolve to a live
+	// roster stack, and that stack's unitId must match the ref's unitId.
+	// Idempotent. Runs automatically on ApplySaveData; exposed for explicit
+	// re-normalization.
+	void NormalizeStationedUnits();
 
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();

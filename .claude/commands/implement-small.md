@@ -23,7 +23,9 @@ Implement only the approved small task.
 - preserve existing behavior unless the task explicitly changes it;
 - avoid demo-specific source branches;
 - avoid repeated parsing, repeated graph rebuilding, large needless copies, and per-frame scans;
-- preserve save/load compatibility unless migration is explicitly in scope.
+- preserve save/load compatibility unless migration is explicitly in scope;
+- keep production source comments sparse and durable: use them for non-obvious invariants, save/load or validation contracts, compatibility constraints, and performance-sensitive choices;
+- avoid milestone/phase comments in production source; milestone context belongs in docs, decisions, commits, prompts, and tests.
 
 ## After implementation
 

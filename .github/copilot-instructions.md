@@ -32,9 +32,9 @@ Do not describe the project as post-M8, post-M11, or a single-Region-only slice.
 
 ## Current planning posture
 
-Current implementation sequencing lives in `docs/implementation_roadmap.md`.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`. The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects.
 
-The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects. M17 should establish the smallest coherent owned-service/economy foundation needed for the v1 content goal:
+M17 should establish the smallest coherent owned-service/economy foundation needed for the v1 content goal:
 
 - owned service runtime state;
 - mine/resource-service passive daily output;
@@ -65,7 +65,9 @@ Use current design terminology in discussion, docs, and new code where practical
 - player character
 - Scenario Region Context
 
-Runtime code and serialized values may still contain legacy names such as `overworld`, `overworld_mode`, or `overworld_selection`. Treat those as compatibility names, not current design language. Do not reintroduce old terms as current design truth.
+Runtime code and serialized values may still contain legacy names such as `overworld`, `overworld_mode`, or `overworld_selection`. Treat those as compatibility names, not current design language.
+
+Do not reintroduce old terms as current design truth.
 
 ## Design pillars
 
@@ -90,6 +92,21 @@ Read `docs/technical_direction.md` before architecture or system work.
 - Keep authored static content separate from runtime mutable state.
 - Prefer incremental schema evolution over ad hoc special cases.
 - Do not add generic engine infrastructure before the current milestone needs it.
+
+## Source comments
+
+Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code.
+
+Use comments for:
+
+- non-obvious invariants;
+- correctness, security, data-integrity, save/load, or compatibility traps;
+- performance-sensitive choices;
+- deliberate limitations that future changes might accidentally violate.
+
+Avoid comments such as `M17 Phase 3a:` in production source unless they are temporary and removed before merge. Put milestone context in docs, decisions, commits, prompts, and tests instead.
+
+Test comments are acceptable when they explain a non-obvious regression or scenario intent.
 
 ## Combat system implementation
 
@@ -195,4 +212,5 @@ If the conflict affects behavior, stop and report it instead of guessing.
 - premature editor tooling;
 - mixing input logic with rendering code;
 - speculative campaign-scale systems that bypass the current slice;
-- performance-hostile patterns such as repeated per-frame content scans, repeated parsing, avoidable large copies, or unnecessary graph rebuilds.
+- performance-hostile patterns such as repeated per-frame content scans, repeated parsing, avoidable large copies, or unnecessary graph rebuilds;
+- stale, redundant, or milestone-specific source comments.

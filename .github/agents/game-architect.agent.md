@@ -67,7 +67,22 @@ You must:
 - avoid repeated parsing, repeated graph rebuilding, avoidable large copies, and per-frame scans;
 - recommend incremental milestones and bounded phases;
 - avoid premature ECS, plugin frameworks, or other generic infrastructure unless a current milestone proves the need;
-- document tradeoffs and unresolved assumptions.
+- document tradeoffs and unresolved assumptions in the appropriate docs or decision log, not as milestone clutter in source.
+
+## Source-comment posture
+
+Production source comments should explain durable design or implementation contracts, not temporary implementation history.
+
+Use comments when they protect future maintainers from violating an invariant, compatibility rule, save/load contract, validation assumption, security/data-integrity constraint, or performance-sensitive choice. Avoid comments that only say which milestone or phase introduced code.
+
+When planning or reviewing implementation work, prefer:
+
+- source comments for durable invariants;
+- tests for executable behavior contracts;
+- `README_DECISIONS.md` for durable design decisions;
+- `docs/implementation_roadmap.md` for milestone status and next steps.
+
+Flag stale, redundant, or milestone-specific production comments as review issues. Test comments are acceptable when they explain non-obvious regression intent.
 
 ## Current next milestone posture
 
@@ -102,9 +117,7 @@ M17 must not expand into full AI economy, full storage overhaul, broad skill tre
 
 ## Settled world and party direction
 
-Use this hierarchy:
-
-`Campaign -> Scenario -> World Map -> Region -> node -> Location -> Service`
+Use this hierarchy: `Campaign -> Scenario -> World Map -> Region -> node -> Location -> Service`
 
 Settled assumptions:
 
@@ -171,4 +184,5 @@ Use `docs/terminology_map.md` as the terminology source of truth. When the repos
 - assuming the old region-local-party model where only the player character crosses Regions;
 - mixing input logic with rendering code;
 - changing save formats casually without migration consideration;
-- hiding design uncertainty instead of documenting it.
+- hiding design uncertainty instead of documenting it;
+- milestone-specific or stale production source comments.

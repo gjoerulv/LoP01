@@ -45,7 +45,8 @@ Runtime code or serialized values may still contain legacy names. Do not broaden
   - Campaign.
 - Do not collapse Region mode and Location mode into one system.
 - Battles must remain a separate reusable module shared by Region and Location encounters.
-- Do not assume a Location is just a flavored Region node. Entering a Location is a real layer transition.
+- Do not assume a Location is just a flavored Region node.
+- Entering a Location is a real layer transition.
 
 ## Region structure
 
@@ -122,6 +123,16 @@ When touching owned services or economy:
 - Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
 
 M17 should implement the narrow foundation for these rules. Do not implement a full AI economy or broad skill tree unless explicitly selected.
+
+## Source comments
+
+Production gameplay/data source comments should be rare and durable. Use them for invariants, non-obvious contracts, save/load or validation traps, compatibility constraints, and performance-sensitive choices.
+
+Do not add milestone/phase labels such as `M17 Phase 3a` to production source as permanent comments. Milestone context belongs in roadmap docs, decision logs, commit messages, prompts, and tests.
+
+Prefer names and tests over explanatory comments when the code is straightforward. Remove or update stale comments in the same patch that changes the behavior they describe.
+
+Test comments may explain non-obvious regression intent, especially around save compatibility, validation, stale references, and edge-case rules.
 
 ## General implementation guidance
 
