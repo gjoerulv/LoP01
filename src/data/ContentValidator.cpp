@@ -407,6 +407,9 @@ std::vector<ValidationMessage> ContentValidator::ValidateTraderOwnershipCurves(
 
     std::vector<ValidationMessage> msgs;
 
+    // Curves are per service type, so a type may appear at most once.
+    std::set<int> seenTypes;
+
     for (size_t i = 0; i < curves.size(); ++i) {
         const auto& curve = curves[i];
         const std::string ci = "trader_curves[" + std::to_string(i) + "]";
@@ -420,7 +423,18 @@ std::vector<ValidationMessage> ContentValidator::ValidateTraderOwnershipCurves(
             continue;
         }
 
+        if (!seenTypes.insert(static_cast<int>(curve.kind)).second) {
+            msgs.push_back({Severity::Error, "TRADER_CURVE_TYPE_DUPLICATE",
+                ci + ".type",
+                "Trader ownership curve for service type \"" + curve.rawType
+                + "\" is defined more than once. Curves are per service type.", ""});
+        }
+
         const bool isTradingPost = curve.kind == data::LocationServiceKind::TradingPost;
+
+        // Tier numbers must be unique within a curve so resolution is not
+        // order-dependent.
+        std::set<int> seenTiers;
 
         for (size_t t = 0; t < curve.tiers.size(); ++t) {
             const auto& tier = curve.tiers[t];
@@ -432,8 +446,24 @@ std::vector<ValidationMessage> ContentValidator::ValidateTraderOwnershipCurves(
                     "Trader ownership tier " + std::to_string(tier.tier)
                     + " is out of range (0.." + std::to_string(kMaxTier) + ").", ""});
             }
+            else if (!seenTiers.insert(tier.tier).second) {
+                msgs.push_back({Severity::Error, "TRADER_CURVE_TIER_DUPLICATE",
+                    ti + ".tier",
+                    "Trader ownership tier " + std::to_string(tier.tier)
+                    + " is defined more than once in this curve.", ""});
+            }
 
             if (isTradingPost) {
+                // A Trading Post tier is authored to override the barter rates;
+                // an empty matrix is partial authored data, not a "use default"
+                // marker (sparse fallback is the no-curve case, not an empty
+                // authored tier).
+                if (tier.exchangeMatrix.empty()) {
+                    msgs.push_back({Severity::Error, "TRADER_EXCHANGE_MATRIX_EMPTY",
+                        ti + ".exchange_matrix",
+                        "Authored Trading Post tier has an empty exchange matrix. "
+                        "Omit the curve to use defaults, or author at least one entry.", ""});
+                }
                 for (size_t e = 0; e < tier.exchangeMatrix.size(); ++e) {
                     const auto& entry = tier.exchangeMatrix[e];
                     const std::string ei = ti + ".exchange_matrix[" + std::to_string(e) + "]";

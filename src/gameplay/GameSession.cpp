@@ -373,23 +373,17 @@ void GameSession::ApplyDailyMinePayout() {
     }
 }
 
-int GameSession::OwnedTraderServiceTier(const data::LocationServiceKind traderKind) const {
-    if (ownedServices_.empty() || locationServiceCatalog_.empty()) {
-        return 0;
-    }
+namespace {
 
-    // Build the service-kind/location lookup and the hostile-node set once.
-    std::unordered_map<std::string, const data::LocationServiceDefinition*> serviceById;
-    serviceById.reserve(locationServiceCatalog_.size());
-    for (const auto& svc : locationServiceCatalog_) {
-        serviceById.emplace(svc.id, &svc);
-    }
-    const auto hostileVec = HostileOccupiedNodeIds(playerColor_);
-    const std::set<std::string> hostileNodes(hostileVec.begin(), hostileVec.end());
-
+// Builds the per-type tier candidates from owned services, using a prebuilt
+// service-id lookup and hostile-node set so there is no nested rescan.
+std::vector<economy::OwnedServiceTierCandidate> BuildTraderTierCandidates(
+    const std::vector<core::OwnedServiceSaveState>& ownedServices,
+    const std::unordered_map<std::string, const data::LocationServiceDefinition*>& serviceById,
+    const std::set<std::string>& hostileNodes) {
     std::vector<economy::OwnedServiceTierCandidate> candidates;
-    candidates.reserve(ownedServices_.size());
-    for (const auto& owned : ownedServices_) {
+    candidates.reserve(ownedServices.size());
+    for (const auto& owned : ownedServices) {
         const auto it = serviceById.find(owned.serviceId);
         if (it == serviceById.end()) {
             continue;
@@ -402,7 +396,69 @@ int GameSession::OwnedTraderServiceTier(const data::LocationServiceKind traderKi
             owned.destroyed,
             hostileNodes.count(def->locationId) != 0});
     }
+    return candidates;
+}
 
+} // namespace
+
+int GameSession::OwnedTraderServiceTierForService(const std::string& serviceId) const {
+    if (locationServiceCatalog_.empty()) {
+        return 0;
+    }
+
+    // One service-id lookup, reused for the exact-service gate and the per-type
+    // count below (no nested rescans).
+    std::unordered_map<std::string, const data::LocationServiceDefinition*> serviceById;
+    serviceById.reserve(locationServiceCatalog_.size());
+    for (const auto& svc : locationServiceCatalog_) {
+        serviceById.emplace(svc.id, &svc);
+    }
+
+    const auto defIt = serviceById.find(serviceId);
+    if (defIt == serviceById.end()) {
+        return 0;  // unknown service id
+    }
+    const auto* def = defIt->second;
+    if (!data::IsTraderServiceKind(def->kind)) {
+        return 0;  // not a trader service
+    }
+
+    const auto* owned = FindOwnedService(serviceId);
+    if (owned == nullptr) {
+        return 0;  // no owned-service runtime state for this id
+    }
+    if (owned->ownerTeamColor.empty() || owned->ownerTeamColor != playerColor_) {
+        return 0;  // not owned by the player team
+    }
+    if (owned->locked || owned->destroyed) {
+        return 0;
+    }
+
+    const auto hostileVec = HostileOccupiedNodeIds(playerColor_);
+    const std::set<std::string> hostileNodes(hostileVec.begin(), hostileVec.end());
+    if (hostileNodes.count(def->locationId) != 0) {
+        return 0;  // the used service is hostile-occupied
+    }
+
+    // The used service is eligible: return the player's tier for its own type.
+    const auto candidates = BuildTraderTierCandidates(ownedServices_, serviceById, hostileNodes);
+    return economy::CountOwnedServiceTier(candidates, def->kind, playerColor_);
+}
+
+int GameSession::OwnedTraderServiceTier(const data::LocationServiceKind traderKind) const {
+    if (ownedServices_.empty() || locationServiceCatalog_.empty()) {
+        return 0;
+    }
+
+    std::unordered_map<std::string, const data::LocationServiceDefinition*> serviceById;
+    serviceById.reserve(locationServiceCatalog_.size());
+    for (const auto& svc : locationServiceCatalog_) {
+        serviceById.emplace(svc.id, &svc);
+    }
+    const auto hostileVec = HostileOccupiedNodeIds(playerColor_);
+    const std::set<std::string> hostileNodes(hostileVec.begin(), hostileVec.end());
+
+    const auto candidates = BuildTraderTierCandidates(ownedServices_, serviceById, hostileNodes);
     return economy::CountOwnedServiceTier(candidates, traderKind, playerColor_);
 }
 

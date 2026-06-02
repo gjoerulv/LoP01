@@ -219,11 +219,23 @@ public:
 	// re-normalization.
 	void NormalizeStationedUnits();
 
-    // M17 Phase 4: ownership tier for a trader service type for the player team.
-    // Counts player-owned services of `traderKind` that are not locked,
-    // destroyed, or hostile-occupied, capped at 8. Counting is per type, so other
-    // trader types never affect the result. Pure read; performs no economy
-    // transaction. Requires the location-service catalog to resolve service kinds.
+    // M17 Phase 4b: effective ownership tier when the player USES a specific
+    // trader service. This is the benefit gate to apply at a trader service:
+    // returns 0 unless `serviceId` is a known trader-kind service with owned
+    // runtime state that the player owns and that is not locked, destroyed, or
+    // hostile-occupied; otherwise returns the player's ownership tier for that
+    // service's own trader type (per-type, eligible-only, capped at 8). This
+    // enforces "benefits apply only when the owning team uses a same-type
+    // service it owns." Prefer this over the raw type count below as the public
+    // benefit API. Pure read; no transaction.
+    [[nodiscard]] int OwnedTraderServiceTierForService(const std::string& serviceId) const;
+
+    // M17 Phase 4: RAW per-type ownership count for the player team (eligible,
+    // capped at 8). This is a type-level count only and is NOT the benefit gate
+    // for using a specific service — it does not know which service is in use, so
+    // it cannot honor "benefits apply only when using a same-type service the
+    // player owns." Use OwnedTraderServiceTierForService for that. Kept for
+    // tests/diagnostics. Requires the location-service catalog.
     [[nodiscard]] int OwnedTraderServiceTier(data::LocationServiceKind traderKind) const;
 
     void EnterLocationMode(const std::string& locationId);

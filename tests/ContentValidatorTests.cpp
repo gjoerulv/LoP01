@@ -706,3 +706,33 @@ TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - non-positive price 
     ContentValidator v;
     REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({market}), "TRADER_CURVE_PRICE_FACTOR_INVALID"));
 }
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - duplicate type produces TRADER_CURVE_TYPE_DUPLICATE")
+{
+    const auto a = MakeTradingPostCurve(0, {{"Wood", "Stone", 10}});
+    const auto b = MakeTradingPostCurve(1, {{"Wood", "Stone", 8}});  // second Trading Post curve
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({a, b}), "TRADER_CURVE_TYPE_DUPLICATE"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - duplicate tier within a curve produces TRADER_CURVE_TIER_DUPLICATE")
+{
+    data::TraderOwnershipCurve curve;
+    curve.kind = data::LocationServiceKind::TradingPost;
+    curve.rawType = "trading_post";
+    data::TraderTierEntry t1; t1.tier = 1; t1.exchangeMatrix = {{"Wood", "Stone", 8}};
+    data::TraderTierEntry t1b; t1b.tier = 1; t1b.exchangeMatrix = {{"Stone", "Wood", 8}};
+    curve.tiers = {t1, t1b};
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_CURVE_TIER_DUPLICATE"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - empty authored Trading Post matrix produces TRADER_EXCHANGE_MATRIX_EMPTY")
+{
+    const auto curve = MakeTradingPostCurve(1, {});  // authored tier with no entries
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_MATRIX_EMPTY"));
+}
