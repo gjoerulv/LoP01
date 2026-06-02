@@ -222,6 +222,53 @@ const core::OwnedServiceSaveState* GameSession::FindOwnedService(
     return nullptr;
 }
 
+void GameSession::NormalizeStationedUnits() {
+    // Drop stationed refs that no longer resolve. A ref is valid iff:
+    //   * unitId is non-empty and a unit definition with that id exists; AND
+    //   * if stackId is set, a roster stack with that id exists and its unitId
+    //     matches the ref (a stale/mismatched generic-stack ref is dropped).
+    // Heroes typically carry only unitId (stackId empty); generics carry both.
+    for (auto& owned : ownedServices_) {
+        auto& refs = owned.stationedUnits;
+        refs.erase(std::remove_if(refs.begin(), refs.end(),
+            [&](const core::StationedUnitSaveState& ref) {
+                if (ref.unitId.empty() || FindUnitDefinition(ref.unitId) == nullptr) {
+                    return true;  // stale hero/unit ref
+                }
+                if (!ref.stackId.empty()) {
+                    const auto* stack = FindStackById(ref.stackId);
+                    if (stack == nullptr || stack->unitId != ref.unitId) {
+                        return true;  // stale/mismatched generic-stack ref
+                    }
+                }
+                return false;
+            }),
+            refs.end());
+    }
+}
+
+std::vector<economy::MineProductionPassive>
+GameSession::CollectStationedMineProductionPassives(
+    const std::string& serviceId, const data::LocationServiceKind serviceKind) const {
+    const auto* owned = FindOwnedService(serviceId);
+    if (owned == nullptr) {
+        return {};
+    }
+
+    std::vector<const data::UnitDefinition*> stationedDefs;
+    stationedDefs.reserve(owned->stationedUnits.size());
+    for (const auto& ref : owned->stationedUnits) {
+        // unitId is the sole passive key (heroes and generics alike); category
+        // is never consulted. Unresolved refs are skipped (normalization should
+        // already have removed them).
+        if (const auto* def = FindUnitDefinition(ref.unitId)) {
+            stationedDefs.push_back(def);
+        }
+    }
+
+    return economy::CollectMineProductionPassives(stationedDefs, serviceKind);
+}
+
 void GameSession::SeedEventResourceContext(events::EventEvaluationContext& ctx) const {
     ctx.resources[ResourceTypeToString(ResourceType::Gold)] = gold_;
     for (const auto type : kNonGoldResourceTypes) {
@@ -1448,8 +1495,12 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
         nonGoldResources_[NonGoldResourceIndex(type)] = std::max(0, entry.amount);
     }
 
-    // M17: restore owned-service runtime state (stable fields only).
+    // M17: restore owned-service runtime state (Phase 1 stable fields + Phase 3a
+    // stationing). Roster and unit catalog are already in place (roster restored
+    // above; the app sets the catalog before loading), so normalize stationing
+    // now to drop any stale unit/stack references.
     ownedServices_ = saveData.ownedServices;
+    NormalizeStationedUnits();
 
     MarkRosterProjectionDirty();
 }
@@ -2210,6 +2261,15 @@ const data::RegionDefinition* GameSession::FindRegionDefinition(const std::strin
     for (const auto& region : regionCatalog_) {
         if (region.id == id) {
             return &region;
+        }
+    }
+    return nullptr;
+}
+
+const data::UnitDefinition* GameSession::FindUnitDefinition(const std::string& id) const {
+    for (const auto& unit : unitCatalog_) {
+        if (unit.id == id) {
+            return &unit;
         }
     }
     return nullptr;

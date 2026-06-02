@@ -70,15 +70,26 @@ struct ResourceSaveState {
     int amount = 0;
 };
 
-// M17 owned-service runtime state. Stable fields only (Phase 1). Stationing is
-// deferred to a later milestone and added additively; no stationedUnits field
-// here. serviceId is the global owned-service instance key
-// (LocationServiceDefinition::id, validated unique). Legacy saves → empty vector.
+// M17 Phase 3a stationed-unit reference. unitId is always present and is the
+// sole key for passive lookup (works for heroes and generics; category is never
+// consulted). stackId is optional: when non-empty it ties the ref to a specific
+// roster stack (used for precise stale-reference detection of generic stacks).
+// Stale refs are dropped on load — see GameSession normalization.
+struct StationedUnitSaveState {
+    std::string unitId;
+    std::string stackId;
+};
+
+// M17 owned-service runtime state. Phase 1 stable fields plus the Phase 3a
+// additive stationing list. serviceId is the global owned-service instance key
+// (LocationServiceDefinition::id, validated unique). Legacy/Phase-1 saves with
+// no stationed_units key load stationedUnits as empty.
 struct OwnedServiceSaveState {
     std::string serviceId;
     std::string ownerTeamColor;
     bool locked = false;
     bool destroyed = false;
+    std::vector<StationedUnitSaveState> stationedUnits;
 };
 
 struct SaveData {

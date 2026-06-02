@@ -352,12 +352,25 @@ void from_json(const json& j, ResourceSaveState& data) {
     j.at("amount").get_to(data.amount);
 }
 
+void to_json(json& j, const StationedUnitSaveState& data) {
+    j = json{
+        {"unit_id", data.unitId},
+        {"stack_id", data.stackId}
+    };
+}
+
+void from_json(const json& j, StationedUnitSaveState& data) {
+    j.at("unit_id").get_to(data.unitId);
+    data.stackId = j.value("stack_id", std::string{});
+}
+
 void to_json(json& j, const OwnedServiceSaveState& data) {
     j = json{
         {"service_id", data.serviceId},
         {"owner_team_color", data.ownerTeamColor},
         {"locked", data.locked},
-        {"destroyed", data.destroyed}
+        {"destroyed", data.destroyed},
+        {"stationed_units", data.stationedUnits}
     };
 }
 
@@ -366,6 +379,11 @@ void from_json(const json& j, OwnedServiceSaveState& data) {
     data.ownerTeamColor = j.value("owner_team_color", std::string{});
     data.locked = j.value("locked", false);
     data.destroyed = j.value("destroyed", false);
+    // M17 Phase 3a additive: absent stationed_units (Phase 1 saves) -> empty.
+    data.stationedUnits.clear();
+    if (j.contains("stationed_units") && j["stationed_units"].is_array()) {
+        data.stationedUnits = j["stationed_units"].get<std::vector<StationedUnitSaveState>>();
+    }
 }
 
 void to_json(json& j, const EnemyTeamSaveState& data) {

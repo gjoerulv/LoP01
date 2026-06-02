@@ -139,6 +139,83 @@ TEST_CASE("SaveGameRepository round-trips M17 resources and owned services") {
     std::filesystem::remove(testSavePath);
 }
 
+TEST_CASE("SaveGameRepository round-trips owned-service stationed units") {
+    const std::filesystem::path testSavePath = "saves/test_slot_stationing.json";
+
+    core::SaveGameRepository repository;
+    core::SaveData original;
+    original.schemaVersion = 5;
+    original.day = 1;
+    original.minutesIntoSliceDay = 0;
+    original.gold = 2500;
+    original.mode = "region_mode";
+    original.regionId = "ashvale_heartland";
+    original.destinationId = "home_base";
+    original.hasCanonicalRoster = true;
+    original.rosterStacks = { core::RosterStackSaveState{"stk_1", "hero_smith", 1} };
+    original.activeSlotStackIds = {"stk_1", "", "", "", ""};
+    original.reserveSlotStackIds = {"", "", "", "", "", "", "", ""};
+    original.nextStackIdCounter = 2;
+    original.ownedServices = {
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {
+                core::StationedUnitSaveState{"hero_smith", "stk_1"},
+                core::StationedUnitSaveState{"kobold", ""}
+            }}
+    };
+
+    REQUIRE(repository.SaveToFile(original, testSavePath.string()));
+    const auto loaded = repository.LoadFromFile(testSavePath.string());
+    REQUIRE(loaded.has_value());
+
+    REQUIRE(loaded->ownedServices.size() == 1);
+    const auto& stationed = loaded->ownedServices[0].stationedUnits;
+    REQUIRE(stationed.size() == 2);
+    REQUIRE(stationed[0].unitId == "hero_smith");
+    REQUIRE(stationed[0].stackId == "stk_1");
+    REQUIRE(stationed[1].unitId == "kobold");
+    REQUIRE(stationed[1].stackId.empty());
+
+    std::filesystem::remove(testSavePath);
+}
+
+TEST_CASE("SaveGameRepository Phase-1 owned service without stationed_units loads empty stationing") {
+    const std::filesystem::path testSavePath = "saves/test_slot_stationing_legacy.json";
+
+    std::ofstream output(testSavePath, std::ios::trunc);
+    output << R"({
+  "schema_version": 5,
+  "day": 1,
+  "minutes_into_slice_day": 0,
+  "gold": 1000,
+  "mode": "region_mode",
+  "region_id": "ashvale_heartland",
+  "destination_id": "home_base",
+  "completed_quest_ids": [],
+  "cleared_combat_node_ids": [],
+  "recruit_service_states": [],
+  "daily_service_states": [],
+  "travel_prep_discount_minutes": 0,
+  "travel_prep_remaining_charges": 0,
+  "travel_prep_granted_day": 0,
+  "roster_stacks": [{"stack_id":"stk_1","unit_id":"hero_smith","quantity":1}],
+  "active_slot_stack_ids": ["stk_1", "", "", "", ""],
+  "reserve_slot_stack_ids": ["", "", "", "", "", "", "", ""],
+  "next_stack_id_counter": 2,
+  "owned_services": [{"service_id":"stone_mine_svc","owner_team_color":"Green","locked":false,"destroyed":false}]
+})";
+    output.close();
+
+    core::SaveGameRepository repository;
+    const auto loaded = repository.LoadFromFile(testSavePath.string());
+    REQUIRE(loaded.has_value());
+    REQUIRE(loaded->ownedServices.size() == 1);
+    REQUIRE(loaded->ownedServices[0].serviceId == "stone_mine_svc");
+    REQUIRE(loaded->ownedServices[0].stationedUnits.empty());
+
+    std::filesystem::remove(testSavePath);
+}
+
 TEST_CASE("SaveGameRepository legacy save without M17 keys loads empty resources and owned services") {
     const std::filesystem::path testSavePath = "saves/test_slot_m17_legacy.json";
 

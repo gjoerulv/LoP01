@@ -21,6 +21,7 @@
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
 #include "gameplay/ResourceState.h"
+#include "gameplay/economy/StationedProductionRules.h"
 #include "gameplay/campaign/CampaignCarryover.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
@@ -192,11 +193,25 @@ public:
     // returns true. Gold routes through TrySpendGold.
     [[nodiscard]] bool TrySpendResource(ResourceType type, int amount);
 
-    // M17 owned-service runtime state (stable fields only). Read-only accessor;
-    // ownership mutation rules arrive in a later milestone.
+    // M17 owned-service runtime state. Read-only accessor; ownership mutation
+    // rules arrive in a later milestone.
     [[nodiscard]] const std::vector<core::OwnedServiceSaveState>& OwnedServices() const;
     [[nodiscard]] const core::OwnedServiceSaveState* FindOwnedService(
         const std::string& serviceId) const;
+
+    // M17 Phase 3a: resolve an owned service's stationed units to the mine-
+    // production passives they contribute, for a producing service of
+    // `serviceKind`. The service catalog lives in ContentRepository, so the
+    // caller supplies the kind. Pure read — no payout, no resource mutation,
+    // no clock advance. Returns the list consumed by ComputeMineDailyOutput.
+    [[nodiscard]] std::vector<economy::MineProductionPassive>
+        CollectStationedMineProductionPassives(
+            const std::string& serviceId, data::LocationServiceKind serviceKind) const;
+
+    // M17 Phase 3a: drop stationed refs whose referenced unit (by unitId) or
+    // roster stack (by stackId, when set) no longer resolves. Idempotent. Runs
+    // automatically on ApplySaveData; exposed for explicit re-normalization.
+    void NormalizeStationedUnits();
 
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
@@ -555,6 +570,10 @@ private:
     [[nodiscard]] int LowestTravelingPartyAgility() const;
 
     [[nodiscard]] const data::RegionDefinition* FindRegionDefinition(const std::string& id) const;
+    // M17 Phase 3a: unit-definition lookup in the loaded catalog (nullptr if the
+    // catalog is unset or has no such id). Used by stationing normalization and
+    // passive collection.
+    [[nodiscard]] const data::UnitDefinition* FindUnitDefinition(const std::string& id) const;
     // True iff the current node (regardless of mode) is an authored World Map
     // exit node of the current region's entry. The mode check lives in the
     // callers: CanOpenWorldMapHere() gates opening from RegionMode; TravelToRegion

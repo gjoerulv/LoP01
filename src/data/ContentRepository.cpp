@@ -194,6 +194,20 @@ namespace data {
                 def.stats.position = UnitDefinitionPositionFromString(unitJson.value("position", "front"));
                 def.stats.range = UnitDefinitionRangeFromString(unitJson.value("range", "melee"));
 
+                // M17 Phase 3a: optional narrow mine-production passive. Absent
+                // on every existing unit, so legacy content loads unchanged.
+                // Field validity (target/resource/amount) is checked by
+                // ContentValidator, not here.
+                if (unitJson.contains("mine_production_passive") &&
+                    unitJson["mine_production_passive"].is_object()) {
+                    const auto& passiveJson = unitJson["mine_production_passive"];
+                    UnitMineProductionPassive passive;
+                    passive.target = passiveJson.value("target", "mine");
+                    passive.resource = passiveJson.value("resource", "");
+                    passive.amount = passiveJson.value("amount", 0);
+                    def.mineProductionPassive = passive;
+                }
+
                 output.push_back(def);
             }
 
