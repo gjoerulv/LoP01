@@ -9,6 +9,7 @@
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
+#include "data/definitions/TraderOwnershipCurve.h"
 #include "data/definitions/UnitDefinition.h"
 
 enum class Severity { Error, Warning, Info };
@@ -39,4 +40,13 @@ public:
         const std::vector<data::BattleScenarioDefinition>& battleScenarios,
         const std::vector<data::LocationServiceDefinition>& services,
         const std::vector<data::QuestDefinition>& quests) const;
+
+    // M17 Phase 4: validates authored trader ownership curves. Ensures curves are
+    // declared only for supported trader service types, tiers stay within the
+    // 0..8 ownership cap, Trading Post exchange entries reference valid resources
+    // and never self-exchange, and price factors are positive. Returns Error
+    // messages; an empty input produces none (omitted curves are legal — runtime
+    // resolves safe defaults).
+    std::vector<ValidationMessage> ValidateTraderOwnershipCurves(
+        const std::vector<data::TraderOwnershipCurve>& curves) const;
 };

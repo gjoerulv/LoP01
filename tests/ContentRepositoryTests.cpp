@@ -520,3 +520,60 @@ TEST_CASE("ContentRepository surfaces identity error messages without gating loa
 
     std::filesystem::remove_all(root);
 }
+
+namespace {
+
+// Writes a minimal-but-valid content directory (no services) and returns root.
+// Caller adds/overwrites location_services.json and trader_curves.json as needed.
+void WriteMinimalContent(const std::filesystem::path& root) {
+    std::filesystem::create_directories(root);
+    WriteTextFile(root / "regions.json", R"({"schemaVersion":1,"kind":"RegionCollection","id":"regions","regions":[{"id":"ashvale_heartland","name":"Ashvale Heartland","unlocked":true,"nodes":[{"location_id":"home_base","x":0,"y":0,"discovered":true,"travel_available":true}],"links":[]}]})");
+    WriteTextFile(root / "locations.json", R"({"schemaVersion":1,"kind":"LocationCollection","id":"locations","locations":[{"id":"home_base","name":"Home Base","type":"home","allows_sleep":true,"overworld_destination":true}]})");
+    WriteTextFile(root / "location_scenes.json", R"({"schemaVersion":1,"kind":"LocationSceneCollection","id":"location_scenes","location_scenes":[]})");
+    WriteTextFile(root / "units.json", R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[{"id":"hero","name":"Hero","category":"hero","is_player_character":true,"attack":1,"defense":1,"magic":1,"resistance":1,"min_damage":1,"max_damage":1,"max_hp":10,"max_mp":0,"agility":1,"life":1,"position":"front","range":"melee"}]})");
+    WriteTextFile(root / "battle_scenarios.json", R"({"schemaVersion":1,"kind":"BattleScenarioCollection","id":"battle_scenarios","battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"schemaVersion":1,"kind":"EnemyGroupCollection","id":"enemy_groups","enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"schemaVersion":1,"kind":"QuestCollection","id":"quests","quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"schemaVersion":1,"kind":"LocationServiceCollection","id":"location_services","location_services":[]})");
+}
+
+} // namespace
+
+TEST_CASE("ContentRepository loads authored trader ownership curves") {
+    const std::filesystem::path root = "saves/content_repo_trader_curves_test";
+    WriteMinimalContent(root);
+    WriteTextFile(root / "trader_curves.json", R"({"schemaVersion":1,"kind":"TraderCurveCollection","id":"trader_curves","trader_curves":[{"type":"trading_post","tiers":[{"tier":1,"exchange_matrix":[{"from":"Wood","to":"Stone","cost":8}]}]},{"type":"market","tiers":[{"tier":2,"price_factor":95}]}]})");
+
+    data::ContentRepository repository;
+    REQUIRE(repository.LoadFromDirectory(root));
+    REQUIRE(repository.TraderCurves().size() == 2);
+    REQUIRE(repository.TraderCurves()[0].kind == data::LocationServiceKind::TradingPost);
+    REQUIRE(repository.TraderCurves()[0].tiers.size() == 1);
+    REQUIRE(repository.TraderCurves()[0].tiers[0].exchangeMatrix.size() == 1);
+    REQUIRE(repository.TraderCurves()[1].kind == data::LocationServiceKind::Market);
+    REQUIRE(repository.TraderCurves()[1].tiers[0].priceFactor == 95);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ContentRepository fails when a trader curve defines a self-exchange") {
+    const std::filesystem::path root = "saves/content_repo_trader_self_exchange_test";
+    WriteMinimalContent(root);
+    WriteTextFile(root / "trader_curves.json", R"({"schemaVersion":1,"kind":"TraderCurveCollection","id":"trader_curves","trader_curves":[{"type":"trading_post","tiers":[{"tier":1,"exchange_matrix":[{"from":"Stone","to":"Stone","cost":8}]}]}]})");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ContentRepository without trader_curves.json loads no curves and stays valid") {
+    const std::filesystem::path root = "saves/content_repo_no_trader_curves_test";
+    WriteMinimalContent(root);
+
+    data::ContentRepository repository;
+    REQUIRE(repository.LoadFromDirectory(root));
+    REQUIRE(repository.TraderCurves().empty());
+
+    std::filesystem::remove_all(root);
+}

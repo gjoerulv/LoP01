@@ -219,6 +219,13 @@ public:
 	// re-normalization.
 	void NormalizeStationedUnits();
 
+    // M17 Phase 4: ownership tier for a trader service type for the player team.
+    // Counts player-owned services of `traderKind` that are not locked,
+    // destroyed, or hostile-occupied, capped at 8. Counting is per type, so other
+    // trader types never affect the result. Pure read; performs no economy
+    // transaction. Requires the location-service catalog to resolve service kinds.
+    [[nodiscard]] int OwnedTraderServiceTier(data::LocationServiceKind traderKind) const;
+
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
     void EnterWorldMapMode();

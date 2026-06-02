@@ -1,6 +1,7 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/EnergyRules.h"
 #include "gameplay/economy/MinePayoutRules.h"
+#include "gameplay/economy/TraderOwnershipRules.h"
 #include "gameplay/campaign/CampaignProgressionRules.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
@@ -370,6 +371,39 @@ void GameSession::ApplyDailyMinePayout() {
             AddResource(line.resource, line.amount);
         }
     }
+}
+
+int GameSession::OwnedTraderServiceTier(const data::LocationServiceKind traderKind) const {
+    if (ownedServices_.empty() || locationServiceCatalog_.empty()) {
+        return 0;
+    }
+
+    // Build the service-kind/location lookup and the hostile-node set once.
+    std::unordered_map<std::string, const data::LocationServiceDefinition*> serviceById;
+    serviceById.reserve(locationServiceCatalog_.size());
+    for (const auto& svc : locationServiceCatalog_) {
+        serviceById.emplace(svc.id, &svc);
+    }
+    const auto hostileVec = HostileOccupiedNodeIds(playerColor_);
+    const std::set<std::string> hostileNodes(hostileVec.begin(), hostileVec.end());
+
+    std::vector<economy::OwnedServiceTierCandidate> candidates;
+    candidates.reserve(ownedServices_.size());
+    for (const auto& owned : ownedServices_) {
+        const auto it = serviceById.find(owned.serviceId);
+        if (it == serviceById.end()) {
+            continue;
+        }
+        const auto* def = it->second;
+        candidates.push_back(economy::OwnedServiceTierCandidate{
+            def->kind,
+            owned.ownerTeamColor,
+            owned.locked,
+            owned.destroyed,
+            hostileNodes.count(def->locationId) != 0});
+    }
+
+    return economy::CountOwnedServiceTier(candidates, traderKind, playerColor_);
 }
 
 void GameSession::SeedEventResourceContext(events::EventEvaluationContext& ctx) const {

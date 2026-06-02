@@ -377,6 +377,9 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
         }
     }
 
+    // (trader ownership curves are validated separately; they are an optional
+    // content collection, not part of the cross-reference graph.)
+
     // Quest target reference checks
     for (size_t i = 0; i < quests.size(); ++i) {
         const auto& quest = quests[i];
@@ -389,6 +392,88 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
                 msgs.push_back({Severity::Error, "QUEST_TARGET_NOT_FOUND",
                     "quests[" + std::to_string(i) + "].target",
                     "Quest target \"" + quest.target + "\" not found in locations.", ""});
+            }
+        }
+    }
+
+    return msgs;
+}
+
+std::vector<ValidationMessage> ContentValidator::ValidateTraderOwnershipCurves(
+    const std::vector<data::TraderOwnershipCurve>& curves) const
+{
+    // Ownership tiers are capped at 8 owned services (docs/core_loop_rules.md §23).
+    constexpr int kMaxTier = 8;
+
+    std::vector<ValidationMessage> msgs;
+
+    for (size_t i = 0; i < curves.size(); ++i) {
+        const auto& curve = curves[i];
+        const std::string ci = "trader_curves[" + std::to_string(i) + "]";
+
+        if (!data::IsTraderServiceKind(curve.kind)) {
+            msgs.push_back({Severity::Error, "TRADER_CURVE_TYPE_INVALID",
+                ci + ".type",
+                "Trader ownership curve has unsupported service type \"" + curve.rawType
+                + "\". Must be a trader service type.", ""});
+            // Without a known type the tier shape is meaningless; skip the rest.
+            continue;
+        }
+
+        const bool isTradingPost = curve.kind == data::LocationServiceKind::TradingPost;
+
+        for (size_t t = 0; t < curve.tiers.size(); ++t) {
+            const auto& tier = curve.tiers[t];
+            const std::string ti = ci + ".tiers[" + std::to_string(t) + "]";
+
+            if (tier.tier < 0 || tier.tier > kMaxTier) {
+                msgs.push_back({Severity::Error, "TRADER_CURVE_TIER_OUT_OF_RANGE",
+                    ti + ".tier",
+                    "Trader ownership tier " + std::to_string(tier.tier)
+                    + " is out of range (0.." + std::to_string(kMaxTier) + ").", ""});
+            }
+
+            if (isTradingPost) {
+                for (size_t e = 0; e < tier.exchangeMatrix.size(); ++e) {
+                    const auto& entry = tier.exchangeMatrix[e];
+                    const std::string ei = ti + ".exchange_matrix[" + std::to_string(e) + "]";
+
+                    gameplay::ResourceType from;
+                    gameplay::ResourceType to;
+                    const bool fromOk = gameplay::TryResourceTypeFromString(entry.from, from);
+                    const bool toOk = gameplay::TryResourceTypeFromString(entry.to, to);
+                    if (!fromOk) {
+                        msgs.push_back({Severity::Error, "TRADER_EXCHANGE_RESOURCE_INVALID",
+                            ei + ".from",
+                            "Trading Post exchange references invalid resource \"" + entry.from
+                            + "\". Must be a canonical ResourceType name.", ""});
+                    }
+                    if (!toOk) {
+                        msgs.push_back({Severity::Error, "TRADER_EXCHANGE_RESOURCE_INVALID",
+                            ei + ".to",
+                            "Trading Post exchange references invalid resource \"" + entry.to
+                            + "\". Must be a canonical ResourceType name.", ""});
+                    }
+                    if (fromOk && toOk && from == to) {
+                        msgs.push_back({Severity::Error, "TRADER_EXCHANGE_SELF",
+                            ei,
+                            "Trading Post exchange may not exchange a resource for itself ("
+                            + entry.from + ").", ""});
+                    }
+                    if (entry.cost <= 0) {
+                        msgs.push_back({Severity::Error, "TRADER_EXCHANGE_COST_INVALID",
+                            ei + ".cost",
+                            "Trading Post exchange cost must be positive (got "
+                            + std::to_string(entry.cost) + ").", ""});
+                    }
+                }
+            }
+            else if (tier.priceFactor <= 0) {
+                // Non-Trading-Post curves use the placeholder price factor.
+                msgs.push_back({Severity::Error, "TRADER_CURVE_PRICE_FACTOR_INVALID",
+                    ti + ".price_factor",
+                    "Trader ownership price factor must be positive (got "
+                    + std::to_string(tier.priceFactor) + ").", ""});
             }
         }
     }

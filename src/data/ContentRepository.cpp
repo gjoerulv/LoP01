@@ -323,6 +323,49 @@ namespace data {
             return true;
         }
 
+        bool LoadTraderCurvesFile(const nlohmann::json& root,
+                                  std::vector<TraderOwnershipCurve>& output) {
+            if (!root.contains("trader_curves") || !root["trader_curves"].is_array()) {
+                return false;
+            }
+
+            output.clear();
+
+            for (const auto& curveJson : root["trader_curves"]) {
+                TraderOwnershipCurve curve;
+                curve.rawType = curveJson.value("type", "");
+                curve.kind = LocationServiceKindFromString(curve.rawType);
+
+                if (curveJson.contains("tiers") && curveJson["tiers"].is_array()) {
+                    for (const auto& tierJson : curveJson["tiers"]) {
+                        if (!tierJson.is_object()) {
+                            continue;
+                        }
+                        TraderTierEntry tier;
+                        tier.tier = tierJson.value("tier", 0);
+                        tier.priceFactor = tierJson.value("price_factor", 100);
+                        if (tierJson.contains("exchange_matrix") &&
+                            tierJson["exchange_matrix"].is_array()) {
+                            for (const auto& exJson : tierJson["exchange_matrix"]) {
+                                if (!exJson.is_object()) {
+                                    continue;
+                                }
+                                TraderExchangeEntry entry;
+                                entry.from = exJson.value("from", "");
+                                entry.to = exJson.value("to", "");
+                                entry.cost = exJson.value("cost", 0);
+                                tier.exchangeMatrix.push_back(entry);
+                            }
+                        }
+                        curve.tiers.push_back(std::move(tier));
+                    }
+                }
+                output.push_back(std::move(curve));
+            }
+
+            return true;
+        }
+
         bool LoadEventDefinitionsFile(
             const nlohmann::json& root,
             std::vector<gameplay::events::EventDefinition>& output,
@@ -1110,6 +1153,7 @@ namespace data {
         worldMap_ = WorldMapDefinition{};
         scenarios_.clear();
         campaigns_.clear();
+        traderCurves_.clear();
 
         ContentValidator validator;
 
@@ -1192,14 +1236,30 @@ namespace data {
             LoadCampaignsFile(*campaignsDoc, campaigns_, scenarios_, messages_);
         }
 
+        // trader_curves.json is optional (M17 Phase 4). Absent/empty → no authored
+        // curves; runtime resolves safe defaults per trader service type.
+        auto traderCurvesDoc = load(root / "trader_curves.json");
+        if (traderCurvesDoc) {
+            LoadTraderCurvesFile(*traderCurvesDoc, traderCurves_);
+        }
+
         auto refMsgs = validator.ValidateReferences(
             regions_, locations_, locationScenes_, units_,
             battleScenarios_, locationServices_, questDefinitions_);
         messages_.insert(messages_.end(), refMsgs.begin(), refMsgs.end());
 
-        const bool anyRefError = std::ranges::any_of(refMsgs,
-            [](const ValidationMessage& m) { return m.severity == Severity::Error; });
-        return !anyRefError;
+        auto curveMsgs = validator.ValidateTraderOwnershipCurves(traderCurves_);
+        messages_.insert(messages_.end(), curveMsgs.begin(), curveMsgs.end());
+
+        const bool anyError = std::ranges::any_of(refMsgs,
+            [](const ValidationMessage& m) { return m.severity == Severity::Error; })
+            || std::ranges::any_of(curveMsgs,
+                [](const ValidationMessage& m) { return m.severity == Severity::Error; });
+        return !anyError;
+    }
+
+    const std::vector<TraderOwnershipCurve>& ContentRepository::TraderCurves() const {
+        return traderCurves_;
     }
 
     const std::vector<ValidationMessage>& ContentRepository::ValidationMessages() const {
