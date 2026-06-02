@@ -24,6 +24,8 @@ Review the current git diff for correctness, scope, and consistency with project
 10. Does the diff preserve the post-M16 baseline and avoid treating completed M12-M16 systems as future work?
 11. Does the diff avoid demo-specific source hardcoding where generic data/rules should be used?
 12. Does the diff preserve save/load compatibility or explicitly test migration behavior?
+13. Do production source comments explain durable invariants, contracts, compatibility constraints, or performance-sensitive choices instead of milestone bookkeeping?
+14. Are stale, redundant, misleading, or milestone-specific comments removed or rewritten?
 
 ## Report
 

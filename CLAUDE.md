@@ -51,9 +51,7 @@ Do not treat M8, M11, M12, M13, M14, M15, or M16 as future work.
 
 ## Current planning posture
 
-The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects.
-
-M17 planning should stay narrow, coherent, and test-backed. It should establish the owned-service/economy foundation needed by `docs/content_scope_v1.md`, not a broad economy simulation.
+The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects. M17 planning should stay narrow, coherent, and test-backed. It should establish the owned-service/economy foundation needed by `docs/content_scope_v1.md`, not a broad economy simulation.
 
 ## Claude Code project commands
 
@@ -86,6 +84,24 @@ Do not treat command files as design truth. They are workflow prompts. The docs 
 - Use `kind + id` as mod override identity when mod loading is implemented.
 - Avoid demo-specific source branches; prove systems through authored content and generic rules.
 
+## Source comments and code documentation
+
+Keep production source comments durable and sparse. Do not add comments merely to describe milestone progress, patch phases, or agent workflow.
+
+Good production comments explain one of these:
+
+- a non-obvious invariant or contract;
+- a correctness, security, data-integrity, or save/load trap;
+- a performance-sensitive choice;
+- a deliberate limitation that prevents accidental broadening;
+- compatibility behavior that looks wrong but is intentional.
+
+Avoid milestone labels such as `M17 Phase 3a` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts.
+
+Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
+
+When reviewing diffs, flag comments that are stale, milestone-specific, redundant, or inconsistent with the code. Prefer deleting weak comments over rewriting them into longer comments.
+
 ## Workflow
 
 - Work on a git branch.
@@ -96,7 +112,8 @@ Do not treat command files as design truth. They are workflow prompts. The docs 
 - Do not make broad rewrites when a targeted change is enough.
 - If the docs conflict, stop and report the conflict instead of guessing.
 - If implementation conflicts with the docs, report it and propose options before changing the design.
-- For Claude-plan review, expect binary feedback: accepted 100%, or rejected with a revision prompt. Do not ask for an "Exact Next Prompt" unless explicitly requested.
+- For Claude-plan review, expect binary feedback: accepted 100%, or rejected with a revision prompt.
+- Do not ask for an "Exact Next Prompt" unless explicitly requested.
 
 ## First task pattern
 
