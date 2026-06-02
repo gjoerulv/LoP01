@@ -143,3 +143,143 @@ TEST_CASE("TraderTierSession - tier caps at 8") {
 
     REQUIRE(session.OwnedTraderServiceTier(LocationServiceKind::Market) == 8);
 }
+
+// ---------------------------------------------------------------------------
+// M17 Phase 4b: service-specific effective tier (the benefit gate).
+// ---------------------------------------------------------------------------
+
+TEST_CASE("TraderTierForService - using a player-owned Market returns the Market tier") {
+    auto session = MakeSession(
+        {
+            MakeService("market_a", "loc_a", LocationServiceKind::Market),
+            MakeService("market_b", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_a", "Green"),
+            Owned("market_b", "Green")
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_a") == 2);
+}
+
+TEST_CASE("TraderTierForService - using an unowned Market returns 0 even if other Markets are owned") {
+    auto session = MakeSession(
+        {
+            MakeService("market_owned", "loc_a", LocationServiceKind::Market),
+            MakeService("market_used", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_owned", "Green"),
+            Owned("market_used", "")  // the used service is unowned
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_used") == 0);
+}
+
+TEST_CASE("TraderTierForService - using an enemy-owned Market returns 0 even if other Markets are owned") {
+    auto session = MakeSession(
+        {
+            MakeService("market_owned", "loc_a", LocationServiceKind::Market),
+            MakeService("market_used", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_owned", "Green"),
+            Owned("market_used", "Red")
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_used") == 0);
+}
+
+TEST_CASE("TraderTierForService - using an allied-owned Market returns 0 even if other Markets are owned") {
+    auto session = MakeSession(
+        {
+            MakeService("market_owned", "loc_a", LocationServiceKind::Market),
+            MakeService("market_used", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_owned", "Green"),
+            Owned("market_used", "Blue")
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_used") == 0);
+}
+
+TEST_CASE("TraderTierForService - using a locked player-owned Market returns 0") {
+    auto session = MakeSession(
+        {
+            MakeService("market_owned", "loc_a", LocationServiceKind::Market),
+            MakeService("market_used", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_owned", "Green"),
+            Owned("market_used", "Green", /*locked=*/true)
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_used") == 0);
+}
+
+TEST_CASE("TraderTierForService - using a destroyed player-owned Market returns 0") {
+    auto session = MakeSession(
+        {
+            MakeService("market_owned", "loc_a", LocationServiceKind::Market),
+            MakeService("market_used", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_owned", "Green"),
+            Owned("market_used", "Green", false, /*destroyed=*/true)
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_used") == 0);
+}
+
+TEST_CASE("TraderTierForService - using a hostile-occupied player-owned Market returns 0") {
+    auto session = MakeSession(
+        {
+            MakeService("market_owned", "loc_a", LocationServiceKind::Market),
+            MakeService("market_used", "loc_b", LocationServiceKind::Market)
+        },
+        {
+            Owned("market_owned", "Green"),
+            Owned("market_used", "Green")
+        });
+
+    gameplay::EnemyTeamState enemy;
+    enemy.teamColor = "Red";
+    enemy.nodeId = "loc_b";  // occupies the used market's node
+    enemy.active = true;
+    session.SetEnemyTeams({enemy});
+
+    REQUIRE(session.OwnedTraderServiceTierForService("market_used") == 0);
+}
+
+TEST_CASE("TraderTierForService - using a player-owned Trading Post returns the Trading Post tier, not Market tier") {
+    auto session = MakeSession(
+        {
+            MakeService("market_a", "loc_a", LocationServiceKind::Market),
+            MakeService("market_b", "loc_b", LocationServiceKind::Market),
+            MakeService("tp_a", "loc_c", LocationServiceKind::TradingPost)
+        },
+        {
+            Owned("market_a", "Green"),
+            Owned("market_b", "Green"),
+            Owned("tp_a", "Green")
+        });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_a") == 1);  // TP tier, not 2
+}
+
+TEST_CASE("TraderTierForService - unknown service id returns 0") {
+    auto session = MakeSession(
+        {MakeService("market_a", "loc_a", LocationServiceKind::Market)},
+        {Owned("market_a", "Green")});
+
+    REQUIRE(session.OwnedTraderServiceTierForService("no_such_service") == 0);
+}
+
+TEST_CASE("TraderTierForService - non-trader service id returns 0") {
+    auto session = MakeSession(
+        {MakeService("shop_a", "loc_a", LocationServiceKind::Shop)},
+        {Owned("shop_a", "Green")});
+
+    REQUIRE(session.OwnedTraderServiceTierForService("shop_a") == 0);
+}
