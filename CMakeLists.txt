@@ -33,6 +33,7 @@ add_library(ashvale_logic
   src/gameplay/region/RegionDeadEndRules.cpp
   src/gameplay/region/RegionTravelRules.cpp
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
+  src/gameplay/economy/MineProductionRules.cpp
   src/gameplay/campaign/CampaignProgressionRules.cpp
   src/gameplay/campaign/CampaignCarryover.cpp
   src/gameplay/worldmap/WorldMapTravelRules.cpp
@@ -134,6 +135,7 @@ if (BUILD_TESTING)
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
     tests/ResourceStateTests.cpp
+    tests/MineProductionRulesTests.cpp
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
     tests/EventDefinitionTests.cpp

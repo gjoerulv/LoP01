@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include "data/ContentValidator.h"
 #include <nlohmann/json.hpp>
+#include <utility>
+#include <vector>
 
 static nlohmann::json ValidDoc()
 {
@@ -371,4 +373,91 @@ TEST_CASE("ContentValidator::ValidateReferences - unique service ids and single 
         return m.code == "SERVICE_ID_DUPLICATE" || m.code == "LOCATION_MULTIPLY_PLACED";
     });
     REQUIRE_FALSE(anyIdentityError);
+}
+
+// ---------------------------------------------------------------------------
+// M17 Phase 2 mine/resource-service output validation.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+data::LocationServiceDefinition MakeMineService(const std::string& id,
+    const std::string& locationId, const std::string& zoneId,
+    std::vector<data::MineOutputDefinition> outputs) {
+    data::LocationServiceDefinition svc;
+    svc.id = id;
+    svc.locationId = locationId;
+    svc.zoneId = zoneId;
+    svc.kind = data::LocationServiceKind::Mine;
+    svc.mineOutputs = std::move(outputs);
+    return svc;
+}
+
+} // namespace
+
+TEST_CASE("ContentValidator::ValidateReferences - valid mine outputs produce no output errors")
+{
+    const auto loc   = MakeLocation("mine_loc", "scene1");
+    const auto scene = MakeScene("scene1", {"mine_face"});
+    const auto svc   = MakeMineService("stone_mine", "mine_loc", "mine_face",
+        {{"Stone", 2}, {"Gold", 1000}});
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool anyMineError = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUT_RESOURCE_INVALID" || m.code == "MINE_OUTPUT_AMOUNT_INVALID";
+    });
+    REQUIRE_FALSE(anyMineError);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - invalid mine output resource produces MINE_OUTPUT_RESOURCE_INVALID")
+{
+    const auto loc   = MakeLocation("mine_loc", "scene1");
+    const auto scene = MakeScene("scene1", {"mine_face"});
+    const auto svc   = MakeMineService("bad_mine", "mine_loc", "mine_face",
+        {{"Mithril", 2}});
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUT_RESOURCE_INVALID"
+            && m.path == "services[0].mine_outputs[0].resource"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - non-positive mine output amount produces MINE_OUTPUT_AMOUNT_INVALID")
+{
+    const auto loc   = MakeLocation("mine_loc", "scene1");
+    const auto scene = MakeScene("scene1", {"mine_face"});
+    const auto svc   = MakeMineService("zero_mine", "mine_loc", "mine_face",
+        {{"Stone", 0}});
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUT_AMOUNT_INVALID"
+            && m.path == "services[0].mine_outputs[0].amount"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - service without mine outputs remains valid")
+{
+    const auto loc   = MakeLocation("loc1", "scene1");
+    const auto scene = MakeScene("scene1", {"zone_a"});
+    const auto svc   = MakeService("svc_a", "loc1", "zone_a");  // no mineOutputs
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {loc}, {scene}, {}, {}, {svc}, {});
+
+    const bool anyMineError = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "MINE_OUTPUT_RESOURCE_INVALID" || m.code == "MINE_OUTPUT_AMOUNT_INVALID";
+    });
+    REQUIRE_FALSE(anyMineError);
 }
