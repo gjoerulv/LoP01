@@ -28,9 +28,7 @@ Treat archived docs/prompts as historical context only. In particular, do not tr
 
 ## Current baseline to verify
 
-The active docs should describe the project as post-M16, not post-M8/post-M11/single-Region-only.
-
-The active next milestone should be M17 — Owned Services and Economy Foundation — unless the docs explicitly record a newer user decision.
+The active docs should describe the project as post-M17, not post-M8/post-M11/post-M16/single-Region-only. The active next milestone should be M18 — Passive Effect Spine — unless the docs explicitly record a newer user decision.
 
 ## Check for
 

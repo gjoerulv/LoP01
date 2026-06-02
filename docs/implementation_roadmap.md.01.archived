@@ -2,7 +2,9 @@
 
 ## Context
 
-The current codebase is a post-M17 bounded multi-Region, multi-Scenario vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, enemy teams on the Region layer, deterministic scenario outcome evaluation, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, and the first owned-service/economy foundation.
+The current codebase is a post-M16 bounded multi-Region, multi-Scenario vertical slice.
+
+The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation foundation, typed events, the practical Phase 3 enemy-team Region-layer slice, deterministic scenario outcome evaluation, a minimal inventory + artifact-equipping layer, the team Energy pool, a minimal World Map layer, and a minimal Campaign System.
 
 This roadmap works from foundations outward:
 
@@ -14,12 +16,11 @@ This roadmap works from foundations outward:
 6. Energy;
 7. World Map;
 8. Campaign;
-9. owned services and economy;
-10. passive/effect generalization when a narrow seam needs to become reusable.
+9. owned services and economy.
 
-`docs/content_scope_v1.md`, `docs/technical_direction.md`, `docs/presentation_game_feel.md`, and `docs/game_shell_flow.md` are active guidance documents. Respect them when their subject matter is touched.
+`docs/content_scope_v1.md`, `docs/technical_direction.md`, `docs/presentation_game_feel.md`, and `docs/game_shell_flow.md` are active guidance documents. Respect them when their subject matter is touched. Do not pre-implement shell screens, presentation behavior, or large content growth beyond what the current milestone requires.
 
-Do not pre-implement shell screens, presentation behavior, or large content growth beyond what the current milestone requires. Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implementation_roadmap.md.00.archived`, are historical context only.
+Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implementation_roadmap.md.00.archived`, are historical context only.
 
 ---
 
@@ -35,13 +36,12 @@ Current stable foundation:
 - team Energy pool with daily-starting formula, spend/recover primitives, day-rollover reset, save/load, legacy-save recompute, snapshot exposure, and HUD exposure;
 - JSON content loading through `ContentRepository`;
 - content validation foundation;
-- typed event foundation with optional `events.json`, typed conditions/actions, story flags, fired event ids, validation, save/load, and tests;
+- typed event foundation with optional `events.json`, typed conditions/actions, story flags, fired event ids, validation, and integration tests;
 - enemy-team Region-layer foundation with runtime state, deterministic patrol movement, hostile occupation, travel blocking, contact battle, exact team clearing, mutation event actions, save/load, and tests;
 - scenario outcome foundation with pure rules, authored/default victory, authored defeat, defeat priority, latching, save/load, ordered integration hooks, placeholder feedback, and tests;
 - inventory and artifact foundation with item/artifact definitions, unsupported-effect validation, team-shared inventories, per-hero equipment, equip/unequip methods, grant/remove event actions, equipped-artifact battle stat bonuses, save/load, authored proof content, and tests;
 - minimal World Map with region entries, adjacency, exit-node-gated travel, 1000 Energy spend, before-11:00 departure gate, next-day 11:00 arrival, generic-unit loss warning/removal, unlocked-region save/load, model/controller/renderer, authored proof content, and tests;
-- minimal Campaign System with thin scenario and campaign definitions, transition graph, allow-list carry-over, campaign runtime state, scenario transition chokepoint, outcome-based advancement, save/load, presence-gated campaign selection, authored proof content, and tests;
-- owned-service/economy foundation with strict resources, owned-service runtime state, mine outputs, stack-backed stationing, narrow mine-production passives, daily mine payout through the day-boundary chokepoint, trader ownership tiers, authored/default trader curves, Trading Post exchange matrices, validation, and proof tests.
+- minimal Campaign System with thin scenario and campaign definitions, transition graph, allow-list carry-over, campaign runtime state, scenario transition chokepoint, outcome-based advancement, save/load, presence-gated campaign selection, authored proof content, and tests.
 
 Still incomplete or intentionally deferred:
 
@@ -52,16 +52,14 @@ Still incomplete or intentionally deferred:
 - softlock / victory-reachability proof validation;
 - advanced enemy AI economy/service use;
 - enemy recruitment and sabotage/destruction/restoration loops;
-- ownership transfer/contesting UI and full service destruction/restoration loops;
 - fog/visibility per team;
 - Energy formula leader passive/item/artifact bonus seams beyond the current zero-valued arguments;
-- broad passive/effect spine beyond the narrow mine-production passive seam;
 - item use, food consumption, cooking, recipes, seeds, ingredients;
 - artifact combination and artifact-handler services;
 - battle `Item` command and item use in battle;
 - battle spoils transfer, gold steal, consumable steal;
 - `teamHasItem` / `teamHasArtifact` condition leaves;
-- Market / Black Market / Trading Post / Freelancer's Guild item economy beyond M17 ownership-tier foundation;
+- Market / Black Market / Trading Post / Freelancer's Guild item economy;
 - HUD/raylib inventory rendering and inventory render-model;
 - event-driven region unlock;
 - per-region world/enemy state partitioning;
@@ -77,14 +75,14 @@ Still incomplete or intentionally deferred:
 | # | Issue | Action |
 |---|-------|--------|
 | 1 | Team Energy pool is implemented, but leader passive and leader item/artifact bonus terms are zero-valued seams. | Close the seams when passive skills and artifact/item Energy effects exist. Do not fake the values in content or UI. |
-| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Items, artifacts, World Map, thin scenarios, campaigns, owned-service economy definitions, and trader curves have loaders; recipes and full per-Scenario Region Contexts do not. | No conflict. Add structs/loaders only when a scoped phase requires them. |
+| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Items, artifacts, World Map, thin scenarios, and campaigns have loaders; recipes and full per-Scenario Region Contexts do not. | No conflict. Add structs/loaders only when a scoped phase requires them. |
 | 3 | `docs/game_shell_flow.md` specifies the full shell flow, while code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Expand validation only when a phase requires it. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader command depth. | Gap; acceptable until skill/status phases. |
-| 6 | Player color may still be hardcoded as `Green` in some Region/enemy-team/outcome/economy paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
+| 6 | Player color may still be hardcoded as `Green` in some Region/enemy-team/outcome paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
 | 7 | Hostile contact requires a configured node `battleScenarioId`. | Intentional rule. Missing encounters produce diagnostics, not fallback battles. Future validation should enforce this for hostile-contact-capable nodes. |
 | 8 | `scenario_outcome.json` is a bounded-slice authoring file, not the full `ScenarioDefinition` outcome model. | Intentional M12 compromise. Full Scenario authoring comes later. |
-| 9 | Owned-service/economy foundation is implemented narrowly; trader item economy, trader UI, AI economy, ownership transfer loops, and broad passive systems are not. | No conflict. Expand only through scoped follow-up milestones. |
+| 9 | Owned-service and economy docs are more advanced than runtime. | This is the next intended implementation frontier. M17 should implement the narrow foundation only. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -96,19 +94,25 @@ No true design contradictions are currently known. Remaining gaps are implementa
 
 **Status:** Foundation implemented; broader validation model still expandable.
 
-Goal: prevent structurally invalid authored content from reaching playable state; unblock safe content authoring. Future expansion remains allowed when host systems require additional validators.
+Goal: prevent structurally invalid authored content from reaching playable state; unblock safe content authoring.
+
+Future expansion remains allowed when host systems require additional validators.
 
 ### Phase 2 — Minimal Typed Event Foundation
 
 **Status:** Foundation implemented.
 
-Goal: typed events, conditions, and actions exist in C++ and evaluate deterministically. Implemented foundation includes event definitions, triggers, typed condition/action evaluation, story flag persistence, one-shot fired guards, priority ordering, enemy-team mutation actions, validation, save/load, and tests.
+Goal: typed events, conditions, and actions exist in C++ and evaluate deterministically.
+
+Implemented foundation includes event definitions, triggers, typed condition/action evaluation, story flag persistence, one-shot fired guards, priority ordering, enemy-team mutation actions, validation, save/load, and tests.
 
 ### Phase 3 — Enemy Teams on Region Layer
 
 **Status:** Practical Phase 3 slice completed by M11-e.
 
-Goal: enemy teams spawn, move, act, occupy nodes, block player interaction, and can be cleared through contact battle. Completed baseline includes enemy runtime state, fixed-color-order phase, patrol movement, hostile occupation, hostile markers, configured hostile-contact battles, exact-team clearing, mutation event actions, persistence, and tests.
+Goal: enemy teams spawn, move, act, occupy nodes, block player interaction, and can be cleared through contact battle.
+
+Completed baseline includes enemy runtime state, fixed-color-order phase, patrol movement, hostile occupation, hostile markers, configured hostile-contact battles, exact-team clearing, mutation event actions, persistence, and tests.
 
 Deferred beyond Phase 3: advanced AI economy/service use, enemy recruitment, sabotage/destruction/restoration loops, cross-Region enemy persistence/travel, fog/visibility/scouting, full enemy inspection UI, and full auto-resolve.
 
@@ -162,67 +166,56 @@ Completed foundation includes thin `ScenarioDefinition`, `CampaignDefinition`, o
 
 Deferred: full per-Scenario content kind, per-scenario region partitioning, authored starting rosters, campaign branching-choice UI, full character creation/load/settings shell, localized text objects, and mod overrides.
 
-### Phase 9 — Owned Services and Economy Foundation
-
-**Status:** M17 complete.
-
-Goal: establish the smallest coherent owned-service/economy foundation that connects Services, ownership, resources, stationed guards, mines, daily payout, and trader ownership tiers without becoming a full economy sim.
-
-Completed foundation includes:
-
-- strict resource type support with Gold delegated to the existing gold source of truth;
-- owned-service runtime state and additive save/load;
-- validation that service ids are unique and each location is placed in at most one Region node, making `service.id` a valid current owned-service instance key;
-- mine/resource service kinds and authored mine outputs;
-- pure mine-production rules with strongest-only, non-stacking per-resource passives;
-- stack-backed stationing refs, normalization, and stale-reference rejection;
-- narrow unit mine-production passive definitions and validation;
-- day-boundary mine payout through the existing `AdvanceClock` chokepoint;
-- payout gating for owner, lock, destruction, hostile occupation, and service kind;
-- trader service types, per-type ownership-tier calculation, and service-specific benefit gate;
-- authored/default trader curves and Trading Post exchange matrices;
-- validation for resources, mine outputs, passives, duplicate curves/tiers, tier caps, self-exchange, and empty authored Trading Post matrices;
-- pure, integration, save/load, validation, and end-to-end tests.
-
-Deferred beyond M17: trader UI, actual player-facing trader transaction flow, broad item-market behavior, AI economy/service use, ownership transfer/contesting loops, full service destruction/restoration loop, full passive skill trees, generic origin-storage across Regions, and broad content expansion.
-
 ---
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M17 — Owned Services and Economy Foundation**.
+Latest completed milestone: **M16 — Campaign System foundation**.
 
-### Next planned milestone: M18 — Passive Effect Spine
+### Next planned milestone: M17 — Owned Services and Economy Foundation
 
-M18 is the likely next milestone because M17 intentionally introduced a narrow mine-production passive seam, while other existing seams already point toward reusable passive/effect handling:
+M17 is the highest-value next milestone because it connects the already-existing strategic layers:
 
-- Energy formula leader passive bonus remains zero-valued;
-- leader item/artifact Energy effects remain zero-valued;
-- mine-production passives exist but are intentionally narrow;
-- future service, item, artifact, and battle effects need consistent validation and resolution rules.
+- Regions and Services;
+- enemy-team occupation and future ownership contesting;
+- resources;
+- Energy/logistics pressure;
+- inventory/artifact/economy follow-ups;
+- stationed units and future passive skills;
+- campaign/scenario content goals from `docs/content_scope_v1.md`.
 
-M18 should not become a full skill tree, full status-effect system, or broad combat redesign. Recommended M18 scope:
+M17 should establish the smallest coherent owned-service/economy foundation. It should not become a broad economy sim.
 
-1. Audit existing effect/passive seams: mine production, Energy leader bonus, item/artifact stat effects, and any current event-action overlaps.
-2. Define a minimal typed passive/effect representation only for effects that have an immediate consumer.
-3. Preserve the M17 strongest-only semantics for mine-production effects unless explicitly superseded.
-4. Add validation for supported effect targets, resources/stats, amounts, and unsupported combinations.
-5. Keep evaluation pure/testable and avoid per-frame scans.
-6. Add migration/compatibility tests so the M17 narrow passive data remains valid or has a clear upgrade path.
+Recommended M17 scope:
 
-M18 non-goals:
+1. Owned service runtime state and save/load.
+2. Content/schema support for owned service defaults needed by the slice.
+3. Mine/resource-service passive daily output for the owning team.
+4. Stationed-guard data seam needed for resource-production passives.
+5. Explicit passive-effect representation only as narrow as needed for production modifiers.
+6. Strongest-only non-stacking production bonus calculation per owned service instance and output resource.
+7. Trader-service ownership tier calculation by service type, capped at 8.
+8. Authored/default service-type curves, including an authored Trading Post exchange matrix when scoped.
+9. Validation for references, illegal stacking assumptions, invalid tier curves, unknown service types, invalid resources, and save/runtime invariants.
+10. Pure tests first; integration/end-to-end proof second.
 
-- full skill tree UI;
-- broad class/job progression;
-- broad combat status-effect expansion;
-- full item-use system;
-- full trader item economy;
-- AI economy/service-use expansion;
-- content-volume expansion disconnected from the effect spine.
+M17 non-goals:
 
-After M18, likely follow-ups are:
+- full passive skill tree;
+- full AI economy;
+- full market item economy;
+- broad trader UI polish;
+- generic origin-storage across Regions;
+- full per-Scenario Region Contexts;
+- large content expansion;
+- procedural economy;
+- full service destruction/restoration loop;
+- broad combat or inventory redesign.
 
-- M19 Service Economy Expansion, for richer trader-service behavior and player-facing service transactions;
+After M17, likely follow-ups are:
+
+- M18 Passive Effect Spine, if M17 proves the passive seam needs generalization;
+- M19 Service Economy Expansion, for richer trader-service behavior;
 - later item-use, recipes/cooking, artifact combination, and inventory UI milestones.
 
 ---
@@ -240,7 +233,6 @@ After M18, likely follow-ups are:
 | 7 | World Map opens from exit nodes, shows unlocked Regions, enforces path/departure/Energy legality, spends Energy, arrives correctly, warns/removes generic travelers, and persists unlocked/current region state. |
 | 8 | Campaign selection is presence-gated; scenarios sequence; carry-over allow-list is applied; disallowed state is absent after transition; Energy recomputes after carry-over; defeat fails run; final victory completes campaign. |
 | 9 | Owned service state persists; owned mines pay daily resources; stationed production passives use strongest-only non-stacking semantics; trader ownership tiers are per service type and capped; ownership never bypasses locks, destruction, occupation, stock, eligibility, story, or availability rules. |
-| 10 | Passive/effect spine, if selected, keeps existing M17 behavior valid while adding only the minimal generalized effect targets needed by active consumers. |
 
 ---
 
@@ -248,14 +240,17 @@ After M18, likely follow-ups are:
 
 All currently completed phase test suites have shipped.
 
-For M18, expected test families depend on the accepted scope but should likely include:
+For M17, expected test families:
 
-- effect/passive schema loading tests;
-- validation tests for supported/unsupported effect targets;
-- regression tests proving M17 mine-production passive behavior remains unchanged;
-- Energy leader-passive calculation tests if that seam is promoted;
-- item/artifact effect tests only for effect types actually implemented;
-- save/load compatibility tests where passive/effect data reaches runtime state.
+- owned service content/loader tests;
+- owned service validation tests;
+- pure mine-output calculation tests;
+- pure strongest-passive selection tests;
+- save/load round-trip tests for owned service runtime state;
+- day-rollover payout integration tests;
+- trader tier calculation tests;
+- ownership-rule integration tests proving allied-owned/enemy-owned/neutral services do not count;
+- regression tests proving ownership does not bypass locked/destroyed/occupied/unavailable service rules.
 
 Continue using Catch2 and prefer pure-logic tests over rendering/input tests.
 
@@ -269,15 +264,15 @@ These are specified at design level but remain out of scope until explicitly sel
 - skill/status combat system expansion;
 - advanced enemy AI economy/service use;
 - enemy recruitment and sabotage loops;
-- ownership transfer/contesting UI and full service destruction/restoration loops;
 - fog of war per team;
 - full Location expansion / multi-screen Locations;
 - full game shell;
 - presentation and audio implementation beyond scoped UI work;
 - mod loading;
+- Energy leader-bonus seams beyond narrow M17 needs;
 - cooking / recipes / food effects / item use / battle `Item` command;
 - artifact combination;
-- full Market / Black Market / Trading Post / Freelancer's Guild item economy beyond the M17 ownership-tier foundation;
+- full Market / Black Market / Trading Post / Freelancer's Guild item economy beyond M17 ownership-tier foundation;
 - `teamHasItem` / `teamHasArtifact` condition leaves;
 - HUD/raylib inventory rendering;
 - PvP mode;

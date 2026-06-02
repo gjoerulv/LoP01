@@ -1,8 +1,6 @@
 # Project Ashvale
 
-Ashvale is a turn-based strategy/RPG built as a content-driven C++20/raylib/CMake project.
-
-The repository is a post-M16 bounded multi-Region, multi-Scenario playable vertical slice with a clarified long-term design direction. Current implementation status, milestone sequencing, and explicit not-yet boundaries live in `docs/implementation_roadmap.md`. For terminology, see `docs/terminology_map.md`.
+Ashvale is a turn-based strategy/RPG built as a content-driven C++20/raylib/CMake project. The repository is a post-M17 bounded multi-Region, multi-Scenario playable vertical slice with a clarified long-term design direction. Current implementation status, milestone sequencing, and explicit not-yet boundaries live in `docs/implementation_roadmap.md`. For terminology, see `docs/terminology_map.md`.
 
 ## Design truth and doc priority
 
@@ -32,9 +30,7 @@ Current implementation sequencing lives in:
 
 - `docs/implementation_roadmap.md`
 
-Use this roadmap for milestone order and explicit not-yet boundaries. Use the design docs above as the source of truth for behavior.
-
-The current next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects.
+Use this roadmap for milestone order and explicit not-yet boundaries. Use the design docs above as the source of truth for behavior. The current next planned milestone is M18: Passive Effect Spine, unless the user explicitly redirects.
 
 ## Project identity
 
@@ -68,7 +64,7 @@ The current codebase follows these principles:
 - controller / mapper / renderer split;
 - gameplay logic separated from rendering and input;
 - typed content loaded from JSON;
-- content-driven Regions, Locations, Services, units, enemy groups, battles, quests, events, outcomes, items, artifacts, World Map, scenarios, and campaigns;
+- content-driven Regions, Locations, Services, units, enemy groups, battles, quests, events, outcomes, items, artifacts, World Map, scenarios, campaigns, owned services, resources, mine outputs, unit mine-production passives, and trader ownership curves;
 - pure or mostly-pure gameplay rules where practical;
 - save/load focused on gameplay state rather than presentation state.
 
@@ -88,7 +84,8 @@ Completed foundations include:
 - inventory and artifact foundation, including per-hero equipment and equipped-artifact battle stat bonuses;
 - team Energy pool with daily-starting formula, spend/recover, day-rollover reset, save/load, and HUD exposure;
 - minimal World Map region-to-region travel from authored exit nodes;
-- minimal Campaign System with thin scenarios, transition graph, explicit allow-list carry-over, campaign state, and campaign selection.
+- minimal Campaign System with thin scenarios, transition graph, explicit allow-list carry-over, campaign state, and campaign selection;
+- owned-service and economy foundation with resource pool, owned-service runtime state, mine outputs, stack-backed stationing, narrow mine-production passives, day-boundary mine payout, trader ownership tiers, authored/default trader curves, and validation/test coverage.
 
 ## World structure baseline
 
@@ -151,20 +148,16 @@ The current intended Region model is:
 - Regions are authored node graphs.
 - Systemic rules operate on top of that authored structure.
 - Regions use a node-content model.
+- A node is fundamentally a travel point.
+- Its gameplay behavior is determined by its main node content and any attached events.
+- A node may contain at most one main content item, such as:
+  - resource pickup;
+  - artifact pickup;
+  - Service;
+  - neutral enemy;
+  - one-time special content.
 
-A node is fundamentally a travel point. Its gameplay behavior is determined by its main node content and any attached events.
-
-A node may contain at most one main content item, such as:
-
-- resource pickup;
-- artifact pickup;
-- Service;
-- neutral enemy;
-- one-time special content.
-
-There is no dedicated permanent combat-node type in the current intended design. Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule. It is not primarily a separate node type.
-
-Temporary hostile content, temporary resources, one-time blockers, and one-time Sealed / Frozen Hero services may all resolve back into empty travel nodes after use or clearing.
+There is no dedicated permanent combat-node type in the current intended design. Blocker behavior is usually created by content, such as a gate service, neutral enemy, hostile team occupation, or authored rule. It is not primarily a separate node type. Temporary hostile content, temporary resources, one-time blockers, and one-time Sealed / Frozen Hero services may all resolve back into empty travel nodes after use or clearing.
 
 ## Travel and logistics baseline
 
@@ -203,9 +196,7 @@ Region-to-Region travel:
 - must begin before 11:00;
 - sends the player to a protected arrival node.
 
-Heroes in the traveling party cross Regions.
-
-Generic units in the traveling party do not survive Region change unless stored first.
+Heroes in the traveling party cross Regions. Generic units in the traveling party do not survive Region change unless stored first.
 
 ### Energy
 
@@ -246,9 +237,7 @@ For exact battle rules, see `docs/combat_rules.md`.
 
 ## Enemy-team baseline
 
-Enemy teams are AI-controlled traveling parties on the Region layer.
-
-They are:
+Enemy teams are AI-controlled traveling parties on the Region layer. They are:
 
 - authored in setup;
 - systemic in behavior.
@@ -274,9 +263,7 @@ The game supports up to 8 total teams per Region, including the player.
 
 ## Owned service and economy baseline
 
-Owned services are strategic objects controlled by a team.
-
-Settled direction:
+Owned services are strategic objects controlled by a team. Implemented foundation and settled direction:
 
 - Mines can be owned and generate passive daily resources for the owning team.
 - Stationed guards can increase mine output only through explicit passive effects.
@@ -290,11 +277,11 @@ Settled direction:
 - Benefits apply only when the owning team uses a service of the same type that it owns.
 - Allied-owned services do not count.
 - Ownership tiers cap at 8 owned services of the same type.
-- Resource exchange uses an authored matrix per tier.
+- Resource exchange uses an authored matrix per tier where supported.
 - Other services use service-type-specific authored/default curves.
 - Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
 
-M17 is expected to implement the first coherent foundation for this area. Do not treat broad economy simulation as already implemented.
+The current runtime implements the narrow owned-service/economy foundation. Full trader UI, full item-market behavior, AI economy, ownership transfer loops, and broad passive/skill systems remain deferred.
 
 ## Progression baseline
 
@@ -346,7 +333,7 @@ The repo should currently be treated as:
 - a bounded playable implementation slice;
 - a broader documented design baseline than the current runtime;
 - a content-driven project with explicit terminology and clarified planning posture;
-- a post-M16 foundation ready for M17 planning after doc/source consistency checks pass.
+- a post-M17 foundation ready for M18 planning after doc/source consistency checks pass.
 
 Future work should:
 
