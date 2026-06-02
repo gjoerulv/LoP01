@@ -71,13 +71,17 @@ struct ResourceSaveState {
 };
 
 // M17 Phase 3a stationed-unit reference. A runtime-valid ref must be
-// STACK-BACKED: both unitId and stackId are required, stackId must resolve to a
-// live roster stack, and that stack's unitId must equal this unitId. This binds
-// stationing to units actually present in the roster (heroes and generics
-// alike) and prevents catalog-only unit injection. unitId is used for passive
-// lookup, but only after the stack-backed ref has been validated. Refs that are
-// not stack-backed (empty/missing/mismatched) are dropped during GameSession
-// normalization on load. Category (hero/generic) is never consulted.
+// STACK-BACKED. The invariant is:
+//   * unitId must be non-empty;
+//   * stackId must be non-empty;
+//   * stackId must resolve to an existing roster stack; and
+//   * that roster stack's unitId must equal this ref's unitId.
+// This binds stationing to units actually present in the roster (heroes and
+// generics alike) and prevents catalog-only unit injection. Invalid/stale refs
+// (empty unitId/stackId, missing stack, or mismatched unitId) are dropped by
+// GameSession::NormalizeStationedUnits(). Passive lookup uses unitId, but only
+// after this stack-backed validation; category (hero/generic) is never
+// consulted.
 struct StationedUnitSaveState {
     std::string unitId;
     std::string stackId;
