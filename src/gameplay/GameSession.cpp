@@ -1,5 +1,6 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/EnergyRules.h"
+#include "gameplay/economy/MinePayoutRules.h"
 #include "gameplay/campaign/CampaignProgressionRules.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
@@ -141,9 +142,13 @@ void GameSession::AdvanceClock(const int minutes) {
     const int dayBefore = clock_.Day();
     clock_.AdvanceMinutes(minutes);
     if (clock_.Day() != dayBefore) {
-        // Day boundary crossed: refresh the daily Energy pool. A multi-day jump
-        // resets once to the formula value (reset is "set to", not "add").
+        // Day boundary crossed: refresh the daily Energy pool, then pay owned
+        // mines. A multi-day jump fires each once (not per skipped day): Energy
+        // is "set to" the formula value, and mine payout is intentionally one
+        // payout per detected crossing (the docs say "at the start of each day"
+        // but do not require accumulating skipped days; see Phase 3b notes).
         ApplyDailyStartingEnergy();
+        ApplyDailyMinePayout();
     }
 }
 
@@ -258,34 +263,13 @@ void GameSession::NormalizeStationedUnits() {
     }
 }
 
-std::vector<economy::MineProductionPassive>
-GameSession::CollectStationedMineProductionPassives(
-    const std::string& serviceId, const data::LocationServiceKind serviceKind) const {
-    const auto* owned = FindOwnedService(serviceId);
-    if (owned == nullptr || owned->stationedUnits.empty()) {
-        return {};
-    }
-
-    // Build a unitId -> definition lookup once per call so each stationed ref is
-    // an O(1) resolve rather than a full catalog scan (Phase 3b payout may call
-    // this per owned service). Refs are assumed already normalized: stack-backed
-    // and matching. We still re-check the stack here so a stale ref can never
-    // contribute a passive even if normalization has not run since a roster
-    // change; unresolved unit/stack refs are skipped.
-    std::unordered_map<std::string, std::string> stackUnitById;
-    stackUnitById.reserve(rosterStacks_.size());
-    for (const auto& stack : rosterStacks_) {
-        stackUnitById.emplace(stack.stackId, stack.unitId);
-    }
-    std::unordered_map<std::string, const data::UnitDefinition*> defById;
-    defById.reserve(unitCatalog_.size());
-    for (const auto& unit : unitCatalog_) {
-        defById.emplace(unit.id, &unit);
-    }
-
+std::vector<const data::UnitDefinition*> GameSession::ResolveStationedUnitDefs(
+    const core::OwnedServiceSaveState& owned,
+    const std::unordered_map<std::string, std::string>& stackUnitById,
+    const std::unordered_map<std::string, const data::UnitDefinition*>& defById) const {
     std::vector<const data::UnitDefinition*> stationedDefs;
-    stationedDefs.reserve(owned->stationedUnits.size());
-    for (const auto& ref : owned->stationedUnits) {
+    stationedDefs.reserve(owned.stationedUnits.size());
+    for (const auto& ref : owned.stationedUnits) {
         if (ref.unitId.empty() || ref.stackId.empty()) {
             continue;  // not stack-backed
         }
@@ -298,8 +282,94 @@ GameSession::CollectStationedMineProductionPassives(
             stationedDefs.push_back(defIt->second);
         }
     }
+    return stationedDefs;
+}
 
+std::vector<economy::MineProductionPassive>
+GameSession::CollectStationedMineProductionPassives(
+    const std::string& serviceId, const data::LocationServiceKind serviceKind) const {
+    const auto* owned = FindOwnedService(serviceId);
+    if (owned == nullptr || owned->stationedUnits.empty()) {
+        return {};
+    }
+
+    // Single-service entry point: build the lookups for this one call. The
+    // payout pass uses ResolveStationedUnitDefs directly with shared maps so it
+    // does not rebuild these per owned service.
+    std::unordered_map<std::string, std::string> stackUnitById;
+    stackUnitById.reserve(rosterStacks_.size());
+    for (const auto& stack : rosterStacks_) {
+        stackUnitById.emplace(stack.stackId, stack.unitId);
+    }
+    std::unordered_map<std::string, const data::UnitDefinition*> defById;
+    defById.reserve(unitCatalog_.size());
+    for (const auto& unit : unitCatalog_) {
+        defById.emplace(unit.id, &unit);
+    }
+
+    const auto stationedDefs = ResolveStationedUnitDefs(*owned, stackUnitById, defById);
     return economy::CollectMineProductionPassives(stationedDefs, serviceKind);
+}
+
+void GameSession::ApplyDailyMinePayout() {
+    if (ownedServices_.empty() || locationServiceCatalog_.empty()) {
+        return;
+    }
+
+    // Build all lookups once per payout pass (not per owned service).
+    std::unordered_map<std::string, const data::LocationServiceDefinition*> serviceById;
+    serviceById.reserve(locationServiceCatalog_.size());
+    for (const auto& svc : locationServiceCatalog_) {
+        serviceById.emplace(svc.id, &svc);
+    }
+    std::unordered_map<std::string, std::string> stackUnitById;
+    stackUnitById.reserve(rosterStacks_.size());
+    for (const auto& stack : rosterStacks_) {
+        stackUnitById.emplace(stack.stackId, stack.unitId);
+    }
+    std::unordered_map<std::string, const data::UnitDefinition*> defById;
+    defById.reserve(unitCatalog_.size());
+    for (const auto& unit : unitCatalog_) {
+        defById.emplace(unit.id, &unit);
+    }
+    const auto hostileVec = HostileOccupiedNodeIds(playerColor_);
+    const std::set<std::string> hostileNodes(hostileVec.begin(), hostileVec.end());
+
+    for (const auto& owned : ownedServices_) {
+        const auto svcIt = serviceById.find(owned.serviceId);
+        if (svcIt == serviceById.end()) {
+            continue;
+        }
+        const auto* def = svcIt->second;
+
+        const bool hostileOccupied = hostileNodes.count(def->locationId) != 0;
+        if (!economy::MineServiceIsPayable(def->kind, !def->mineOutputs.empty(),
+                owned.ownerTeamColor, owned.locked, owned.destroyed,
+                playerColor_, hostileOccupied)) {
+            continue;
+        }
+
+        // Authored base outputs -> typed outputs. Validation guarantees valid
+        // resource names for loaded content; any that fail to parse are skipped
+        // defensively so a hand-edited save cannot inject an unknown resource.
+        std::vector<economy::MineResourceOutput> base;
+        base.reserve(def->mineOutputs.size());
+        for (const auto& out : def->mineOutputs) {
+            ResourceType resource;
+            if (TryResourceTypeFromString(out.resource, resource)) {
+                base.push_back(economy::MineResourceOutput{resource, out.amount});
+            }
+        }
+
+        const auto stationedDefs = ResolveStationedUnitDefs(owned, stackUnitById, defById);
+        const auto passives = economy::CollectMineProductionPassives(stationedDefs, def->kind);
+        const auto outputs = economy::ComputeMineDailyOutput(base, passives);
+
+        for (const auto& line : outputs) {
+            // Gold routes to gold_ via the Phase 1 delegation; non-gold to pool.
+            AddResource(line.resource, line.amount);
+        }
+    }
 }
 
 void GameSession::SeedEventResourceContext(events::EventEvaluationContext& ctx) const {
@@ -2261,6 +2331,10 @@ void GameSession::SetArtifactCatalog(std::vector<data::ArtifactDefinition> catal
 
 void GameSession::SetUnitCatalog(std::vector<data::UnitDefinition> catalog) {
     unitCatalog_ = std::move(catalog);
+}
+
+void GameSession::SetLocationServiceCatalog(std::vector<data::LocationServiceDefinition> catalog) {
+    locationServiceCatalog_ = std::move(catalog);
 }
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 #include "core/GameClock.h"
@@ -21,6 +22,7 @@
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
 #include "gameplay/ResourceState.h"
+#include "gameplay/economy/MineProductionRules.h"
 #include "gameplay/economy/StationedProductionRules.h"
 #include "gameplay/campaign/CampaignCarryover.h"
 #include "gameplay/events/EventDefinition.h"
@@ -272,6 +274,13 @@ public:
     // startup. An empty catalog makes ApplyDailyStartingEnergy treat the party
     // as having no resolvable agility (1000 floor).
     void SetUnitCatalog(std::vector<data::UnitDefinition> catalog);
+
+    // M17 Phase 3b: location-service catalog gives the session read access to
+    // service definitions (kind + authored mine outputs + locationId) so the
+    // day-boundary mine payout can resolve owned-service ids. Mirrors the catalog
+    // pattern; set by the App at startup. An empty catalog makes daily mine
+    // payout a no-op.
+    void SetLocationServiceCatalog(std::vector<data::LocationServiceDefinition> catalog);
 
     // M15-b World Map. SetWorldMap seeds the persisted runtime unlocked-region
     // set from the authored `unlocked` flags. SetRegionCatalog gives the session
@@ -559,6 +568,8 @@ private:
     std::vector<data::ItemDefinition>     itemCatalog_;
     std::vector<data::ArtifactDefinition> artifactCatalog_;
     std::vector<data::UnitDefinition>     unitCatalog_;
+    // M17 Phase 3b: read-only service definitions for day-boundary mine payout.
+    std::vector<data::LocationServiceDefinition> locationServiceCatalog_;
 
     // M15-b World Map state.
     data::WorldMapDefinition              worldMap_;
@@ -594,12 +605,28 @@ private:
     int RemoveGenericTravelingPartyUnits();
 
     // Single chokepoint for all time advances. Detects a day-boundary crossing
-    // and triggers ApplyDailyStartingEnergy() exactly once (a multi-day jump
-    // resets to the formula value, not per skipped day, because reset is
-    // "set to", not "add"). All three public time-advancing methods route
-    // through here so daily Energy reset is correct regardless of which path
-    // advanced the clock.
+    // and triggers ApplyDailyStartingEnergy() and ApplyDailyMinePayout() exactly
+    // once (a multi-day jump fires once, not per skipped day — matching the
+    // Energy "set to" reset and avoiding per-day payout multiplication). All
+    // public time-advancing methods route through here so daily effects are
+    // correct regardless of which path advanced the clock.
     void AdvanceClock(int minutes);
+
+    // M17 Phase 3b: pay owned mine/resource services their daily output to the
+    // player team. Fired once per AdvanceClock day-boundary crossing. Builds its
+    // service/roster/unit lookups once per pass and reuses them across all owned
+    // services. Gold output routes through gold_; non-gold to the resource pool.
+    // No-op when the service catalog is unset.
+    void ApplyDailyMinePayout();
+
+    // M17 Phase 3b: resolve an owned service's normalized (stack-backed)
+    // stationed refs to unit definitions, using caller-built lookup maps so a
+    // multi-service payout pass does not rebuild them per service. Re-checks the
+    // stack-backing defensively so a stale ref never resolves.
+    [[nodiscard]] std::vector<const data::UnitDefinition*> ResolveStationedUnitDefs(
+        const core::OwnedServiceSaveState& owned,
+        const std::unordered_map<std::string, std::string>& stackUnitById,
+        const std::unordered_map<std::string, const data::UnitDefinition*>& defById) const;
 
     [[nodiscard]] const data::ItemDefinition*     FindItemDefinition(const std::string& id) const;
     [[nodiscard]] const data::ArtifactDefinition* FindArtifactDefinition(const std::string& id) const;

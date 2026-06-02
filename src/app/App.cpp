@@ -82,6 +82,9 @@ App::App() {
         // seed day-1 Energy now that the catalog and starting party are in place.
         // Subsequent days auto-reset when the clock crosses a day boundary.
         session_.SetUnitCatalog(content_.Units());
+        // M17 Phase 3b: feed service definitions so day-boundary mine payout can
+        // resolve owned-service ids to authored mine outputs.
+        session_.SetLocationServiceCatalog(content_.LocationServices());
         session_.ApplyDailyStartingEnergy();
         // M15-b: feed the World Map (seeds the unlocked-region set) and the
         // region catalog (resolves a destination's arrival node at travel time).
