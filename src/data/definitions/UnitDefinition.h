@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 namespace data
@@ -64,6 +65,25 @@ namespace data
         UnitDefinitionRange range = UnitDefinitionRange::Melee;
     };
 
+    // M17 Phase 3a: a narrow, flat unit passive used only for mine/resource
+    // production. This is NOT a general passive system or skill tree — it is a
+    // single optional production modifier per unit. A unit (hero, leader, or
+    // generic) is a valid production-boosting stationed guard iff its definition
+    // carries this passive; category is never consulted.
+    //
+    //   target   - producing-service kind the passive applies to. Only "mine"
+    //              is meaningful in M17; validated explicitly.
+    //   resource - canonical ResourceType name (e.g. "Stone") the bonus applies
+    //              to; validated strict.
+    //   amount   - additive per-day bonus to that resource's output; validated
+    //              positive. Resolved strongest-only / non-stacking at payout.
+    struct UnitMineProductionPassive
+    {
+        std::string target = "mine";
+        std::string resource;
+        int amount = 0;
+    };
+
     struct UnitDefinition
     {
         std::string id;
@@ -71,5 +91,9 @@ namespace data
         UnitDefinitionCategory category = UnitDefinitionCategory::Generic;
         bool isPlayerCharacter = false;
         UnitStatsDefinition stats;
+
+        // M17 Phase 3a: present only when the unit authored a mine-production
+        // passive. Absent for every existing unit (backward compatible).
+        std::optional<UnitMineProductionPassive> mineProductionPassive;
     };
 }

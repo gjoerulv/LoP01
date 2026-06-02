@@ -343,6 +343,40 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
         }
     }
 
+    // M17 Phase 3a: unit mine-production passive validation. Units without the
+    // optional passive (every existing unit) produce no messages.
+    for (size_t i = 0; i < units.size(); ++i) {
+        const auto& unit = units[i];
+        if (!unit.mineProductionPassive.has_value()) {
+            continue;
+        }
+        const auto& passive = *unit.mineProductionPassive;
+        const std::string pi = "units[" + std::to_string(i) + "].mine_production_passive";
+
+        // Only "mine" is a recognized production target in M17.
+        if (passive.target != "mine") {
+            msgs.push_back({Severity::Error, "UNIT_PASSIVE_TARGET_INVALID",
+                pi + ".target",
+                "Unit mine-production passive has unknown target \"" + passive.target
+                + "\". Only \"mine\" is supported.", ""});
+        }
+
+        gameplay::ResourceType parsed;
+        if (!gameplay::TryResourceTypeFromString(passive.resource, parsed)) {
+            msgs.push_back({Severity::Error, "UNIT_PASSIVE_RESOURCE_INVALID",
+                pi + ".resource",
+                "Unit mine-production passive references invalid resource \""
+                + passive.resource + "\". Must be a canonical ResourceType name.", ""});
+        }
+
+        if (passive.amount <= 0) {
+            msgs.push_back({Severity::Error, "UNIT_PASSIVE_AMOUNT_INVALID",
+                pi + ".amount",
+                "Unit mine-production passive amount must be positive (got "
+                + std::to_string(passive.amount) + ").", ""});
+        }
+    }
+
     // Quest target reference checks
     for (size_t i = 0; i < quests.size(); ++i) {
         const auto& quest = quests[i];

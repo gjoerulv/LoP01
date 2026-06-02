@@ -196,6 +196,18 @@ data::UnitDefinition MakeUnit(const std::string& id) {
     return u;
 }
 
+data::UnitDefinition MakeUnitWithMinePassive(const std::string& id,
+    const std::string& target, const std::string& resource, int amount) {
+    data::UnitDefinition u;
+    u.id = id;
+    data::UnitMineProductionPassive p;
+    p.target = target;
+    p.resource = resource;
+    p.amount = amount;
+    u.mineProductionPassive = p;
+    return u;
+}
+
 data::BattleScenarioDefinition MakeBattleScenario(const std::string& id) {
     data::BattleScenarioDefinition bs;
     bs.id = id;
@@ -515,4 +527,83 @@ TEST_CASE("ContentValidator::ValidateReferences - non-mine service with outputs 
             && m.severity == Severity::Error;
     });
     REQUIRE(found);
+}
+
+// ---------------------------------------------------------------------------
+// M17 Phase 3a unit mine-production passive validation.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ContentValidator::ValidateReferences - valid unit mine passive produces no passive errors")
+{
+    const auto unit = MakeUnitWithMinePassive("kobold", "mine", "Stone", 1);
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {}, {}, {unit}, {}, {}, {});
+
+    const bool anyPassiveError = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "UNIT_PASSIVE_TARGET_INVALID"
+            || m.code == "UNIT_PASSIVE_RESOURCE_INVALID"
+            || m.code == "UNIT_PASSIVE_AMOUNT_INVALID";
+    });
+    REQUIRE_FALSE(anyPassiveError);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - invalid unit passive resource produces UNIT_PASSIVE_RESOURCE_INVALID")
+{
+    const auto unit = MakeUnitWithMinePassive("kobold", "mine", "Mithril", 1);
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {}, {}, {unit}, {}, {}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "UNIT_PASSIVE_RESOURCE_INVALID"
+            && m.path == "units[0].mine_production_passive.resource"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - non-positive unit passive amount produces UNIT_PASSIVE_AMOUNT_INVALID")
+{
+    const auto unit = MakeUnitWithMinePassive("kobold", "mine", "Stone", 0);
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {}, {}, {unit}, {}, {}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "UNIT_PASSIVE_AMOUNT_INVALID"
+            && m.path == "units[0].mine_production_passive.amount"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - unknown unit passive target produces UNIT_PASSIVE_TARGET_INVALID")
+{
+    const auto unit = MakeUnitWithMinePassive("kobold", "market", "Stone", 1);
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {}, {}, {unit}, {}, {}, {});
+
+    const bool found = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "UNIT_PASSIVE_TARGET_INVALID"
+            && m.path == "units[0].mine_production_passive.target"
+            && m.severity == Severity::Error;
+    });
+    REQUIRE(found);
+}
+
+TEST_CASE("ContentValidator::ValidateReferences - unit without a mine passive remains valid")
+{
+    const auto unit = MakeUnit("plain_unit");
+
+    ContentValidator v;
+    auto msgs = v.ValidateReferences({}, {}, {}, {unit}, {}, {}, {});
+
+    const bool anyPassiveError = std::ranges::any_of(msgs, [](const auto& m) {
+        return m.code == "UNIT_PASSIVE_TARGET_INVALID"
+            || m.code == "UNIT_PASSIVE_RESOURCE_INVALID"
+            || m.code == "UNIT_PASSIVE_AMOUNT_INVALID";
+    });
+    REQUIRE_FALSE(anyPassiveError);
 }
