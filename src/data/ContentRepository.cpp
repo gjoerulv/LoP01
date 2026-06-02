@@ -287,6 +287,22 @@ namespace data {
                 service.travelPrepDiscountMinutes = serviceJson.value("travel_prep_discount_minutes", 0);
                 service.travelPrepCharges = serviceJson.value("travel_prep_charges", 0);
 
+                // M17 Phase 2: optional authored mine base outputs. Absent for
+                // every existing (non-mine) service, so legacy content loads
+                // unchanged. Resource-name/amount validity is checked by
+                // ContentValidator, not here.
+                if (serviceJson.contains("mine_outputs") && serviceJson["mine_outputs"].is_array()) {
+                    for (const auto& outputJson : serviceJson["mine_outputs"]) {
+                        if (!outputJson.is_object()) {
+                            continue;
+                        }
+                        MineOutputDefinition mineOutput;
+                        mineOutput.resource = outputJson.value("resource", "");
+                        mineOutput.amount = outputJson.value("amount", 0);
+                        service.mineOutputs.push_back(mineOutput);
+                    }
+                }
+
                 output.push_back(service);
             }
 

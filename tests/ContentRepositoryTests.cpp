@@ -41,6 +41,53 @@ TEST_CASE("ContentRepository loads blocks_transit_until_cleared flag") {
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("ContentRepository loads mine service kind and authored mine_outputs") {
+    const std::filesystem::path root = "saves/content_repo_mine_outputs_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({"schemaVersion":1,"kind":"RegionCollection","id":"regions","regions":[{"id":"ashvale_heartland","name":"Ashvale Heartland","unlocked":true,"nodes":[{"location_id":"stone_mine","x":0,"y":0,"discovered":true,"travel_available":true}],"links":[]}]})");
+    WriteTextFile(root / "locations.json", R"({"schemaVersion":1,"kind":"LocationCollection","id":"locations","locations":[{"id":"stone_mine","name":"Stone Mine","type":"recruit","allows_sleep":false,"overworld_destination":true,"scene_id":"mine_scene"}]})");
+    WriteTextFile(root / "location_scenes.json", R"({"schemaVersion":1,"kind":"LocationSceneCollection","id":"location_scenes","location_scenes":[{"id":"mine_scene","spawn":{"x":0,"y":0,"width":1,"height":1},"blocking_rects":[],"zones":[{"id":"mine_face","type":"recruit","area":{"x":0,"y":0,"width":1,"height":1},"prompt_text":"","result_text":"","failure_text":"","time_cost_minutes":0,"gold_cost":0,"recruit_count":0,"dialogue_choice_time_cost_minutes":1,"dialogue_choices":[]}]}]})");
+    WriteTextFile(root / "units.json", R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[{"id":"hero","name":"Hero","category":"hero","is_player_character":true,"attack":1,"defense":1,"magic":1,"resistance":1,"min_damage":1,"max_damage":1,"max_hp":10,"max_mp":0,"agility":1,"life":1,"position":"front","range":"melee"}]})");
+    WriteTextFile(root / "battle_scenarios.json", R"({"schemaVersion":1,"kind":"BattleScenarioCollection","id":"battle_scenarios","battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"schemaVersion":1,"kind":"EnemyGroupCollection","id":"enemy_groups","enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"schemaVersion":1,"kind":"QuestCollection","id":"quests","quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"schemaVersion":1,"kind":"LocationServiceCollection","id":"location_services","location_services":[{"id":"stone_mine_svc","location_id":"stone_mine","zone_id":"mine_face","kind":"mine","mine_outputs":[{"resource":"Stone","amount":2},{"resource":"Gold","amount":1000}]}]})");
+
+    data::ContentRepository repository;
+    REQUIRE(repository.LoadFromDirectory(root));
+
+    const auto* mine = repository.FindLocationService("stone_mine", "mine_face");
+    REQUIRE(mine != nullptr);
+    REQUIRE(mine->kind == data::LocationServiceKind::Mine);
+    REQUIRE(mine->mineOutputs.size() == 2);
+    REQUIRE(mine->mineOutputs[0].resource == "Stone");
+    REQUIRE(mine->mineOutputs[0].amount == 2);
+    REQUIRE(mine->mineOutputs[1].resource == "Gold");
+    REQUIRE(mine->mineOutputs[1].amount == 1000);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ContentRepository fails when mine output uses an invalid resource name") {
+    const std::filesystem::path root = "saves/content_repo_mine_bad_resource_test";
+    std::filesystem::create_directories(root);
+
+    WriteTextFile(root / "regions.json", R"({"schemaVersion":1,"kind":"RegionCollection","id":"regions","regions":[{"id":"ashvale_heartland","name":"Ashvale Heartland","unlocked":true,"nodes":[{"location_id":"stone_mine","x":0,"y":0,"discovered":true,"travel_available":true}],"links":[]}]})");
+    WriteTextFile(root / "locations.json", R"({"schemaVersion":1,"kind":"LocationCollection","id":"locations","locations":[{"id":"stone_mine","name":"Stone Mine","type":"recruit","allows_sleep":false,"overworld_destination":true,"scene_id":"mine_scene"}]})");
+    WriteTextFile(root / "location_scenes.json", R"({"schemaVersion":1,"kind":"LocationSceneCollection","id":"location_scenes","location_scenes":[{"id":"mine_scene","spawn":{"x":0,"y":0,"width":1,"height":1},"blocking_rects":[],"zones":[{"id":"mine_face","type":"recruit","area":{"x":0,"y":0,"width":1,"height":1},"prompt_text":"","result_text":"","failure_text":"","time_cost_minutes":0,"gold_cost":0,"recruit_count":0,"dialogue_choice_time_cost_minutes":1,"dialogue_choices":[]}]}]})");
+    WriteTextFile(root / "units.json", R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[{"id":"hero","name":"Hero","category":"hero","is_player_character":true,"attack":1,"defense":1,"magic":1,"resistance":1,"min_damage":1,"max_damage":1,"max_hp":10,"max_mp":0,"agility":1,"life":1,"position":"front","range":"melee"}]})");
+    WriteTextFile(root / "battle_scenarios.json", R"({"schemaVersion":1,"kind":"BattleScenarioCollection","id":"battle_scenarios","battle_scenarios":[]})");
+    WriteTextFile(root / "enemy_groups.json", R"({"schemaVersion":1,"kind":"EnemyGroupCollection","id":"enemy_groups","enemy_groups":[]})");
+    WriteTextFile(root / "quests.json", R"({"schemaVersion":1,"kind":"QuestCollection","id":"quests","quests":[]})");
+    WriteTextFile(root / "location_services.json", R"({"schemaVersion":1,"kind":"LocationServiceCollection","id":"location_services","location_services":[{"id":"stone_mine_svc","location_id":"stone_mine","zone_id":"mine_face","kind":"mine","mine_outputs":[{"resource":"Mithril","amount":2}]}]})");
+
+    data::ContentRepository repository;
+    REQUIRE_FALSE(repository.LoadFromDirectory(root));
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_CASE("ContentRepository fails when recruit service is missing unit_id") {
     const std::filesystem::path root = "saves/content_repo_recruit_missing_unit_id_test";
     std::filesystem::create_directories(root);

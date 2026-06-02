@@ -4,6 +4,8 @@
 #include <map>
 #include <string>
 
+#include "gameplay/ResourceState.h"
+
 std::vector<ValidationMessage> ContentValidator::ValidateIdentity(const nlohmann::json& doc) const
 {
     std::vector<ValidationMessage> msgs;
@@ -275,6 +277,36 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
                 msgs.push_back({Severity::Error, "SERVICE_UNIT_NOT_FOUND",
                     si + ".unit_id",
                     "Recruit service references unknown unit \"" + service.unitId + "\".", ""});
+            }
+        }
+    }
+
+    // M17 Phase 2: mine/resource-service base-output validation. Independent of
+    // the reference checks above so an invalid resource name always reports,
+    // regardless of any location/zone issue on the same service. Services with
+    // no authored mineOutputs (every existing service) produce no messages.
+    for (size_t i = 0; i < services.size(); ++i) {
+        const auto& service = services[i];
+        const std::string si = "services[" + std::to_string(i) + "]";
+        for (size_t k = 0; k < service.mineOutputs.size(); ++k) {
+            const auto& output = service.mineOutputs[k];
+            const std::string oi = si + ".mine_outputs[" + std::to_string(k) + "]";
+
+            gameplay::ResourceType parsed;
+            if (!gameplay::TryResourceTypeFromString(output.resource, parsed)) {
+                msgs.push_back({Severity::Error, "MINE_OUTPUT_RESOURCE_INVALID",
+                    oi + ".resource",
+                    "Mine output references invalid resource \"" + output.resource
+                    + "\". Must be a canonical ResourceType name.", ""});
+            }
+
+            // Authored base outputs must be strictly positive — a zero or
+            // negative base output is meaningless for a producing service.
+            if (output.amount <= 0) {
+                msgs.push_back({Severity::Error, "MINE_OUTPUT_AMOUNT_INVALID",
+                    oi + ".amount",
+                    "Mine output amount must be positive (got "
+                    + std::to_string(output.amount) + ").", ""});
             }
         }
     }
