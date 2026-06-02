@@ -2,15 +2,11 @@
 
 ## Purpose
 
-This is the active content-scope document for the post-M16 Ashvale project.
-
-It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`.
-
-Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
+This is the active content-scope document for the post-M17 Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`. Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
 
 Related active docs:
 
-- `docs/implementation_roadmap.md` — active technical roadmap after M16.
+- `docs/implementation_roadmap.md` — active technical roadmap after M17.
 - `docs/content_schema.md` — intended and current authored data shapes.
 - `docs/scenario_authoring.md` — authoring rules and validation expectations.
 - `docs/core_loop_rules.md` — systemic gameplay rules.
@@ -23,15 +19,16 @@ Archived docs should be read only for historical context.
 
 ## 1. Current playable baseline
 
-The current baseline is post-M16:
+The current baseline is post-M17:
 
 - C++20 / raylib / CMake project.
 - Content-driven JSON loading through `ContentRepository`.
-- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, inventory/artifacts, Energy, World Map, and Campaign foundations exist.
+- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, and owned-service/economy foundations exist.
 - The playable content is a bounded multi-Region, multi-Scenario vertical slice.
 - M15 introduced minimal World Map region-to-region travel.
 - M16 introduced thin Scenario and Campaign definitions, explicit carry-over, and campaign selection.
-- Regions, units, items, artifacts, events, quests, services, and the World Map remain globally loaded.
+- M17 introduced the owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, narrow mine-production passives, daily mine payout, trader ownership tiers, and authored/default trader curves.
+- Regions, units, items, artifacts, events, quests, services, the World Map, scenarios, campaigns, and economy definitions remain globally loaded.
 - Full per-Scenario Region Contexts, per-scenario content directories, authored starting rosters, and full campaign branching UI are not implemented.
 
 The current content should prove systems generically. Do not add demo-specific source branches to make authored content work.
@@ -40,13 +37,11 @@ The current content should prove systems generically. Do not add demo-specific s
 
 ## 2. v1 content goal
 
-The next playable content target should move Ashvale from a traversal/campaign proof into a small strategic-economy proof.
-
-The v1 content goal is:
+The v1 content goal is still a compact strategic-economy proof:
 
 > A compact campaign slice where owned services matter: mines produce resources, stationed guards can influence mine output through explicit passive effects, and owned trader services create service-type-specific economy advantages.
 
-The content should remain small enough that tests and manual verification stay practical.
+M17 established the runtime foundation for this goal. Future content work should remain small enough that tests and manual verification stay practical.
 
 Recommended scale for v1:
 
@@ -58,9 +53,9 @@ Recommended scale for v1:
   - at least one mine/resource service,
   - at least one storage/garrison-compatible service,
   - at least one trader service type,
-  - optionally one service from each trader type once the rules exist.
+  - optionally one service from each trader type once the relevant rules are being exercised.
 - A small number of units with passive service/economy hooks.
-- Enough enemy teams to test ownership transfer and guarded services, but not a full AI economy.
+- Enough enemy teams to test ownership pressure and guarded services, but not a full AI economy.
 
 This target is intentionally modest. The project should gain systemic depth before content volume.
 
@@ -68,9 +63,7 @@ This target is intentionally modest. The project should gain systemic depth befo
 
 ## 3. Owned service content rules
 
-Owned services are strategic objects controlled by a team.
-
-Examples:
+Owned services are strategic objects controlled by a team. Examples:
 
 - mines / resource services,
 - Markets,
@@ -79,9 +72,7 @@ Examples:
 - Freelancer's Guilds,
 - gates and storage-like service points where units can be stationed.
 
-Ownership benefits apply to the owning team only unless a later system explicitly changes alliance benefits.
-
-Allies do not automatically receive ownership benefits.
+Ownership benefits apply to the owning team only unless a later system explicitly changes alliance benefits. Allies do not automatically receive ownership benefits.
 
 Service ownership must not bypass:
 
@@ -120,7 +111,7 @@ Example:
 - A stationed Stonewright has `+2 Stone output at Stone Mine`.
 - Output is `4 Stone`, not `5 Stone`, because only the strongest applicable Stone modifier applies.
 
-Do not implement or author broad passive-skill trees just to support this rule. The content should use the narrow passive-effect surface implemented by the active milestone.
+Do not implement or author broad passive-skill trees just to support this rule. The current content should use the narrow passive/effect surfaces implemented by the active milestone.
 
 ---
 
@@ -153,10 +144,10 @@ Curves:
 
 - Each service type has a default ownership curve.
 - Designers may author service-type-specific curves when supported.
-- Trading Post exchange should use an authored tier matrix when supported.
+- Trading Post exchange can use an authored tier matrix.
 - Curves are capped by authored settings and the global 8-tier cap.
 
-M17 should avoid deep economy simulation. It should establish the ownership tier model, validation, default curves, and a minimal proof.
+M17 established the ownership tier model, validation, default curves, and minimal proof. Future milestones may build player-facing trader transactions, item economy, or service UI on this foundation.
 
 ---
 
@@ -168,7 +159,8 @@ When modifying content:
 - Prefer adding small, reusable content objects over hardcoded demo branches.
 - Use current schema fields; do not invent unsupported mechanics in JSON.
 - If a desired content behavior needs a new system, update the roadmap rather than faking it in content.
-- Do not duplicate rules across many docs. Put systemic rules in `core_loop_rules.md`, schema shape in `content_schema.md`, validation details in `validation_system.md`, and milestone scope in `implementation_roadmap.md`.
+- Do not duplicate rules across many docs.
+- Put systemic rules in `core_loop_rules.md`, schema shape in `content_schema.md`, validation details in `validation_system.md`, and milestone scope in `implementation_roadmap.md`.
 - Keep authored proof content minimal and representative.
 - Every new content system must have:
   - loader tests,
@@ -199,6 +191,4 @@ The following remain out of scope unless explicitly promoted by the active roadm
 
 ## 8. Update rule
 
-Update this document when the playable content target changes.
-
-Do not use it as a changelog. The implementation roadmap owns milestone status.
+Update this document when the playable content target changes. Do not use it as a changelog. The implementation roadmap owns milestone status.

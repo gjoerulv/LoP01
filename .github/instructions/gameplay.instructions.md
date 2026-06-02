@@ -6,7 +6,7 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 
 - Treat the repository and the current active design docs as the source of truth.
 - Respect `docs/implementation_roadmap.md` for current sequencing and not-yet boundaries.
-- Respect `docs/content_scope_v1.md` for post-M16 content-scope limits.
+- Respect `docs/content_scope_v1.md` for post-M17 content-scope limits.
 - Respect `docs/technical_direction.md` for architecture, state ownership, and performance principles.
 - Respect the time, travel, Energy, service, ownership, and economy rules in `docs/core_loop_rules.md`.
 - Respect battle logic exactly as described in `docs/combat_rules.md`.
@@ -19,9 +19,9 @@ applyTo: "src/gameplay/**/*.cpp,src/gameplay/**/*.h,src/data/**/*.cpp,src/data/*
 
 ## Current baseline
 
-The project is post-M16. Battle, roster, save/load, typed events, scenario outcomes, inventory/artifacts, team Energy, minimal World Map travel, and minimal Campaign foundations exist.
+The project is post-M17. Battle, roster, save/load, typed events, scenario outcomes, inventory/artifacts, team Energy, minimal World Map travel, minimal Campaign, and owned-service/economy foundations exist.
 
-Do not write guidance or implementation assumptions as if the project is still post-M8, post-M11, or single-Region only.
+Do not write guidance or implementation assumptions as if the project is still post-M8, post-M11, post-M16, or single-Region only.
 
 ## Terminology
 
@@ -88,9 +88,7 @@ Respect the settled party model:
 - `Reserve` = additional traveling units, up to 7.
 - `Traveling party` = active party + reserve.
 - `Stored units` = units tied to a specific storage service and not traveling with the player.
-
-Hero units and stackable generic units must continue to be modeled differently.
-
+- Hero units and stackable generic units must continue to be modeled differently.
 - Do not assume traveling generic units survive Region transfer.
 - Do not assume stored units are interchangeable with reserve units.
 - Storage may exist in a Location or as a direct Region service.
@@ -122,15 +120,13 @@ When touching owned services or economy:
 - Ownership tiers cap at 8 owned services of the same type.
 - Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
 
-M17 should implement the narrow foundation for these rules. Do not implement a full AI economy or broad skill tree unless explicitly selected.
+The current runtime implements the narrow foundation for these rules. Do not implement a full AI economy, broad skill tree, full trader item economy, or broad ownership-transfer loop unless explicitly selected.
 
 ## Source comments
 
-Production gameplay/data source comments should be rare and durable. Use them for invariants, non-obvious contracts, save/load or validation traps, compatibility constraints, and performance-sensitive choices.
+Production gameplay/data source comments should be rare and durable.
 
-Do not add milestone/phase labels such as `M17 Phase 3a` to production source as permanent comments. Milestone context belongs in roadmap docs, decision logs, commit messages, prompts, and tests.
-
-Prefer names and tests over explanatory comments when the code is straightforward. Remove or update stale comments in the same patch that changes the behavior they describe.
+Use them for invariants, non-obvious contracts, save/load or validation traps, compatibility constraints, and performance-sensitive choices. Do not add milestone/phase labels such as `M17 Phase 3a` to production source as permanent comments. Milestone context belongs in roadmap docs, decision logs, commit messages, prompts, and tests. Prefer names and tests over explanatory comments when the code is straightforward. Remove or update stale comments in the same patch that changes the behavior they describe.
 
 Test comments may explain non-obvious regression intent, especially around save compatibility, validation, stale references, and edge-case rules.
 

@@ -27,15 +27,16 @@ Then inspect the current code structure enough to avoid planning against nonexis
 
 ## Current baseline assumption to verify
 
-The repo should be treated as post-M16 unless the code contradicts the docs:
+The repo should be treated as post-M17 unless the code contradicts the docs:
 
 - M12 scenario outcomes complete;
 - M13 inventory/artifacts complete;
 - M14 team Energy complete;
 - M15 minimal World Map complete;
-- M16 minimal Campaign System complete.
+- M16 minimal Campaign System complete;
+- M17 owned-service/economy foundation complete.
 
-The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects or current `main` contradicts the active docs.
+The next planned milestone is M18: Passive Effect Spine, unless the user explicitly redirects or current `main` contradicts the active docs.
 
 ## Produce
 
@@ -50,8 +51,8 @@ The next planned milestone is M17: Owned Services and Economy Foundation, unless
 ## Roadmap constraints
 
 - Keep milestones small enough to review.
-- Move faster than the early M12-M16 micro-slices only when the phase remains coherent and testable.
-- Do not implement full vision at once.
+- Move faster than the early M12-M17 micro-slices only when the phase remains coherent and testable.
+- Do not implement the full vision at once.
 - Prefer foundations first: schema, validation, content loading, deterministic state, save/load, and tests.
 - Keep gameplay logic separated from rendering/input.
 - Keep docs as source of truth.

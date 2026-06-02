@@ -24,9 +24,9 @@ Then inspect source, tests, content, and CMake/build files.
 
 ## Current baseline to verify
 
-The implementation should be treated as post-M16. Battle, roster, save/load, typed events, scenario outcomes, inventory/artifacts, team Energy, minimal World Map, and minimal Campaign foundations should already exist.
+The implementation should be treated as post-M17. Battle, roster, save/load, typed events, scenario outcomes, inventory/artifacts, team Energy, minimal World Map, minimal Campaign, and owned-service/economy foundations should already exist.
 
-Do not plan as if M8-M16 are still future work.
+Do not plan as if M8-M17 are still future work.
 
 ## Report
 

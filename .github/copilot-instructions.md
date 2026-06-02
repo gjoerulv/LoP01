@@ -12,13 +12,13 @@ Use these rules when working in this repository.
 
 ## Current baseline
 
-The current codebase should be treated as a post-M16 bounded multi-Region, multi-Scenario vertical slice.
+The current codebase should be treated as a post-M17 bounded multi-Region, multi-Scenario vertical slice.
 
 Completed foundations include:
 
 - explicit `App` / `GameSession` flow;
 - controller / mapper / renderer split;
-- typed Regions, Locations, Services, quests, events, units, battles, items, artifacts, World Map, scenarios, and campaigns;
+- typed Regions, Locations, Services, quests, events, units, battles, items, artifacts, World Map, scenarios, campaigns, resources, owned services, mine outputs, unit mine-production passives, and trader ownership curves;
 - route-aware Region travel and hostile-occupation blocking;
 - enemy-team Region-layer foundation through the practical M11-e slice;
 - deterministic scenario outcome rules with authored victory and defeat conditions;
@@ -26,25 +26,16 @@ Completed foundations include:
 - inventory and artifact foundation, including per-hero equipment and battle stat bonuses;
 - team Energy pool with daily reset, spend/recover primitives, save/load, and HUD exposure;
 - minimal World Map region-to-region travel from authored exit nodes;
-- minimal Campaign System with thin scenarios, transition graph, explicit carry-over, and campaign selection.
+- minimal Campaign System with thin scenarios, transition graph, explicit carry-over, and campaign selection;
+- owned-service/economy foundation with resource pool, owned-service runtime state, stack-backed stationing, day-boundary mine payout, trader ownership tiers, authored/default trader curves, validation, and tests.
 
-Do not describe the project as post-M8, post-M11, or a single-Region-only slice. Those were older baselines.
+Do not describe the project as post-M8, post-M11, post-M16, or a single-Region-only slice. Those were older baselines.
 
 ## Current planning posture
 
-Current implementation sequencing lives in `docs/implementation_roadmap.md`. The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`. The next planned milestone is M18: Passive Effect Spine, unless the user explicitly redirects.
 
-M17 should establish the smallest coherent owned-service/economy foundation needed for the v1 content goal:
-
-- owned service runtime state;
-- mine/resource-service passive daily output;
-- stationed guard hooks through explicit passive effects;
-- non-stacking strongest-applicable production passives;
-- trader-service ownership tiers by service type;
-- authored/default service-type curves;
-- validation and tests for the above.
-
-M17 must not become a broad economy simulation, full skill tree, full AI economy, full storage overhaul, or large content expansion.
+M18 should generalize only the passive/effect seams that have immediate consumers. It must not become a broad skill tree, broad status system, full AI economy, full storage overhaul, or large content expansion.
 
 ## Terminology source of truth
 
@@ -143,9 +134,11 @@ Settled rules:
 - Ownership benefits apply only when the owning team uses a service of the same type that it owns.
 - Allied-owned services do not count.
 - Ownership tiers cap at 8 owned services of the same type.
-- Resource exchange uses an authored matrix per tier.
+- Resource exchange uses an authored matrix per tier where supported.
 - Other services use service-type-specific authored/default curves.
 - Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
+
+The current runtime implements the narrow foundation for those rules. Do not assume full trader UI, item-market transactions, AI economy, ownership-transfer loops, or a broad passive/skill system exist.
 
 ## Key docs to follow
 
@@ -194,7 +187,7 @@ If the conflict affects behavior, stop and report it instead of guessing.
 
 - Make the smallest clean change that solves the task.
 - Prefer narrow, test-backed iterations over broad rewrites.
-- Move faster than the early M12-M16 micro-slices only when the phase remains coherent and testable.
+- Move faster than the early M12-M17 micro-slices only when the phase remains coherent and testable.
 - Call out doc/code mismatches explicitly.
 - If a design area is still ambiguous, tighten the docs/vision before implementing broad behavior.
 - Do not silently invent large systems when the vision is underspecified.

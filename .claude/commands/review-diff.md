@@ -21,7 +21,7 @@ Review the current git diff for correctness, scope, and consistency with project
    - `docs/game_shell_flow.md`
    - `docs/presentation_game_feel.md`
    - `.github/instructions/ui.instructions.md`
-10. Does the diff preserve the post-M16 baseline and avoid treating completed M12-M16 systems as future work?
+10. Does the diff preserve the post-M17 baseline and avoid treating completed M12-M17 systems as future work?
 11. Does the diff avoid demo-specific source hardcoding where generic data/rules should be used?
 12. Does the diff preserve save/load compatibility or explicitly test migration behavior?
 13. Do production source comments explain durable invariants, contracts, compatibility constraints, or performance-sensitive choices instead of milestone bookkeeping?

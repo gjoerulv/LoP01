@@ -35,7 +35,7 @@ Archived docs and historical milestone prompts are historical context only. Do n
 
 ## Current baseline
 
-The current codebase is post-M16.
+The current codebase is post-M17.
 
 Completed foundations include:
 
@@ -45,13 +45,16 @@ Completed foundations include:
 - inventory and artifacts foundation;
 - team Energy pool foundation;
 - minimal World Map region-to-region travel;
-- minimal Campaign System foundation.
+- minimal Campaign System foundation;
+- owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, narrow mine-production passives, day-boundary mine payout, trader ownership tiers, authored/default trader curves, validation, and proof tests.
 
-Do not treat M8, M11, M12, M13, M14, M15, or M16 as future work.
+Do not treat M8, M11, M12, M13, M14, M15, M16, or M17 as future work.
 
 ## Current planning posture
 
-The next planned milestone is M17: Owned Services and Economy Foundation, unless the user explicitly redirects. M17 planning should stay narrow, coherent, and test-backed. It should establish the owned-service/economy foundation needed by `docs/content_scope_v1.md`, not a broad economy simulation.
+The next planned milestone is M18: Passive Effect Spine, unless the user explicitly redirects.
+
+M18 planning should stay narrow, coherent, and test-backed. It should generalize only the passive/effect seams that have an immediate consumer, not create a broad skill tree, status system, or economy framework.
 
 ## Claude Code project commands
 
@@ -72,7 +75,7 @@ Do not treat command files as design truth. They are workflow prompts. The docs 
 ## Core rules
 
 - Respect `docs/technical_direction.md` for architectural principles, performance posture, and source-layout constraints.
-- Respect `docs/content_scope_v1.md` for current post-M16 content scope.
+- Respect `docs/content_scope_v1.md` for current post-M17 content scope.
 - Respect `docs/presentation_game_feel.md` for moment-to-moment presentation, audio/visual tone, transitions, and feedback.
 - Do not invent new game-design rules that contradict the docs.
 - Do not reintroduce old terminology such as `overworld`, `combat node`, or `game_vision_complete.md` as current design truth.
@@ -86,9 +89,9 @@ Do not treat command files as design truth. They are workflow prompts. The docs 
 
 ## Source comments and code documentation
 
-Keep production source comments durable and sparse. Do not add comments merely to describe milestone progress, patch phases, or agent workflow.
+Keep production source comments durable and sparse.
 
-Good production comments explain one of these:
+Do not add comments merely to describe milestone progress, patch phases, or agent workflow. Good production comments explain one of these:
 
 - a non-obvious invariant or contract;
 - a correctness, security, data-integrity, or save/load trap;
