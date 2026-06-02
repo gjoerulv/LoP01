@@ -152,15 +152,18 @@ TEST_CASE("SaveGameRepository round-trips owned-service stationed units") {
     original.regionId = "ashvale_heartland";
     original.destinationId = "home_base";
     original.hasCanonicalRoster = true;
-    original.rosterStacks = { core::RosterStackSaveState{"stk_1", "hero_smith", 1} };
+    original.rosterStacks = {
+        core::RosterStackSaveState{"stk_1", "hero_smith", 1},
+        core::RosterStackSaveState{"stk_2", "kobold", 3}
+    };
     original.activeSlotStackIds = {"stk_1", "", "", "", ""};
-    original.reserveSlotStackIds = {"", "", "", "", "", "", "", ""};
-    original.nextStackIdCounter = 2;
+    original.reserveSlotStackIds = {"stk_2", "", "", "", "", "", "", ""};
+    original.nextStackIdCounter = 3;
     original.ownedServices = {
         core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
             {
                 core::StationedUnitSaveState{"hero_smith", "stk_1"},
-                core::StationedUnitSaveState{"kobold", ""}
+                core::StationedUnitSaveState{"kobold", "stk_2"}
             }}
     };
 
@@ -174,7 +177,7 @@ TEST_CASE("SaveGameRepository round-trips owned-service stationed units") {
     REQUIRE(stationed[0].unitId == "hero_smith");
     REQUIRE(stationed[0].stackId == "stk_1");
     REQUIRE(stationed[1].unitId == "kobold");
-    REQUIRE(stationed[1].stackId.empty());
+    REQUIRE(stationed[1].stackId == "stk_2");
 
     std::filesystem::remove(testSavePath);
 }

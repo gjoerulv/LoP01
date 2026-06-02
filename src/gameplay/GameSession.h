@@ -481,7 +481,9 @@ private:
     // M17 non-gold resource pool, indexed by NonGoldResourceIndex(). Gold is
     // never stored here — it lives solely in gold_. Default-zero.
     std::array<int, kNonGoldResourceCount> nonGoldResources_{};
-    // M17 owned-service runtime state (stable fields only; no stationing yet).
+    // M17 owned-service runtime state: Phase 1 stable fields plus Phase 3a
+    // stationing. Stationed refs are stack-backed and normalized on load
+    // (NormalizeStationedUnits) so they always reference live roster stacks.
     std::vector<core::OwnedServiceSaveState> ownedServices_;
     std::string regionId_;
     std::string destinationId_;

@@ -34,8 +34,11 @@ data::UnitDefinition MakeUnitWithPassive(const std::string& id,
     return u;
 }
 
-// A minimally-valid canonical save: roster with the three test units, slots
-// sized to the canonical 5/8 layout, mode region. Caller fills ownedServices.
+// A minimally-valid canonical save: roster with the test units, slots sized to
+// the canonical 5/8 layout, mode region. Caller fills ownedServices.
+//   stk_1 -> hero_smith (Hero, +250 Gold)
+//   stk_2 -> kobold     (Generic, +1 Stone)
+//   stk_3 -> plain      (Generic, no passive)
 core::SaveData MakeBaseSave() {
     core::SaveData s;
     s.schemaVersion = 5;
@@ -57,11 +60,15 @@ core::SaveData MakeBaseSave() {
     return s;
 }
 
+// Catalog includes "ghost_smith": a unit that carries a passive but has NO
+// roster stack in MakeBaseSave — used to prove catalog-only units cannot
+// station or contribute.
 std::vector<data::UnitDefinition> MakeCatalog() {
     return {
         MakeUnitWithPassive("hero_smith", data::UnitDefinitionCategory::Hero, "Gold", 250),
         MakeUnitWithPassive("kobold", data::UnitDefinitionCategory::Generic, "Stone", 1),
-        MakeUnit("plain", data::UnitDefinitionCategory::Generic)  // no passive
+        MakeUnit("plain", data::UnitDefinitionCategory::Generic),
+        MakeUnitWithPassive("ghost_smith", data::UnitDefinitionCategory::Hero, "Gold", 999)
     };
 }
 
@@ -72,112 +79,165 @@ bool HasPassive(const std::vector<MineProductionPassive>& list,
     });
 }
 
-} // namespace
-
-TEST_CASE("Stationing - valid stationed refs round-trip and survive normalization") {
+gameplay::GameSession LoadWith(std::vector<core::OwnedServiceSaveState> ownedServices) {
     auto save = MakeBaseSave();
-    save.ownedServices = {
-        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
-            {
-                core::StationedUnitSaveState{"hero_smith", "stk_1"},
-                core::StationedUnitSaveState{"kobold", "stk_2"}
-            }}
-    };
-
+    save.ownedServices = std::move(ownedServices);
     gameplay::GameSession session;
     session.SetUnitCatalog(MakeCatalog());
     session.ApplySaveData(save);
+    return session;
+}
+
+} // namespace
+
+TEST_CASE("Stationing - valid stack-backed hero ref survives and contributes its passive") {
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {core::StationedUnitSaveState{"hero_smith", "stk_1"}}}
+    });
 
     const auto* owned = session.FindOwnedService("stone_mine_svc");
     REQUIRE(owned != nullptr);
-    REQUIRE(owned->stationedUnits.size() == 2);
+    REQUIRE(owned->stationedUnits.size() == 1);
 
-    // Re-serialize: stationing survives the round-trip.
-    const auto out = session.ToSaveData();
-    REQUIRE(out.ownedServices.size() == 1);
-    REQUIRE(out.ownedServices[0].stationedUnits.size() == 2);
-    REQUIRE(out.ownedServices[0].stationedUnits[0].unitId == "hero_smith");
-    REQUIRE(out.ownedServices[0].stationedUnits[0].stackId == "stk_1");
+    const auto passives = session.CollectStationedMineProductionPassives(
+        "stone_mine_svc", data::LocationServiceKind::Mine);
+    REQUIRE(passives.size() == 1);
+    REQUIRE(HasPassive(passives, ResourceType::Gold, 250));
 }
 
-TEST_CASE("Stationing - legacy/Phase-1 owned service with no stationing loads empty") {
-    auto save = MakeBaseSave();
-    save.ownedServices = {
-        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false, {}}
-    };
+TEST_CASE("Stationing - valid stack-backed generic ref survives and contributes its passive") {
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {core::StationedUnitSaveState{"kobold", "stk_2"}}}
+    });
 
-    gameplay::GameSession session;
-    session.SetUnitCatalog(MakeCatalog());
-    session.ApplySaveData(save);
+    const auto* owned = session.FindOwnedService("stone_mine_svc");
+    REQUIRE(owned != nullptr);
+    REQUIRE(owned->stationedUnits.size() == 1);
+
+    const auto passives = session.CollectStationedMineProductionPassives(
+        "stone_mine_svc", data::LocationServiceKind::Mine);
+    REQUIRE(passives.size() == 1);
+    REQUIRE(HasPassive(passives, ResourceType::Stone, 1));
+}
+
+TEST_CASE("Stationing - generic ref with valid unitId but empty stackId is dropped and contributes nothing") {
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {core::StationedUnitSaveState{"kobold", ""}}}  // not stack-backed
+    });
+
+    const auto* owned = session.FindOwnedService("stone_mine_svc");
+    REQUIRE(owned != nullptr);
+    REQUIRE(owned->stationedUnits.empty());
+
+    const auto passives = session.CollectStationedMineProductionPassives(
+        "stone_mine_svc", data::LocationServiceKind::Mine);
+    REQUIRE(passives.empty());
+}
+
+TEST_CASE("Stationing - catalog-only unit with no roster stack is dropped and contributes nothing") {
+    // ghost_smith exists in the catalog (and carries a +999 Gold passive) but
+    // has no roster stack. Neither an empty stackId nor a fabricated stackId may
+    // let it station or contribute — this is the rejected-injection scenario.
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {
+                core::StationedUnitSaveState{"ghost_smith", ""},
+                core::StationedUnitSaveState{"ghost_smith", "stk_404"}
+            }}
+    });
+
+    const auto* owned = session.FindOwnedService("stone_mine_svc");
+    REQUIRE(owned != nullptr);
+    REQUIRE(owned->stationedUnits.empty());
+
+    const auto passives = session.CollectStationedMineProductionPassives(
+        "stone_mine_svc", data::LocationServiceKind::Mine);
+    REQUIRE(passives.empty());
+    REQUIRE_FALSE(HasPassive(passives, ResourceType::Gold, 999));
+}
+
+TEST_CASE("Stationing - mismatched stackId/unitId is dropped") {
+    // stk_1 is hero_smith, not kobold -> mismatch.
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {core::StationedUnitSaveState{"kobold", "stk_1"}}}
+    });
 
     const auto* owned = session.FindOwnedService("stone_mine_svc");
     REQUIRE(owned != nullptr);
     REQUIRE(owned->stationedUnits.empty());
 }
 
-TEST_CASE("Stationing - stale hero/unit ref (unknown unitId) is dropped on load") {
-    auto save = MakeBaseSave();
-    save.ownedServices = {
+TEST_CASE("Stationing - unknown unitId is dropped") {
+    // stk_2 is kobold; ref claims an unknown unit at that stack -> mismatch/drop.
+    auto session = LoadWith({
         core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
-            {
-                core::StationedUnitSaveState{"ghost_unit", ""},     // unknown unit -> drop
-                core::StationedUnitSaveState{"hero_smith", "stk_1"} // valid -> keep
-            }}
-    };
-
-    gameplay::GameSession session;
-    session.SetUnitCatalog(MakeCatalog());
-    session.ApplySaveData(save);
+            {core::StationedUnitSaveState{"ghost_unit", "stk_2"}}}
+    });
 
     const auto* owned = session.FindOwnedService("stone_mine_svc");
     REQUIRE(owned != nullptr);
-    REQUIRE(owned->stationedUnits.size() == 1);
-    REQUIRE(owned->stationedUnits[0].unitId == "hero_smith");
+    REQUIRE(owned->stationedUnits.empty());
 }
 
-TEST_CASE("Stationing - stale generic stack ref (missing or mismatched stackId) is dropped on load") {
-    auto save = MakeBaseSave();
-    save.ownedServices = {
+TEST_CASE("Stationing - missing stackId is dropped") {
+    auto session = LoadWith({
         core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
-            {
-                core::StationedUnitSaveState{"kobold", "stk_999"},  // stack missing -> drop
-                core::StationedUnitSaveState{"kobold", "stk_1"},    // stk_1 is hero_smith -> mismatch -> drop
-                core::StationedUnitSaveState{"kobold", "stk_2"}     // valid -> keep
-            }}
-    };
-
-    gameplay::GameSession session;
-    session.SetUnitCatalog(MakeCatalog());
-    session.ApplySaveData(save);
+            {core::StationedUnitSaveState{"kobold", "stk_999"}}}  // no such stack
+    });
 
     const auto* owned = session.FindOwnedService("stone_mine_svc");
     REQUIRE(owned != nullptr);
-    REQUIRE(owned->stationedUnits.size() == 1);
-    REQUIRE(owned->stationedUnits[0].unitId == "kobold");
-    REQUIRE(owned->stationedUnits[0].stackId == "stk_2");
+    REQUIRE(owned->stationedUnits.empty());
 }
 
-TEST_CASE("Stationing - CollectStationedMineProductionPassives resolves hero and generic passives") {
-    auto save = MakeBaseSave();
-    save.ownedServices = {
+TEST_CASE("Stationing - valid refs round-trip and survive normalization") {
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {
+                core::StationedUnitSaveState{"hero_smith", "stk_1"},
+                core::StationedUnitSaveState{"kobold", "stk_2"}
+            }}
+    });
+
+    const auto out = session.ToSaveData();
+    REQUIRE(out.ownedServices.size() == 1);
+    REQUIRE(out.ownedServices[0].stationedUnits.size() == 2);
+    REQUIRE(out.ownedServices[0].stationedUnits[0].unitId == "hero_smith");
+    REQUIRE(out.ownedServices[0].stationedUnits[0].stackId == "stk_1");
+    REQUIRE(out.ownedServices[0].stationedUnits[1].unitId == "kobold");
+    REQUIRE(out.ownedServices[0].stationedUnits[1].stackId == "stk_2");
+}
+
+TEST_CASE("Stationing - legacy/Phase-1 owned service with no stationing loads empty") {
+    auto session = LoadWith({
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false, {}}
+    });
+
+    const auto* owned = session.FindOwnedService("stone_mine_svc");
+    REQUIRE(owned != nullptr);
+    REQUIRE(owned->stationedUnits.empty());
+}
+
+TEST_CASE("Stationing - CollectStationedMineProductionPassives resolves hero and generic, ignores no-passive units") {
+    auto session = LoadWith({
         core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
             {
                 core::StationedUnitSaveState{"hero_smith", "stk_1"},
                 core::StationedUnitSaveState{"kobold", "stk_2"},
-                core::StationedUnitSaveState{"plain", "stk_3"}  // no passive -> contributes nothing
+                core::StationedUnitSaveState{"plain", "stk_3"}  // no passive
             }}
-    };
-
-    gameplay::GameSession session;
-    session.SetUnitCatalog(MakeCatalog());
-    session.ApplySaveData(save);
+    });
 
     const auto passives = session.CollectStationedMineProductionPassives(
         "stone_mine_svc", data::LocationServiceKind::Mine);
 
     REQUIRE(passives.size() == 2);
-    REQUIRE(HasPassive(passives, ResourceType::Gold, 250));   // hero
-    REQUIRE(HasPassive(passives, ResourceType::Stone, 1));    // generic
+    REQUIRE(HasPassive(passives, ResourceType::Gold, 250));
+    REQUIRE(HasPassive(passives, ResourceType::Stone, 1));
 }
 
 TEST_CASE("Stationing - collecting from an unknown service yields no passives") {
