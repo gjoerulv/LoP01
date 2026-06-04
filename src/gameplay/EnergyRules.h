@@ -12,9 +12,10 @@ namespace gameplay {
 //   Y = leader passive-skill Energy bonus
 //   Z = leader equipped-item/artifact Energy bonus
 //
-// M14 passes Y and Z as 0 (zero-valued seams) because the skill system and
-// item/artifact Energy effects do not exist yet. The parameters exist so a
-// later milestone can supply real values without changing call sites.
+// Y is supplied by the caller from the current leader's LeaderEnergy passive
+// effects. Z is still a zero-valued seam (leader item/artifact Energy effects do
+// not exist yet); the parameter stays so it can be filled without changing call
+// sites. Never fake Z in content or UI.
 //
 // An empty traveling party yields lowestPartyAgility == 0 -> base 1000.
 // Negative agility is guarded to 0 so a malformed unit can never reduce the

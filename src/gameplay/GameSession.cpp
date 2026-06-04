@@ -2,6 +2,7 @@
 #include "gameplay/EnergyRules.h"
 #include "gameplay/economy/MinePayoutRules.h"
 #include "gameplay/economy/TraderOwnershipRules.h"
+#include "gameplay/effects/UnitPassiveEffects.h"
 #include "gameplay/campaign/CampaignProgressionRules.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
@@ -2630,12 +2631,61 @@ int GameSession::LowestTravelingPartyAgility() const {
     return found ? lowest : 0;
 }
 
+const data::UnitDefinition* GameSession::CurrentLeaderUnitDefinition() const {
+    // Resolve the active-party leader the same way battle does (BattleFactory
+    // AssignLeader): the first player-character leader-capable unit, else the
+    // first leader-capable unit, in active-slot order. Leader-capable = Leader or
+    // Hero category. Generics are never the leader.
+    const data::UnitDefinition* firstCapable = nullptr;
+    for (const auto& stackId : activeSlotStackIds_) {
+        if (stackId.empty()) {
+            continue;
+        }
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr || stack->quantity <= 0) {
+            continue;
+        }
+        const auto* def = FindUnitDefinition(stack->unitId);
+        if (def == nullptr) {
+            continue;
+        }
+        const bool capable = def->category == data::UnitDefinitionCategory::Leader
+                          || def->category == data::UnitDefinitionCategory::Hero;
+        if (!capable) {
+            continue;
+        }
+        if (def->isPlayerCharacter) {
+            return def;
+        }
+        if (firstCapable == nullptr) {
+            firstCapable = def;
+        }
+    }
+    return firstCapable;
+}
+
+int GameSession::LeaderPassiveEnergyBonus() const {
+    const data::UnitDefinition* leader = CurrentLeaderUnitDefinition();
+    if (leader == nullptr) {
+        return 0;
+    }
+    int bonus = 0;
+    for (const auto* effect : gameplay::effects::CollectUnitPassiveEffects(
+             *leader, data::PassiveEffectKind::LeaderEnergy)) {
+        if (effect->amount > 0) {
+            bonus += effect->amount;
+        }
+    }
+    return bonus;
+}
+
 void GameSession::ApplyDailyStartingEnergy() {
-    // Leader passive-skill (Y) and leader equipped-item/artifact (Z) Energy
-    // bonuses are zero-valued seams in M14 — those systems do not exist yet.
+    // Y = the current leader's summed LeaderEnergy passive effects. Z = leader
+    // equipped-item/artifact Energy bonus, still a zero-valued seam (deferred to
+    // a future artifact-effect milestone; not faked here).
     const int starting = ComputeDailyStartingEnergy(
         LowestTravelingPartyAgility(),
-        /*leaderPassiveEnergyBonus=*/0,
+        LeaderPassiveEnergyBonus(),
         /*leaderItemEnergyBonus=*/0);
     dailyMaxEnergy_ = starting;
     currentEnergy_ = starting;

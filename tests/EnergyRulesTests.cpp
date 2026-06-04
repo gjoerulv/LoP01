@@ -49,6 +49,29 @@ GameSession MakeSessionWithParty(const std::vector<data::UnitDefinition>& heroes
     return session;
 }
 
+// A Hero (leader-capable) carrying one LeaderEnergy passive per listed amount.
+data::UnitDefinition MakeLeaderWithEnergyBonuses(const std::string& id, int agility,
+    const std::vector<int>& bonuses) {
+    auto def = MakeHero(id, agility);
+    for (const int amount : bonuses) {
+        def.passiveEffects.push_back(data::UnitPassiveEffect{
+            data::PassiveEffectKind::LeaderEnergy, "", "", amount});
+    }
+    return def;
+}
+
+// A Generic unit (never leader-capable) carrying a LeaderEnergy passive.
+data::UnitDefinition MakeGenericWithEnergyBonus(const std::string& id, int agility, int amount) {
+    data::UnitDefinition def;
+    def.id = id;
+    def.name = id;
+    def.category = data::UnitDefinitionCategory::Generic;
+    def.stats.agility = agility;
+    def.passiveEffects.push_back(data::UnitPassiveEffect{
+        data::PassiveEffectKind::LeaderEnergy, "", "", amount});
+    return def;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -108,6 +131,50 @@ TEST_CASE("GameSession - party present but no unit catalog falls back to base 10
     session.ApplyDailyStartingEnergy();
     REQUIRE(session.MaxEnergy() == 1000);
     REQUIRE(session.CurrentEnergy() == 1000);
+}
+
+// ---------------------------------------------------------------------------
+// Leader passive Energy bonus (the Y seam, fed from the spine)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("GameSession - the leader's LeaderEnergy passive raises daily starting Energy") {
+    auto session = MakeSessionWithParty({ MakeLeaderWithEnergyBonuses("hero_a", 8, {50}) });
+    session.ApplyDailyStartingEnergy();
+    // 1000 + 8*100 + 50
+    REQUIRE(session.MaxEnergy() == 1850);
+    REQUIRE(session.CurrentEnergy() == 1850);
+}
+
+TEST_CASE("GameSession - multiple LeaderEnergy passives on the leader sum") {
+    auto session = MakeSessionWithParty({ MakeLeaderWithEnergyBonuses("hero_a", 8, {50, 25}) });
+    session.ApplyDailyStartingEnergy();
+    // 1000 + 800 + (50 + 25)
+    REQUIRE(session.MaxEnergy() == 1875);
+}
+
+TEST_CASE("GameSession - a non-leader unit's LeaderEnergy passive does not count") {
+    // hero_a (leader-capable, no passive) is active; gen_b (generic, +999) stays
+    // in reserve and is never the leader -> its passive is ignored.
+    auto session = MakeSessionWithParty({
+        MakeHero("hero_a", 5),
+        MakeGenericWithEnergyBonus("gen_b", 5, 999)
+    });
+    session.ApplyDailyStartingEnergy();
+    // 1000 + min(5,5)*100, no +999
+    REQUIRE(session.MaxEnergy() == 1500);
+}
+
+TEST_CASE("GameSession - a leader without a LeaderEnergy passive leaves Energy at the base formula") {
+    auto session = MakeSessionWithParty({ MakeHero("hero_a", 8) });
+    session.ApplyDailyStartingEnergy();
+    REQUIRE(session.MaxEnergy() == 1800);  // 1000 + 800, Y = 0
+}
+
+TEST_CASE("GameSession - leader Energy bonus is applied at the day-boundary chokepoint") {
+    auto session = MakeSessionWithParty({ MakeLeaderWithEnergyBonuses("hero_a", 8, {50}) });
+    session.AddMinutes(core::GameClock::kMinutesPerSliceDay);  // cross one day
+    REQUIRE(session.MaxEnergy() == 1850);
+    REQUIRE(session.CurrentEnergy() == 1850);
 }
 
 // ---------------------------------------------------------------------------
