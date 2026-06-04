@@ -259,3 +259,40 @@ TEST_CASE("MinePayout - a multi-day jump pays exactly once per crossing") {
     session.AddMinutes(kOneDay * 2);  // day 1 -> 3 in one advance: one detected crossing
     REQUIRE(session.Snapshot().gold == goldBefore + 1000);  // not +2000
 }
+
+TEST_CASE("MinePayout - a stationed unit's LeaderEnergy passive does not affect mine output") {
+    // Cross-consumer isolation: a LeaderEnergy effect on a stationed unit must
+    // never be treated as a mine-production modifier.
+    data::UnitDefinition energizer;
+    energizer.id = "energizer";
+    energizer.name = "energizer";
+    energizer.category = data::UnitDefinitionCategory::Generic;
+    energizer.passiveEffects.push_back(data::UnitPassiveEffect{
+        data::PassiveEffectKind::LeaderEnergy, "", "", 500});
+
+    core::SaveData save;
+    save.schemaVersion = 5;
+    save.day = 1;
+    save.minutesIntoSliceDay = 0;
+    save.gold = 2500;
+    save.mode = "region_mode";
+    save.regionId = "ashvale_heartland";
+    save.destinationId = "home_base";
+    save.hasCanonicalRoster = true;
+    save.rosterStacks = { core::RosterStackSaveState{"stk_1", "energizer", 1} };
+    save.activeSlotStackIds = {"stk_1", "", "", "", ""};
+    save.reserveSlotStackIds = {"", "", "", "", "", "", "", ""};
+    save.nextStackIdCounter = 2;
+    save.ownedServices = {
+        core::OwnedServiceSaveState{"stone_mine_svc", "Green", false, false,
+            {core::StationedUnitSaveState{"energizer", "stk_1"}}}
+    };
+
+    gameplay::GameSession session;
+    session.SetUnitCatalog({energizer});
+    session.SetLocationServiceCatalog({MakeMine("stone_mine_svc", "stone_mine", {{"Stone", 2}})});
+    session.ApplySaveData(save);
+
+    session.AddMinutes(kOneDay);
+    REQUIRE(session.ResourceCount(ResourceType::Stone) == 2);  // base only; LeaderEnergy ignored
+}

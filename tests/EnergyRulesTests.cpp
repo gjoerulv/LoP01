@@ -72,6 +72,15 @@ data::UnitDefinition MakeGenericWithEnergyBonus(const std::string& id, int agili
     return def;
 }
 
+// A Hero (leader-capable) carrying only a MineProduction passive — used to prove
+// mine-production effects never leak into the Energy (Y) term.
+data::UnitDefinition MakeLeaderWithMinePassive(const std::string& id, int agility, int amount) {
+    auto def = MakeHero(id, agility);
+    def.passiveEffects.push_back(data::UnitPassiveEffect{
+        data::PassiveEffectKind::MineProduction, "Stone", "mine", amount});
+    return def;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -175,6 +184,14 @@ TEST_CASE("GameSession - leader Energy bonus is applied at the day-boundary chok
     session.AddMinutes(core::GameClock::kMinutesPerSliceDay);  // cross one day
     REQUIRE(session.MaxEnergy() == 1850);
     REQUIRE(session.CurrentEnergy() == 1850);
+}
+
+TEST_CASE("GameSession - the leader's MineProduction passive does not affect daily Energy") {
+    // Cross-consumer isolation: a MineProduction effect on the current leader
+    // must never leak into the Energy (Y) term.
+    auto session = MakeSessionWithParty({ MakeLeaderWithMinePassive("hero_a", 8, 50) });
+    session.ApplyDailyStartingEnergy();
+    REQUIRE(session.MaxEnergy() == 1800);  // 1000 + 8*100, no MineProduction amount in Y
 }
 
 // ---------------------------------------------------------------------------
