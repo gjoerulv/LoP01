@@ -1,7 +1,7 @@
 #pragma once
 
-#include <optional>
 #include <string>
+#include <vector>
 
 namespace data
 {
@@ -65,22 +65,32 @@ namespace data
         UnitDefinitionRange range = UnitDefinitionRange::Melee;
     };
 
-    // M17 Phase 3a: a narrow, flat unit passive used only for mine/resource
-    // production. This is NOT a general passive system or skill tree — it is a
-    // single optional production modifier per unit. A unit (hero, leader, or
-    // generic) is a valid production-boosting stationed guard iff its definition
-    // carries this passive; category is never consulted.
+    // Typed unit passive effect. Each effect's kind names its consumer; the
+    // spine is intentionally narrow (only kinds with an active consumer exist).
+    // Category (hero/leader/generic) is never consulted for eligibility.
     //
-    //   target   - producing-service kind the passive applies to. Only "mine"
-    //              is meaningful in M17; validated explicitly.
-    //   resource - canonical ResourceType name (e.g. "Stone") the bonus applies
-    //              to; validated strict.
-    //   amount   - additive per-day bonus to that resource's output; validated
-    //              positive. Resolved strongest-only / non-stacking at payout.
-    struct UnitMineProductionPassive
+    //   MineProduction - additive per-day bonus (`amount`) to a mine/resource
+    //     service's output of `resource`; `target` is the producing-service kind
+    //     ("mine"). Resolved strongest-only / non-stacking per owned-service
+    //     instance and output resource at payout.
+    //   LeaderEnergy - additive bonus (`amount`) to the team's daily starting
+    //     Energy, applied only when the unit is the current leader. Carries no
+    //     resource/target.
+    // `amount` is validated positive for both kinds.
+    enum class PassiveEffectKind { Unknown, MineProduction, LeaderEnergy };
+
+    inline PassiveEffectKind PassiveEffectKindFromString(const std::string& value)
     {
-        std::string target = "mine";
-        std::string resource;
+        if (value == "mine_production") return PassiveEffectKind::MineProduction;
+        if (value == "leader_energy")   return PassiveEffectKind::LeaderEnergy;
+        return PassiveEffectKind::Unknown;
+    }
+
+    struct UnitPassiveEffect
+    {
+        PassiveEffectKind kind = PassiveEffectKind::Unknown;
+        std::string resource;   // MineProduction only
+        std::string target;     // MineProduction only ("mine")
         int amount = 0;
     };
 
@@ -92,8 +102,9 @@ namespace data
         bool isPlayerCharacter = false;
         UnitStatsDefinition stats;
 
-        // M17 Phase 3a: present only when the unit authored a mine-production
-        // passive. Absent for every existing unit (backward compatible).
-        std::optional<UnitMineProductionPassive> mineProductionPassive;
+        // Canonical typed passive effects. Empty for units authoring none. The
+        // legacy `mine_production_passive` JSON key is converted into a
+        // MineProduction entry here at load; runtime reads only this vector.
+        std::vector<UnitPassiveEffect> passiveEffects;
     };
 }

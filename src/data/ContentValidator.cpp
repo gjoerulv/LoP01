@@ -343,37 +343,57 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
         }
     }
 
-    // M17 Phase 3a: unit mine-production passive validation. Units without the
-    // optional passive (every existing unit) produce no messages.
+    // Unit passive-effect validation (the canonical passiveEffects vector;
+    // legacy mine_production_passive is converted into it at load). Units with no
+    // effects (every existing unit) produce no messages.
     for (size_t i = 0; i < units.size(); ++i) {
         const auto& unit = units[i];
-        if (!unit.mineProductionPassive.has_value()) {
-            continue;
-        }
-        const auto& passive = *unit.mineProductionPassive;
-        const std::string pi = "units[" + std::to_string(i) + "].mine_production_passive";
+        for (size_t k = 0; k < unit.passiveEffects.size(); ++k) {
+            const auto& effect = unit.passiveEffects[k];
+            const std::string pi =
+                "units[" + std::to_string(i) + "].passive_effects[" + std::to_string(k) + "]";
 
-        // Only "mine" is a recognized production target in M17.
-        if (passive.target != "mine") {
-            msgs.push_back({Severity::Error, "UNIT_PASSIVE_TARGET_INVALID",
-                pi + ".target",
-                "Unit mine-production passive has unknown target \"" + passive.target
-                + "\". Only \"mine\" is supported.", ""});
-        }
+            if (effect.amount <= 0) {
+                msgs.push_back({Severity::Error, "PASSIVE_EFFECT_AMOUNT_INVALID",
+                    pi + ".amount",
+                    "Passive effect amount must be positive (got "
+                    + std::to_string(effect.amount) + ").", ""});
+            }
 
-        gameplay::ResourceType parsed;
-        if (!gameplay::TryResourceTypeFromString(passive.resource, parsed)) {
-            msgs.push_back({Severity::Error, "UNIT_PASSIVE_RESOURCE_INVALID",
-                pi + ".resource",
-                "Unit mine-production passive references invalid resource \""
-                + passive.resource + "\". Must be a canonical ResourceType name.", ""});
-        }
-
-        if (passive.amount <= 0) {
-            msgs.push_back({Severity::Error, "UNIT_PASSIVE_AMOUNT_INVALID",
-                pi + ".amount",
-                "Unit mine-production passive amount must be positive (got "
-                + std::to_string(passive.amount) + ").", ""});
+            switch (effect.kind) {
+                case data::PassiveEffectKind::MineProduction: {
+                    if (effect.target != "mine") {
+                        msgs.push_back({Severity::Error, "PASSIVE_EFFECT_TARGET_INVALID",
+                            pi + ".target",
+                            "Mine-production effect has unknown target \"" + effect.target
+                            + "\". Only \"mine\" is supported.", ""});
+                    }
+                    gameplay::ResourceType parsed;
+                    if (!gameplay::TryResourceTypeFromString(effect.resource, parsed)) {
+                        msgs.push_back({Severity::Error, "PASSIVE_EFFECT_RESOURCE_INVALID",
+                            pi + ".resource",
+                            "Mine-production effect references invalid resource \""
+                            + effect.resource + "\". Must be a canonical ResourceType name.", ""});
+                    }
+                    break;
+                }
+                case data::PassiveEffectKind::LeaderEnergy: {
+                    // A leader-energy effect carries no resource/target.
+                    if (!effect.resource.empty() || !effect.target.empty()) {
+                        msgs.push_back({Severity::Error, "PASSIVE_EFFECT_FIELD_UNSUPPORTED",
+                            pi,
+                            "Leader-energy effect must not define a resource or target.", ""});
+                    }
+                    break;
+                }
+                case data::PassiveEffectKind::Unknown:
+                default:
+                    msgs.push_back({Severity::Error, "PASSIVE_EFFECT_KIND_INVALID",
+                        pi + ".kind",
+                        "Passive effect has an unknown kind. Supported: "
+                        "\"mine_production\", \"leader_energy\".", ""});
+                    break;
+            }
         }
     }
 

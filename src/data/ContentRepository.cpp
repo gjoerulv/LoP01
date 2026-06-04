@@ -167,12 +167,14 @@ namespace data {
             return true;
         }
 
-        bool LoadUnitsFile(const nlohmann::json& root, std::vector<UnitDefinition>& output) {
+        bool LoadUnitsFile(const nlohmann::json& root, std::vector<UnitDefinition>& output,
+                           std::vector<ValidationMessage>& msgs) {
             if (!root.contains("units") || !root["units"].is_array()) {
                 return false;
             }
 
             output.clear();
+            bool ok = true;
 
             for (const auto& unitJson : root["units"]) {
                 UnitDefinition def;
@@ -194,24 +196,50 @@ namespace data {
                 def.stats.position = UnitDefinitionPositionFromString(unitJson.value("position", "front"));
                 def.stats.range = UnitDefinitionRangeFromString(unitJson.value("range", "melee"));
 
-                // M17 Phase 3a: optional narrow mine-production passive. Absent
-                // on every existing unit, so legacy content loads unchanged.
-                // Field validity (target/resource/amount) is checked by
-                // ContentValidator, not here.
-                if (unitJson.contains("mine_production_passive") &&
-                    unitJson["mine_production_passive"].is_object()) {
+                // Typed passive effects. The canonical authoring form is the
+                // `passive_effects` array; the legacy `mine_production_passive`
+                // object is converted into an equivalent MineProduction entry so
+                // runtime reads a single store. Authoring both is ambiguous and
+                // rejected (gates the load). Per-effect field validity is checked
+                // by ContentValidator, not here.
+                const bool hasCanonical = unitJson.contains("passive_effects");
+                const bool hasLegacy = unitJson.contains("mine_production_passive");
+                if (hasCanonical && hasLegacy) {
+                    msgs.push_back({Severity::Error, "PASSIVE_EFFECT_LEGACY_MIXED_WITH_CANONICAL",
+                        "units[" + std::to_string(output.size()) + "].passive_effects",
+                        "Unit authors both \"mine_production_passive\" and "
+                        "\"passive_effects\". Author one form only.", ""});
+                    ok = false;
+                }
+                if (hasCanonical && unitJson["passive_effects"].is_array()) {
+                    for (const auto& effectJson : unitJson["passive_effects"]) {
+                        if (!effectJson.is_object()) {
+                            continue;
+                        }
+                        UnitPassiveEffect effect;
+                        effect.kind = PassiveEffectKindFromString(effectJson.value("kind", ""));
+                        effect.amount = effectJson.value("amount", 0);
+                        effect.resource = effectJson.value("resource", "");
+                        effect.target = effectJson.value("target",
+                            effect.kind == PassiveEffectKind::MineProduction
+                                ? std::string("mine") : std::string());
+                        def.passiveEffects.push_back(effect);
+                    }
+                }
+                if (hasLegacy && unitJson["mine_production_passive"].is_object()) {
                     const auto& passiveJson = unitJson["mine_production_passive"];
-                    UnitMineProductionPassive passive;
-                    passive.target = passiveJson.value("target", "mine");
-                    passive.resource = passiveJson.value("resource", "");
-                    passive.amount = passiveJson.value("amount", 0);
-                    def.mineProductionPassive = passive;
+                    UnitPassiveEffect effect;
+                    effect.kind = PassiveEffectKind::MineProduction;
+                    effect.target = passiveJson.value("target", "mine");
+                    effect.resource = passiveJson.value("resource", "");
+                    effect.amount = passiveJson.value("amount", 0);
+                    def.passiveEffects.push_back(effect);
                 }
 
                 output.push_back(def);
             }
 
-            return true;
+            return ok;
         }
 
         bool LoadBattleScenariosFile(const nlohmann::json& root, std::vector<BattleScenarioDefinition>& output) {
@@ -1182,7 +1210,7 @@ namespace data {
         const bool regionsLoaded   = LoadRegionsFile(*regionsDoc, regions_);
         const bool locationsLoaded = LoadLocationsFile(*locationsDoc, locations_);
         const bool scenesLoaded    = LoadLocationScenesFile(*scenesDoc, locationScenes_);
-        const bool unitsLoaded     = LoadUnitsFile(*unitsDoc, units_);
+        const bool unitsLoaded     = LoadUnitsFile(*unitsDoc, units_, messages_);
         const bool scenariosLoaded = LoadBattleScenariosFile(*scenariosDoc, battleScenarios_);
         const bool enemyLoaded     = LoadEnemyGroupsFile(*enemyDoc, enemyGroups_);
         const bool questDefLoaded  = LoadQuestDefinitionsFile(*questsDoc, questDefinitions_);
