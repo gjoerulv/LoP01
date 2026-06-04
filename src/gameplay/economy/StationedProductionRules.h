@@ -11,9 +11,9 @@ namespace gameplay::economy {
 // Pure collection of applicable mine-production passives from a set of stationed
 // unit definitions, for a producing service of `serviceKind`.
 //
-// A unit contributes a passive iff its definition carries a
-// `mineProductionPassive` whose:
-//   * target matches `serviceKind` (M17: target "mine" <-> LocationServiceKind::Mine);
+// A unit contributes a passive for each MineProduction entry in its
+// passiveEffects whose:
+//   * target matches `serviceKind` (target "mine" <-> LocationServiceKind::Mine);
 //   * resource parses to a valid ResourceType; and
 //   * amount is positive.
 // Unit category (hero / leader / generic) is NEVER consulted — eligibility is

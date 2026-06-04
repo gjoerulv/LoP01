@@ -35,6 +35,7 @@ add_library(ashvale_logic
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
   src/gameplay/economy/MineProductionRules.cpp
   src/gameplay/economy/StationedProductionRules.cpp
+  src/gameplay/effects/UnitPassiveEffects.cpp
   src/gameplay/economy/MinePayoutRules.cpp
   src/gameplay/economy/TraderOwnershipRules.cpp
   src/gameplay/campaign/CampaignProgressionRules.cpp
@@ -146,6 +147,7 @@ if (BUILD_TESTING)
     tests/TraderOwnershipRulesTests.cpp
     tests/TraderTierTests.cpp
     tests/EconomyEndToEndTests.cpp
+    tests/PassiveEffectContentTests.cpp
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
     tests/EventDefinitionTests.cpp

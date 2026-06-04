@@ -1,6 +1,7 @@
 #include "gameplay/economy/StationedProductionRules.h"
 
 #include "gameplay/ResourceState.h"
+#include "gameplay/effects/UnitPassiveEffects.h"
 
 namespace gameplay::economy {
 
@@ -25,23 +26,23 @@ std::vector<MineProductionPassive> CollectMineProductionPassives(
     std::vector<MineProductionPassive> passives;
 
     for (const auto* unit : stationedUnits) {
-        if (unit == nullptr || !unit->mineProductionPassive.has_value()) {
+        if (unit == nullptr) {
             continue;
         }
-        const auto& authored = *unit->mineProductionPassive;
-
-        if (!TargetMatchesServiceKind(authored.target, serviceKind)) {
-            continue;
+        for (const auto* effect : gameplay::effects::CollectUnitPassiveEffects(
+                 *unit, data::PassiveEffectKind::MineProduction)) {
+            if (!TargetMatchesServiceKind(effect->target, serviceKind)) {
+                continue;
+            }
+            if (effect->amount <= 0) {
+                continue;
+            }
+            ResourceType resource;
+            if (!TryResourceTypeFromString(effect->resource, resource)) {
+                continue;
+            }
+            passives.push_back(MineProductionPassive{resource, effect->amount});
         }
-        if (authored.amount <= 0) {
-            continue;
-        }
-        ResourceType resource;
-        if (!TryResourceTypeFromString(authored.resource, resource)) {
-            continue;
-        }
-
-        passives.push_back(MineProductionPassive{resource, authored.amount});
     }
 
     return passives;

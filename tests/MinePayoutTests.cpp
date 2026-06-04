@@ -28,11 +28,8 @@ data::UnitDefinition MakeUnit(const std::string& id) {
 data::UnitDefinition MakeUnitWithPassive(const std::string& id,
     const std::string& resource, int amount) {
     auto u = MakeUnit(id);
-    data::UnitMineProductionPassive p;
-    p.target = "mine";
-    p.resource = resource;
-    p.amount = amount;
-    u.mineProductionPassive = p;
+    u.passiveEffects.push_back(data::UnitPassiveEffect{
+        data::PassiveEffectKind::MineProduction, resource, "mine", amount});
     return u;
 }
 

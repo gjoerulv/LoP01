@@ -22,11 +22,8 @@ data::UnitDefinition MakeUnitWithPassive(const std::string& id,
     data::UnitDefinition u;
     u.id = id;
     u.category = category;
-    data::UnitMineProductionPassive p;
-    p.target = target;
-    p.resource = resource;
-    p.amount = amount;
-    u.mineProductionPassive = p;
+    u.passiveEffects.push_back(data::UnitPassiveEffect{
+        data::PassiveEffectKind::MineProduction, resource, target, amount});
     return u;
 }
 
@@ -35,7 +32,7 @@ data::UnitDefinition MakePlainUnit(const std::string& id,
     data::UnitDefinition u;
     u.id = id;
     u.category = category;
-    return u;  // no mineProductionPassive
+    return u;  // no passive effects
 }
 
 bool HasPassive(const std::vector<MineProductionPassive>& list,
