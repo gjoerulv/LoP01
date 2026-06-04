@@ -506,6 +506,9 @@ These may include:
 
 Use **event actions** as the system term rather than “reward” when the effect is broader than a simple benefit.
 
+### Passive effect
+A **passive effect** is a typed, always-on modifier authored on a unit definition (`passive_effects`). Each effect has a **kind** naming its consumer; the current kinds are `mine_production` (stationed-unit mine output) and `leader_energy` (current-leader daily Energy). Passive effects are definition-derived and resolved at the day boundary, not stored in save state. Prefer **passive effect** over “skill”/“buff” for this typed unit data.
+
 ### Eligibility
 **Eligibility** defines who is allowed to participate in or trigger something.
 

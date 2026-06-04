@@ -1136,6 +1136,23 @@ Hero instance:
 
 Hero id is enough as stable identity because heroes are unique pool entities. Do not create a separate hero instance id unless the design later supports duplicate hero identities.
 
+### Unit passive effects
+
+A unit definition may carry a canonical `passive_effects` array of typed effects:
+
+```json
+"passive_effects": [
+  { "kind": "mine_production", "resource": "Stone", "amount": 2 },
+  { "kind": "leader_energy", "amount": 50 }
+]
+```
+
+- `mine_production` — additive per-day bonus to a mine/resource service's output of `resource` (target defaults to `"mine"`); applies only to a stationed unit and is resolved strongest-only / non-stacking per owned-service instance and output resource at payout.
+- `leader_energy` — additive bonus to the team's daily starting Energy; applies only when the unit is the current leader and carries no `resource`/`target`.
+- `amount` must be positive for both kinds.
+
+`passive_effects` must be an array of objects; malformed structure is rejected. The legacy `mine_production_passive` object is accepted as an authoring alias and converted into an equivalent `mine_production` entry at load. Authoring both `mine_production_passive` and `passive_effects` on the same unit is rejected as ambiguous.
+
 ---
 
 ## 33. Item definition schema

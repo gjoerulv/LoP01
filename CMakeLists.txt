@@ -148,6 +148,7 @@ if (BUILD_TESTING)
     tests/TraderTierTests.cpp
     tests/EconomyEndToEndTests.cpp
     tests/PassiveEffectContentTests.cpp
+    tests/PassiveEffectEndToEndTests.cpp
     tests/LocationServicePromptFormatterTests.cpp
     tests/ContentValidatorTests.cpp
     tests/EventDefinitionTests.cpp
