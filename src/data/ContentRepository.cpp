@@ -211,19 +211,33 @@ namespace data {
                         "\"passive_effects\". Author one form only.", ""});
                     ok = false;
                 }
-                if (hasCanonical && unitJson["passive_effects"].is_array()) {
-                    for (const auto& effectJson : unitJson["passive_effects"]) {
-                        if (!effectJson.is_object()) {
-                            continue;
+                if (hasCanonical) {
+                    const std::string unitPath = "units[" + std::to_string(output.size()) + "]";
+                    const auto& canonical = unitJson["passive_effects"];
+                    if (!canonical.is_array()) {
+                        msgs.push_back({Severity::Error, "PASSIVE_EFFECTS_TYPE_INVALID",
+                            unitPath + ".passive_effects",
+                            "\"passive_effects\" must be an array of effect objects.", ""});
+                        ok = false;
+                    } else {
+                        for (size_t k = 0; k < canonical.size(); ++k) {
+                            const auto& effectJson = canonical[k];
+                            if (!effectJson.is_object()) {
+                                msgs.push_back({Severity::Error, "PASSIVE_EFFECT_ENTRY_TYPE_INVALID",
+                                    unitPath + ".passive_effects[" + std::to_string(k) + "]",
+                                    "Each passive effect must be an object.", ""});
+                                ok = false;
+                                continue;
+                            }
+                            UnitPassiveEffect effect;
+                            effect.kind = PassiveEffectKindFromString(effectJson.value("kind", ""));
+                            effect.amount = effectJson.value("amount", 0);
+                            effect.resource = effectJson.value("resource", "");
+                            effect.target = effectJson.value("target",
+                                effect.kind == PassiveEffectKind::MineProduction
+                                    ? std::string("mine") : std::string());
+                            def.passiveEffects.push_back(effect);
                         }
-                        UnitPassiveEffect effect;
-                        effect.kind = PassiveEffectKindFromString(effectJson.value("kind", ""));
-                        effect.amount = effectJson.value("amount", 0);
-                        effect.resource = effectJson.value("resource", "");
-                        effect.target = effectJson.value("target",
-                            effect.kind == PassiveEffectKind::MineProduction
-                                ? std::string("mine") : std::string());
-                        def.passiveEffects.push_back(effect);
                     }
                 }
                 if (hasLegacy && unitJson["mine_production_passive"].is_object()) {

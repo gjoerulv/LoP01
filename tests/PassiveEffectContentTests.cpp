@@ -145,6 +145,51 @@ TEST_CASE("PassiveEffect content - authoring both mine_production_passive and pa
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("PassiveEffect content - passive_effects authored as an object fails with PASSIVE_EFFECTS_TYPE_INVALID") {
+    const std::filesystem::path root = "saves/passive_effects_object";
+    const std::string units = std::string(
+        R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[)") +
+        R"({"id":"bad","name":"Bad","category":"generic","is_player_character":false,)" + kStatsTail +
+        R"(,"passive_effects":{}}]})";
+    WriteContentWithUnits(root, units);
+
+    data::ContentRepository content;
+    REQUIRE_FALSE(content.LoadFromDirectory(root));
+    REQUIRE(HasCode(content.ValidationMessages(), "PASSIVE_EFFECTS_TYPE_INVALID"));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("PassiveEffect content - passive_effects authored as a string fails with PASSIVE_EFFECTS_TYPE_INVALID") {
+    const std::filesystem::path root = "saves/passive_effects_string";
+    const std::string units = std::string(
+        R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[)") +
+        R"({"id":"bad","name":"Bad","category":"generic","is_player_character":false,)" + kStatsTail +
+        R"(,"passive_effects":"mine"}]})";
+    WriteContentWithUnits(root, units);
+
+    data::ContentRepository content;
+    REQUIRE_FALSE(content.LoadFromDirectory(root));
+    REQUIRE(HasCode(content.ValidationMessages(), "PASSIVE_EFFECTS_TYPE_INVALID"));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("PassiveEffect content - a non-object passive_effects entry fails with PASSIVE_EFFECT_ENTRY_TYPE_INVALID") {
+    const std::filesystem::path root = "saves/passive_effects_bad_entry";
+    const std::string units = std::string(
+        R"({"schemaVersion":1,"kind":"UnitCollection","id":"units","units":[)") +
+        R"({"id":"bad","name":"Bad","category":"generic","is_player_character":false,)" + kStatsTail +
+        R"(,"passive_effects":[123]}]})";
+    WriteContentWithUnits(root, units);
+
+    data::ContentRepository content;
+    REQUIRE_FALSE(content.LoadFromDirectory(root));
+    REQUIRE(HasCode(content.ValidationMessages(), "PASSIVE_EFFECT_ENTRY_TYPE_INVALID"));
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_CASE("PassiveEffect content - an unknown effect kind fails validation") {
     const std::filesystem::path root = "saves/passive_effect_unknown_kind";
     const std::string units = std::string(
