@@ -605,6 +605,13 @@ private:
     // Returns 0 when no party agility is resolvable (empty party or no catalog).
     [[nodiscard]] int LowestTravelingPartyAgility() const;
 
+    // Current active-party leader resolution (matches battle's AssignLeader:
+    // first player-character leader-capable unit, else first leader-capable;
+    // leader-capable = Leader/Hero). Nullptr when none. Used to source the
+    // leader's LeaderEnergy passive bonus (the Y term in the Energy formula).
+    [[nodiscard]] const data::UnitDefinition* CurrentLeaderUnitDefinition() const;
+    [[nodiscard]] int LeaderPassiveEnergyBonus() const;
+
     [[nodiscard]] const data::RegionDefinition* FindRegionDefinition(const std::string& id) const;
     // M17 Phase 3a: unit-definition lookup in the loaded catalog (nullptr if the
     // catalog is unset or has no such id). Used by stationing normalization and
