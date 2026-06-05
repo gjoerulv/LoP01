@@ -157,8 +157,8 @@ At the start of each day, traveling-party Energy is set to:
 Where:
 
 - `X` = the Agility of the unit with the lowest Agility in the entire traveling party
-- `Y` = any passive-skill Energy bonus granted by the current leader
-- `Z` = any equipped-item Energy bonus granted by the current leader
+- `Y` = passive-skill Energy bonus granted by the current leader — implemented as the sum of the leader unit's `leader_energy` passive effects
+- `Z` = equipped-item/artifact Energy bonus granted by the current leader — a deferred seam, still zero until item/artifact Energy effects exist
 
 If the team has no leader, only the applicable parts of the formula apply.
 
