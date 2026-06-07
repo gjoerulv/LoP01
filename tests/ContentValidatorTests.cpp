@@ -733,6 +733,22 @@ TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - self-exchange produ
     REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_SELF"));
 }
 
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - Gold as exchange source produces TRADER_EXCHANGE_GOLD")
+{
+    const auto curve = MakeTradingPostCurve(1, {{"Gold", "Stone", 8}});
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_GOLD"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - Gold as exchange target produces TRADER_EXCHANGE_GOLD")
+{
+    const auto curve = MakeTradingPostCurve(1, {{"Wood", "Gold", 8}});
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_GOLD"));
+}
+
 TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - non-positive exchange cost produces TRADER_EXCHANGE_COST_INVALID")
 {
     const auto curve = MakeTradingPostCurve(1, {{"Wood", "Stone", 0}});
