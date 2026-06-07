@@ -16,9 +16,11 @@ The current codebase should be treated as a post-M20 bounded multi-Region, multi
 
 Do not describe the project as post-M8, post-M11, post-M16, post-M17, post-M18, post-M19, or a single-Region-only slice. Those were older baselines.
 
-## Current planning posture
+## Current milestone
 
-Current implementation sequencing lives in `docs/implementation_roadmap.md`. No next milestone is currently selected. Before starting new work, audit the active docs and source, then propose a narrow, testable slice. Do not assume the next step is a full marketplace, broad UI, AI economy, passive/effect expansion, or all-trader-service expansion.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`. The selected next milestone is **M21 — Scenario Economy Start-State Authoring Foundation**.
+
+M21 is a narrow authored Scenario start-state milestone. It should not expand into full Scenario directories, full team definitions, authored starting rosters, ownership transfer/claiming UI, AI economy, item economy, or full shell flow unless the active roadmap is explicitly revised.
 
 ## Technical rules
 
@@ -39,7 +41,7 @@ Read `docs/technical_direction.md` before architecture or system work.
 
 Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code.
 
-Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M20 Phase 2:` in production source unless they are temporary and removed before merge.
+Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M21 Phase 1:` in production source unless they are temporary and removed before merge.
 
 Test comments are acceptable when they explain a non-obvious regression or scenario intent.
 
@@ -65,6 +67,10 @@ Settled rules:
   - the 20-minute visit cost is charged once on exit only if at least one trade succeeded.
 
 Do not assume Market/Black Market/Freelancer's Guild behavior, full item-market transactions, AI economy, ownership-transfer loops, or a broad passive/skill system exist.
+
+## Scenario start-state rules
+
+M21 may add a narrow content-authored player start-state surface for Scenario start economy/service setup. Keep it focused on the active roadmap scope. Do not turn it into full team authoring, roster authoring, per-scenario content directories, campaign branching UI, or a general shell/save-slot rewrite.
 
 ## Key docs to follow
 
