@@ -615,6 +615,20 @@ TradeResult GameSession::TryTradingPostSellForGold(
     return {true, "Trade complete"};
 }
 
+TradingPostOffer GameSession::ResolveTradingPostOffer(const std::string& serviceId) const {
+    TradingPostOffer offer;
+    const auto gate = GateTradingPostUse(serviceId);
+    if (!gate.isTradingPost || !gate.usable) {
+        return offer;  // unknown / non-Trading-Post / locked / destroyed / occupied
+    }
+    offer.usable = true;
+    offer.effectiveTier = gate.effectiveTier;
+    const auto* curve = FindTraderCurve(data::LocationServiceKind::TradingPost);
+    offer.barter = economy::ResolveTradingPostBarter(curve, gate.effectiveTier);
+    offer.priceFactor = economy::ResolvePriceFactor(curve, gate.effectiveTier);
+    return offer;
+}
+
 void GameSession::SeedEventResourceContext(events::EventEvaluationContext& ctx) const {
     ctx.resources[ResourceTypeToString(ResourceType::Gold)] = gold_;
     for (const auto type : kNonGoldResourceTypes) {

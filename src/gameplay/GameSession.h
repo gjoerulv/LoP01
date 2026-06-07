@@ -25,6 +25,7 @@
 #include "gameplay/ResourceState.h"
 #include "gameplay/economy/MineProductionRules.h"
 #include "gameplay/economy/StationedProductionRules.h"
+#include "gameplay/economy/TraderOwnershipRules.h"
 #include "gameplay/campaign/CampaignCarryover.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
@@ -158,6 +159,19 @@ struct TradeResult {
     std::string message;
 };
 
+// Read-only snapshot of what a Trading Post offers right now: whether it is
+// usable, the player's effective ownership tier for it, the resolved barter
+// matrix for that tier, and the Gold-trade price factor. The interaction layer
+// uses this to build/preview options; trades still execute through the
+// TryTradingPost* APIs (which re-gate atomically), so gate/curve resolution
+// lives in exactly one place. `usable == false` means no options are offered.
+struct TradingPostOffer {
+    bool usable = false;
+    int effectiveTier = 0;
+    std::vector<economy::ResolvedExchange> barter;
+    int priceFactor = 100;
+};
+
 struct EnemyTeamActionResult {
     std::string teamColor;
     std::string actionType;
@@ -266,6 +280,11 @@ public:
         const std::string& serviceId, ResourceType resource, int quantity);
     [[nodiscard]] TradeResult TryTradingPostSellForGold(
         const std::string& serviceId, ResourceType resource, int quantity);
+
+    // Resolves the current offer for a Trading Post service (usability, effective
+    // tier, resolved barter matrix, Gold price factor) for display/preview. Pure
+    // read; performs no transaction and mutates nothing.
+    [[nodiscard]] TradingPostOffer ResolveTradingPostOffer(const std::string& serviceId) const;
 
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
