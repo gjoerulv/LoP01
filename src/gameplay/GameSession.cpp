@@ -202,6 +202,14 @@ void GameSession::AddResource(const ResourceType type, const int amount) {
     slot = std::max(0, slot + amount);
 }
 
+bool GameSession::CanAddResource(const ResourceType type, const int amount) const {
+    if (amount < 0) {
+        return false;
+    }
+    const int current = ResourceCount(type);
+    return current <= std::numeric_limits<int>::max() - amount;
+}
+
 bool GameSession::TrySpendResource(const ResourceType type, const int amount) {
     if (amount <= 0) {
         return true;
@@ -534,8 +542,11 @@ TradeResult GameSession::TryTradingPostBarter(
     if (!quote.valid) {
         return {false, "This barter is not offered here"};
     }
-    // Atomic: TrySpendResource only deducts when the team holds enough, so the
-    // grant happens only after a successful spend.
+    // Atomic: confirm the grant cannot overflow before spending, then spend
+    // (guarded) and grant. Nothing is mutated unless the whole trade succeeds.
+    if (!CanAddResource(to, quantity)) {
+        return {false, "Trade would exceed resource capacity"};
+    }
     if (!TrySpendResource(from, quote.fromCost)) {
         return {false, "Not enough resources to trade"};
     }
@@ -561,6 +572,9 @@ TradeResult GameSession::TryTradingPostBuyForGold(
     const auto quote = economy::QuoteBuyResourceForGold(resource, quantity, priceFactor);
     if (!quote.valid) {
         return {false, "This purchase is not offered here"};
+    }
+    if (!CanAddResource(resource, quantity)) {
+        return {false, "Trade would exceed resource capacity"};
     }
     if (!TrySpendGold(quote.goldAmount)) {
         return {false, "Not enough gold to buy"};
@@ -590,6 +604,9 @@ TradeResult GameSession::TryTradingPostSellForGold(
     }
     if (quote.goldAmount <= 0) {
         return {false, "Sale would yield no gold"};  // never trade resources for nothing
+    }
+    if (!CanAddResource(ResourceType::Gold, quote.goldAmount)) {
+        return {false, "Trade would exceed resource capacity"};
     }
     if (!TrySpendResource(resource, quantity)) {
         return {false, "Not enough resources to sell"};

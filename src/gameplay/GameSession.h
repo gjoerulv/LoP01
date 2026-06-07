@@ -198,6 +198,12 @@ public:
     // drops below zero (use TrySpendResource for guarded spends). Gold routes
     // through gold_.
     void AddResource(ResourceType type, int amount);
+    // Preflight for a grant: true iff `amount` of `type` can be added without
+    // overflowing int. False for a negative amount. Uses safe arithmetic
+    // (max - amount) rather than forming current + amount first. Callers that
+    // spend-then-grant (e.g. trades) must check this before the spend so the
+    // whole operation stays atomic.
+    [[nodiscard]] bool CanAddResource(ResourceType type, int amount) const;
     // Spends `amount` of `type` iff at least that much is held. Returns false
     // and leaves state unchanged when insufficient. amount <= 0 is a no-op that
     // returns true. Gold routes through TrySpendGold.
