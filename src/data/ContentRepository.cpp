@@ -1,6 +1,8 @@
 #include "data/ContentRepository.h"
 #include "data/ContentValidator.h"
 
+#include "gameplay/ResourceState.h"
+
 #include <algorithm>
 #include <fstream>
 #include <map>
@@ -919,6 +921,7 @@ namespace data {
             const nlohmann::json& root,
             std::vector<ScenarioDefinition>& output,
             const std::vector<RegionDefinition>& regions,
+            const std::vector<LocationServiceDefinition>& services,
             std::vector<ValidationMessage>& msgs)
         {
             output.clear();
@@ -929,6 +932,12 @@ namespace data {
             auto findRegion = [&](const std::string& regionId) -> const RegionDefinition* {
                 for (const auto& region : regions) {
                     if (region.id == regionId) return &region;
+                }
+                return nullptr;
+            };
+            auto findService = [&](const std::string& serviceId) -> const LocationServiceDefinition* {
+                for (const auto& service : services) {
+                    if (service.id == serviceId) return &service;
                 }
                 return nullptr;
             };
@@ -959,8 +968,175 @@ namespace data {
                 def.startRegionId = entry.value("startRegionId", "");
                 def.startNodeId   = entry.value("startNodeId", "");
                 def.standaloneSelectable = entry.value("standaloneSelectable", false);
-                if (entry.contains("startGold") && entry["startGold"].is_number_integer()) {
-                    def.startGold = entry["startGold"].get<int>();
+
+                // Start gold: legacy top-level "startGold" and the canonical
+                // "playerStart.gold" alias both resolve into the single startGold
+                // field. Authoring both is rejected; gold is never negative.
+                const bool hasLegacyGold = entry.contains("startGold");
+                if (hasLegacyGold) {
+                    if (entry["startGold"].is_number_integer()) {
+                        def.startGold = entry["startGold"].get<int>();
+                    } else {
+                        msgs.push_back({Severity::Error, "SCENARIO_START_GOLD_INVALID",
+                            path + ".startGold", "Scenario \"startGold\" must be an integer.", ""});
+                    }
+                }
+
+                // M21 canonical economy start-state. Strict shape: a malformed
+                // block or wrong-typed field fails loudly rather than being skipped.
+                if (entry.contains("playerStart")) {
+                    const auto& ps = entry["playerStart"];
+                    if (!ps.is_object()) {
+                        msgs.push_back({Severity::Error, "SCENARIO_PLAYER_START_TYPE_INVALID",
+                            path + ".playerStart", "\"playerStart\" must be a JSON object.", ""});
+                    } else {
+                        if (ps.contains("gold")) {
+                            if (hasLegacyGold) {
+                                msgs.push_back({Severity::Error, "SCENARIO_START_GOLD_AMBIGUOUS",
+                                    path + ".playerStart.gold",
+                                    "Scenario authors both \"startGold\" and \"playerStart.gold\"; author one.", ""});
+                            }
+                            if (!ps["gold"].is_number_integer()) {
+                                msgs.push_back({Severity::Error, "SCENARIO_START_GOLD_INVALID",
+                                    path + ".playerStart.gold", "\"playerStart.gold\" must be an integer.", ""});
+                            } else if (!hasLegacyGold) {
+                                def.startGold = ps["gold"].get<int>();
+                            }
+                        }
+
+                        if (ps.contains("resources")) {
+                            if (!ps["resources"].is_array()) {
+                                msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCES_TYPE_INVALID",
+                                    path + ".playerStart.resources",
+                                    "\"playerStart.resources\" must be a JSON array.", ""});
+                            } else {
+                                std::set<std::string> seenResources;
+                                for (size_t r = 0; r < ps["resources"].size(); ++r) {
+                                    const auto& re = ps["resources"][r];
+                                    const std::string rpath =
+                                        path + ".playerStart.resources[" + std::to_string(r) + "]";
+                                    if (!re.is_object()) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_ENTRY_TYPE_INVALID",
+                                            rpath, "Start resource entry must be a JSON object.", ""});
+                                        continue;
+                                    }
+                                    if (!re.contains("resource") || !re["resource"].is_string()) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_FIELD_INVALID",
+                                            rpath + ".resource",
+                                            "Start resource \"resource\" is required and must be a string.", ""});
+                                        continue;
+                                    }
+                                    if (!re.contains("amount") || !re["amount"].is_number_integer()) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_AMOUNT_INVALID",
+                                            rpath + ".amount",
+                                            "Start resource \"amount\" is required and must be a positive integer.", ""});
+                                        continue;
+                                    }
+                                    const std::string resourceName = re["resource"].get<std::string>();
+                                    const int amount = re["amount"].get<int>();
+                                    if (amount <= 0) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_AMOUNT_INVALID",
+                                            rpath + ".amount", "Start resource \"amount\" must be greater than zero.", ""});
+                                        continue;
+                                    }
+                                    gameplay::ResourceType type;
+                                    if (!gameplay::TryResourceTypeFromString(resourceName, type)) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_INVALID",
+                                            rpath + ".resource", "Unknown start resource \"" + resourceName + "\".", ""});
+                                        continue;
+                                    }
+                                    if (gameplay::IsGoldResource(type)) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_GOLD",
+                                            rpath + ".resource",
+                                            "Gold may not be authored in \"resources\"; use \"gold\".", ""});
+                                        continue;
+                                    }
+                                    if (!seenResources.insert(resourceName).second) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_RESOURCE_DUPLICATE",
+                                            rpath + ".resource", "Duplicate start resource \"" + resourceName + "\".", ""});
+                                        continue;
+                                    }
+                                    def.startResources.push_back({resourceName, amount});
+                                }
+                            }
+                        }
+
+                        if (ps.contains("ownedServices")) {
+                            if (!ps["ownedServices"].is_array()) {
+                                msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICES_TYPE_INVALID",
+                                    path + ".playerStart.ownedServices",
+                                    "\"playerStart.ownedServices\" must be a JSON array.", ""});
+                            } else {
+                                std::set<std::string> seenServiceIds;
+                                for (size_t s = 0; s < ps["ownedServices"].size(); ++s) {
+                                    const auto& se = ps["ownedServices"][s];
+                                    const std::string spath =
+                                        path + ".playerStart.ownedServices[" + std::to_string(s) + "]";
+                                    if (!se.is_object()) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_ENTRY_TYPE_INVALID",
+                                            spath, "Owned-service entry must be a JSON object.", ""});
+                                        continue;
+                                    }
+                                    if (!se.contains("serviceId") || !se["serviceId"].is_string() ||
+                                        se["serviceId"].get<std::string>().empty()) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_FIELD_INVALID",
+                                            spath + ".serviceId",
+                                            "Owned-service \"serviceId\" is required and must be a non-empty string.", ""});
+                                        continue;
+                                    }
+                                    ScenarioStartOwnedService owned;
+                                    owned.serviceId = se["serviceId"].get<std::string>();
+                                    bool flagInvalid = false;
+                                    if (se.contains("locked")) {
+                                        if (!se["locked"].is_boolean()) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_FLAG_INVALID",
+                                                spath + ".locked", "Owned-service \"locked\" must be a boolean.", ""});
+                                            flagInvalid = true;
+                                        } else {
+                                            owned.locked = se["locked"].get<bool>();
+                                        }
+                                    }
+                                    if (se.contains("destroyed")) {
+                                        if (!se["destroyed"].is_boolean()) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_FLAG_INVALID",
+                                                spath + ".destroyed", "Owned-service \"destroyed\" must be a boolean.", ""});
+                                            flagInvalid = true;
+                                        } else {
+                                            owned.destroyed = se["destroyed"].get<bool>();
+                                        }
+                                    }
+                                    if (flagInvalid) {
+                                        continue;
+                                    }
+                                    if (!seenServiceIds.insert(owned.serviceId).second) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_DUPLICATE",
+                                            spath + ".serviceId", "Duplicate owned-service \"" + owned.serviceId + "\".", ""});
+                                        continue;
+                                    }
+                                    const LocationServiceDefinition* svc = findService(owned.serviceId);
+                                    if (svc == nullptr) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_UNKNOWN",
+                                            spath + ".serviceId",
+                                            "Owned-service references unknown service \"" + owned.serviceId + "\".", ""});
+                                        continue;
+                                    }
+                                    if (svc->kind != LocationServiceKind::Mine && !IsTraderServiceKind(svc->kind)) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_NOT_OWNABLE",
+                                            spath + ".serviceId",
+                                            "Service \"" + owned.serviceId + "\" is not an ownable (mine/trader) service.", ""});
+                                        continue;
+                                    }
+                                    def.startOwnedServices.push_back(std::move(owned));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // The resolved start gold (either spelling) must not be negative.
+                if (def.startGold.has_value() && *def.startGold < 0) {
+                    msgs.push_back({Severity::Error, "SCENARIO_START_GOLD_INVALID",
+                        path + ".startGold", "Scenario start gold must not be negative.", ""});
                 }
 
                 if (def.id.empty()) {
@@ -1271,7 +1447,7 @@ namespace data {
         // campaign references resolve against them.
         auto scenariosFileDoc = load(root / "scenarios.json");
         if (scenariosFileDoc) {
-            LoadScenariosFile(*scenariosFileDoc, scenarios_, regions_, messages_);
+            LoadScenariosFile(*scenariosFileDoc, scenarios_, regions_, locationServices_, messages_);
         }
         auto campaignsDoc = load(root / "campaigns.json");
         if (campaignsDoc) {

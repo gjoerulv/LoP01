@@ -278,6 +278,14 @@ Scenario and Campaign validation ensures that thin M16 Scenario definitions and 
 
 If `startNodeId` is omitted, runtime falls back to the referenced Region's `arrivalNodeId`; Region/world-map validation remains responsible for arrival-node validity.
 
+### Scenario economy start-state (`playerStart`, M21)
+
+`playerStart` validation is strict on both shape and semantics; a malformed block fails rather than being silently skipped.
+
+- Start gold: non-integer `startGold` or `playerStart.gold`, or a resolved negative value, is rejected (`SCENARIO_START_GOLD_INVALID`); authoring both `startGold` and `playerStart.gold` is rejected (`SCENARIO_START_GOLD_AMBIGUOUS`).
+- Structure: `playerStart` not an object (`SCENARIO_PLAYER_START_TYPE_INVALID`); `resources` not an array (`SCENARIO_START_RESOURCES_TYPE_INVALID`); a resources entry not an object (`SCENARIO_START_RESOURCE_ENTRY_TYPE_INVALID`); missing/non-string `resource` (`SCENARIO_START_RESOURCE_FIELD_INVALID`); missing/non-integer/non-positive `amount` (`SCENARIO_START_RESOURCE_AMOUNT_INVALID`); `ownedServices` not an array (`SCENARIO_OWNED_SERVICES_TYPE_INVALID`); an ownedServices entry not an object (`SCENARIO_OWNED_SERVICE_ENTRY_TYPE_INVALID`); missing/empty/non-string `serviceId` (`SCENARIO_OWNED_SERVICE_FIELD_INVALID`); non-boolean `locked`/`destroyed` (`SCENARIO_OWNED_SERVICE_FLAG_INVALID`).
+- Semantics: unknown resource (`SCENARIO_START_RESOURCE_INVALID`); Gold in `resources` (`SCENARIO_START_RESOURCE_GOLD`); duplicate resource (`SCENARIO_START_RESOURCE_DUPLICATE`); duplicate serviceId (`SCENARIO_OWNED_SERVICE_DUPLICATE`); serviceId not found in the location-service catalog (`SCENARIO_OWNED_SERVICE_UNKNOWN`); serviceId is not an ownable mine/trader service (`SCENARIO_OWNED_SERVICE_NOT_OWNABLE`).
+
 `content/campaigns.json` loading currently validates:
 
 - empty Campaign id (`CAMPAIGN_ID_EMPTY`)
