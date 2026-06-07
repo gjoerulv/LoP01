@@ -1,47 +1,40 @@
-# Audit implementation against docs
+# Implementation audit command
 
-Audit the current implementation against the authoritative docs. Do not edit files unless explicitly asked.
+Use this when asked to audit source against docs or review a completed branch/commit.
 
 ## Read first
 
 - `CLAUDE.md`
-- `README.md`
-- `README_DECISIONS.md`
 - `docs/implementation_roadmap.md`
 - `docs/content_scope_v1.md`
 - `docs/technical_direction.md`
-- `docs/game_vision.md`
-- `docs/core_loop_rules.md`
-- `docs/combat_rules.md`
-- `docs/scenario_authoring.md`
-- `docs/validation_system.md`
-- `docs/content_schema.md`
-- `docs/terminology_map.md`
-- relevant `.github/instructions/*.md`
-- relevant `.github/agents/*.md`
+- relevant rule/schema/validation docs for the changed area
+- the changed source and tests
 
-Then inspect source, tests, content, and CMake/build files.
+## Current baseline
 
-## Current baseline to verify
+The active baseline is post-M18 unless the audited commit proves otherwise.
 
-The implementation should be treated as post-M17. Battle, roster, save/load, typed events, scenario outcomes, inventory/artifacts, team Energy, minimal World Map, minimal Campaign, and owned-service/economy foundations should already exist.
+M17 owned-service/economy and M18 passive-effect spine are complete. Do not report them as missing future work.
 
-Do not plan as if M8-M17 are still future work.
+## Audit priorities
 
-## Report
+Check:
 
-1. what currently matches the docs;
-2. what conflicts with the docs;
-3. what is obsolete but still present;
-4. what is missing for the next safe milestone;
-5. what should not be implemented yet;
-6. suggested first implementation patch, with files to touch.
+- source/doc alignment;
+- active docs alignment;
+- stale references to old baselines or archived docs;
+- contradictions, ambiguity, redundancy, or uncertainty;
+- correctness and save/load compatibility;
+- performance traps: per-frame scans, repeated parsing, graph rebuilds, needless large copies, hidden nested loops;
+- source comments that are stale, milestone-specific, redundant, or misleading;
+- tests for boundary behavior and regression traps.
 
-## Rules
+## Output
 
-- Do not invent new design.
-- If docs and code disagree, report the disagreement before proposing code changes.
-- Prefer small, reversible changes.
-- Identify tests that should be added or updated.
-- Do not perform broad rewrites in the audit phase.
-- Use `docs/technical_direction.md` to flag performance/architecture problems such as repeated parsing, per-frame scans, unnecessary graph rebuilds, large needless copies, or renderer-owned gameplay state.
+Return a binary result:
+
+- Accept; or
+- Reject with a focused revision prompt.
+
+If fixes are needed, list only blocking fixes. Do not bury blockers under general suggestions.
