@@ -391,6 +391,24 @@
           "dialogue_choices": []
         },
         {
+          "id": "trading_counter",
+          "type": "shop",
+          "area": {
+            "x": 300,
+            "y": 500,
+            "width": 60,
+            "height": 40
+          },
+          "prompt_text": "E: Trade at Trading Post",
+          "result_text": "",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
           "id": "npc_old_man",
           "type": "npc",
           "area": {

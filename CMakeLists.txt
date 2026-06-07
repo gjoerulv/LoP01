@@ -70,6 +70,7 @@ target_link_libraries(ashvale_rendering PUBLIC raylib)
 add_executable(ashvale_slice
   src/app/App.cpp
   src/app/MusteringInteraction.cpp
+  src/app/TradingPostInteraction.cpp
   src/app/main.cpp
   src/app/input/InputTranslator.cpp
   src/app/RegionController.cpp

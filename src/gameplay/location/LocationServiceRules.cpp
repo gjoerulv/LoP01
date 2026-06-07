@@ -21,6 +21,10 @@ namespace gameplay::location {
         return service != nullptr && service->kind == data::LocationServiceKind::Muster;
     }
 
+    bool IsTradingPostService(const data::LocationServiceDefinition* service) {
+        return service != nullptr && service->kind == data::LocationServiceKind::TradingPost;
+    }
+
     RecruitServiceApplyResult TryApplyRecruitService(
         gameplay::GameSession& session,
         const data::ContentRepository& content,
