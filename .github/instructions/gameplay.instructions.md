@@ -4,13 +4,14 @@ These instructions apply to gameplay, data, validation, save/load, and test work
 
 ## Current baseline
 
-Treat the codebase as post-M19:
+Treat the codebase as post-M20:
 
 - Region/Location/Battle/Campaign foundations exist.
 - Owned-service/economy foundations exist.
 - Unit passive-effect spine exists for `mine_production` and `leader_energy` only.
-- Headless Trading Post transaction APIs exist for resource barter and resource/Gold buy/sell.
-- Full trader UI, item economy, AI economy, broad effect systems, artifact Energy, item effects, battle statuses, and skill trees are not implemented.
+- Trading Post transaction APIs exist for resource barter and resource/Gold buy/sell.
+- Trading Post interaction flow exists as a bounded Location-mode service interaction with per-visit time cost.
+- Full shop/inventory UI, item economy, AI economy, broad effect systems, artifact Energy, item effects, battle statuses, and skill trees are not implemented.
 
 ## Design-source discipline
 
@@ -45,7 +46,7 @@ Owned services:
 - Strongest-only and non-stacking semantics are required per owned-service instance and output resource.
 - Trader ownership benefits are service-type-specific and must be gated by the exact service being used.
 
-Trading Post transactions:
+Trading Post:
 
 - Non-Gold barter uses resolved Trading Post exchange matrices.
 - Gold may not appear in Trading Post barter matrices.
@@ -53,7 +54,7 @@ Trading Post transactions:
 - Usable unowned/allied/enemy/neutral Trading Posts resolve at effective tier 0.
 - Locked, destroyed, and hostile-occupied Trading Posts are refused outright.
 - Resource/Gold mutation must route through existing GameSession resource APIs.
-- Full UI/interaction flow and per-visit time cost are deferred until explicitly selected.
+- The current Trading Post UI is intentionally bounded: buy, sell, barter, live prompt feedback, and a 20-minute visit cost charged once on exit after at least one successful trade.
 
 Passive effects:
 
@@ -61,7 +62,9 @@ Passive effects:
 - `mine_production_passive` is a legacy authoring alias only.
 - Runtime consumers must read canonical passive effects, not a legacy runtime field.
 - `leader_energy` affects only the current leader's daily Energy passive term.
-- Artifact `statBonus` remains separate. Artifact Energy, item effects, status effects, and active abilities remain deferred until explicitly selected.
+- Artifact `statBonus` remains separate.
+
+Artifact Energy, item effects, status effects, and active abilities remain deferred until explicitly selected.
 
 ## Performance
 

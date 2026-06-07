@@ -23,13 +23,11 @@ Read these first when relevant:
 15. `.github/copilot-instructions.md`
 16. `.github/instructions/gameplay.instructions.md`
 
-For UI work, also read `.github/instructions/ui.instructions.md`. For architecture work, also read `.github/agents/game-architect.agent.md`.
-
-Archived docs and historical milestone prompts are historical context only. Do not use `docs/content_scope_v0.md.archived` or `docs/implementation_roadmap.md.00.archived` as current scope, roadmap, or behavior truth.
+For UI work, also read `.github/instructions/ui.instructions.md`. For architecture work, also read `.github/agents/game-architect.agent.md`. Archived docs and historical milestone prompts are historical context only. Do not use `docs/content_scope_v0.md.archived` or `docs/implementation_roadmap.md.00.archived` as current scope, roadmap, or behavior truth.
 
 ## Current baseline
 
-The current codebase is post-M19.
+The current codebase is post-M20.
 
 Completed foundations include:
 
@@ -42,18 +40,19 @@ Completed foundations include:
 - minimal Campaign System foundation;
 - owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, day-boundary mine payout, trader ownership tiers, authored/default trader curves, validation, and proof tests;
 - passive-effect spine foundation: canonical unit `passive_effects`, legacy mine-passive authoring compatibility, `mine_production` effects for owned mines, and current-leader `leader_energy` effects for daily Energy;
-- headless Trading Post transaction foundation: pure barter/Gold quote rules, service-specific ownership/use gates, GameSession transaction APIs, tier-0 fallback/default behavior, Gold delegation, and validation/test coverage.
+- Trading Post transaction foundation: pure barter/Gold quote rules, service-specific ownership/use gates, GameSession transaction APIs, tier-0 fallback/default behavior, Gold delegation, and validation/test coverage;
+- Trading Post interaction flow: bounded Location-mode service interaction, buy/sell/barter commands, live prompt feedback, per-visit time cost charged once on exit after at least one successful trade, and a small authored playable Trading Post.
 
-Do not treat M8, M11, M12, M13, M14, M15, M16, M17, M18, or M19 as future work.
+Do not treat M8, M11, M12, M13, M14, M15, M16, M17, M18, M19, or M20 as future work.
 
 ## Current planning posture
 
-The likely next milestone is **M20: Trading Post Interaction Flow**, unless the user explicitly redirects. M20 should expose the already-implemented Trading Post transaction API through the smallest coherent service interaction flow without becoming a full shop UI, broad item economy, AI economy, or all-trader-service expansion.
+No next milestone is currently selected. Start the next planning pass from `docs/implementation_roadmap.md`, the active docs, and the current source. Do not assume the next step is a full marketplace, full UI, AI economy, broad item system, or passive-effect expansion unless the user explicitly selects that direction.
 
 ## Core rules
 
 - Respect `docs/technical_direction.md` for architectural principles, performance posture, and source-layout constraints.
-- Respect `docs/content_scope_v1.md` for current post-M19 content scope.
+- Respect `docs/content_scope_v1.md` for current post-M20 content scope.
 - Respect `docs/presentation_game_feel.md` for presentation, audio/visual tone, transitions, and feedback.
 - Do not invent new game-design rules that contradict the docs.
 - Use current terms: World Map, Region, Location, Service, node content, Scenario Info screen, Adventure button strip.
@@ -64,9 +63,9 @@ The likely next milestone is **M20: Trading Post Interaction Flow**, unless the 
 
 ## Source comments and code documentation
 
-Keep production source comments durable and sparse.
+Keep production source comments durable and sparse. Do not add comments merely to describe milestone progress, patch phases, or agent workflow.
 
-Do not add comments merely to describe milestone progress, patch phases, or agent workflow. Good production comments explain one of these:
+Good production comments explain one of these:
 
 - a non-obvious invariant or contract;
 - a correctness, security, data-integrity, or save/load trap;
@@ -74,9 +73,7 @@ Do not add comments merely to describe milestone progress, patch phases, or agen
 - a deliberate limitation that prevents accidental broadening;
 - compatibility behavior that looks wrong but is intentional.
 
-Avoid milestone labels such as `M19 Phase 2` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts.
-
-Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
+Avoid milestone labels such as `M20 Phase 2` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts. Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
 
 When reviewing diffs, flag comments that are stale, milestone-specific, redundant, or inconsistent with the code. Prefer deleting weak comments over rewriting them into longer comments.
 

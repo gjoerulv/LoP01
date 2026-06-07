@@ -1,41 +1,22 @@
 # Implementation audit command
 
-Use this when asked to audit source against docs or review a completed branch/commit.
+When auditing an implementation:
 
-## Read first
-
-- `CLAUDE.md`
-- `docs/implementation_roadmap.md`
-- `docs/content_scope_v1.md`
-- `docs/technical_direction.md`
-- relevant rule/schema/validation docs for the changed area
-- the changed source and tests
-
-## Current baseline
-
-The active baseline is post-M19 unless the audited commit proves otherwise. M17 owned-service/economy, M18 passive-effect spine, and M19 Trading Post transaction layer are complete.
-
-Do not report them as missing future work.
-
-## Audit priorities
-
-Check:
-
-- source/doc alignment;
-- active docs alignment;
-- stale references to old baselines or archived docs;
-- contradictions, ambiguity, redundancy, or uncertainty;
-- correctness and save/load compatibility;
-- transaction/resource atomicity where economy code is touched;
-- performance traps: per-frame scans, repeated parsing, graph rebuilds, needless large copies, hidden nested loops;
-- source comments that are stale, milestone-specific, redundant, or misleading;
-- tests for boundary behavior and regression traps.
-
-## Output
-
-Return a binary result:
-
-- Accept; or
-- Reject with a focused revision prompt.
-
-If fixes are needed, list only blocking fixes. Do not bury blockers under general suggestions.
+1. Verify the exact branch/commit before reviewing.
+2. Compare source against active docs, especially:
+   - `docs/implementation_roadmap.md`
+   - `docs/content_scope_v1.md`
+   - `docs/technical_direction.md`
+   - `docs/core_loop_rules.md`
+   - `docs/content_schema.md`
+   - `docs/validation_system.md`
+3. Treat the baseline as post-M20 unless the checked commit proves otherwise.
+4. Check correctness, separation of concerns, performance, save/load compatibility, validation coverage, and tests.
+5. Be strict about:
+   - UI or App code duplicating gameplay/economy rules;
+   - ownership/service gates being bypassed;
+   - resource/Gold mutations bypassing GameSession APIs;
+   - per-frame scans, repeated parsing, graph rebuilds, or hidden nested scans;
+   - broad systems added without a current scoped consumer;
+   - stale or milestone-specific production comments.
+6. Return a binary result: accept, or reject with only blocking fixes.

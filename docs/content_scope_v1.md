@@ -2,13 +2,11 @@
 
 ## Purpose
 
-This is the active content-scope document for the post-M19 Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`.
-
-Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
+This is the active content-scope document for the post-M20 Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`. Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
 
 Related active docs:
 
-- `docs/implementation_roadmap.md` — active technical roadmap after M19.
+- `docs/implementation_roadmap.md` — active technical roadmap after M20.
 - `docs/content_schema.md` — intended and current authored data shapes.
 - `docs/scenario_authoring.md` — authoring rules and validation expectations.
 - `docs/core_loop_rules.md` — systemic gameplay rules.
@@ -19,16 +17,17 @@ Archived docs should be read only for historical context.
 
 ## 1. Current playable baseline
 
-The current baseline is post-M19:
+The current baseline is post-M20:
 
 - C++20 / raylib / CMake project.
 - Content-driven JSON loading through `ContentRepository`.
-- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, passive-effect, and headless Trading Post transaction foundations exist.
+- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, passive-effect, Trading Post transaction, and Trading Post interaction foundations exist.
 - The playable content is a bounded multi-Region, multi-Scenario vertical slice.
 - M17 introduced the owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, daily mine payout, trader ownership tiers, and authored/default trader curves.
 - M18 introduced a narrow unit passive-effect spine: canonical `passive_effects`, legacy mine-passive authoring compatibility, `mine_production` effects for owned mines, and `leader_energy` effects for daily starting Energy.
-- M19 introduced a headless Trading Post transaction layer: pure barter/Gold quote rules, GameSession transaction APIs, service-specific ownership/use gates, tier-0 fallback behavior, and validation/test proof.
-- Full per-Scenario Region Contexts, per-scenario content directories, authored starting rosters, full campaign branching UI, and full trader interaction UI are not implemented.
+- M19 introduced the Trading Post transaction layer: pure barter/Gold quote rules, GameSession transaction APIs, service-specific ownership/use gates, tier-0 fallback behavior, and validation/test proof.
+- M20 introduced the playable Trading Post interaction flow: bounded Location-mode service interaction, buy/sell/barter commands, live feedback, and per-visit time cost.
+- Full per-Scenario Region Contexts, per-scenario content directories, authored starting rosters, full campaign branching UI, full shop/inventory UI, and other trader-service behaviors are not implemented.
 
 The current content should prove systems generically. Do not add demo-specific source branches to make authored content work.
 
@@ -36,7 +35,7 @@ The current content should prove systems generically. Do not add demo-specific s
 
 The v1 content goal is a compact strategic-economy proof:
 
-> A compact campaign slice where owned services matter: mines produce resources, stationed guards can influence mine output through explicit passive effects, owned trader services create service-type-specific economy advantages, Trading Posts can exchange resources through the headless transaction model, and leader passives can affect daily strategic Energy.
+> A compact campaign slice where owned services matter: mines produce resources, stationed guards can influence mine output through explicit passive effects, owned trader services create service-type-specific economy advantages, Trading Posts can exchange resources through the bounded interaction flow, and leader passives can affect daily strategic Energy.
 
 Recommended scale for v1:
 
@@ -46,7 +45,7 @@ Recommended scale for v1:
 - 5 to 10 Region nodes per Region unless a milestone explicitly needs more.
 - A small number of owned services: at least one mine/resource service, at least one storage/garrison-compatible service, and at least one trader service type.
 - A small number of units with passive service/economy hooks: `mine_production` and `leader_energy`.
-- Enough authored Trading Post data to prove barter and Gold trade behavior without becoming a full item economy.
+- Enough authored Trading Post data/content to prove barter and Gold trade behavior without becoming a full item economy.
 - Enough enemy teams to test ownership pressure and guarded services, but not a full AI economy.
 
 This target is intentionally modest. The project should gain systemic depth before content volume.
@@ -100,18 +99,18 @@ Ownership tier rules:
 - Benefits apply when the owning team uses a service of that same type that it owns.
 - Allied-owned, enemy-owned, and neutral services do not grant ownership benefits to the player.
 
-M17 established the ownership tier model, validation, default curves, and minimal proof. M19 added a headless Trading Post transaction layer.
+M17 established the ownership tier model, validation, default curves, and minimal proof. M19 added Trading Post transaction rules/APIs. M20 exposed Trading Post use through a bounded Location service interaction.
 
-Current Trading Post transaction scope:
+Current Trading Post scope:
 
 - Non-Gold resource barter uses resolved Trading Post exchange matrices.
 - Gold buy/sell uses resource base values and tier `priceFactor`.
 - Effective tier 0 is data-driven: usable unowned/allied/enemy/neutral Trading Posts use authored tier 0 if present, otherwise built-in defaults.
 - Ownership raises the effective tier above 0 only when the exact used service is player-owned and eligible.
 - Locked, destroyed, or hostile-occupied Trading Posts are refused outright.
-- Transactions are headless `GameSession` APIs; full UI/interaction flow and per-visit time cost remain future work.
+- The player-facing Trading Post interaction is intentionally bounded: buy, sell, barter, prompt feedback, and a 20-minute visit cost charged once on exit if at least one trade succeeded.
 
-Future milestones may build the interaction UI, per-visit time cost, other trader-service behaviors, item economy, or service UI on this foundation.
+Future milestones may broaden service UI, add other trader-service behaviors, item economy, AI economy, or service ownership transfer only when explicitly selected.
 
 ## 6. Passive-effect content scope
 
@@ -158,8 +157,8 @@ The following remain out of scope unless explicitly promoted by the active roadm
 - generic origin-storage across Regions;
 - campaign save-slot UI;
 - broad recipe/cooking/artifact-combination suite unless selected as a milestone;
-- broad item-market economy beyond the current Trading Post transaction foundation;
-- full trader UI / inventory browsing UI;
+- broad item-market economy beyond the current Trading Post foundation;
+- full shop/inventory browsing UI;
 - Market, Black Market, and Freelancer's Guild behavior beyond ownership-tier foundation;
 - artifact Energy and item-effect execution until selected by roadmap.
 

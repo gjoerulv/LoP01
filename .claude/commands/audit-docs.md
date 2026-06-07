@@ -1,45 +1,15 @@
 # Documentation audit command
 
-Use this when asked to audit documentation consistency.
+When auditing docs:
 
-## Read first
-
-- `README.md`
-- `CLAUDE.md`
-- `docs/implementation_roadmap.md`
-- `docs/content_scope_v1.md`
-- `docs/technical_direction.md`
-- `docs/core_loop_rules.md`
-- `docs/content_schema.md`
-- `docs/validation_system.md`
-- `docs/terminology_map.md`
-- `.github/copilot-instructions.md`
-- relevant `.github/instructions/*.md`
-- relevant `.claude/commands/*.md`
-
-## Current baseline
-
-The active baseline is post-M19.
-
-The likely next milestone is M20 unless redirected. Archived docs are historical context only. Do not treat archived roadmaps or old content-scope files as current truth.
-
-## Audit checks
-
-Find:
-
-- stale baseline statements;
-- wrong next-milestone references;
-- references to M17/M18/M19 as future work;
-- stale references to `mineProductionPassive`, old `UNIT_PASSIVE_*` behavior, or mine-only passive semantics where the canonical `passive_effects` spine is meant;
-- stale references saying Trading Post transactions are unimplemented when the headless GameSession transaction layer exists;
-- contradictions between roadmap, schema, validation, core rules, README, and agent guidance;
-- redundant or bloated documentation that should be shortened.
-
-## Output
-
-Return a concise report and a binary recommendation:
-
-- docs are ready; or
-- fix docs first.
-
-If asked to patch docs, update only files that matter. Do not rewrite stable docs unnecessarily.
+1. Treat active docs as current source-of-truth candidates, but verify against source.
+2. Archived docs are historical context only.
+3. Current active docs should describe a post-M20 baseline.
+4. Look for:
+   - stale milestone status;
+   - contradictions between roadmap, content scope, schema, validation, and code;
+   - references to M17/M18/M19/M20 as future work;
+   - claims that Trading Post transaction or interaction flow is unimplemented;
+   - excessive or redundant documentation.
+5. Keep fixes concise. Do not turn docs into a changelog.
+6. If a doc update is needed, update only the files that prevent ambiguity or agent misdirection.
