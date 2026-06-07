@@ -510,6 +510,20 @@ std::vector<ValidationMessage> ContentValidator::ValidateTraderOwnershipCurves(
                             "Trading Post exchange may not exchange a resource for itself ("
                             + entry.from + ").", ""});
                     }
+                    // Barter is non-Gold resource-for-resource only; Gold buy/sell
+                    // uses base values and the tier price factor, not the matrix.
+                    if (fromOk && gameplay::IsGoldResource(from)) {
+                        msgs.push_back({Severity::Error, "TRADER_EXCHANGE_GOLD",
+                            ei + ".from",
+                            "Trading Post barter may not involve Gold. Gold buy/sell uses "
+                            "base values and the tier price factor, not the exchange matrix.", ""});
+                    }
+                    if (toOk && gameplay::IsGoldResource(to)) {
+                        msgs.push_back({Severity::Error, "TRADER_EXCHANGE_GOLD",
+                            ei + ".to",
+                            "Trading Post barter may not involve Gold. Gold buy/sell uses "
+                            "base values and the tier price factor, not the exchange matrix.", ""});
+                    }
                     if (entry.cost <= 0) {
                         msgs.push_back({Severity::Error, "TRADER_EXCHANGE_COST_INVALID",
                             ei + ".cost",
