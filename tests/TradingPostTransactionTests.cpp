@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -278,6 +279,50 @@ TEST_CASE("TradingPostTxn - an unknown service id is refused") {
     const auto result = session.TryTradingPostBuyForGold("no_such_id", ResourceType::Wood, 1);
     REQUIRE_FALSE(result.success);
     REQUIRE(session.Snapshot().gold == 2500);
+}
+
+// ---------------------------------------------------------------------------
+// Grant-overflow safety: a spend must never succeed when the grant would
+// overflow int. The receiving count is seeded at INT_MAX.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("TradingPostTxn - barter grant overflow leaves both resources unchanged") {
+    auto session = MakeSession(
+        {MakeService("tp", "loc_a", LocationServiceKind::TradingPost)},
+        {Owned("tp", "")});
+    session.AddResource(ResourceType::Wood, 100);
+    session.AddResource(ResourceType::Stone, std::numeric_limits<int>::max());
+
+    const auto result = session.TryTradingPostBarter("tp", ResourceType::Wood, ResourceType::Stone, 1);
+    REQUIRE_FALSE(result.success);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 100);
+    REQUIRE(session.ResourceCount(ResourceType::Stone) == std::numeric_limits<int>::max());
+}
+
+TEST_CASE("TradingPostTxn - buy grant overflow leaves gold and resource unchanged") {
+    auto session = MakeSession(
+        {MakeService("tp", "loc_a", LocationServiceKind::TradingPost)},
+        {Owned("tp", "")});
+    session.AddResource(ResourceType::Wood, std::numeric_limits<int>::max());
+
+    const auto result = session.TryTradingPostBuyForGold("tp", ResourceType::Wood, 1);
+    REQUIRE_FALSE(result.success);
+    REQUIRE(session.Snapshot().gold == 2500);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == std::numeric_limits<int>::max());
+}
+
+TEST_CASE("TradingPostTxn - sell gold grant overflow leaves resource and gold unchanged") {
+    auto session = MakeSession(
+        {MakeService("tp", "loc_a", LocationServiceKind::TradingPost)},
+        {Owned("tp", "")});
+    session.AddResource(ResourceType::Wood, 5);
+    session.AddResource(ResourceType::Gold, std::numeric_limits<int>::max() - 2500);  // gold -> INT_MAX
+
+    REQUIRE(session.Snapshot().gold == std::numeric_limits<int>::max());
+    const auto result = session.TryTradingPostSellForGold("tp", ResourceType::Wood, 1);
+    REQUIRE_FALSE(result.success);
+    REQUIRE(session.Snapshot().gold == std::numeric_limits<int>::max());
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 5);
 }
 
 TEST_CASE("TradingPostTxn - barter with Gold is refused and mutates nothing") {
