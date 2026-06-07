@@ -15,18 +15,18 @@ constexpr int64_t kGoldBuyRate = 5;
 constexpr int64_t kGoldSellDivisor = 5;
 constexpr int64_t kBasis = 100;
 
-// Overflow-checked 64-bit multiply. Returns false on overflow so a quote can be
-// rejected rather than wrapping to a bogus (possibly negative) value.
-[[nodiscard]] bool MulChecked(int64_t a, int64_t b, int64_t& out) {
-    if (a == 0 || b == 0) {
-        out = 0;
-        return true;
-    }
-    const int64_t result = a * b;
-    if (result / a != b) {
+// Overflow-safe 64-bit multiply for the strictly-positive operands these quotes
+// use (all inputs are validated > 0 before any arithmetic). The bound is checked
+// BEFORE multiplying so the guard itself never triggers signed-overflow UB.
+// Non-positive operands are rejected as a defensive contract violation.
+[[nodiscard]] bool MulPositiveChecked(int64_t a, int64_t b, int64_t& out) {
+    if (a <= 0 || b <= 0) {
         return false;
     }
-    out = result;
+    if (a > std::numeric_limits<int64_t>::max() / b) {
+        return false;  // product would overflow; reject before multiplying
+    }
+    out = a * b;
     return true;
 }
 
@@ -60,13 +60,16 @@ GoldTradeQuote QuoteBuyResourceForGold(ResourceType resource, int quantity, int 
     }
 
     int64_t numerator = base;
-    if (!MulChecked(numerator, kGoldBuyRate, numerator) ||
-        !MulChecked(numerator, quantity, numerator) ||
-        !MulChecked(numerator, kBasis, numerator)) {
+    if (!MulPositiveChecked(numerator, kGoldBuyRate, numerator) ||
+        !MulPositiveChecked(numerator, quantity, numerator) ||
+        !MulPositiveChecked(numerator, kBasis, numerator)) {
         return quote;
     }
-    // Round up: numerator and priceFactor are both strictly positive here.
-    const int64_t cost = (numerator + priceFactor - 1) / priceFactor;
+    // Round up via quotient + remainder so the player never underpays, and so the
+    // rounding cannot overflow (the quotient is <= numerator, and the +1 only
+    // applies when priceFactor >= 2, keeping it far from the int64 ceiling).
+    const int64_t cost =
+        numerator / priceFactor + ((numerator % priceFactor != 0) ? 1 : 0);
     if (!FitsInt(cost)) {
         return quote;
     }
@@ -86,8 +89,8 @@ GoldTradeQuote QuoteSellResourceForGold(ResourceType resource, int quantity, int
     }
 
     int64_t numerator = base;
-    if (!MulChecked(numerator, quantity, numerator) ||
-        !MulChecked(numerator, priceFactor, numerator)) {
+    if (!MulPositiveChecked(numerator, quantity, numerator) ||
+        !MulPositiveChecked(numerator, priceFactor, numerator)) {
         return quote;
     }
     const int64_t gain = numerator / (kGoldSellDivisor * kBasis);  // round down
@@ -114,7 +117,8 @@ BarterQuote QuoteBarter(
             return quote;  // malformed matrix line; reject rather than give it away
         }
         int64_t cost = 0;
-        if (!MulChecked(static_cast<int64_t>(entry.cost), quantity, cost) || !FitsInt(cost)) {
+        if (!MulPositiveChecked(static_cast<int64_t>(entry.cost), quantity, cost) ||
+            !FitsInt(cost)) {
             return quote;
         }
         quote.valid = true;
