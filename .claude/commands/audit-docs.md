@@ -1,71 +1,44 @@
-# Audit live Markdown docs
+# Documentation audit command
 
-Audit all live Markdown files for contradictions, ambiguity, stale terminology, duplicate definitions, malformed references, and unclear agent guidance. Do not edit files unless explicitly asked.
+Use this when asked to audit documentation consistency.
 
 ## Read first
 
-- `CLAUDE.md`
 - `README.md`
-- `README_DECISIONS.md`
+- `CLAUDE.md`
 - `docs/implementation_roadmap.md`
 - `docs/content_scope_v1.md`
 - `docs/technical_direction.md`
-- `docs/game_vision.md`
-- `docs/game_shell_flow.md`
-- `docs/presentation_game_feel.md`
 - `docs/core_loop_rules.md`
-- `docs/combat_rules.md`
-- `docs/scenario_authoring.md`
-- `docs/validation_system.md`
 - `docs/content_schema.md`
+- `docs/validation_system.md`
 - `docs/terminology_map.md`
 - `.github/copilot-instructions.md`
-- `.github/instructions/*.md`
-- `.github/agents/*.md`
-- `.claude/commands/*.md`
+- relevant `.github/instructions/*.md`
+- relevant `.claude/commands/*.md`
 
-Treat archived docs/prompts as historical context only. In particular, do not treat `docs/content_scope_v0.md.archived` or `docs/implementation_roadmap.md.00.archived` as active scope or roadmap truth.
+## Current baseline
 
-## Current baseline to verify
+The active baseline is post-M18. The next planned milestone is M19 unless redirected.
 
-The active docs should describe the project as post-M17, not post-M8/post-M11/post-M16/single-Region-only. The active next milestone should be M18 — Passive Effect Spine — unless the docs explicitly record a newer user decision.
+Archived docs are historical context only. Do not treat archived roadmaps or old content-scope files as current truth.
 
-## Check for
+## Audit checks
 
-1. blocker contradictions;
-2. ambiguous or underspecified rules;
-3. stale/outdated wording;
-4. duplicate definitions or needless redundancy;
-5. malformed numbering or dangling bullets;
-6. active docs pointing to removed, renamed, or archived docs as current truth;
-7. old terms used as current design truth;
-8. agent instructions that contradict the active roadmap or current baseline.
+Find:
 
-## Known current terms
+- stale baseline statements;
+- wrong next-milestone references;
+- references to M17/M18 as future work;
+- stale references to `mineProductionPassive`, old `UNIT_PASSIVE_*` behavior, or mine-only passive semantics where the canonical `passive_effects` spine is meant;
+- contradictions between roadmap, schema, validation, core rules, README, and agent guidance;
+- redundant or bloated documentation that should be shortened.
 
-- World Map
-- Region
-- Location
-- Service
-- node content
-- Scenario Info screen
-- Adventure button strip
-- traveling party
-- player character
-- Scenario Region Context
+## Output
 
-## Old terms that should not be reintroduced as current design truth
+Return a concise report and a binary recommendation:
 
-- overworld
-- combat node
-- game_vision_complete.md
-- blocker node as a formal node type
-- Adventure menu as the formal victory/defeat screen
+- docs are ready; or
+- fix docs first.
 
-## Report format
-
-- Blockers
-- Recommended cleanup
-- Optional polish
-- Files checked
-- Safe-to-commit recommendation
+If asked to patch docs, update only files that matter. Do not rewrite stable docs unnecessarily.
