@@ -790,6 +790,33 @@ Why:
 - Gives a readable, harsh default barter economy.
 - Loosely follows the gold-value structure without collapsing into it.
 
+### 58a) Trading Post priceFactor and effective-tier-0 resolution (M19)
+
+Decision:
+- For a Trading Post ownership curve, `priceFactor` is a basis-100 Gold-trade
+  favorability scalar applied to the §57 Gold buy/sell model:
+  - `100` keeps the §57 default rates (buy 5× base value, sell 1/5 base value);
+  - `> 100` favors the player (cheaper buys, richer sells);
+  - `< 100` worsens the player's Gold trades.
+- `priceFactor` governs only Gold trade. The barter `exchangeMatrix` governs
+  resource-for-resource trade and never involves Gold (Gold may not appear as
+  `from` or `to`).
+- Effective tier is data-driven, with tier 0 as the baseline:
+  - a usable Trading Post the player does not own (allied-, enemy-, or
+    neutral-owned, or simply unowned) resolves at effective tier 0;
+  - if the curve authors tier 0, that tier-0 matrix/priceFactor applies;
+  - otherwise built-in defaults apply (the §58 barter table and priceFactor 100);
+  - ownership raises effective tier above 0 only when the exact service in use is
+    player-owned and eligible (not locked, destroyed, or hostile-occupied).
+
+Why:
+- Lets one authored scalar express ownership-driven Gold-trade benefit without a
+  second currency model or a broader price system.
+- Keeps Gold and barter as the two separate trade systems (§56) rather than
+  letting Gold leak into the barter matrix.
+- Makes tier 0 ordinary authored data, so unowned and owned services share one
+  resolution path and ownership only ever improves rates.
+
 ### 59) Charge time, not Energy, for trade actions
 
 Decision:

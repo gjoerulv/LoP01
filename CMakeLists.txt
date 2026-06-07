@@ -38,6 +38,7 @@ add_library(ashvale_logic
   src/gameplay/effects/UnitPassiveEffects.cpp
   src/gameplay/economy/MinePayoutRules.cpp
   src/gameplay/economy/TraderOwnershipRules.cpp
+  src/gameplay/economy/TradingPostTransactionRules.cpp
   src/gameplay/campaign/CampaignProgressionRules.cpp
   src/gameplay/campaign/CampaignCarryover.cpp
   src/gameplay/worldmap/WorldMapTravelRules.cpp
@@ -145,6 +146,7 @@ if (BUILD_TESTING)
     tests/MinePayoutRulesTests.cpp
     tests/MinePayoutTests.cpp
     tests/TraderOwnershipRulesTests.cpp
+    tests/TradingPostTransactionRulesTests.cpp
     tests/TraderTierTests.cpp
     tests/EconomyEndToEndTests.cpp
     tests/PassiveEffectContentTests.cpp
