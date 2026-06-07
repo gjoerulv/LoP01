@@ -67,7 +67,10 @@ private:
     // Offer resolved once at Open. Trade rates are stable for the visit's
     // lifetime (ownership/occupation cannot change inside the modal), so caching
     // them avoids a per-frame catalog scan; live Gold/resource counts are read
-    // from the session in BuildPromptText.
+    // from the session in BuildPromptText. `offerUsable_` is false for a locked,
+    // destroyed, hostile-occupied, or non-Trading-Post service: no trades are
+    // offered and confirms are refused (the transaction APIs would refuse anyway).
+    bool offerUsable_ = false;
     int effectiveTier_ = 0;
     int priceFactor_ = 100;
     std::vector<gameplay::economy::ResolvedExchange> barter_;

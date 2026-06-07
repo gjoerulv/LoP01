@@ -7,6 +7,7 @@
 #include "core/SaveGame.h"
 #include "data/definitions/LocationServiceDefinition.h"
 #include "data/definitions/TraderOwnershipCurve.h"
+#include "gameplay/EnemyTeamState.h"
 #include "gameplay/GameSession.h"
 #include "gameplay/ResourceState.h"
 
@@ -156,6 +157,19 @@ TEST_CASE("TradingPostInteraction - quantity clamps at 1 and increments") {
     REQUIRE(tp.BuildPromptText(session).find("Qty: 3") != std::string::npos);
 }
 
+TEST_CASE("TradingPostInteraction - quantity clamps at the upper cap of 999") {
+    const auto service = MakeTradingPost("tp", "loc");
+    auto session = MakeSession({service});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);
+
+    for (int i = 0; i < 1005; ++i) {
+        tp.ApplyCommand(TradingPostCommand::QuantityUp, session);
+    }
+    REQUIRE(tp.BuildPromptText(session).find("Qty: 999") != std::string::npos);
+}
+
 // ---------------------------------------------------------------------------
 // Trades execute through the M19 APIs (Gold via gold_, resources atomic).
 // ---------------------------------------------------------------------------
@@ -277,4 +291,63 @@ TEST_CASE("TradingPostInteraction - barter at a locked post is refused and chang
 
     const auto exit = tp.ApplyCommand(TradingPostCommand::Exit, session);
     REQUIRE(session.Snapshot().minutesIntoSliceDay == 0);  // nothing succeeded
+}
+
+TEST_CASE("TradingPostInteraction - a locked post shows unavailable text, not a buy quote") {
+    const auto service = MakeTradingPost("tp", "loc");
+    auto session = MakeSession({service}, {Owned("tp", "Green", /*locked=*/true)});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);  // default Buy mode
+
+    const std::string prompt = tp.BuildPromptText(session);
+    REQUIRE(prompt.find("not available") != std::string::npos);
+    REQUIRE(prompt.find("Buy 1") == std::string::npos);  // no fake quote line
+}
+
+TEST_CASE("TradingPostInteraction - confirm on a locked post is refused and charges no time") {
+    const auto service = MakeTradingPost("tp", "loc", /*timeCostMinutes=*/20);
+    auto session = MakeSession({service}, {Owned("tp", "Green", /*locked=*/true)});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);  // default Buy mode
+
+    const auto result = tp.ApplyCommand(TradingPostCommand::ConfirmTrade, session);
+    REQUIRE(result.statusText.find("not available") != std::string::npos);
+    REQUIRE(session.Snapshot().gold == 2500);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 0);
+
+    const auto exit = tp.ApplyCommand(TradingPostCommand::Exit, session);
+    REQUIRE(session.Snapshot().minutesIntoSliceDay == 0);  // no successful visit
+}
+
+TEST_CASE("TradingPostInteraction - a destroyed post offers no trades") {
+    const auto service = MakeTradingPost("tp", "loc");
+    auto session = MakeSession({service}, {Owned("tp", "Green", false, /*destroyed=*/true)});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);
+
+    const auto result = tp.ApplyCommand(TradingPostCommand::ConfirmTrade, session);
+    REQUIRE(result.statusText.find("not available") != std::string::npos);
+    REQUIRE(session.Snapshot().gold == 2500);
+}
+
+TEST_CASE("TradingPostInteraction - a hostile-occupied post offers no trades") {
+    const auto service = MakeTradingPost("tp", "loc");
+    auto session = MakeSession({service}, {Owned("tp", "Green")});
+
+    gameplay::EnemyTeamState enemy;
+    enemy.teamColor = "Red";
+    enemy.nodeId = "loc";  // occupies the Trading Post's node
+    enemy.active = true;
+    session.SetEnemyTeams({enemy});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);
+
+    REQUIRE(tp.BuildPromptText(session).find("not available") != std::string::npos);
+    const auto result = tp.ApplyCommand(TradingPostCommand::ConfirmTrade, session);
+    REQUIRE(result.statusText.find("not available") != std::string::npos);
+    REQUIRE(session.Snapshot().gold == 2500);
 }
