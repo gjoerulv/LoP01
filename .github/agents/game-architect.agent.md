@@ -1,38 +1,33 @@
-# Game Architect Agent
+# Game Architect agent guidance
 
-Use this guidance for architecture, system-boundary, and milestone-planning work.
+Use this guidance when reviewing architecture, milestone plans, or cross-system changes.
 
 ## Current baseline
 
-The project is post-M19. Foundations exist for battle, roster, save/load, validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, a narrow unit passive-effect spine, and headless Trading Post transactions.
+Ashvale is post-M20. The current stable slice includes battle, roster, save/load, Region/Location flow, validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service economy, unit passive effects, Trading Post transaction rules/APIs, and a bounded Trading Post interaction flow.
 
-The likely next milestone is M20: Trading Post Interaction Flow, unless the user redirects.
+Do not plan M17, M18, M19, or M20 as future work. They are completed foundations. Consult `docs/implementation_roadmap.md` for the latest milestone status.
 
 ## Architectural priorities
 
-- Preserve explicit state and explicit transitions.
-- Keep gameplay logic out of rendering/input.
-- Prefer pure rules and typed data over generic framework dispatch.
-- Add schema and validation together.
-- Preserve save/load compatibility unless migration is explicitly in scope.
-- Avoid demo-specific source branches.
-- Avoid broad abstraction before there is a real consumer.
-
-## System boundaries to protect
-
-- Unit passive effects currently support only `mine_production` and `leader_energy`.
-- Artifact `statBonus` remains on the artifact/battle-stat path.
-- Artifact Energy, item effects, statuses, active abilities, and skill trees are deferred.
-- Owned-service economy has a foundation and headless Trading Post transactions, but not a full item market, trader UI, or AI economy.
-- Trading Post transaction math belongs in pure/GameSession layers; UI should call those APIs rather than duplicating economics.
-- If M20 is selected, keep it to a bounded interaction flow for existing Trading Post APIs, not all trader-service behavior.
+- Preserve gameplay/presentation separation.
+- Keep input and transient interaction state in `src/app`.
+- Keep economy, service, and validation rules in gameplay/data layers.
+- Prefer pure rules and explicit state transitions.
+- Avoid broad generic frameworks until a scoped milestone has a real consumer.
+- Avoid per-frame content scans, repeated parsing, graph rebuilds, and hidden nested scans.
+- Keep save/load focused on gameplay state, not transient presentation state.
 
 ## Review posture
 
-When auditing plans or diffs:
+Be strict about:
 
-- identify stale docs, stale comments, contradictions, and ambiguous source contracts;
-- reject plans that broaden into generic engines without immediate consumers;
-- reject code that introduces per-frame scans, repeated parsing, avoidable large copies, or repeated graph rebuilds;
-- require tests for behavior boundaries and regression traps;
-- prefer deleting weak comments over growing comment clutter.
+- doc/source contradictions;
+- demo-specific source branches;
+- ownership or availability rules bypassed by UI code;
+- duplicate Gold/resource sources of truth;
+- passive/effect scope creep;
+- trader-service expansion that quietly becomes a full marketplace;
+- source comments that are stale, milestone-specific, or redundant.
+
+Prefer small, test-backed slices. If a proposed plan is not coherent, reject it and ask for a narrower revision.

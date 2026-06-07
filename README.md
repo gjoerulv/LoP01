@@ -1,6 +1,6 @@
 # Project Ashvale
 
-Ashvale is a turn-based strategy/RPG built as a content-driven C++20/raylib/CMake project. The repository is a post-M19 bounded multi-Region, multi-Scenario playable vertical slice. Current implementation status, milestone sequencing, and explicit not-yet boundaries live in `docs/implementation_roadmap.md`. For terminology, see `docs/terminology_map.md`.
+Ashvale is a turn-based strategy/RPG built as a content-driven C++20/raylib/CMake project. The repository is a post-M20 bounded multi-Region, multi-Scenario playable vertical slice. Current implementation status, milestone sequencing, and explicit not-yet boundaries live in `docs/implementation_roadmap.md`. For terminology, see `docs/terminology_map.md`.
 
 ## Design truth and doc priority
 
@@ -24,7 +24,7 @@ Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implement
 
 ## Implementation planning
 
-Current implementation sequencing lives in `docs/implementation_roadmap.md`. The current likely next milestone is **M20: Trading Post Interaction Flow**, unless the user explicitly redirects.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`. M20 is complete. No next milestone is currently selected; start the next planning pass by auditing the active roadmap, docs, and current source before choosing the next narrow slice.
 
 ## Current implementation baseline
 
@@ -43,7 +43,8 @@ Completed foundations include:
 - minimal Campaign System with thin scenarios, transition graph, explicit allow-list carry-over, campaign state, and campaign selection;
 - owned-service and economy foundation with resource pool, owned-service runtime state, mine outputs, stack-backed stationing, day-boundary mine payout, trader ownership tiers, authored/default trader curves, and validation/test coverage;
 - passive/effect spine foundation with canonical unit `passive_effects`, legacy mine-passive authoring compatibility, typed validation, M17 mine-production behavior preservation, and leader `leader_energy` feeding the daily Energy passive term;
-- headless Trading Post transaction layer with pure barter/Gold quote rules, service-specific ownership-tier gating, GameSession transaction APIs, Gold delegation, validation hardening, and end-to-end tests.
+- Trading Post transaction layer with pure barter/Gold quote rules, service-specific ownership/use gates, GameSession transaction APIs, Gold delegation, validation hardening, and end-to-end tests;
+- Trading Post interaction flow in Location mode, including a bounded modal service interaction, buy/sell/barter commands, live feedback, resource/Gold previews, and the 20-minute visit time cost applied once on exit after at least one successful trade.
 
 ## Current architecture baseline
 
@@ -53,7 +54,7 @@ The current codebase follows these principles:
 - controller / mapper / renderer split;
 - gameplay logic separated from rendering and input;
 - typed content loaded from JSON;
-- content-driven Regions, Locations, Services, units, battles, quests, events, outcomes, items, artifacts, World Map, scenarios, campaigns, owned services, resources, mine outputs, unit passive effects, trader ownership curves, and Trading Post transaction rules;
+- content-driven Regions, Locations, Services, units, battles, quests, events, outcomes, items, artifacts, World Map, scenarios, campaigns, owned services, resources, mine outputs, unit passive effects, trader ownership curves, Trading Post transaction rules, and Trading Post interaction flow;
 - pure or mostly-pure gameplay rules where practical;
 - save/load focused on gameplay state rather than presentation state.
 
@@ -98,13 +99,14 @@ Implemented foundation and settled direction:
 - Allied-owned, enemy-owned, and neutral services do not grant ownership benefits to the player.
 - Ownership tiers cap at 8 owned services of the same type.
 - Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
-- Trading Post transactions are implemented headlessly through pure quote rules and GameSession APIs:
+- Trading Post transactions are playable through the bounded Location service interaction flow:
   - non-Gold resource barter uses the resolved Trading Post exchange matrix;
   - Gold buy/sell uses base resource values and tier `priceFactor`;
   - usable unowned/allied/enemy/neutral Trading Posts resolve at effective tier 0;
-  - locked, destroyed, or hostile-occupied Trading Posts are refused outright.
+  - locked, destroyed, or hostile-occupied Trading Posts are refused outright;
+  - time cost is charged once per visit on exit only if at least one trade succeeded.
 
-Full trader UI, per-visit time-cost interaction flow, broader item-market transactions, Market/Freelancer's Guild/Black Market behavior, AI economy, ownership-transfer loops, and broad passive/skill systems remain future work.
+Market/Freelancer's Guild/Black Market behavior, broader item-market transactions, AI economy, ownership-transfer loops, and broad passive/skill systems remain future work.
 
 ## Passive effect baseline
 
@@ -113,4 +115,6 @@ Unit definitions may author canonical `passive_effects`:
 - `mine_production` applies only to stationed units on owned mine/resource services and feeds mine-output calculation.
 - `leader_energy` applies only from the current leader and feeds the daily Energy passive bonus.
 
-The legacy `mine_production_passive` authoring key is still accepted as compatibility input and is converted at load to canonical `passive_effects`. Authoring both keys on the same unit is invalid. Runtime consumers read the canonical passive-effect representation, not a legacy runtime field. Artifact `statBonus` battle effects remain on the existing artifact path. Artifact Energy, item effects, status effects, skill trees, and active abilities are not part of the current passive-effect spine.
+The legacy `mine_production_passive` authoring key is still accepted as compatibility input and is converted at load to canonical `passive_effects`. Authoring both keys on the same unit is invalid. Runtime consumers read the canonical passive-effect representation, not a legacy runtime field. Artifact `statBonus` battle effects remain on the existing artifact path.
+
+Artifact Energy, item effects, status effects, skill trees, and active abilities are not part of the current passive-effect spine.
