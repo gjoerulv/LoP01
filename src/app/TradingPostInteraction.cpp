@@ -167,7 +167,11 @@ std::string TradingPostInteraction::BuildPromptText(const gameplay::GameSession&
         return "Trading Post\nThis Trading Post is not available.\nE Done";
     }
 
-    std::string out = "Trading Post (tier " + std::to_string(effectiveTier_) + ")\n";
+    std::string out = "Trading Post";
+    if (effectiveTier_ > 0) {
+        out += " (ownership tier " + std::to_string(effectiveTier_) + ")";
+    }
+    out += "\n";
     out += std::string("Mode: ") + ModeLabel(static_cast<int>(mode_)) + "\n";
 
     const int count = OptionCount();
@@ -178,23 +182,34 @@ std::string TradingPostInteraction::BuildPromptText(const gameplay::GameSession&
         const std::string position =
             " (" + std::to_string(index + 1) + "/" + std::to_string(count) + ") [Left/Right]";
 
+        bool affordable = true;
         if (mode_ == TradeMode::Barter) {
             const auto& entry = barter_[index];
             const auto quote = gameplay::economy::QuoteBarter(barter_, entry.from, entry.to, quantity_);
+            affordable = quote.valid && session.ResourceCount(entry.from) >= quote.fromCost;
             out += "> Barter " + std::to_string(quote.fromCost) + " " +
-                gameplay::ResourceTypeToString(entry.from) + " -> " + std::to_string(quantity_) +
-                " " + gameplay::ResourceTypeToString(entry.to) + position + "\n";
+                gameplay::ResourceTypeToString(entry.from) + " for " + std::to_string(quantity_) +
+                " " + gameplay::ResourceTypeToString(entry.to) + position;
         } else {
             const ResourceType resource = gameplay::kNonGoldResourceTypes[index];
-            const auto quote = mode_ == TradeMode::GoldBuy
-                ? gameplay::economy::QuoteBuyResourceForGold(resource, quantity_, priceFactor_)
-                : gameplay::economy::QuoteSellResourceForGold(resource, quantity_, priceFactor_);
-            const std::string verb = mode_ == TradeMode::GoldBuy ? "Buy " : "Sell ";
-            const std::string arrow = mode_ == TradeMode::GoldBuy ? " <- " : " -> ";
-            out += "> " + verb + std::to_string(quantity_) + " " +
-                gameplay::ResourceTypeToString(resource) + arrow +
-                std::to_string(quote.goldAmount) + " Gold" + position + "\n";
+            if (mode_ == TradeMode::GoldBuy) {
+                const auto quote = gameplay::economy::QuoteBuyResourceForGold(resource, quantity_, priceFactor_);
+                affordable = quote.valid && session.ResourceCount(ResourceType::Gold) >= quote.goldAmount;
+                out += "> Buy " + std::to_string(quantity_) + " " +
+                    gameplay::ResourceTypeToString(resource) + " for " +
+                    std::to_string(quote.goldAmount) + " Gold" + position;
+            } else {
+                const auto quote = gameplay::economy::QuoteSellResourceForGold(resource, quantity_, priceFactor_);
+                affordable = quote.valid && session.ResourceCount(resource) >= quantity_;
+                out += "> Sell " + std::to_string(quantity_) + " " +
+                    gameplay::ResourceTypeToString(resource) + " for " +
+                    std::to_string(quote.goldAmount) + " Gold" + position;
+            }
         }
+        if (!affordable) {
+            out += "  [need more]";
+        }
+        out += "\n";
     }
 
     out += "Qty: " + std::to_string(quantity_) + " [Up/Down]\n";
@@ -206,6 +221,10 @@ std::string TradingPostInteraction::BuildPromptText(const gameplay::GameSession&
         }
     }
     out += "\n";
+    if (visitTimeCostMinutes_ > 0) {
+        out += "Visit cost: " + std::to_string(visitTimeCostMinutes_) + " min " +
+            (anyTradeSucceeded_ ? "(pending on exit)" : "(after first trade)") + "\n";
+    }
     if (!lastResult_.empty()) {
         out += lastResult_ + "\n";
     }
