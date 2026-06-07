@@ -67,7 +67,7 @@ std::vector<ValidationMessage> LoadScenario(
     WriteTextFile(root / "scenarios.json",
         R"({"schemaVersion":1,"kind":"ScenarioCollection","id":"scenarios","scenarios":[)" +
         scenarioObject + "]}");
-    repo.LoadFromDirectory(root);
+    (void)repo.LoadFromDirectory(root);
     return repo.ValidationMessages();
 }
 
@@ -158,19 +158,26 @@ TEST_CASE("ScenarioStart: negative and non-integer playerStart.gold are rejected
 TEST_CASE("ScenarioStart: malformed playerStart shapes fail loudly") {
     struct Case { std::string name; std::string ps; std::string code; };
     const std::vector<Case> cases = {
+        {"legacy_gold_nonint", R"("startGold":"lots")", "SCENARIO_START_GOLD_INVALID"},
         {"ps_obj", R"("playerStart":5)", "SCENARIO_PLAYER_START_TYPE_INVALID"},
         {"res_arr", R"("playerStart":{"resources":5})", "SCENARIO_START_RESOURCES_TYPE_INVALID"},
         {"res_entry", R"("playerStart":{"resources":[5]})", "SCENARIO_START_RESOURCE_ENTRY_TYPE_INVALID"},
         {"res_field", R"("playerStart":{"resources":[{"amount":3}]})", "SCENARIO_START_RESOURCE_FIELD_INVALID"},
+        {"res_field_nonstring", R"("playerStart":{"resources":[{"resource":123,"amount":1}]})", "SCENARIO_START_RESOURCE_FIELD_INVALID"},
         {"res_amt_missing", R"("playerStart":{"resources":[{"resource":"Wood"}]})", "SCENARIO_START_RESOURCE_AMOUNT_INVALID"},
+        {"res_amt_nonint", R"("playerStart":{"resources":[{"resource":"Wood","amount":"many"}]})", "SCENARIO_START_RESOURCE_AMOUNT_INVALID"},
         {"res_amt_zero", R"("playerStart":{"resources":[{"resource":"Wood","amount":0}]})", "SCENARIO_START_RESOURCE_AMOUNT_INVALID"},
+        {"res_amt_negative", R"("playerStart":{"resources":[{"resource":"Wood","amount":-1}]})", "SCENARIO_START_RESOURCE_AMOUNT_INVALID"},
         {"res_unknown", R"("playerStart":{"resources":[{"resource":"Mithril","amount":1}]})", "SCENARIO_START_RESOURCE_INVALID"},
         {"res_gold", R"("playerStart":{"resources":[{"resource":"Gold","amount":1}]})", "SCENARIO_START_RESOURCE_GOLD"},
         {"res_dup", R"("playerStart":{"resources":[{"resource":"Wood","amount":1},{"resource":"Wood","amount":2}]})", "SCENARIO_START_RESOURCE_DUPLICATE"},
         {"svc_arr", R"("playerStart":{"ownedServices":5})", "SCENARIO_OWNED_SERVICES_TYPE_INVALID"},
         {"svc_entry", R"("playerStart":{"ownedServices":[5]})", "SCENARIO_OWNED_SERVICE_ENTRY_TYPE_INVALID"},
         {"svc_field", R"("playerStart":{"ownedServices":[{"locked":true}]})", "SCENARIO_OWNED_SERVICE_FIELD_INVALID"},
+        {"svc_field_nonstring", R"("playerStart":{"ownedServices":[{"serviceId":123}]})", "SCENARIO_OWNED_SERVICE_FIELD_INVALID"},
+        {"svc_field_empty", R"("playerStart":{"ownedServices":[{"serviceId":""}]})", "SCENARIO_OWNED_SERVICE_FIELD_INVALID"},
         {"svc_flag", R"("playerStart":{"ownedServices":[{"serviceId":"alpha_mine","locked":"yes"}]})", "SCENARIO_OWNED_SERVICE_FLAG_INVALID"},
+        {"svc_flag_destroyed", R"("playerStart":{"ownedServices":[{"serviceId":"alpha_mine","destroyed":"yes"}]})", "SCENARIO_OWNED_SERVICE_FLAG_INVALID"},
         {"svc_dup", R"("playerStart":{"ownedServices":[{"serviceId":"alpha_mine"},{"serviceId":"alpha_mine"}]})", "SCENARIO_OWNED_SERVICE_DUPLICATE"},
         {"svc_unknown", R"("playerStart":{"ownedServices":[{"serviceId":"nope"}]})", "SCENARIO_OWNED_SERVICE_UNKNOWN"},
         {"svc_not_ownable", R"("playerStart":{"ownedServices":[{"serviceId":"alpha_rest"}]})", "SCENARIO_OWNED_SERVICE_NOT_OWNABLE"},
