@@ -116,6 +116,7 @@ if (BUILD_TESTING)
     tests/BattleFactoryTests.cpp
     src/app/BattleEventTextFormatter.cpp
     src/app/MusteringInteraction.cpp
+    src/app/TradingPostInteraction.cpp
     src/app/mappers/HudModelMapper.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/RegionModelMapper.cpp
@@ -130,6 +131,7 @@ if (BUILD_TESTING)
     tests/GameClockTests.cpp
     tests/GameSessionTests.cpp
     tests/MusteringInteractionTests.cpp
+    tests/TradingPostInteractionTests.cpp
     tests/LocationModelMapperTests.cpp
     tests/LocationSceneTests.cpp
     tests/LocationServiceRulesTests.cpp
