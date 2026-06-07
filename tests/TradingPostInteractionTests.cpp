@@ -127,8 +127,46 @@ TEST_CASE("TradingPostInteraction - Open activates and reflects effective tier")
 
     REQUIRE(tp.IsActive());
     const std::string prompt = tp.BuildPromptText(session);
-    REQUIRE(prompt.find("tier 0") != std::string::npos);
-    REQUIRE(prompt.find("Buy") != std::string::npos);
+    REQUIRE(prompt.find("Trading Post") != std::string::npos);
+    REQUIRE(prompt.find("Mode: Buy") != std::string::npos);
+    REQUIRE(prompt.find("Visit cost: 20 min") != std::string::npos);  // shown up front
+}
+
+TEST_CASE("TradingPostInteraction - prompt shows the ownership tier when the post is owned") {
+    const auto service = MakeTradingPost("tp", "loc");
+    auto session = MakeSession({service}, {Owned("tp", "Green")},
+        {TradingPostCurve(1, 200, {{"Wood", "Stone", 5}})});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);
+
+    REQUIRE(tp.BuildPromptText(session).find("ownership tier 1") != std::string::npos);
+}
+
+TEST_CASE("TradingPostInteraction - prompt flags an unaffordable previewed trade") {
+    const auto service = MakeTradingPost("tp", "loc");
+    auto session = MakeSession({service});  // 2500 gold, mode Buy, Wood at 500/unit
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);
+    REQUIRE(tp.BuildPromptText(session).find("[need more]") == std::string::npos);  // qty 1 = 500, affordable
+
+    for (int i = 0; i < 5; ++i) {
+        tp.ApplyCommand(TradingPostCommand::QuantityUp, session);  // qty 6 -> 3000 gold
+    }
+    REQUIRE(tp.BuildPromptText(session).find("[need more]") != std::string::npos);
+}
+
+TEST_CASE("TradingPostInteraction - visit cost becomes pending after a successful trade") {
+    const auto service = MakeTradingPost("tp", "loc", /*timeCostMinutes=*/20);
+    auto session = MakeSession({service});
+
+    TradingPostInteraction tp;
+    tp.Open(session, service);
+    REQUIRE(tp.BuildPromptText(session).find("after first trade") != std::string::npos);
+
+    tp.ApplyCommand(TradingPostCommand::ConfirmTrade, session);  // buy Wood (success)
+    REQUIRE(tp.BuildPromptText(session).find("pending on exit") != std::string::npos);
 }
 
 TEST_CASE("TradingPostInteraction - CycleMode rotates Buy -> Sell -> Barter -> Buy") {
