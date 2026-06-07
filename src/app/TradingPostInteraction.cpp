@@ -42,12 +42,16 @@ void TradingPostInteraction::Open(
     lastResult_.clear();
 
     const auto offer = session.ResolveTradingPostOffer(serviceId_);
+    offerUsable_ = offer.usable;
     effectiveTier_ = offer.effectiveTier;
     priceFactor_ = offer.priceFactor;
     barter_ = offer.barter;
 }
 
 int TradingPostInteraction::OptionCount() const {
+    if (!offerUsable_) {
+        return 0;  // locked / destroyed / hostile-occupied / non-Trading-Post
+    }
     if (mode_ == TradeMode::Barter) {
         return static_cast<int>(barter_.size());
     }
@@ -99,6 +103,11 @@ TradingPostApplyResult TradingPostInteraction::ApplyCommand(
             return result;
         }
         case TradingPostCommand::ConfirmTrade: {
+            if (!offerUsable_) {
+                lastResult_ = "Trading Post is not available";
+                result.statusText = lastResult_;
+                return result;
+            }
             const int count = OptionCount();
             if (count <= 0) {
                 lastResult_ = "Nothing to trade here";
@@ -141,6 +150,7 @@ void TradingPostInteraction::Close() {
     anyTradeSucceeded_ = false;
     lastResult_.clear();
     barter_.clear();
+    offerUsable_ = false;
     effectiveTier_ = 0;
     priceFactor_ = 100;
 }
@@ -152,6 +162,9 @@ bool TradingPostInteraction::IsActive() const {
 std::string TradingPostInteraction::BuildPromptText(const gameplay::GameSession& session) const {
     if (!active_) {
         return "Trading Post\nE: Open";
+    }
+    if (!offerUsable_) {
+        return "Trading Post\nThis Trading Post is not available.\nE Done";
     }
 
     std::string out = "Trading Post (tier " + std::to_string(effectiveTier_) + ")\n";
