@@ -9,6 +9,7 @@
 #include "app/LocationController.h"
 #include "app/BattleController.h"
 #include "app/MusteringInteraction.h"
+#include "app/TradingPostInteraction.h"
 #include "app/input/InputTranslator.h"
 #include "app/mappers/RegionModelMapper.h"
 #include "app/mappers/WorldMapModelMapper.h"
@@ -82,6 +83,7 @@ namespace app {
         // No-op if the session is not in a latched outcome state.
         void AppendScenarioEndedStatusIfLatched();
         [[nodiscard]] MusteringCommand TranslateMusteringCommand(const input::InputState& input) const;
+        [[nodiscard]] TradingPostCommand TranslateTradingPostCommand(const input::InputState& input) const;
         void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
         bool ApplyResolvedLocationService(const data::LocationServiceDefinition& service);
@@ -111,6 +113,7 @@ namespace app {
         WorldMapController worldMapController_;
         CampaignController campaignController_;
         MusteringInteraction musteringInteraction_;
+        TradingPostInteraction tradingPostInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
         mappers::BattleModelMapper battleModelMapper_;

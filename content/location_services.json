@@ -51,7 +51,18 @@
       "failure_text": "",
       "gold_cost": 0,
       "time_cost_minutes": 0
-    },    
+    },
+    {
+      "id": "home_base_trading_post",
+      "location_id": "home_base",
+      "zone_id": "trading_counter",
+      "kind": "trading_post",
+      "prompt_text": "E: Trade at Trading Post",
+      "success_text": "Opened Trading Post",
+      "failure_text": "Trading Post is not available",
+      "gold_cost": 0,
+      "time_cost_minutes": 20
+    },
     {
       "id": "survivor_post_recruitment",
       "location_id": "survivor_recruit_post",

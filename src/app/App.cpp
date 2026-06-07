@@ -271,6 +271,7 @@ void App::ResetTransientModeState() {
     battleControllerState_ = {};
     battleStartStackIds_.clear();
     musteringInteraction_.Close();
+    tradingPostInteraction_.Close();
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     observedDay_ = snapshot.day;
@@ -905,6 +906,31 @@ MusteringCommand App::TranslateMusteringCommand(const input::InputState& input) 
     return MusteringCommand::None;
 }
 
+TradingPostCommand App::TranslateTradingPostCommand(const input::InputState& input) const {
+    if (input.interact) {
+        return TradingPostCommand::Exit;
+    }
+    if (input.option1) {
+        return TradingPostCommand::ConfirmTrade;
+    }
+    if (input.option2) {
+        return TradingPostCommand::CycleMode;
+    }
+    if (input.selectPrev) {
+        return TradingPostCommand::SelectPrev;
+    }
+    if (input.selectNext) {
+        return TradingPostCommand::SelectNext;
+    }
+    if (input.targetPrev) {
+        return TradingPostCommand::QuantityDown;
+    }
+    if (input.targetNext) {
+        return TradingPostCommand::QuantityUp;
+    }
+    return TradingPostCommand::None;
+}
+
 void App::UpdateLocationScene(const input::InputState& input, const float deltaTime) {
     const LocationUpdateResult result =
         locationController_.Update(input, deltaTime, locationScene_.HasActiveDialogue());
@@ -936,6 +962,20 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
 
         if (musteringResult.shouldExit) {
             musteringInteraction_.Close();
+        }
+
+        return;
+    }
+
+    if (tradingPostInteraction_.IsActive()) {
+        const TradingPostCommand command = TranslateTradingPostCommand(input);
+        const auto tradeResult = tradingPostInteraction_.ApplyCommand(command, session_);
+        if (!tradeResult.statusText.empty()) {
+            statusMessage_ = tradeResult.statusText;
+        }
+
+        if (tradeResult.shouldExit) {
+            tradingPostInteraction_.Close();
         }
 
         return;
@@ -1083,6 +1123,20 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
         return true;
     }
 
+    if (gameplay::location::IsTradingPostService(&service)) {
+        if (!session_.ResolveTradingPostOffer(service.id).usable) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "Trading Post is not available";
+            return false;
+        }
+        tradingPostInteraction_.Open(session_, service);
+        statusMessage_ = !service.successText.empty()
+            ? service.successText
+            : "Opened Trading Post";
+        return true;
+    }
+
     statusMessage_ = "Unknown service";
     return false;
 }
@@ -1120,6 +1174,12 @@ void App::Draw() const {
     if (snapshot.mode == gameplay::GameMode::LocationMode && musteringInteraction_.IsActive()) {
         locationPromptOverride = mappers::InteractPromptOverride{
             musteringInteraction_.BuildPromptText(session_),
+            true
+        };
+    }
+    else if (snapshot.mode == gameplay::GameMode::LocationMode && tradingPostInteraction_.IsActive()) {
+        locationPromptOverride = mappers::InteractPromptOverride{
+            tradingPostInteraction_.BuildPromptText(session_),
             true
         };
     }
