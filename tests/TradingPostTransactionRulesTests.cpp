@@ -98,6 +98,13 @@ TEST_CASE("GoldTrade - buy rounds up") {
     REQUIRE(QuoteBuyResourceForGold(ResourceType::Wood, 1, 150).goldAmount == 334);
 }
 
+TEST_CASE("GoldTrade - buy rounds up with a large numerator (remainder rounding)") {
+    // 500 * 5 * 7 * 100 = 1,750,000; / 3 = 583333.33 -> 583334. Exercises the
+    // quotient+remainder rounding on a non-trivial numerator (the old
+    // numerator + priceFactor - 1 form is intentionally avoided).
+    REQUIRE(QuoteBuyResourceForGold(ResourceType::Gems, 7, 3).goldAmount == 583334);
+}
+
 TEST_CASE("GoldTrade - sell rounds down") {
     // 100 * 1 * 133 / 500 = 13300 / 500 = 26.6 -> 26 (and richer than the 20 default).
     REQUIRE(QuoteSellResourceForGold(ResourceType::Wood, 1, 133).goldAmount == 26);
