@@ -21,6 +21,23 @@ namespace data {
 //     semantics inside ScenarioOutcomeRules).
 //   - If neither key is present, hasInlineOutcome is false and the scenario uses
 //     the global content/scenario_outcome.json definition exactly as M12 does.
+// One authored starting non-Gold resource amount. `resource` is a canonical
+// ResourceType name (validated non-Gold/positive at load); Gold is authored via
+// startGold / playerStart.gold, never here.
+struct ScenarioStartResource {
+    std::string resource;
+    int amount = 0;
+};
+
+// One authored initial player-owned service. `serviceId` references an existing
+// ownable (Mine/trader) service; `locked`/`destroyed` set initial runtime state
+// and never bypass the runtime usability/payout gates.
+struct ScenarioStartOwnedService {
+    std::string serviceId;
+    bool locked = false;
+    bool destroyed = false;
+};
+
 struct ScenarioDefinition {
     std::string id;
     std::string name;
@@ -32,6 +49,12 @@ struct ScenarioDefinition {
     bool hasInlineOutcome = false;       // set by loader from JSON key presence
     std::vector<gameplay::events::EventCondition> victoryConditions;
     std::vector<gameplay::events::EventCondition> defeatConditions;
+
+    // M21 scenario economy start-state. Authored under "playerStart" (gold routes
+    // to startGold above). Applied once at scenario start; never written back to
+    // content. Empty vectors => no authored resources / owned services.
+    std::vector<ScenarioStartResource> startResources;
+    std::vector<ScenarioStartOwnedService> startOwnedServices;
 };
 
 } // namespace data

@@ -163,6 +163,24 @@ Current thin Scenario definitions support:
 
 If a Scenario has no inline outcome conditions, it uses the global `content/scenario_outcome.json` exactly as M12 did. M16 does **not** change default-victory semantics.
 
+### Scenario economy start-state (`playerStart`)
+
+M21 adds a narrow, optional `playerStart` object that authors the player's starting economy/service-control state. It is applied once when the Scenario starts (through `GameSession::TransitionToScenario`) and is never written back to content; the resulting runtime state serializes through normal save data.
+
+```json
+"playerStart": {
+  "gold": 2500,
+  "resources": [ { "resource": "Wood", "amount": 5 }, { "resource": "Stone", "amount": 3 } ],
+  "ownedServices": [ { "serviceId": "home_base_trading_post", "locked": false, "destroyed": false } ]
+}
+```
+
+- `gold` — optional integer; an **alias** for top-level `startGold`. Author **one** of the two, never both (authoring both is rejected). The resolved start gold must be a non-negative integer.
+- `resources` — optional array of `{ resource, amount }`; `resource` is a canonical non-Gold resource name, `amount` a positive integer, no duplicate resource. Gold is authored via `gold`, never here.
+- `ownedServices` — optional array of `{ serviceId, locked?, destroyed? }`. `serviceId` references an existing **ownable** service (a mine or a trader service); duplicates are rejected. Services are owned by the player team. `locked`/`destroyed` set initial runtime state only and never bypass the usability/payout gates.
+
+`playerStart` is a canonical authored schema: a malformed block or wrong-typed field fails validation loudly rather than being silently skipped. M21 does **not** add authored starting rosters, team definitions, per-scenario `unlockedRegions` overrides (World Map `unlocked` flags already author initial unlock state), item/inventory start-state, or ownership-claiming.
+
 Current Campaign definitions support:
 
 - `id`
