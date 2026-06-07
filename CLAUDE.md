@@ -23,14 +23,13 @@ Read these first when relevant:
 15. `.github/copilot-instructions.md`
 16. `.github/instructions/gameplay.instructions.md`
 
-For UI work, also read `.github/instructions/ui.instructions.md`.
-For architecture work, also read `.github/agents/game-architect.agent.md`.
+For UI work, also read `.github/instructions/ui.instructions.md`. For architecture work, also read `.github/agents/game-architect.agent.md`.
 
 Archived docs and historical milestone prompts are historical context only. Do not use `docs/content_scope_v0.md.archived` or `docs/implementation_roadmap.md.00.archived` as current scope, roadmap, or behavior truth.
 
 ## Current baseline
 
-The current codebase is post-M18.
+The current codebase is post-M19.
 
 Completed foundations include:
 
@@ -42,20 +41,19 @@ Completed foundations include:
 - minimal World Map region-to-region travel;
 - minimal Campaign System foundation;
 - owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, day-boundary mine payout, trader ownership tiers, authored/default trader curves, validation, and proof tests;
-- passive-effect spine foundation: canonical unit `passive_effects`, legacy mine-passive authoring compatibility, `mine_production` effects for owned mines, and current-leader `leader_energy` effects for daily Energy.
+- passive-effect spine foundation: canonical unit `passive_effects`, legacy mine-passive authoring compatibility, `mine_production` effects for owned mines, and current-leader `leader_energy` effects for daily Energy;
+- headless Trading Post transaction foundation: pure barter/Gold quote rules, service-specific ownership/use gates, GameSession transaction APIs, tier-0 fallback/default behavior, Gold delegation, and validation/test coverage.
 
-Do not treat M8, M11, M12, M13, M14, M15, M16, M17, or M18 as future work.
+Do not treat M8, M11, M12, M13, M14, M15, M16, M17, M18, or M19 as future work.
 
 ## Current planning posture
 
-The next planned milestone is **M19: Service Economy Expansion**, unless the user explicitly redirects.
-
-M19 planning should stay narrow, coherent, and test-backed. It should connect owned trader-service tiers/curves to a minimal player-facing service-transaction layer without becoming a broad item economy, full shop UI, or AI economy framework.
+The likely next milestone is **M20: Trading Post Interaction Flow**, unless the user explicitly redirects. M20 should expose the already-implemented Trading Post transaction API through the smallest coherent service interaction flow without becoming a full shop UI, broad item economy, AI economy, or all-trader-service expansion.
 
 ## Core rules
 
 - Respect `docs/technical_direction.md` for architectural principles, performance posture, and source-layout constraints.
-- Respect `docs/content_scope_v1.md` for current post-M18 content scope.
+- Respect `docs/content_scope_v1.md` for current post-M19 content scope.
 - Respect `docs/presentation_game_feel.md` for presentation, audio/visual tone, transitions, and feedback.
 - Do not invent new game-design rules that contradict the docs.
 - Use current terms: World Map, Region, Location, Service, node content, Scenario Info screen, Adventure button strip.
@@ -68,9 +66,7 @@ M19 planning should stay narrow, coherent, and test-backed. It should connect ow
 
 Keep production source comments durable and sparse.
 
-Do not add comments merely to describe milestone progress, patch phases, or agent workflow.
-
-Good production comments explain one of these:
+Do not add comments merely to describe milestone progress, patch phases, or agent workflow. Good production comments explain one of these:
 
 - a non-obvious invariant or contract;
 - a correctness, security, data-integrity, or save/load trap;
@@ -78,7 +74,7 @@ Good production comments explain one of these:
 - a deliberate limitation that prevents accidental broadening;
 - compatibility behavior that looks wrong but is intentional.
 
-Avoid milestone labels such as `M18 Phase 2` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts.
+Avoid milestone labels such as `M19 Phase 2` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts.
 
 Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
 

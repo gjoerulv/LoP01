@@ -19,9 +19,9 @@ Use this when asked to audit documentation consistency.
 
 ## Current baseline
 
-The active baseline is post-M18. The next planned milestone is M19 unless redirected.
+The active baseline is post-M19.
 
-Archived docs are historical context only. Do not treat archived roadmaps or old content-scope files as current truth.
+The likely next milestone is M20 unless redirected. Archived docs are historical context only. Do not treat archived roadmaps or old content-scope files as current truth.
 
 ## Audit checks
 
@@ -29,8 +29,9 @@ Find:
 
 - stale baseline statements;
 - wrong next-milestone references;
-- references to M17/M18 as future work;
+- references to M17/M18/M19 as future work;
 - stale references to `mineProductionPassive`, old `UNIT_PASSIVE_*` behavior, or mine-only passive semantics where the canonical `passive_effects` spine is meant;
+- stale references saying Trading Post transactions are unimplemented when the headless GameSession transaction layer exists;
 - contradictions between roadmap, schema, validation, core rules, README, and agent guidance;
 - redundant or bloated documentation that should be shortened.
 

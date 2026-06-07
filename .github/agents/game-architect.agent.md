@@ -4,9 +4,9 @@ Use this guidance for architecture, system-boundary, and milestone-planning work
 
 ## Current baseline
 
-The project is post-M18. Foundations exist for battle, roster, save/load, validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, and a narrow unit passive-effect spine.
+The project is post-M19. Foundations exist for battle, roster, save/load, validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, a narrow unit passive-effect spine, and headless Trading Post transactions.
 
-The next planned milestone is M19: Service Economy Expansion, unless the user redirects.
+The likely next milestone is M20: Trading Post Interaction Flow, unless the user redirects.
 
 ## Architectural priorities
 
@@ -23,8 +23,9 @@ The next planned milestone is M19: Service Economy Expansion, unless the user re
 - Unit passive effects currently support only `mine_production` and `leader_energy`.
 - Artifact `statBonus` remains on the artifact/battle-stat path.
 - Artifact Energy, item effects, statuses, active abilities, and skill trees are deferred.
-- Owned-service economy is founded but not a full item market, trader UI, or AI economy.
-- M19 should likely connect existing trader tiers/curves to narrow transactions, not expand every economy system at once.
+- Owned-service economy has a foundation and headless Trading Post transactions, but not a full item market, trader UI, or AI economy.
+- Trading Post transaction math belongs in pure/GameSession layers; UI should call those APIs rather than duplicating economics.
+- If M20 is selected, keep it to a bounded interaction flow for existing Trading Post APIs, not all trader-service behavior.
 
 ## Review posture
 

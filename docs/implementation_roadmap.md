@@ -2,7 +2,9 @@
 
 ## Context
 
-The current codebase is a post-M18 bounded multi-Region, multi-Scenario vertical slice. The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation, typed events, enemy teams on the Region layer, deterministic scenario outcomes, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, and a narrow passive-effect spine for unit-driven mine production and leader Energy.
+The current codebase is a post-M19 bounded multi-Region, multi-Scenario vertical slice.
+
+The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation, typed events, enemy teams on the Region layer, deterministic scenario outcomes, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, a narrow passive-effect spine for unit-driven mine production and leader Energy, and a headless Trading Post transaction layer.
 
 This roadmap works from foundations outward:
 
@@ -16,7 +18,8 @@ This roadmap works from foundations outward:
 8. Campaign;
 9. owned services and economy;
 10. passive/effect generalization when a narrow seam needs to become reusable;
-11. service-economy expansion when ownership tiers need player-facing transactions.
+11. service-economy expansion when ownership tiers need player-facing transaction rules;
+12. interaction/presentation exposure when a proven headless system needs to become playable.
 
 Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implementation_roadmap.md.00.archived`, are historical context only.
 
@@ -39,7 +42,8 @@ Current stable foundation:
 - minimal World Map;
 - minimal Campaign System;
 - owned-service/economy foundation with resources, owned-service runtime state, mine outputs, stack-backed stationing, daily mine payout, trader ownership tiers, authored/default trader curves, Trading Post exchange matrices, validation, and proof tests;
-- passive-effect spine foundation with canonical unit `passive_effects`, legacy `mine_production_passive` authoring compatibility, typed validation, M17 mine-production behavior preserved, and leader `leader_energy` feeding the daily Energy passive term.
+- passive-effect spine foundation with canonical unit `passive_effects`, legacy `mine_production_passive` authoring compatibility, typed validation, M17 mine-production behavior preserved, and leader `leader_energy` feeding the daily Energy passive term;
+- headless Trading Post transaction foundation with pure quote rules, GameSession transaction APIs, service-specific use/ownership gating, tier-0 fallback/default behavior, Gold delegation, validation, and end-to-end tests.
 
 Still incomplete or intentionally deferred:
 
@@ -57,7 +61,8 @@ Still incomplete or intentionally deferred:
 - item use, food consumption, cooking, recipes, seeds, ingredients;
 - artifact combination and artifact-handler services;
 - battle `Item` command and item use in battle;
-- Market / Black Market / Trading Post / Freelancer's Guild item economy beyond M17 ownership-tier foundation;
+- full Trading Post interaction UI, per-visit time-cost flow, and full service dispatch presentation;
+- Market / Black Market / Freelancer's Guild item economy beyond M17 ownership-tier foundation;
 - HUD/raylib inventory rendering and inventory render-model;
 - event-driven region unlock;
 - per-region world/enemy state partitioning;
@@ -78,6 +83,7 @@ Still incomplete or intentionally deferred:
 | 6 | Player color may still be hardcoded as `Green` in some Region/enemy-team/outcome/economy paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
 | 7 | `scenario_outcome.json` is a bounded-slice authoring file, not the full `ScenarioDefinition` outcome model. | Intentional M12 compromise. Full Scenario authoring comes later. |
 | 8 | Unit `passive_effects` support only `mine_production` and `leader_energy`; artifact `statBonus` remains on the artifact path. | Intentional M18 scope. Do not fold artifact/item/status behavior into the unit passive spine without a scoped milestone. |
+| 9 | Trading Post transactions exist as headless rules/GameSession APIs; there is no full UI interaction flow or per-visit time-cost flow yet. | Gap, not conflict. Expose through UI only in a scoped interaction milestone. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -156,33 +162,51 @@ Completed foundation includes:
 
 Deferred beyond M18: artifact Energy, item effects, artifact special effects beyond existing `statBonus`, battle statuses, active abilities, skill-tree UI, and broad effect dispatch.
 
+### Phase 11 — Service Economy Expansion
+
+**Status:** M19 complete.
+
+Completed foundation includes:
+
+- Trading Post pure transaction rules for non-Gold barter and Gold buy/sell;
+- Decision-58 base resource values and safe quote math with overflow/invalid-input handling;
+- data-driven effective tier 0 behavior for usable unowned/allied/enemy/neutral Trading Posts;
+- GameSession Trading Post transaction APIs for barter, buying resources for Gold, and selling resources for Gold;
+- service-specific use gates that hard-block locked, destroyed, hostile-occupied, unknown, or non-Trading-Post services;
+- ownership-tier integration through authored/default trader curves and `priceFactor`;
+- atomic resource/Gold mutation through existing resource APIs and Gold delegation;
+- validation that Trading Post barter matrices are non-Gold resource-for-resource only and that `priceFactor` is positive;
+- end-to-end tests proving authored tier 0, owned higher-tier, built-in fallback, and hostile-occupation refusal.
+
+Deferred beyond M19: full Trading Post UI/interaction flow, per-visit time cost, service dispatch/presentation, Market/Freelancer's Guild/Black Market transaction behavior, item market/inventory browsing, AI economy/service use, ownership transfer/contesting loops, and team-to-team transfer rules.
+
 ## 4. Current next milestone
 
-Latest completed milestone: **M18 — Passive Effect Spine**.
+Latest completed milestone: **M19 — Service Economy Expansion**.
 
-### Next planned milestone: M19 — Service Economy Expansion
+### Next likely milestone: M20 — Trading Post Interaction Flow
 
-M19 is the likely next milestone because M17 established owned trader-service tiers and authored/default curves, but intentionally deferred player-facing service transactions and richer trader-service behavior.
+M20 is the likely next milestone because M19 proved the headless Trading Post transaction layer but intentionally deferred UI/service-dispatch exposure and per-visit time cost.
 
-M19 should connect the owned-service economy foundation to a narrow, test-backed service-transaction layer without becoming a full item economy or broad shop UI milestone.
+Recommended M20 scope:
 
-Recommended M19 scope:
+1. Audit existing Region/Location service interaction flow, status messaging, button/input flow, and service dispatch.
+2. Expose the existing Trading Post transaction API through the smallest coherent UI/interaction seam.
+3. Preserve M19 rules: transaction math stays in pure/GameSession layers, UI does not bypass service use gates, Gold delegation, or resource atomicity.
+4. Implement the documented 20-minute cost per Trading Post visit with at least one completed trade, not per individual trade.
+5. Keep the UI bounded: enough to prove barter and Gold buy/sell, not a full shop/inventory marketplace.
+6. Add integration/UI-adjacent tests where practical, and keep pure transaction tests as the behavioral source of truth.
 
-1. Audit current trader-service rules, curves, Trading Post matrices, resource pool, ownership gates, service availability gates, and existing service interaction flow.
-2. Define the smallest service-transaction model needed for one or two trader service types, preferably pure rules first.
-3. Preserve M17 ownership semantics: benefits apply only when using a same-type service the team owns, and ownership never bypasses lock, destruction, hostile occupation, stock, eligibility, story, or availability rules.
-4. Keep resource exchange and price/discount calculations pure and validation-backed.
-5. Add minimal integration proof; defer broad UI unless the slice explicitly needs a basic interaction path.
+M20 non-goals:
 
-M19 non-goals:
-
-- full item-market economy;
+- broad item-market economy;
 - full shop UI and inventory browsing UI;
+- Market, Black Market, or Freelancer's Guild behavior unless explicitly selected;
 - AI economy/service use;
-- storage overhaul;
 - ownership transfer/contesting loops;
-- skill-tree or status-effect expansion;
-- content-volume growth disconnected from service-transaction proof.
+- storage overhaul;
+- passive/effect expansion;
+- content-volume growth disconnected from the Trading Post interaction proof.
 
 ## 5. Acceptance checks per phase
 
@@ -198,22 +222,22 @@ M19 non-goals:
 | 8 | Campaign selection is presence-gated; scenarios sequence; carry-over allow-list is applied; disallowed state is absent after transition; Energy recomputes after carry-over; defeat fails run; final victory completes campaign. |
 | 9 | Owned service state persists; owned mines pay daily resources; stationed production passives use strongest-only non-stacking semantics; trader ownership tiers are per service type and capped; ownership never bypasses locks, destruction, occupation, stock, eligibility, story, or availability rules. |
 | 10 | Passive/effect spine keeps existing M17 behavior valid, supports only active consumers (`mine_production` and `leader_energy`), rejects unsupported/malformed authoring, and does not disturb artifact/item effect paths. |
-| 11 | Service Economy Expansion, if selected, proves player-facing service transactions use ownership tiers/curves correctly without broad item-economy or UI sprawl. |
+| 11 | Service Economy Expansion proves Trading Post transactions use ownership tiers/curves, tier-0 fallback, Gold delegation, resource atomicity, and service-use gates without broad item-economy or UI sprawl. |
+| 12 | Trading Post Interaction Flow, if selected, exposes the proven transaction APIs through a bounded interaction layer, charges time per visit correctly, preserves pure rule behavior, and avoids full shop/item-market expansion. |
 
 ## 6. Tests needed
 
 All currently completed phase test suites have shipped.
 
-For M19, expected test families depend on the accepted scope but should likely include:
+For M20, expected test families depend on the accepted scope but should likely include:
 
-- pure trader/service transaction rule tests;
-- service-specific ownership gate tests;
-- Trading Post exchange matrix resolution tests;
-- resource spend/receive tests using the existing resource pool and Gold delegation;
-- validation tests for authored transaction/curve data;
-- integration proof for a minimal service transaction flow.
+- service interaction flow tests for Trading Post dispatch;
+- UI/model or controller tests for selecting barter/buy/sell actions where practical;
+- time-cost tests proving cost is per visit with at least one completed trade;
+- regression tests proving locked/destroyed/hostile-occupied services remain blocked;
+- resource/Gold mutation tests that continue to use the existing GameSession transaction APIs.
 
-Continue using Catch2 and prefer pure-logic tests over rendering/input tests.
+Continue using Catch2 and prefer pure-logic/controller tests over rendering/input tests.
 
 ## 7. Explicit not-yet boundaries
 
@@ -231,7 +255,8 @@ These are specified at design level but remain out of scope until explicitly sel
 - mod loading;
 - cooking / recipes / food effects / item use / battle `Item` command;
 - artifact combination;
-- full Market / Black Market / Trading Post / Freelancer's Guild item economy beyond the M17 ownership-tier foundation;
+- full Market / Black Market / Freelancer's Guild item economy beyond the current ownership-tier foundation;
+- full Trading Post shop/inventory UI beyond a scoped interaction proof;
 - artifact Energy and artifact special effects beyond current `statBonus` until explicitly promoted;
 - `teamHasItem` / `teamHasArtifact` condition leaves;
 - HUD/raylib inventory rendering;

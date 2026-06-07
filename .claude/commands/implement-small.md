@@ -19,13 +19,15 @@ Use this for an approved narrow implementation slice.
 - Avoid per-frame scans, repeated parsing, repeated graph rebuilds, and needless large copies.
 - Do not add broad framework abstractions without an immediate consumer.
 
-## Post-M18 reminders
+## Post-M19 reminders
 
 - M17 economy foundation is complete.
 - M18 passive-effect spine is complete for `mine_production` and `leader_energy`.
+- M19 headless Trading Post transactions are complete.
 - New unit passive content should use canonical `passive_effects`.
 - Do not reintroduce runtime `mineProductionPassive` or old `UNIT_PASSIVE_*` semantics.
 - Do not fold artifact/item/status systems into the passive-effect spine unless the approved slice explicitly does that.
+- Do not duplicate Trading Post transaction math in UI; call the existing rules/GameSession APIs.
 
 ## Comments
 
@@ -33,4 +35,6 @@ Production comments should explain durable invariants, validation traps, compati
 
 ## Finish
 
-Run targeted tests and the full suite where practical. Report files changed, tests added/updated, commands run, and any residual risk.
+Run targeted tests and the full suite where practical.
+
+Report files changed, tests added/updated, commands run, and any residual risk.

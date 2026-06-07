@@ -18,11 +18,11 @@ Use this when asked to plan the next implementation milestone.
 
 ## Current baseline
 
-Treat the repository as post-M18 unless the current branch/commit proves otherwise.
+Treat the repository as post-M19 unless the current branch/commit proves otherwise.
 
-Do not plan M17 or M18 as future work. M17 owned-service/economy foundation and M18 passive-effect spine are complete baselines.
+Do not plan M17, M18, or M19 as future work. M17 owned-service/economy foundation, M18 passive-effect spine, and M19 headless Trading Post transaction layer are complete baselines.
 
-The next planned milestone is M19: Service Economy Expansion, unless the user redirects.
+The likely next milestone is M20: Trading Post Interaction Flow, unless the user redirects.
 
 ## Output
 
