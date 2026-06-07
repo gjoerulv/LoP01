@@ -95,6 +95,21 @@ const data::TraderOwnershipCurve* FindCurve(
     return nullptr;
 }
 
+// Same authored slice, but with a richer Trading Post curve: tier 0 and tier 1
+// each carry a barter matrix AND a Gold-trade price factor, so transactions
+// exercise tiered barter and tiered Gold trade. Tier-0 values differ from the
+// built-in defaults (cost 10 / factor 100) so an authored tier 0 is
+// distinguishable from the fallback.
+void WriteTradingPostTxnContent(const std::filesystem::path& root) {
+    WriteEconomyContent(root);
+    WriteTextFile(root / "trader_curves.json",
+        R"({"schemaVersion":1,"kind":"TraderCurveCollection","id":"trader_curves","trader_curves":[)"
+        R"({"type":"trading_post","tiers":[)"
+        R"({"tier":0,"price_factor":120,"exchange_matrix":[{"from":"Wood","to":"Stone","cost":7}]},)"
+        R"({"tier":1,"price_factor":200,"exchange_matrix":[{"from":"Wood","to":"Stone","cost":4}]})"
+        R"(]}]})");
+}
+
 } // namespace
 
 TEST_CASE("Economy end-to-end: authored slice loads, validates, and pays a stationed mine with trader tiers") {
@@ -232,6 +247,157 @@ TEST_CASE("Economy end-to-end: a trader service the player does not own yields t
     session.ApplySaveData(save);
 
     REQUIRE(session.OwnedTraderServiceTierForService("market_svc") == 0);
+
+    std::filesystem::remove_all(root);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: player-facing Trading Post transactions driven from loaded content.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Economy end-to-end: a player-owned Trading Post trades at its ownership tier") {
+    const std::filesystem::path root = "saves/economy_e2e_tp_owned";
+    WriteTradingPostTxnContent(root);
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+    REQUIRE_FALSE(HasErrorMessage(content.ValidationMessages()));
+
+    gameplay::GameSession session;
+    session.SetUnitCatalog(content.Units());
+    session.SetLocationServiceCatalog(content.LocationServices());
+    session.SetTraderCurveCatalog(content.TraderCurves());
+
+    auto save = MakeEconomySave();
+    save.ownedServices = {
+        core::OwnedServiceSaveState{"tp_svc", "Green", false, false, {}}
+    };
+    session.ApplySaveData(save);
+    session.AddResource(ResourceType::Wood, 100);
+
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_svc") == 1);
+
+    // Tier-1 authored barter: 4 Wood per Stone (not the default 10).
+    const auto barter = session.TryTradingPostBarter("tp_svc", ResourceType::Wood, ResourceType::Stone, 1);
+    REQUIRE(barter.success);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 96);
+    REQUIRE(session.ResourceCount(ResourceType::Stone) == 1);
+
+    // Tier-1 Gold buy: favorability 200 -> 500 * 100 / 200 = 250.
+    const int goldBefore = session.Snapshot().gold;
+    const auto buy = session.TryTradingPostBuyForGold("tp_svc", ResourceType::Wood, 1);
+    REQUIRE(buy.success);
+    REQUIRE(session.Snapshot().gold == goldBefore - 250);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("Economy end-to-end: an unowned Trading Post trades at authored tier 0") {
+    const std::filesystem::path root = "saves/economy_e2e_tp_tier0";
+    WriteTradingPostTxnContent(root);
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+    REQUIRE_FALSE(HasErrorMessage(content.ValidationMessages()));
+
+    gameplay::GameSession session;
+    session.SetUnitCatalog(content.Units());
+    session.SetLocationServiceCatalog(content.LocationServices());
+    session.SetTraderCurveCatalog(content.TraderCurves());
+
+    auto save = MakeEconomySave();
+    save.ownedServices = {
+        core::OwnedServiceSaveState{"tp_svc", "", false, false, {}}  // usable, unowned
+    };
+    session.ApplySaveData(save);
+    session.AddResource(ResourceType::Wood, 100);
+
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_svc") == 0);
+
+    // Authored tier-0 barter: 7 Wood per Stone (not the default 10, proving the
+    // authored tier 0 is used at effective tier 0).
+    const auto barter = session.TryTradingPostBarter("tp_svc", ResourceType::Wood, ResourceType::Stone, 1);
+    REQUIRE(barter.success);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 93);
+
+    // Authored tier-0 Gold buy: favorability 120 -> ceil(500 * 100 / 120) = 417.
+    const int goldBefore = session.Snapshot().gold;
+    const auto buy = session.TryTradingPostBuyForGold("tp_svc", ResourceType::Wood, 1);
+    REQUIRE(buy.success);
+    REQUIRE(session.Snapshot().gold == goldBefore - 417);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("Economy end-to-end: an unowned Trading Post with no authored tier 0 uses built-in defaults") {
+    const std::filesystem::path root = "saves/economy_e2e_tp_default";
+    WriteEconomyContent(root);  // shared curve authors only tier 1 (no tier 0)
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+    REQUIRE_FALSE(HasErrorMessage(content.ValidationMessages()));
+
+    gameplay::GameSession session;
+    session.SetUnitCatalog(content.Units());
+    session.SetLocationServiceCatalog(content.LocationServices());
+    session.SetTraderCurveCatalog(content.TraderCurves());
+
+    auto save = MakeEconomySave();
+    save.ownedServices = {
+        core::OwnedServiceSaveState{"tp_svc", "", false, false, {}}  // usable, unowned -> tier 0
+    };
+    session.ApplySaveData(save);
+    session.AddResource(ResourceType::Wood, 100);
+
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_svc") == 0);
+
+    // No authored tier 0 -> built-in default barter (10 Wood per Stone).
+    const auto barter = session.TryTradingPostBarter("tp_svc", ResourceType::Wood, ResourceType::Stone, 1);
+    REQUIRE(barter.success);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 90);
+
+    // No authored tier 0 -> default Gold buy (factor 100 -> 5x base = 500).
+    const int goldBefore = session.Snapshot().gold;
+    const auto buy = session.TryTradingPostBuyForGold("tp_svc", ResourceType::Wood, 1);
+    REQUIRE(buy.success);
+    REQUIRE(session.Snapshot().gold == goldBefore - 500);
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("Economy end-to-end: a hostile-occupied Trading Post refuses transactions") {
+    const std::filesystem::path root = "saves/economy_e2e_tp_blocked";
+    WriteTradingPostTxnContent(root);
+
+    data::ContentRepository content;
+    REQUIRE(content.LoadFromDirectory(root));
+
+    gameplay::GameSession session;
+    session.SetUnitCatalog(content.Units());
+    session.SetLocationServiceCatalog(content.LocationServices());
+    session.SetTraderCurveCatalog(content.TraderCurves());
+
+    auto save = MakeEconomySave();
+    save.ownedServices = {
+        core::OwnedServiceSaveState{"tp_svc", "Green", false, false, {}}
+    };
+    session.ApplySaveData(save);
+    session.AddResource(ResourceType::Wood, 100);
+
+    gameplay::EnemyTeamState enemy;
+    enemy.teamColor = "Red";
+    enemy.nodeId = "tp_loc";  // occupies the Trading Post's node
+    enemy.active = true;
+    session.SetEnemyTeams({enemy});
+
+    const int goldBefore = session.Snapshot().gold;
+    const auto barter = session.TryTradingPostBarter("tp_svc", ResourceType::Wood, ResourceType::Stone, 1);
+    const auto buy = session.TryTradingPostBuyForGold("tp_svc", ResourceType::Wood, 1);
+    REQUIRE_FALSE(barter.success);
+    REQUIRE_FALSE(buy.success);
+    REQUIRE(session.ResourceCount(ResourceType::Wood) == 100);
+    REQUIRE(session.ResourceCount(ResourceType::Stone) == 0);
+    REQUIRE(session.Snapshot().gold == goldBefore);
 
     std::filesystem::remove_all(root);
 }
