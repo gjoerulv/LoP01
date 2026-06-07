@@ -757,6 +757,33 @@ TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - non-positive exchan
     REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_EXCHANGE_COST_INVALID"));
 }
 
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - Trading Post zero price factor produces TRADER_CURVE_PRICE_FACTOR_INVALID")
+{
+    auto curve = MakeTradingPostCurve(1, {{"Wood", "Stone", 8}});
+    curve.tiers[0].priceFactor = 0;
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_CURVE_PRICE_FACTOR_INVALID"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - Trading Post negative price factor produces TRADER_CURVE_PRICE_FACTOR_INVALID")
+{
+    auto curve = MakeTradingPostCurve(1, {{"Wood", "Stone", 8}});
+    curve.tiers[0].priceFactor = -5;
+
+    ContentValidator v;
+    REQUIRE(HasCode(v.ValidateTraderOwnershipCurves({curve}), "TRADER_CURVE_PRICE_FACTOR_INVALID"));
+}
+
+TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - Trading Post positive price factor with a non-Gold matrix passes")
+{
+    auto curve = MakeTradingPostCurve(1, {{"Wood", "Stone", 8}});
+    curve.tiers[0].priceFactor = 150;
+
+    ContentValidator v;
+    REQUIRE(v.ValidateTraderOwnershipCurves({curve}).empty());
+}
+
 TEST_CASE("ContentValidator::ValidateTraderOwnershipCurves - non-positive price factor produces TRADER_CURVE_PRICE_FACTOR_INVALID")
 {
     data::TraderOwnershipCurve market;

@@ -532,8 +532,11 @@ std::vector<ValidationMessage> ContentValidator::ValidateTraderOwnershipCurves(
                     }
                 }
             }
-            else if (tier.priceFactor <= 0) {
-                // Non-Trading-Post curves use the placeholder price factor.
+
+            // priceFactor applies to every trader tier: for Trading Post it is
+            // the Gold-trade favorability scalar; for other types it is the
+            // placeholder price scalar. Either way it must be positive.
+            if (tier.priceFactor <= 0) {
                 msgs.push_back({Severity::Error, "TRADER_CURVE_PRICE_FACTOR_INVALID",
                     ti + ".price_factor",
                     "Trader ownership price factor must be positive (got "
