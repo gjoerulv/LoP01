@@ -23,7 +23,9 @@ Read these first when relevant:
 15. `.github/copilot-instructions.md`
 16. `.github/instructions/gameplay.instructions.md`
 
-For UI work, also read `.github/instructions/ui.instructions.md`. For architecture work, also read `.github/agents/game-architect.agent.md`. Archived docs and historical milestone prompts are historical context only. Do not use `docs/content_scope_v0.md.archived` or `docs/implementation_roadmap.md.00.archived` as current scope, roadmap, or behavior truth.
+For UI work, also read `.github/instructions/ui.instructions.md`. For architecture work, also read `.github/agents/game-architect.agent.md`.
+
+Archived docs and historical milestone prompts are historical context only. Do not use archived files as current scope, roadmap, or behavior truth.
 
 ## Current baseline
 
@@ -47,7 +49,11 @@ Do not treat M8, M11, M12, M13, M14, M15, M16, M17, M18, M19, or M20 as future w
 
 ## Current planning posture
 
-No next milestone is currently selected. Start the next planning pass from `docs/implementation_roadmap.md`, the active docs, and the current source. Do not assume the next step is a full marketplace, full UI, AI economy, broad item system, or passive-effect expansion unless the user explicitly selects that direction.
+The selected next milestone is **M21 — Scenario Economy Start-State Authoring Foundation**.
+
+M21 should make the player's initial economy/service-control state more content-driven through a narrow Scenario start-state surface. It must not become the full Scenario authoring system, full team-definition model, roster authoring system, ownership-transfer flow, AI economy, item economy, or full shell flow.
+
+Before implementing M21, re-read `docs/implementation_roadmap.md`, `docs/content_scope_v1.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, `docs/validation_system.md`, and the relevant source. If the branch/source does not match the post-M20 baseline, stop and report the mismatch.
 
 ## Core rules
 
@@ -73,7 +79,9 @@ Good production comments explain one of these:
 - a deliberate limitation that prevents accidental broadening;
 - compatibility behavior that looks wrong but is intentional.
 
-Avoid milestone labels such as `M20 Phase 2` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts. Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
+Avoid milestone labels such as `M21 Phase 1` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts.
+
+Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
 
 When reviewing diffs, flag comments that are stale, milestone-specific, redundant, or inconsistent with the code. Prefer deleting weak comments over rewriting them into longer comments.
 

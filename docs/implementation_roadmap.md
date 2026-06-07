@@ -4,24 +4,9 @@
 
 The current codebase is a post-M20 bounded multi-Region, multi-Scenario vertical slice.
 
-The stable foundation now includes battle, roster, save/load, basic Region/Location flow, content validation, typed events, enemy teams on the Region layer, deterministic scenario outcomes, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, a narrow passive-effect spine for unit-driven mine production and leader Energy, a headless Trading Post transaction layer, and a bounded Trading Post interaction flow.
+The stable foundation now includes battle, roster, save/load, Region/Location flow, content validation, typed events, enemy teams on the Region layer, deterministic scenario outcomes, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, a narrow unit passive-effect spine, a headless Trading Post transaction layer, and a bounded playable Trading Post interaction flow.
 
-This roadmap works from foundations outward:
-
-1. validation;
-2. typed event/condition core;
-3. enemy teams on the Region layer;
-4. victory/defeat;
-5. inventory and artifacts;
-6. Energy;
-7. World Map;
-8. Campaign;
-9. owned services and economy;
-10. passive/effect generalization when a narrow seam needs to become reusable;
-11. service-economy expansion when ownership tiers need player-facing transaction rules;
-12. interaction/presentation exposure when a proven headless system needs to become playable.
-
-Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implementation_roadmap.md.00.archived`, are historical context only.
+Archived docs, including `docs/content_scope_v0.md.archived` and older `docs/implementation_roadmap.md.*.archived` files, are historical context only. The active scope cap is `docs/content_scope_v1.md`.
 
 ## 1. Current implementation baseline
 
@@ -32,7 +17,7 @@ Current stable foundation:
 - battle engine, CTB, static formation, leader aura, deterministic damage, and battle write-back;
 - persistent roster, active/reserve party, mustering, and save/load;
 - daily clock, Region travel, wake/recovery penalty, and basic services;
-- team Energy pool with daily-starting formula, spend/recover primitives, day-rollover reset, save/load, snapshot/HUD exposure, and leader passive Energy contribution through `leader_energy` unit passive effects;
+- team Energy pool with daily-starting formula, spend/recover primitives, day-rollover reset, save/load, snapshot/HUD exposure, and current-leader `leader_energy` contribution;
 - JSON content loading through `ContentRepository`;
 - content validation foundation;
 - typed event foundation;
@@ -41,8 +26,8 @@ Current stable foundation:
 - inventory and artifact foundation with equipped-artifact battle stat bonuses;
 - minimal World Map;
 - minimal Campaign System;
-- owned-service/economy foundation with resources, owned-service runtime state, mine outputs, stack-backed stationing, daily mine payout, trader ownership tiers, authored/default trader curves, Trading Post exchange matrices, validation, and proof tests;
-- passive-effect spine foundation with canonical unit `passive_effects`, legacy `mine_production_passive` authoring compatibility, typed validation, M17 mine-production behavior preserved, and leader `leader_energy` feeding the daily Energy passive term;
+- owned-service/economy foundation with resources, owned-service runtime state, mine outputs, stack-backed stationing, daily mine payout, trader ownership tiers, authored/default trader curves, validation, and proof tests;
+- passive-effect spine foundation with canonical unit `passive_effects`, legacy `mine_production_passive` authoring compatibility, `mine_production` effects, and `leader_energy` effects;
 - Trading Post transaction foundation with pure quote rules, GameSession transaction APIs, service-specific use/ownership gating, tier-0 fallback/default behavior, Gold delegation, validation, and end-to-end tests;
 - Trading Post interaction flow with a bounded Location-mode service interaction, buy/sell/barter modes, live prompt feedback, per-visit time cost, and a small authored playable Home Base Trading Post.
 
@@ -65,24 +50,24 @@ Still incomplete or intentionally deferred:
 - Market / Black Market / Freelancer's Guild item economy beyond M17 ownership-tier foundation;
 - broad trader inventory browsing UI beyond the current bounded Trading Post interaction;
 - HUD/raylib inventory rendering and inventory render-model;
-- event-driven region unlock;
-- per-region world/enemy state partitioning;
+- event-driven Region unlock;
+- per-Region world/enemy state partitioning;
 - generic origin-storage across Regions;
 - full per-Scenario `ScenarioDefinition` content kind;
 - authored starting rosters and full campaign branching-choice UI;
 - full shell/menu/character-creation/load/settings flow.
 
-## 2. Doc/code conflicts and known debt
+## 2. Known doc/code gaps and debt
 
 | # | Issue | Action |
 |---|-------|--------|
-| 1 | Team Energy pool has an implemented leader passive term (`leader_energy`) and a still-deferred leader item/artifact Energy term. | Keep `leader_energy` unit effects on the current passive spine. Do not fake item/artifact Energy until an item/artifact effect milestone exists. |
-| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Items, artifacts, World Map, thin scenarios, campaigns, owned-service economy definitions, trader curves, and unit passive effects have loaders; recipes and full per-Scenario Region Contexts do not. | No conflict. Add structs/loaders only when a scoped phase requires them. |
+| 1 | Team Energy has an implemented leader passive term (`leader_energy`) and a still-deferred leader item/artifact Energy term. | Keep `leader_energy` on the current unit passive spine. Do not fake item/artifact Energy until an item/artifact effect milestone exists. |
+| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Recipes, full Scenario Region Contexts, and several long-term authored structures still do not exist. | Add structs/loaders only when a scoped phase requires them. |
 | 3 | `docs/game_shell_flow.md` specifies the full shell flow, while code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred. |
 | 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Expand validation only when a phase requires it. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader command depth. | Gap; acceptable until skill/status phases. |
 | 6 | Player color may still be hardcoded as `Green` in some Region/enemy-team/outcome/economy paths. | Known debt. Do not fix opportunistically unless introducing a real player-team identity model. |
-| 7 | `scenario_outcome.json` is a bounded-slice authoring file, not the full `ScenarioDefinition` outcome model. | Intentional M12 compromise. Full Scenario authoring comes later. |
+| 7 | `scenario_outcome.json` remains a bounded-slice authoring file, while thin `ScenarioDefinition` supports only a subset of long-term Scenario authoring. | Intentional sequencing. Expand Scenario authoring through scoped milestones. |
 | 8 | Unit `passive_effects` support only `mine_production` and `leader_energy`; artifact `statBonus` remains on the artifact path. | Intentional M18 scope. Do not fold artifact/item/status behavior into the unit passive spine without a scoped milestone. |
 | 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. Build broader trader UI only in a scoped UI/economy milestone. |
 
@@ -90,156 +75,171 @@ No true design contradictions are currently known. Remaining gaps are implementa
 
 ## 3. Completed implementation phases
 
-### Phase 1 — Content Validation System
-
-**Status:** Foundation implemented; broader validation model still expandable.
-
-### Phase 2 — Minimal Typed Event Foundation
-
-**Status:** Foundation implemented.
-
-### Phase 3 — Enemy Teams on Region Layer
-
-**Status:** Practical Phase 3 slice completed by M11-e.
-
-### Phase 4 — Victory and Defeat Conditions
-
-**Status:** M12 complete.
-
-### Phase 5 — Inventory and Artifacts
-
-**Status:** M13 complete.
-
-### Phase 6 — Energy Pool
-
-**Status:** M14 complete; leader passive seam filled by M18.
-
-Completed baseline includes daily-starting Energy, spend/recover primitives, reset through the day-rollover chokepoint, save/load, legacy recompute, snapshot/HUD exposure, tests, and M18 leader passive Energy contribution through the current leader's `leader_energy` passive effects. Deferred: leader item/artifact Energy bonus term.
-
-### Phase 7 — World Map Layer
-
-**Status:** M15 complete.
-
-### Phase 8 — Campaign System
-
-**Status:** M16 complete.
-
-### Phase 9 — Owned Services and Economy Foundation
-
-**Status:** M17 complete.
-
-Completed foundation includes:
-
-- strict resource type support with Gold delegated to the existing gold source of truth;
-- owned-service runtime state and additive save/load;
-- validation that service ids are unique and each location is placed in at most one Region node;
-- mine/resource service kinds and authored mine outputs;
-- pure mine-production rules with strongest-only, non-stacking per-resource passives;
-- stack-backed stationing refs, normalization, and stale-reference rejection;
-- day-boundary mine payout through the existing `AdvanceClock` chokepoint;
-- trader service types, per-type ownership-tier calculation, and service-specific benefit gate;
-- authored/default trader curves and Trading Post exchange matrices;
-- validation and proof tests.
-
-Deferred beyond M17: broad item-market behavior, AI economy/service use, ownership transfer/contesting loops, full service destruction/restoration loop, full passive skill trees, generic origin-storage across Regions, and broad content expansion.
-
-### Phase 10 — Passive Effect Spine
-
-**Status:** M18 complete.
-
-Completed foundation includes:
-
-- canonical `UnitDefinition::passiveEffects` runtime representation;
-- strict loading/validation for `passive_effects` arrays and entries;
-- legacy `mine_production_passive` JSON authoring compatibility, converted at load into canonical `mine_production` effects;
-- mixed legacy + canonical passive authoring rejected as ambiguous;
-- `mine_production` effects feeding the existing strongest-only/non-stacking mine-output path;
-- `leader_energy` effects feeding the daily Energy leader passive bonus term;
-- cross-consumer isolation tests;
-- end-to-end tests for canonical and legacy authoring paths;
-- concise schema/rules/validation docs.
-
-Deferred beyond M18: artifact Energy, item effects, artifact special effects beyond existing `statBonus`, battle statuses, active abilities, skill-tree UI, and broad effect dispatch.
-
-### Phase 11 — Service Economy Expansion
-
-**Status:** M19 complete.
-
-Completed foundation includes:
-
-- Trading Post pure transaction rules for non-Gold barter and Gold buy/sell;
-- Decision-58 base resource values and safe quote math with overflow/invalid-input handling;
-- data-driven effective tier 0 behavior for usable unowned/allied/enemy/neutral Trading Posts;
-- GameSession Trading Post transaction APIs for barter, buying resources for Gold, and selling resources for Gold;
-- service-specific use gates that hard-block locked, destroyed, hostile-occupied, unknown, or non-Trading-Post services;
-- ownership-tier integration through authored/default trader curves and `priceFactor`;
-- atomic resource/Gold mutation through existing resource APIs and Gold delegation;
-- validation that Trading Post barter matrices are non-Gold resource-for-resource only and that `priceFactor` is positive;
-- end-to-end tests proving authored tier 0, owned higher-tier, built-in fallback, and hostile-occupation refusal.
-
-Deferred beyond M19: broad trader UI, Market/Freelancer's Guild/Black Market transaction behavior, item market/inventory browsing, AI economy/service use, ownership transfer/contesting loops, and team-to-team transfer rules.
-
-### Phase 12 — Trading Post Interaction Flow
-
-**Status:** M20 complete.
-
-Completed foundation includes:
-
-- a bounded headless `TradingPostInteraction` modeled after the existing service-interaction pattern;
-- read-only Trading Post offer resolution for display/previews;
-- Location-mode App wiring for opening and updating the Trading Post service interaction;
-- buy, sell, and barter commands routed through the existing GameSession transaction APIs;
-- live prompt feedback for quotes, affordability, resource/Gold counts, trade result, and visit cost;
-- authored Home Base Trading Post service/content proof;
-- 20-minute visit time cost charged once on exit only if at least one trade succeeded;
-- tests for interaction state, gating, quantity bounds, successful/failed trades, and time-cost semantics;
-- manual verification of the playable Trading Post flow.
-
-Deferred beyond M20: full shop/inventory UI, Market/Freelancer's Guild/Black Market service flows, broader item-market economy, AI economy/service use, ownership transfer/contesting loops, service restoration/sabotage flow, and broader presentation polish.
+- **Phase 1 — Content Validation System:** foundation implemented; broader validation model still expandable.
+- **Phase 2 — Minimal Typed Event Foundation:** foundation implemented.
+- **Phase 3 — Enemy Teams on Region Layer:** practical Region-layer enemy-team slice completed by M11-e.
+- **Phase 4 — Victory and Defeat Conditions:** M12 complete.
+- **Phase 5 — Inventory and Artifacts:** M13 complete.
+- **Phase 6 — Energy Pool:** M14 complete; current-leader `leader_energy` passive term filled by M18. Item/artifact Energy remains deferred.
+- **Phase 7 — World Map Layer:** M15 complete.
+- **Phase 8 — Campaign System:** M16 complete.
+- **Phase 9 — Owned Services and Economy Foundation:** M17 complete.
+- **Phase 10 — Passive Effect Spine:** M18 complete.
+- **Phase 11 — Service Economy Expansion:** M19 complete.
+- **Phase 12 — Trading Post Interaction Flow:** M20 complete.
 
 ## 4. Current next milestone
 
 Latest completed milestone: **M20 — Trading Post Interaction Flow**.
 
-No next milestone is currently selected. Start the next milestone by auditing this roadmap, `content_scope_v1.md`, and the current source. Good candidates must be narrow, testable, and aligned with the bounded vertical slice rather than broad speculative systems.
+Selected next milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
 
-Potential future directions, if explicitly selected, include:
+### Why M21 now
 
-- broadening service interaction presentation without creating a full marketplace;
-- Market / Black Market / Freelancer's Guild behavior as separate scoped milestones;
-- ownership transfer/contesting or service destruction/restoration loops;
+The highest-value next step is not another trader-service expansion, full marketplace, UI polish pass, or AI economy. The project now has enough economy/service systems that the bigger bottleneck is authored scenario setup: designers still cannot cleanly define the player's initial economy/service-control state for a scenario. That pushes work back toward hardcoded defaults, test-only save setup, or demo-specific branches.
+
+M21 should make the start of a Scenario more content-driven without attempting the full long-term ScenarioDefinition model.
+
+### M21 goal
+
+Add a narrow, validated, content-authored player start-state surface for economy and service-control setup.
+
+The selected scope is:
+
+- scenario-authored starting Gold and non-Gold resources for the player;
+- scenario-authored initial owned-service state for the player, using existing owned-service runtime fields where legal;
+- scenario-authored World Map unlocked Region overrides only if they are needed to avoid hardcoded setup for the bounded slice;
+- application of that authored start state when a Scenario starts or a new session is initialized;
+- additive compatibility with existing thin `ScenarioDefinition` fields such as `startRegionId`, `startNodeId`, and legacy `startGold`.
+
+M21 is not the full Scenario authoring system. It is the smallest step that lets authored content initialize the economy/service systems already proven by M17-M20.
+
+### M21 constraints
+
+Do not include:
+
+- authored starting roster or hero-pool system;
+- full team definitions;
+- full per-Scenario content directories;
+- Scenario Region Contexts;
+- campaign branching-choice UI;
+- full shell/menu/load-slot flow;
+- ownership transfer/claiming/contesting UI;
+- enemy AI economy/service use;
+- item/inventory/artifact start-state authoring unless explicitly selected;
+- trader-service behavior beyond the implemented Trading Post surface;
+- passive/effect expansion.
+
+Preserve:
+
+- save/load compatibility;
+- existing `startGold` behavior or a clearly validated migration/alias rule;
+- Gold single-source-of-truth and resource pool semantics;
+- owned-service validation invariants: service ids are instance keys, and each location is placed in at most one Region node;
+- all M17-M20 tests and runtime behavior.
+
+### Recommended M21 phases
+
+#### M21 Phase 1 — Scenario start-state schema, loader, and validation
+
+Define a narrow authored start-state shape on thin `ScenarioDefinition`, for example:
+
+```json
+"playerStart": {
+  "gold": 2500,
+  "resources": [
+    { "resource": "Wood", "amount": 5 },
+    { "resource": "Stone", "amount": 3 }
+  ],
+  "ownedServices": [
+    { "serviceId": "home_base_trading_post" }
+  ],
+  "unlockedRegions": ["ashvale_meadow"]
+}
+```
+
+Exact field names may change during implementation, but the model must stay narrow.
+
+Validation should reject:
+
+- invalid resource names;
+- negative starting resources or Gold;
+- duplicate resource entries;
+- invalid service ids;
+- duplicate owned service entries;
+- service ids that cannot be legal owned-service instances under the M17 invariants;
+- invalid Region ids in unlocked Region overrides;
+- ambiguous authoring such as both legacy `startGold` and `playerStart.gold` with conflicting values.
+
+No runtime behavior change in this phase unless the loader/validator structure requires a minimal adapter.
+
+#### M21 Phase 2 — Apply authored player start state at Scenario start
+
+Apply the validated start state through existing `GameSession` APIs/state:
+
+- Gold through the existing Gold source of truth;
+- non-Gold resources through the resource pool;
+- owned services through existing owned-service runtime state;
+- World Map unlocked Regions through existing unlocked-region state, only if Phase 1 selected that field.
+
+Do not write directly to private containers when an existing API exists. Do not introduce a second start-state source.
+
+Expected tests:
+
+- new Scenario with `playerStart.resources` starts with the authored resource counts;
+- legacy Scenario with `startGold` still starts with the expected Gold;
+- Scenario with authored owned Trading Post starts with player ownership and the existing Trading Post interaction receives ownership-tier benefits;
+- absent `playerStart` preserves current defaults;
+- save/load after start round-trips the resulting runtime state without adding new save fields.
+
+#### M21 Phase 3 — End-to-end proof content and docs
+
+Add the smallest authored proof content needed to show that Scenario start state can drive the current economy/service systems without hardcoded setup.
+
+Docs to update only if implementation finalizes field names or semantics:
+
+- `docs/content_schema.md` for the exact `playerStart` shape;
+- `docs/scenario_authoring.md` for the current authored Scenario subset;
+- `docs/validation_system.md` for new validation errors;
+- `README_DECISIONS.md` only if a real design decision is made.
+
+Do not rewrite broad vision docs as a changelog.
+
+### M21 acceptance check
+
+M21 is accepted when a thin Scenario can author the player's starting Gold/resources and initial owned-service state, validation rejects malformed/ambiguous start-state content, the authored state is applied through existing runtime APIs at Scenario start, existing saves remain compatible, and at least one end-to-end test proves authored start state affects a real existing system such as Trading Post ownership tier or resource availability.
+
+## 5. Future candidate milestones after M21
+
+Do not start these without a fresh planning audit and explicit user selection.
+
+Potential directions:
+
+- authored starting rosters / player team definition;
+- scenario result screen and victory event chains;
+- richer scenario outcome condition leaves such as ownership or item/artifact conditions;
+- ownership claiming/transfer/contesting flow;
+- service destruction/restoration/sabotage loops;
+- Market / Black Market / Freelancer's Guild transaction behavior;
 - inventory rendering / item-use / recipe systems;
-- scenario/campaign authoring expansion;
-- enemy AI economy/service use.
-
-Do not start any of these without a fresh planning audit and user selection.
-
-## 5. Acceptance checks per phase
-
-| Phase | Acceptance check |
-|-------|------------------|
-| 1 | Implemented validation rules have Catch2 coverage; malformed JSON surfaces typed messages with correct paths; valid content loads without blocking messages. |
-| 2 | Authored event fires on trigger, evaluates a condition, executes an action, persists story flags/fired event ids, and does not re-fire one-shot events. |
-| 3 | Enemy teams move/occupy on the Region layer; hostile occupation blocks use/travel where intended; contact battle clears the exact occupying team; event actions mutate teams; save/load round-trips enemy-team state. |
-| 4 | Default/authored victory and authored defeat evaluate deterministically; defeat wins priority; default victory is suppressed by authored victory list; outcome latches and persists. |
-| 5 | Item/artifact content loads and validates; equip/unequip obeys ownership/slot rules; equipped artifacts affect battle stats without mutating persistent unit definitions; save/load round-trips inventory/equipment. |
-| 6 | Energy computes, spends, recovers, resets, clamps, persists, displays consistently, applies current-leader `leader_energy` passive effects, and still leaves item/artifact Energy as a deferred seam. |
-| 7 | World Map opens from exit nodes, shows unlocked Regions, enforces path/departure/Energy legality, spends Energy, arrives correctly, warns/removes generic travelers, and persists unlocked/current region state. |
-| 8 | Campaign selection is presence-gated; scenarios sequence; carry-over allow-list is applied; disallowed state is absent after transition; Energy recomputes after carry-over; defeat fails run; final victory completes campaign. |
-| 9 | Owned service state persists; owned mines pay daily resources; stationed production passives use strongest-only non-stacking semantics; trader ownership tiers are per service type and capped; ownership never bypasses locks, destruction, occupation, stock, eligibility, story, or availability rules. |
-| 10 | Passive/effect spine keeps existing M17 behavior valid, supports only active consumers (`mine_production` and `leader_energy`), rejects unsupported/malformed authoring, and does not disturb artifact/item effect paths. |
-| 11 | Service Economy Expansion proves Trading Post transactions use ownership tiers/curves, tier-0 fallback, Gold delegation, resource atomicity, and service-use gates without broad item-economy or UI sprawl. |
-| 12 | Trading Post Interaction Flow exposes the proven transaction APIs through a bounded Location service interaction, charges time per visit correctly, preserves pure rule behavior, and avoids full shop/item-market expansion. |
+- enemy AI economy/service use;
+- campaign branching-choice UI;
+- broader shell/menu/load-slot flow.
 
 ## 6. Tests needed
 
-All currently completed phase test suites have shipped.
+All completed phase test suites have shipped. For M21, define tests from the selected scope and prefer:
 
-For the next milestone, define test families from the selected scope. Continue using Catch2 and prefer pure-logic/controller tests over rendering/input tests.
+- pure loader/validator tests for start-state authoring;
+- GameSession/scenario-start integration tests for runtime application;
+- end-to-end proof tests for authored start state affecting existing economy/service behavior;
+- regression tests proving legacy `startGold` and absent `playerStart` behavior remain stable.
+
+Continue using Catch2 and prefer pure logic/controller tests over rendering/input tests.
 
 ## 7. Explicit not-yet boundaries
 
-These are specified at design level but remain out of scope until explicitly selected:
+These remain out of scope until explicitly selected:
 
 - full passive skill tree UI;
 - skill/status combat system expansion;
