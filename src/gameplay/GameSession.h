@@ -13,6 +13,7 @@
 #include "data/definitions/CampaignDefinition.h"
 #include "data/definitions/ItemDefinition.h"
 #include "data/definitions/LocationServiceDefinition.h"
+#include "data/definitions/TraderOwnershipCurve.h"
 #include "data/definitions/QuestDefinition.h"
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioDefinition.h"
@@ -150,6 +151,13 @@ struct BattleStackLifeResult {
     int resultingLife = 0;
 };
 
+// Result of a Trading Post transaction. `message` carries the failure reason on
+// refusal, or a short success note. Mirrors the EquipResult shape.
+struct TradeResult {
+    bool success = false;
+    std::string message;
+};
+
 struct EnemyTeamActionResult {
     std::string teamColor;
     std::string actionType;
@@ -238,6 +246,21 @@ public:
     // tests/diagnostics. Requires the location-service catalog.
     [[nodiscard]] int OwnedTraderServiceTier(data::LocationServiceKind traderKind) const;
 
+    // Player-facing Trading Post transactions. Each gates on the service being a
+    // usable Trading Post (not locked, destroyed, or hostile-occupied; ownership
+    // never bypasses these), resolves the effective ownership tier for the exact
+    // service (0 unless player-owned and eligible), then applies the authored or
+    // default curve. Resource/Gold changes route through the existing resource
+    // APIs (single Gold source of truth) and are atomic: nothing is mutated
+    // unless the whole trade succeeds. Barter is non-Gold resource-for-resource;
+    // buy/sell exchange a non-Gold resource against Gold.
+    [[nodiscard]] TradeResult TryTradingPostBarter(
+        const std::string& serviceId, ResourceType from, ResourceType to, int quantity);
+    [[nodiscard]] TradeResult TryTradingPostBuyForGold(
+        const std::string& serviceId, ResourceType resource, int quantity);
+    [[nodiscard]] TradeResult TryTradingPostSellForGold(
+        const std::string& serviceId, ResourceType resource, int quantity);
+
     void EnterLocationMode(const std::string& locationId);
     void EnterRegionMode();
     void EnterWorldMapMode();
@@ -300,6 +323,11 @@ public:
     // pattern; set by the App at startup. An empty catalog makes daily mine
     // payout a no-op.
     void SetLocationServiceCatalog(std::vector<data::LocationServiceDefinition> catalog);
+
+    // Authored trader ownership curves (per trader type). Mirrors the catalog
+    // pattern; set by the App at startup. An empty catalog (or a type with no
+    // curve) makes every trade resolve at the built-in defaults.
+    void SetTraderCurveCatalog(std::vector<data::TraderOwnershipCurve> catalog);
 
     // M15-b World Map. SetWorldMap seeds the persisted runtime unlocked-region
     // set from the authored `unlocked` flags. SetRegionCatalog gives the session
@@ -589,6 +617,8 @@ private:
     std::vector<data::UnitDefinition>     unitCatalog_;
     // M17 Phase 3b: read-only service definitions for day-boundary mine payout.
     std::vector<data::LocationServiceDefinition> locationServiceCatalog_;
+    // Authored trader ownership curves, looked up by trader kind for transactions.
+    std::vector<data::TraderOwnershipCurve> traderCurveCatalog_;
 
     // M15-b World Map state.
     data::WorldMapDefinition              worldMap_;
@@ -617,6 +647,26 @@ private:
     // catalog is unset or has no such id). Used by stationing normalization and
     // passive collection.
     [[nodiscard]] const data::UnitDefinition* FindUnitDefinition(const std::string& id) const;
+    // Location-service definition lookup by id (nullptr if absent).
+    [[nodiscard]] const data::LocationServiceDefinition* FindLocationServiceById(
+        const std::string& serviceId) const;
+    // Authored trader curve for a trader kind (nullptr if none authored, which
+    // resolves to built-in defaults).
+    [[nodiscard]] const data::TraderOwnershipCurve* FindTraderCurve(
+        data::LocationServiceKind kind) const;
+
+    // Resolved gate for a Trading Post transaction. `service` is null when the id
+    // is unknown; `isTradingPost` is false when the id resolves to a non-Trading-
+    // Post service; `usable` reflects the lock/destruction/occupation gate; and
+    // `effectiveTier` is the player's ownership tier for the exact service (0
+    // unless player-owned and eligible), computed only when usable.
+    struct TradingPostUseGate {
+        const data::LocationServiceDefinition* service = nullptr;
+        bool isTradingPost = false;
+        bool usable = false;
+        int effectiveTier = 0;
+    };
+    [[nodiscard]] TradingPostUseGate GateTradingPostUse(const std::string& serviceId) const;
     // True iff the current node (regardless of mode) is an authored World Map
     // exit node of the current region's entry. The mode check lives in the
     // callers: CanOpenWorldMapHere() gates opening from RegionMode; TravelToRegion

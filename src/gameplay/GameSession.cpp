@@ -2,6 +2,7 @@
 #include "gameplay/EnergyRules.h"
 #include "gameplay/economy/MinePayoutRules.h"
 #include "gameplay/economy/TraderOwnershipRules.h"
+#include "gameplay/economy/TradingPostTransactionRules.h"
 #include "gameplay/effects/UnitPassiveEffects.h"
 #include "gameplay/campaign/CampaignProgressionRules.h"
 #include "gameplay/events/EventEngine.h"
@@ -461,6 +462,140 @@ int GameSession::OwnedTraderServiceTier(const data::LocationServiceKind traderKi
 
     const auto candidates = BuildTraderTierCandidates(ownedServices_, serviceById, hostileNodes);
     return economy::CountOwnedServiceTier(candidates, traderKind, playerColor_);
+}
+
+const data::LocationServiceDefinition* GameSession::FindLocationServiceById(
+    const std::string& serviceId) const {
+    for (const auto& svc : locationServiceCatalog_) {
+        if (svc.id == serviceId) {
+            return &svc;
+        }
+    }
+    return nullptr;
+}
+
+const data::TraderOwnershipCurve* GameSession::FindTraderCurve(
+    const data::LocationServiceKind kind) const {
+    for (const auto& curve : traderCurveCatalog_) {
+        if (curve.kind == kind) {
+            return &curve;
+        }
+    }
+    return nullptr;
+}
+
+GameSession::TradingPostUseGate GameSession::GateTradingPostUse(
+    const std::string& serviceId) const {
+    TradingPostUseGate gate;
+    gate.service = FindLocationServiceById(serviceId);
+    if (gate.service == nullptr ||
+        gate.service->kind != data::LocationServiceKind::TradingPost) {
+        return gate;  // unknown id or non-Trading-Post service
+    }
+    gate.isTradingPost = true;
+
+    // Lock/destruction come from owned-service runtime state (absent => not
+    // locked/destroyed for an available, unowned post). Hostile occupation is
+    // independent of ownership: an enemy holding the node blocks use regardless.
+    const auto* owned = FindOwnedService(serviceId);
+    const bool locked = owned != nullptr && owned->locked;
+    const bool destroyed = owned != nullptr && owned->destroyed;
+    const auto hostileVec = HostileOccupiedNodeIds(playerColor_);
+    const bool hostileOccupied =
+        std::find(hostileVec.begin(), hostileVec.end(), gate.service->locationId) !=
+        hostileVec.end();
+    gate.usable = economy::TradingPostUsable(locked, destroyed, hostileOccupied);
+    if (!gate.usable) {
+        return gate;
+    }
+
+    // Effective tier: 0 for a usable but unowned/ineligible post; the per-type
+    // ownership tier only when the exact service is player-owned and eligible.
+    gate.effectiveTier = OwnedTraderServiceTierForService(serviceId);
+    return gate;
+}
+
+TradeResult GameSession::TryTradingPostBarter(
+    const std::string& serviceId, ResourceType from, ResourceType to, int quantity) {
+    const auto gate = GateTradingPostUse(serviceId);
+    if (gate.service == nullptr) {
+        return {false, "Unknown service"};
+    }
+    if (!gate.isTradingPost) {
+        return {false, "Service is not a Trading Post"};
+    }
+    if (!gate.usable) {
+        return {false, "Trading Post is not available"};
+    }
+
+    const auto* curve = FindTraderCurve(data::LocationServiceKind::TradingPost);
+    const auto matrix = economy::ResolveTradingPostBarter(curve, gate.effectiveTier);
+    const auto quote = economy::QuoteBarter(matrix, from, to, quantity);
+    if (!quote.valid) {
+        return {false, "This barter is not offered here"};
+    }
+    // Atomic: TrySpendResource only deducts when the team holds enough, so the
+    // grant happens only after a successful spend.
+    if (!TrySpendResource(from, quote.fromCost)) {
+        return {false, "Not enough resources to trade"};
+    }
+    AddResource(to, quantity);
+    return {true, "Trade complete"};
+}
+
+TradeResult GameSession::TryTradingPostBuyForGold(
+    const std::string& serviceId, ResourceType resource, int quantity) {
+    const auto gate = GateTradingPostUse(serviceId);
+    if (gate.service == nullptr) {
+        return {false, "Unknown service"};
+    }
+    if (!gate.isTradingPost) {
+        return {false, "Service is not a Trading Post"};
+    }
+    if (!gate.usable) {
+        return {false, "Trading Post is not available"};
+    }
+
+    const auto* curve = FindTraderCurve(data::LocationServiceKind::TradingPost);
+    const int priceFactor = economy::ResolvePriceFactor(curve, gate.effectiveTier);
+    const auto quote = economy::QuoteBuyResourceForGold(resource, quantity, priceFactor);
+    if (!quote.valid) {
+        return {false, "This purchase is not offered here"};
+    }
+    if (!TrySpendGold(quote.goldAmount)) {
+        return {false, "Not enough gold to buy"};
+    }
+    AddResource(resource, quantity);
+    return {true, "Trade complete"};
+}
+
+TradeResult GameSession::TryTradingPostSellForGold(
+    const std::string& serviceId, ResourceType resource, int quantity) {
+    const auto gate = GateTradingPostUse(serviceId);
+    if (gate.service == nullptr) {
+        return {false, "Unknown service"};
+    }
+    if (!gate.isTradingPost) {
+        return {false, "Service is not a Trading Post"};
+    }
+    if (!gate.usable) {
+        return {false, "Trading Post is not available"};
+    }
+
+    const auto* curve = FindTraderCurve(data::LocationServiceKind::TradingPost);
+    const int priceFactor = economy::ResolvePriceFactor(curve, gate.effectiveTier);
+    const auto quote = economy::QuoteSellResourceForGold(resource, quantity, priceFactor);
+    if (!quote.valid) {
+        return {false, "This sale is not offered here"};
+    }
+    if (quote.goldAmount <= 0) {
+        return {false, "Sale would yield no gold"};  // never trade resources for nothing
+    }
+    if (!TrySpendResource(resource, quantity)) {
+        return {false, "Not enough resources to sell"};
+    }
+    AddResource(ResourceType::Gold, quote.goldAmount);
+    return {true, "Trade complete"};
 }
 
 void GameSession::SeedEventResourceContext(events::EventEvaluationContext& ctx) const {
@@ -2426,6 +2561,10 @@ void GameSession::SetUnitCatalog(std::vector<data::UnitDefinition> catalog) {
 
 void GameSession::SetLocationServiceCatalog(std::vector<data::LocationServiceDefinition> catalog) {
     locationServiceCatalog_ = std::move(catalog);
+}
+
+void GameSession::SetTraderCurveCatalog(std::vector<data::TraderOwnershipCurve> catalog) {
+    traderCurveCatalog_ = std::move(catalog);
 }
 
 // ---------------------------------------------------------------------------

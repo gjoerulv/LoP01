@@ -85,6 +85,9 @@ App::App() {
         // M17 Phase 3b: feed service definitions so day-boundary mine payout can
         // resolve owned-service ids to authored mine outputs.
         session_.SetLocationServiceCatalog(content_.LocationServices());
+        // Feed authored trader curves so player-facing Trading Post transactions
+        // resolve ownership-tier rates (omitted curves fall back to defaults).
+        session_.SetTraderCurveCatalog(content_.TraderCurves());
         session_.ApplyDailyStartingEnergy();
         // M15-b: feed the World Map (seeds the unlocked-region set) and the
         // region catalog (resolves a destination's arrival node at travel time).

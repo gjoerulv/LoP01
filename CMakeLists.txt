@@ -147,6 +147,7 @@ if (BUILD_TESTING)
     tests/MinePayoutTests.cpp
     tests/TraderOwnershipRulesTests.cpp
     tests/TradingPostTransactionRulesTests.cpp
+    tests/TradingPostTransactionTests.cpp
     tests/TraderTierTests.cpp
     tests/EconomyEndToEndTests.cpp
     tests/PassiveEffectContentTests.cpp
