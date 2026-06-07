@@ -13,9 +13,9 @@ Use this when asked to audit source against docs or review a completed branch/co
 
 ## Current baseline
 
-The active baseline is post-M18 unless the audited commit proves otherwise.
+The active baseline is post-M19 unless the audited commit proves otherwise. M17 owned-service/economy, M18 passive-effect spine, and M19 Trading Post transaction layer are complete.
 
-M17 owned-service/economy and M18 passive-effect spine are complete. Do not report them as missing future work.
+Do not report them as missing future work.
 
 ## Audit priorities
 
@@ -26,6 +26,7 @@ Check:
 - stale references to old baselines or archived docs;
 - contradictions, ambiguity, redundancy, or uncertainty;
 - correctness and save/load compatibility;
+- transaction/resource atomicity where economy code is touched;
 - performance traps: per-frame scans, repeated parsing, graph rebuilds, needless large copies, hidden nested loops;
 - source comments that are stale, milestone-specific, redundant, or misleading;
 - tests for boundary behavior and regression traps.

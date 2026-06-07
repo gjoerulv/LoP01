@@ -23,17 +23,20 @@ Be strict and binary:
 - missing validation for new authored data;
 - missing regression tests for important boundaries;
 - save/load compatibility issues;
+- transaction/resource atomicity issues;
 - performance-hostile patterns;
 - broad framework expansion beyond the requested slice;
 - demo-specific source branches.
 
-For post-M18 work, remember:
+For post-M19 work, remember:
 
 - unit passive effects are canonicalized through `passive_effects`;
 - `mine_production_passive` is legacy authoring compatibility only;
 - `mine_production` and `leader_energy` are the only implemented unit passive-effect consumers;
 - artifact `statBonus` remains separate;
-- artifact Energy, item effects, status effects, and skill trees remain deferred.
+- artifact Energy, item effects, status effects, and skill trees remain deferred;
+- Trading Post transactions exist as headless pure/GameSession APIs;
+- Trading Post UI, per-visit time-cost flow, and other trader-service transaction behaviors remain deferred unless the current slice explicitly selects them.
 
 ## Output
 

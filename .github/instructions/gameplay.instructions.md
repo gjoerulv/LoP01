@@ -4,12 +4,13 @@ These instructions apply to gameplay, data, validation, save/load, and test work
 
 ## Current baseline
 
-Treat the codebase as post-M18:
+Treat the codebase as post-M19:
 
 - Region/Location/Battle/Campaign foundations exist.
 - Owned-service/economy foundations exist.
 - Unit passive-effect spine exists for `mine_production` and `leader_energy` only.
-- Full trader transactions, item economy, AI economy, broad effect systems, artifact Energy, item effects, battle statuses, and skill trees are not implemented.
+- Headless Trading Post transaction APIs exist for resource barter and resource/Gold buy/sell.
+- Full trader UI, item economy, AI economy, broad effect systems, artifact Energy, item effects, battle statuses, and skill trees are not implemented.
 
 ## Design-source discipline
 
@@ -35,7 +36,7 @@ If docs and code disagree, stop and report the conflict before guessing.
 - Do not change battle assumptions unless the user explicitly reopens combat design.
 - Preserve save compatibility unless the task explicitly includes migration work.
 
-## Economy and passive effects
+## Economy, Trading Post, and passive effects
 
 Owned services:
 
@@ -43,6 +44,16 @@ Owned services:
 - Mine production modifiers come only from explicit `mine_production` passive effects on valid stationed stack-backed units.
 - Strongest-only and non-stacking semantics are required per owned-service instance and output resource.
 - Trader ownership benefits are service-type-specific and must be gated by the exact service being used.
+
+Trading Post transactions:
+
+- Non-Gold barter uses resolved Trading Post exchange matrices.
+- Gold may not appear in Trading Post barter matrices.
+- Gold buy/sell uses base resource values plus tier `priceFactor`.
+- Usable unowned/allied/enemy/neutral Trading Posts resolve at effective tier 0.
+- Locked, destroyed, and hostile-occupied Trading Posts are refused outright.
+- Resource/Gold mutation must route through existing GameSession resource APIs.
+- Full UI/interaction flow and per-visit time cost are deferred until explicitly selected.
 
 Passive effects:
 
@@ -60,7 +71,7 @@ Avoid:
 - repeated JSON/content parsing;
 - repeated graph rebuilds;
 - avoidable large copies;
-- hidden nested scans in day-boundary or service-transaction paths.
+- hidden nested scans in day-boundary, service-transaction, or interaction paths.
 
 Build lookup maps once per pass when a rule must inspect many services, units, stacks, or nodes.
 
