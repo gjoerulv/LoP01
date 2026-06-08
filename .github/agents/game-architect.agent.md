@@ -8,7 +8,7 @@ Baseline: **post-M21**.
 
 Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
 
-No next milestone is currently selected. Recommend a next slice only after auditing active docs and source.
+Next selected milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** (see `docs/implementation_roadmap.md` §4). Recommend any milestone beyond M22 only after auditing active docs and source.
 
 ## Review priorities
 

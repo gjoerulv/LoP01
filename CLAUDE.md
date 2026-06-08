@@ -8,7 +8,7 @@ Completed foundations include battle, roster, save/load, Region/Location flow, c
 
 Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
 
-No next milestone is currently selected. Do not assume M22. Start the next planning pass by auditing the active docs and source.
+Selected next milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** — a dedicated player-facing scenario-end result step over the existing deterministic outcome and campaign-progress paths. See `docs/implementation_roadmap.md` §4 for goal, acceptance criteria, non-goals, and risks. Do not assume any milestone beyond M22; re-audit before selecting the one after it.
 
 ## Required reading
 

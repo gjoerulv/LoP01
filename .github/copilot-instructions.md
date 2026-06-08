@@ -24,7 +24,7 @@ Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
 Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
 
-No next milestone is currently selected. Do not assume M22. A new milestone should begin with a fresh audit of the active roadmap/docs/source.
+Next selected milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** (see `docs/implementation_roadmap.md`). Do not assume any milestone beyond M22; the one after it should begin with a fresh audit of the active roadmap/docs/source.
 
 ## Technical rules
 
