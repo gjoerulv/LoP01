@@ -17,7 +17,7 @@ When asked to plan the next Ashvale milestone:
 2. Verify the branch/source state against the docs.
 3. Treat the current baseline as post-M21 unless the checked commit proves otherwise.
 4. Do not treat M17, M18, M19, M20, or M21 as future work.
-5. No next milestone is currently selected. Do not assume M22; recommend it only after an audit.
+5. The next milestone is selected: **M22 — Scenario Result Presentation Flow** (see `docs/implementation_roadmap.md` §4). Do not treat M22 as future planning work, and do not assume any milestone beyond M22; recommend the one after it only after a fresh audit.
 6. If docs/source disagree, stop and report the conflict.
 7. Recommend narrow, testable slices. Do not produce broad speculative redesign.
 8. Do not ask for an "Exact Next Prompt" unless explicitly requested.

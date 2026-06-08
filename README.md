@@ -17,7 +17,7 @@ M21 added a narrow `playerStart` surface on Scenario content:
 - application through `GameSession::TransitionToScenario` when a Scenario starts;
 - save/load compatibility through existing SaveData fields.
 
-No next milestone is currently selected. The next planning pass should audit the post-M21 source/docs and choose the highest-value narrow slice.
+Selected next milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** — a dedicated player-facing scenario-end result step (outcome, reason, next step) over the existing deterministic outcome and campaign-progress paths. See `docs/implementation_roadmap.md` for the full definition.
 
 ## Active docs
 

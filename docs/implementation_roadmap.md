@@ -97,19 +97,39 @@ No true design contradictions are currently known. Remaining gaps are implementa
 
 Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
 
-No next milestone is currently selected.
+Selected next milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow**.
 
-The next planning pass should audit the active docs/source and choose the highest-value narrow milestone. Do not assume M22 without that audit.
+- **Goal:** Add a dedicated player-facing scenario-end result step that presents the deterministic outcome (Victory/Defeat and reason) and the immediate next step (advance to next scenario, campaign complete, campaign failed, or standalone end) before control resumes, replacing the current single-line HUD status append.
+- **Rationale:** Scenario outcome computation (M12) and campaign progression (M16) are complete and deterministic, but the only player-facing surface is one line appended to the shared HUD status text. This is the one obviously thin spot in an otherwise complete loop. It is presentation-only over stable model state: low architecture risk, high clarity value, no new systems, and no content-scope change.
+- **Acceptance criteria (narrow):**
+  - a new result `GameMode` value entered when an outcome latches, before campaign auto-advance / input-freeze;
+  - a result view-model mapped from the existing `ScenarioOutcome` (state, reason) plus campaign context (next scenario id, campaign completed, campaign failed, or no campaign), with no new gameplay logic;
+  - a dedicated result renderer drawing the outcome label, reason, next-step line, and a Continue affordance;
+  - Continue advances exactly as today through the existing campaign-transition / terminal path; outcome evaluation, campaign progression, carry-over, and save format are unchanged;
+  - tests cover mapper construction for Victory, Defeat, campaign-complete, campaign-failed, and standalone-scenario cases, plus mode entry/exit, with existing outcome/campaign tests still passing.
+- **Non-goals:**
+  - no campaign branch-choice (multiple `nextScenarioIds` still resolves to the first; this stays a candidate);
+  - no score/stats/rewards/fanfare/animation beyond outcome, reason, and next-step;
+  - no inventory/reward display, no shell/menu integration, no post-victory event chains;
+  - no change to outcome evaluation, campaign progression, carry-over, or save/load format;
+  - no content-scope change and no new authored content.
+- **Likely first slice:** add the result `GameMode` value and a minimal pass-through Result mode that renders the already-latched outcome on its own screen with a Continue input that triggers the existing campaign-progress path; then extract a proper result view-model, mapper, renderer, and tests.
+- **Risk notes:**
+  - insert the new mode at the correct scenario-end seam without double-latching or skipping the existing input-freeze / campaign-advance path; keep the single-latch invariant;
+  - cover both entry points: victory (enemy cleared, return to Region) and defeat (battle defeat with wake penalty/recover, and condition-defeat);
+  - standalone (non-campaign) scenarios end with no next, so the result mode must handle "no next" gracefully;
+  - do not entangle result presentation with the known fixed-as-`Green` player-color debt (gap #6).
 
-## 5. Strong candidate directions for the next planning pass
+After M22, the next planning pass should re-audit and select from the candidates below. Do not assume M23 without that audit.
 
-These are candidates, not selected commitments:
+## 5. Candidate directions after M22
 
-1. **Scenario result / victory presentation flow.** The game has deterministic scenario outcomes but still lacks a polished result screen and richer post-victory/defeat flow.
-2. **Campaign branching choice UI.** The Campaign System exists, but player-facing branch choice remains deferred.
-3. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content.
-4. **Service ownership transfer / claiming loop.** Builds on owned services and Scenario start-state, but should not start until the desired contest/claim interaction is clearly scoped.
-5. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped.
-6. **Inventory render-model / HUD presentation.** Inventory/artifacts exist, but rendering/UI remains limited.
+Scenario result / victory presentation flow is now selected as **M22** (see §4). The directions below remain candidates, not selected commitments:
+
+1. **Campaign branch-choice presentation.** The natural successor to the M22 result seam: when a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support already exists, but `CampaignProgressionRules` currently resolves the first entry only, and `docs/content_scope_v1.md` lists large campaign branching UI as out of v1 scope. Select only once authored content needs a real branch; pair it with a narrow `content_scope_v1` update.
+2. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface. Independent, pure-presentation, no logic change; a reasonable successor once the result flow is polished.
+3. **Service ownership transfer / claiming loop.** Builds on owned services and Scenario start-state, but should not start until the desired contest/claim interaction is clearly scoped. Sprawl risk; no consumer yet.
+4. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped; currently out of v1 content scope.
+5. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content. No current authored-content pressure; out of v1 content scope.
 
 The next selected milestone should be narrow, testable, and justified by current gameplay value rather than system excitement.
