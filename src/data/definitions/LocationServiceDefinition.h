@@ -45,6 +45,13 @@ namespace data
             || kind == LocationServiceKind::BlackMarket;
     }
 
+    // Ownable service kinds: mines/resource services and the trader service types.
+    // These are the only services whose runtime ownership is tracked and gated.
+    inline bool IsOwnableServiceKind(LocationServiceKind kind)
+    {
+        return kind == LocationServiceKind::Mine || IsTraderServiceKind(kind);
+    }
+
     // M17 Phase 2: one authored base daily output line for a mine/resource
     // service. `resource` is a canonical ResourceType name (e.g. "Stone",
     // "Gold"); it is stored as a string in the data layer and converted to the

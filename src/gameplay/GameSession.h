@@ -26,6 +26,7 @@
 #include "gameplay/economy/MineProductionRules.h"
 #include "gameplay/economy/StationedProductionRules.h"
 #include "gameplay/economy/TraderOwnershipRules.h"
+#include "gameplay/economy/ServiceClaimRules.h"
 #include "gameplay/campaign/CampaignCarryover.h"
 #include "gameplay/events/EventDefinition.h"
 #include "gameplay/events/EventEngine.h"
@@ -228,11 +229,21 @@ public:
     // returns true. Gold routes through TrySpendGold.
     [[nodiscard]] bool TrySpendResource(ResourceType type, int amount);
 
-    // M17 owned-service runtime state. Read-only accessor; ownership mutation
-    // rules arrive in a later milestone.
+    // M17 owned-service runtime state. Read-only accessors. The only in-play
+    // ownership mutation is M23 claiming via ClaimContestedServicesAtNode.
     [[nodiscard]] const std::vector<core::OwnedServiceSaveState>& OwnedServices() const;
     [[nodiscard]] const core::OwnedServiceSaveState* FindOwnedService(
         const std::string& serviceId) const;
+
+    // M23: after the hostile team occupying/guarding `nodeId` is defeated, claim
+    // for the player every eligible ownable service at that node's location.
+    // Eligible = ownable kind, not locked, not destroyed, and currently unowned
+    // or hostile-owned (player-owned unchanged; allied-owned not claimed). On
+    // claim the service's ownerTeamColor becomes the player color and its
+    // stationed units are cleared. No-op (returns empty) when `nodeId` is empty
+    // or still hostile-occupied by another team. Content definitions are never
+    // mutated. Returns the claimed service ids. Call after ClearEnemyTeamByColor.
+    std::vector<std::string> ClaimContestedServicesAtNode(const std::string& nodeId);
 
     // M17 Phase 3a: resolve an owned service's normalized stack-backed stationed
 	// units to the mine-production passives they contribute, for a producing
@@ -725,6 +736,13 @@ private:
     // services. Gold output routes through gold_; non-gold to the resource pool.
     // No-op when the service catalog is unset.
     void ApplyDailyMinePayout();
+
+    // M23: classify an owned-service owner team color relative to the player,
+    // reusing the alliance determination used by HostileOccupiedNodeIds. Empty
+    // color => Unowned; player color => Player; a color whose active team is
+    // allied to the player => AlliedToPlayer; otherwise HostileToPlayer.
+    [[nodiscard]] economy::ServiceOwnerRelationship OwnerRelationshipForColor(
+        const std::string& ownerColor) const;
 
     // M17 Phase 3b: resolve an owned service's normalized (stack-backed)
     // stationed refs to unit definitions, using caller-built lookup maps so a

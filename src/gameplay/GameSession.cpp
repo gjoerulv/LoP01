@@ -2248,6 +2248,73 @@ std::string GameSession::HostileTeamColorAtNode(
     return "";
 }
 
+economy::ServiceOwnerRelationship GameSession::OwnerRelationshipForColor(
+    const std::string& ownerColor) const {
+    if (ownerColor.empty()) {
+        return economy::ServiceOwnerRelationship::Unowned;
+    }
+    if (ownerColor == playerColor_) {
+        return economy::ServiceOwnerRelationship::Player;
+    }
+    // Allied iff an active team of that color is allied to the player. Mirrors
+    // the alliance determination used by HostileOccupiedNodeIds.
+    for (const auto& team : enemyTeams_) {
+        if (!team.active || team.teamColor != ownerColor) {
+            continue;
+        }
+        if (std::find(team.alliances.begin(), team.alliances.end(), playerColor_)
+            != team.alliances.end()) {
+            return economy::ServiceOwnerRelationship::AlliedToPlayer;
+        }
+    }
+    return economy::ServiceOwnerRelationship::HostileToPlayer;
+}
+
+std::vector<std::string> GameSession::ClaimContestedServicesAtNode(
+    const std::string& nodeId) {
+    std::vector<std::string> claimed;
+    if (nodeId.empty()) {
+        return claimed;
+    }
+    // Still contested by another hostile team => the guards are not fully
+    // cleared; claim nothing.
+    const auto hostileNodes = HostileOccupiedNodeIds(playerColor_);
+    if (std::find(hostileNodes.begin(), hostileNodes.end(), nodeId) != hostileNodes.end()) {
+        return claimed;
+    }
+
+    for (const auto& svc : locationServiceCatalog_) {
+        if (svc.locationId != nodeId) {
+            continue;
+        }
+        const auto* existing = FindOwnedService(svc.id);
+        const std::string ownerColor = existing ? existing->ownerTeamColor : std::string{};
+        const bool locked = existing != nullptr && existing->locked;
+        const bool destroyed = existing != nullptr && existing->destroyed;
+        if (!economy::ServiceIsClaimable(
+                svc.kind, locked, destroyed, OwnerRelationshipForColor(ownerColor))) {
+            continue;
+        }
+        // Apply the claim: the player becomes the owner and any inherited
+        // stationed units are dropped. Content definitions are never mutated.
+        bool updated = false;
+        for (auto& owned : ownedServices_) {
+            if (owned.serviceId == svc.id) {
+                owned.ownerTeamColor = playerColor_;
+                owned.stationedUnits.clear();
+                updated = true;
+                break;
+            }
+        }
+        if (!updated) {
+            ownedServices_.push_back(core::OwnedServiceSaveState{
+                svc.id, playerColor_, false, false, {}});
+        }
+        claimed.push_back(svc.id);
+    }
+    return claimed;
+}
+
 void GameSession::SetPlayerColor(std::string color) {
     playerColor_ = std::move(color);
 }
