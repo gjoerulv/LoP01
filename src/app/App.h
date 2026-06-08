@@ -17,6 +17,7 @@
 #include "app/mappers/LocationModelMapper.h"
 #include "app/mappers/HudModelMapper.h"
 #include "app/mappers/BattleModelMapper.h"
+#include "app/mappers/ScenarioResultModelMapper.h"
 #include "app/BattleEventTextFormatter.h"
 #include "core/SaveGame.h"
 #include "data/ContentRepository.h"
@@ -31,6 +32,7 @@
 #include "rendering/WorldMapRenderer.h"
 #include "rendering/CampaignSelectRenderer.h"
 #include "rendering/RenderContext.h"
+#include "rendering/ScenarioResultRenderer.h"
 #include "rendering/TitleRenderer.h"
 
 
@@ -73,9 +75,13 @@ namespace app {
         void UpdateRegionMode(const input::InputState& input);
         void UpdateWorldMapMode(const input::InputState& input);
         void UpdateCampaignSelectMode(const input::InputState& input);
+        // Presents the end-of-scenario result screen. On Continue, runs the
+        // deferred campaign-progress path (or returns to Title for standalone /
+        // terminal runs).
+        void UpdateScenarioResultMode(const input::InputState& input);
         // If a campaign is active and a scenario outcome has latched, advance the
         // campaign (Victory), or mark it Completed/Failed, and update the status
-        // message. No-op otherwise. Called at the top of UpdateRegionMode.
+        // message. No-op otherwise. Invoked from the result screen's Continue.
         void HandleCampaignProgressIfLatched();
         void UpdateLocationScene(const input::InputState& input, float deltaTime);
         void UpdateBattleMode(const input::InputState& input);
@@ -104,6 +110,7 @@ namespace app {
         ashvale::rendering::CampaignSelectRenderer campaignSelectRenderer_;
         ashvale::rendering::LocationRenderer locationRenderer_;
         ashvale::rendering::BattleRenderer battleRenderer_;
+        ashvale::rendering::ScenarioResultRenderer scenarioResultRenderer_;
 
         input::InputTranslator inputTranslator_;
         BattleController battleController_;
@@ -121,6 +128,7 @@ namespace app {
         mappers::RegionModelMapper regionModelMapper_;
         mappers::WorldMapModelMapper worldMapModelMapper_;
         mappers::CampaignModelMapper campaignModelMapper_;
+        mappers::ScenarioResultModelMapper scenarioResultModelMapper_;
 
         BattleEventTextFormatter battleEventTextFormatter_;        
 

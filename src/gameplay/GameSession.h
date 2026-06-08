@@ -46,7 +46,12 @@ enum class GameMode {
     WorldMapMode,
     RegionMode,
     LocationMode,
-    BattleMode
+    BattleMode,
+    // Transient end-of-scenario result screen. Entered only when an outcome is
+    // latched; left on the player's Continue. Never persisted (App refuses to
+    // save while in this mode; see GameSession::FromString for the load-side
+    // self-heal).
+    ScenarioResultMode
 };
 
 // M16-b campaign run lifecycle. None = no campaign active (standalone play).
@@ -291,6 +296,7 @@ public:
     void EnterWorldMapMode();
     void EnterCampaignSelectMode();
     void EnterTitleMode();
+    void EnterScenarioResultMode();
     void ExitLocationMode();
     void EnterBattleMode();
     [[nodiscard]] bool IsInLocationMode() const;

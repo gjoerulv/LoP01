@@ -62,6 +62,7 @@ add_library(ashvale_rendering
   src/rendering/CampaignSelectRenderer.cpp
   src/rendering/LocationRenderer.cpp
   src/rendering/BattleRenderer.cpp
+  src/rendering/ScenarioResultRenderer.cpp
 )
 
 target_include_directories(ashvale_rendering PUBLIC src)
@@ -84,6 +85,7 @@ add_executable(ashvale_slice
   src/app/mappers/CampaignModelMapper.cpp
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
+  src/app/mappers/ScenarioResultModelMapper.cpp
   src/app/BattleEventTextFormatter.cpp
   src/app/formatters/LocationServicePromptFormatter.cpp
 )
@@ -125,6 +127,7 @@ if (BUILD_TESTING)
     src/app/WorldMapController.cpp
     src/app/CampaignController.cpp
     src/app/mappers/CampaignModelMapper.cpp
+    src/app/mappers/ScenarioResultModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
@@ -165,6 +168,7 @@ if (BUILD_TESTING)
     tests/ScenarioOutcomeContentTests.cpp
     tests/ScenarioOutcomeIntegrationTests.cpp
     tests/ScenarioOutcomeEndToEndTests.cpp
+  tests/ScenarioResultModelMapperTests.cpp
     tests/InventoryContentTests.cpp
     tests/ArtifactContentTests.cpp
     tests/ContentRepositoryReloadTests.cpp
