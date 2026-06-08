@@ -973,28 +973,44 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
     }
 
     for (const auto& mut : pendingMutations) {
+        EnemyTeamState* match = nullptr;
         for (auto& team : enemyTeams_) {
-            if (team.teamColor != mut.teamColor) continue;
+            if (team.teamColor == mut.teamColor) {
+                match = &team;
+                break;
+            }
+        }
+
+        if (match != nullptr) {
             if (mut.type == events::EnemyTeamMutationType::Spawn) {
-                team.nodeId = mut.nodeId;
-                team.active = true;
+                match->nodeId = mut.nodeId;
+                match->active = true;
             } else if (mut.type == events::EnemyTeamMutationType::Remove) {
-                team.active = false;
+                match->active = false;
             } else if (mut.type == events::EnemyTeamMutationType::ChangeAlliance) {
                 if (mut.addAlliance) {
-                    if (std::ranges::find(team.alliances, mut.allyColor) == team.alliances.end())
-                        team.alliances.push_back(mut.allyColor);
+                    if (std::ranges::find(match->alliances, mut.allyColor) == match->alliances.end())
+                        match->alliances.push_back(mut.allyColor);
                 } else {
-                    std::erase(team.alliances, mut.allyColor);
+                    std::erase(match->alliances, mut.allyColor);
                 }
             }
-            break;
+        } else if (mut.type == events::EnemyTeamMutationType::Spawn) {
+            // No team of this color exists yet: a spawnTeam action creates one so
+            // a node can be guarded without any pre-seeded roster of teams. Only
+            // Spawn creates; Remove/ChangeAlliance on an unknown color are no-ops.
+            // A later spawnTeam of the same color matches above (no duplicates).
+            EnemyTeamState created;
+            created.teamColor = mut.teamColor;
+            created.nodeId = mut.nodeId;
+            created.active = true;
+            enemyTeams_.push_back(created);
         }
     }
 
-    // M12-b ordering boundary #1: any authored regionNodeEntry / startOfDay event
-    // may have removed teams, changed alliances, or set story flags that now
-    // satisfy victory/defeat. Latch before the caller proceeds to enemy phase.
+    // Any authored regionNodeEntry / startOfDay event may have spawned/removed
+    // teams, changed alliances, or set story flags that now satisfy victory or
+    // defeat. Latch before the caller proceeds to the enemy phase.
     CheckAndLatchOutcome();
 
     return allResults;

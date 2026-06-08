@@ -78,6 +78,13 @@
           "y": 210,
           "discovered": true,
           "travel_available": true
+        },
+        {
+          "location_id": "iron_mine",
+          "x": 250,
+          "y": 250,
+          "discovered": true,
+          "travel_available": true
         }
       ],
       "links": [
@@ -90,7 +97,8 @@
         [ "supply_cart", "bridge_checkpoint" ],
         [ "bridge_checkpoint", "orchard_pass" ],
         [ "orchard_pass", "clocktower_square" ],
-        [ "survivor_recruit_post", "bridge_checkpoint" ]
+        [ "survivor_recruit_post", "bridge_checkpoint" ],
+        [ "town_center", "iron_mine" ]
       ]
     },
     {

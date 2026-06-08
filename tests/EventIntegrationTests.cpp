@@ -486,6 +486,72 @@ TEST_CASE("GameSession - NotifyRegionNodeEntry applies changeAlliance team mutat
         != teams.front().alliances.end());
 }
 
+TEST_CASE("GameSession - spawnTeam creates a missing team and occupies the authored node") {
+    gameplay::GameSession session;   // no pre-seeded teams
+
+    session.InitializeEventDefinitions({MakeRegionNodeEntryEvent("evt_guard", "node_gate", {
+        MakeAction({{"type", "spawnTeam"}, {"teamColor", "Red"}, {"nodeId", "deep_mine"}})
+    })});
+
+    const auto results = session.NotifyRegionNodeEntry("node_gate");
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].success);
+
+    const auto& teams = session.EnemyTeams();
+    REQUIRE(teams.size() == 1);
+    REQUIRE(teams.front().teamColor == "Red");
+    REQUIRE(teams.front().nodeId == "deep_mine");
+    REQUIRE(teams.front().active);
+    REQUIRE(teams.front().alliances.empty());
+
+    // The created team makes its node hostile-occupied to the player.
+    const auto occupied = session.HostileOccupiedNodeIds("Green");
+    REQUIRE(std::ranges::find(occupied, std::string{"deep_mine"}) != occupied.end());
+}
+
+TEST_CASE("GameSession - spawnTeam activates and moves an existing inactive team") {
+    gameplay::GameSession session;
+
+    gameplay::EnemyTeamState red;
+    red.teamColor = "Red";
+    red.nodeId = "old_node";
+    red.active = false;
+    session.SetEnemyTeams({ red });
+
+    session.InitializeEventDefinitions({MakeRegionNodeEntryEvent("evt_guard", "node_gate", {
+        MakeAction({{"type", "spawnTeam"}, {"teamColor", "Red"}, {"nodeId", "deep_mine"}})
+    })});
+
+    static_cast<void>(session.NotifyRegionNodeEntry("node_gate"));
+
+    const auto& teams = session.EnemyTeams();
+    REQUIRE(teams.size() == 1);   // reused, not duplicated
+    REQUIRE(teams.front().teamColor == "Red");
+    REQUIRE(teams.front().nodeId == "deep_mine");   // moved
+    REQUIRE(teams.front().active);                  // activated
+}
+
+TEST_CASE("GameSession - repeated spawnTeam does not duplicate the same team color") {
+    gameplay::GameSession session;
+
+    session.InitializeEventDefinitions({
+        MakeRegionNodeEntryEvent("evt_guard_a", "node_a", {
+            MakeAction({{"type", "spawnTeam"}, {"teamColor", "Red"}, {"nodeId", "deep_mine"}})
+        }, "always"),
+        MakeRegionNodeEntryEvent("evt_guard_b", "node_b", {
+            MakeAction({{"type", "spawnTeam"}, {"teamColor", "Red"}, {"nodeId", "watchtower"}})
+        }, "always")
+    });
+
+    static_cast<void>(session.NotifyRegionNodeEntry("node_a"));
+    static_cast<void>(session.NotifyRegionNodeEntry("node_b"));
+
+    const auto& teams = session.EnemyTeams();
+    REQUIRE(teams.size() == 1);                 // one Red team only
+    REQUIRE(teams.front().teamColor == "Red");
+    REQUIRE(teams.front().nodeId == "watchtower");   // last spawn position wins
+}
+
 TEST_CASE("GameSession - NotifyRegionNodeEntry fires matching events in priority order (lower first)") {
     gameplay::GameSession session;
 

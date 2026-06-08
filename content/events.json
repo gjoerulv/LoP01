@@ -39,6 +39,15 @@
         { "type": "setStoryFlag", "flag": "vale_secured" }
       ],
       "repeat": { "mode": "once" }
+    },
+    {
+      "id": "evt_guard_steel_mine",
+      "trigger": { "type": "regionNodeEntry", "nodeId": "town_center" },
+      "actions": [
+        { "type": "showMessage", "text": { "en": "Raiders have seized the Steel Mine to the north." } },
+        { "type": "spawnTeam", "teamColor": "Red", "nodeId": "iron_mine" }
+      ],
+      "repeat": { "mode": "once" }
     }
   ]
 }

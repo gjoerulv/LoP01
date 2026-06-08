@@ -10,7 +10,6 @@
 #include "core/SaveGame.h"
 #include "data/ContentRepository.h"
 #include "data/definitions/LocationServiceDefinition.h"
-#include "gameplay/EnemyTeamState.h"
 #include "gameplay/GameSession.h"
 #include "gameplay/ResourceState.h"
 
@@ -21,12 +20,23 @@
 // defeated the player claims the mine, which then pays at the daily payout. Uses
 // a temp content dir rather than expanding shipped content.
 
+// LOP01_PROJECT_ROOT is defined by CMake so the shipped-content proof can load
+// the real content/ directory the running game uses. If absent the shipped-content
+// case is skipped (it validates authored content, not engine logic).
+#ifndef LOP01_PROJECT_ROOT
+#define LOP01_PROJECT_ROOT "."
+#endif
+
 using data::LocationServiceKind;
 using gameplay::ResourceType;
 
 namespace {
 
 constexpr int kOneDay = core::GameClock::kMinutesPerSliceDay;
+
+std::filesystem::path RealContentDir() {
+    return std::filesystem::path(LOP01_PROJECT_ROOT) / "content";
+}
 
 void WriteTextFile(const std::filesystem::path& path, const std::string& content) {
     std::ofstream output(path, std::ios::trunc);
@@ -123,15 +133,8 @@ TEST_CASE("ServiceClaim content: authored guarded mine validates, spawns, is cla
     session.InitializeEventDefinitions(repo.EventDefinitions());
     session.ApplySaveData(BaseSave());
 
-    // The contesting system seeds teams at runtime; the authored spawnTeam event
-    // activates a seeded team of that color at the target node. Seed after
-    // ApplySaveData so it is not overwritten.
-    gameplay::EnemyTeamState seed;
-    seed.teamColor = "Red";
-    seed.active = false;
-    session.SetEnemyTeams({seed});
-
-    // Authored spawnTeam fires on entering home and guards the mine node.
+    // The authored spawnTeam event creates and positions the guard on entering
+    // home — no manual team seeding required.
     static_cast<void>(session.NotifyRegionNodeEntry("home"));
     const auto occupied = session.HostileOccupiedNodeIds("Green");
     REQUIRE(std::find(occupied.begin(), occupied.end(), "deep_mine") != occupied.end());
@@ -156,4 +159,53 @@ TEST_CASE("ServiceClaim content: authored guarded mine validates, spawns, is cla
     REQUIRE(session.Snapshot().gold == goldBefore + 1000);
 
     std::filesystem::remove_all(root);
+}
+
+TEST_CASE("ServiceClaim shipped content: the Steel Mine is guarded, claimed, and pays") {
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(RealContentDir()));
+    REQUIRE_FALSE(HasErrorMessage(repo.ValidationMessages()));
+
+    gameplay::GameSession session;
+    session.SetPlayerColor("Green");
+    session.SetUnitCatalog(repo.Units());
+    session.SetRegionCatalog(repo.Regions());
+    session.SetLocationServiceCatalog(repo.LocationServices());
+    session.InitializeEventDefinitions(repo.EventDefinitions());
+    session.SetScenarioOutcomeDefinition(repo.ScenarioOutcome());
+
+    // The shipped mine starts unowned (not authored in any playerStart).
+    REQUIRE(session.FindOwnedService("iron_mine_svc") == nullptr);
+
+    // The authored spawnTeam event (entering town_center) creates the guard at
+    // the mine node and occupies it.
+    static_cast<void>(session.NotifyRegionNodeEntry("town_center"));
+    const auto occupied = session.HostileOccupiedNodeIds("Green");
+    REQUIRE(std::find(occupied.begin(), occupied.end(), "iron_mine") != occupied.end());
+
+    // Defeating the guard claims the mine through the existing M23 claim path.
+    session.ClearEnemyTeamByColor("Red");
+    const auto claimed = session.ClaimContestedServicesAtNode("iron_mine");
+    REQUIRE(claimed.size() == 1);
+    REQUIRE(claimed.front() == "iron_mine_svc");
+    const auto* owned = session.FindOwnedService("iron_mine_svc");
+    REQUIRE(owned != nullptr);
+    REQUIRE(owned->ownerTeamColor == "Green");
+
+    // The claimed mine pays its authored Steel + Gold at the next daily payout.
+    const int goldBefore = session.Snapshot().gold;
+    const int steelBefore = session.ResourceCount(ResourceType::Steel);
+    session.AddMinutes(kOneDay);
+    REQUIRE(session.ResourceCount(ResourceType::Steel) == steelBefore + 2);
+    REQUIRE(session.Snapshot().gold == goldBefore + 200);
+
+    // Claimed ownership persists through save/load.
+    const auto saved = session.ToSaveData();
+    gameplay::GameSession restored;
+    restored.SetPlayerColor("Green");
+    restored.SetLocationServiceCatalog(repo.LocationServices());
+    restored.ApplySaveData(saved);
+    const auto* restoredOwned = restored.FindOwnedService("iron_mine_svc");
+    REQUIRE(restoredOwned != nullptr);
+    REQUIRE(restoredOwned->ownerTeamColor == "Green");
 }
