@@ -157,3 +157,35 @@ TEST_CASE("ScenarioStartApply: an authored owned mine pays out at the day bounda
     session.AddMinutes(kOneDay);  // cross the day boundary -> mine pays
     REQUIRE(session.ResourceCount(ResourceType::Stone) == 2);  // no hand-built SaveData needed
 }
+
+TEST_CASE("ScenarioStartApply: an authored owned Trading Post resolves ownership tier 1") {
+    auto scenario = MakeScenario("s1");
+    scenario.startOwnedServices = {{"tp_svc", false, false}};
+    auto session = StartSession(scenario, {MakeTradingPost("tp_svc", "tp_loc")});
+
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_svc") == 1);
+    const auto offer = session.ResolveTradingPostOffer("tp_svc");
+    REQUIRE(offer.usable);
+    REQUIRE(offer.effectiveTier == 1);
+}
+
+TEST_CASE("ScenarioStartApply: an unowned Trading Post is usable at tier 0") {
+    auto session = StartSession(MakeScenario("s1"), {MakeTradingPost("tp_svc", "tp_loc")});
+
+    const auto offer = session.ResolveTradingPostOffer("tp_svc");
+    REQUIRE(offer.usable);
+    REQUIRE(offer.effectiveTier == 0);
+}
+
+TEST_CASE("ScenarioStartApply: two authored owned Trading Posts feed the per-type tier count") {
+    auto scenario = MakeScenario("s1");
+    scenario.startOwnedServices = {{"tp_a", false, false}, {"tp_b", false, false}};
+    auto session = StartSession(scenario, {
+        MakeTradingPost("tp_a", "loc_a"),
+        MakeTradingPost("tp_b", "loc_b"),
+    });
+
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_a") == 2);
+    REQUIRE(session.OwnedTraderServiceTierForService("tp_b") == 2);
+    REQUIRE(session.ResolveTradingPostOffer("tp_a").effectiveTier == 2);
+}
