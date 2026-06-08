@@ -2458,9 +2458,27 @@ void GameSession::TransitionToScenario(const std::string& scenarioId,
         destinationId_ = "";
     }
 
-    // Step 7: seed scenario defaults (gold, active outcome, world-map unlock) and
-    // re-seed persistent campaign flags so conditions still see them.
+    // Step 7: seed scenario defaults (gold, resources, owned services, active
+    // outcome, world-map unlock) and re-seed persistent campaign flags so
+    // conditions still see them.
     gold_ = scenario->startGold.value_or(kDefaultStartGold);
+    // Authored economy start-state, applied deterministically like gold: reset
+    // then apply the authored values. Validation guarantees non-Gold/positive
+    // resources and existing ownable services; the Gold guard is defensive.
+    // Carry-over (Step 8) still overrides these if a rule touches them.
+    nonGoldResources_.fill(0);
+    for (const auto& res : scenario->startResources) {
+        ResourceType type;
+        if (TryResourceTypeFromString(res.resource, type) && !IsGoldResource(type)) {
+            AddResource(type, res.amount);
+        }
+    }
+    ownedServices_.clear();
+    for (const auto& owned : scenario->startOwnedServices) {
+        ownedServices_.push_back(core::OwnedServiceSaveState{
+            owned.serviceId, playerColor_, owned.locked, owned.destroyed, {}});
+    }
+    NormalizeStationedUnits();
     SelectActiveOutcomeForScenario(*scenario);
     ReseedWorldMapUnlock();
     for (const auto& flag : campaignFlags_) {

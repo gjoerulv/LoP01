@@ -182,6 +182,7 @@ if (BUILD_TESTING)
     tests/WorldMapEndToEndTests.cpp
     tests/ScenarioContentTests.cpp
     tests/ScenarioStartStateContentTests.cpp
+    tests/ScenarioStartStateTests.cpp
     tests/CampaignContentTests.cpp
     tests/CampaignProgressionRulesTests.cpp
     tests/CampaignCarryoverTests.cpp
