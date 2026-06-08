@@ -403,9 +403,9 @@ void App::ResolveBattleOutcomeIfNeeded() {
             // claim runs at the node the defeated team was occupying.
             const std::string clearedNodeId = pendingHostileContactNodeId_;
             session_.ClearEnemyTeamByColor(pendingHostileContactTeamColor_);
-            // M23: defeating the guarding team claims the eligible ownable
-            // services at that node. Runs after the team is cleared so the
-            // still-contested guard sees the updated occupation.
+            // Defeating the guarding team claims the eligible ownable services
+            // at that node. Runs after the team is cleared so the still-contested
+            // guard sees the updated occupation.
             const auto claimedServices = session_.ClaimContestedServicesAtNode(clearedNodeId);
             pendingHostileContactNodeId_.clear();
             pendingHostileContactTeamColor_.clear();

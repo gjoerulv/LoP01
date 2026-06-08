@@ -90,6 +90,16 @@
       "daily_use_limit": 1,
       "travel_prep_discount_minutes": 20,
       "travel_prep_charges": 1
+    },
+    {
+      "id": "iron_mine_svc",
+      "location_id": "iron_mine",
+      "zone_id": "mine_face",
+      "kind": "mine",
+      "mine_outputs": [
+        { "resource": "Steel", "amount": 2 },
+        { "resource": "Gold", "amount": 200 }
+      ]
     }
   ]
 }

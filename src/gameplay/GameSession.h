@@ -235,8 +235,8 @@ public:
     [[nodiscard]] const core::OwnedServiceSaveState* FindOwnedService(
         const std::string& serviceId) const;
 
-    // M23: after the hostile team occupying/guarding `nodeId` is defeated, claim
-    // for the player every eligible ownable service at that node's location.
+    // After the hostile team occupying/guarding `nodeId` is defeated, claim for
+    // the player every eligible ownable service at that node's location.
     // Eligible = ownable kind, not locked, not destroyed, and currently unowned
     // or hostile-owned (player-owned unchanged; allied-owned not claimed). On
     // claim the service's ownerTeamColor becomes the player color and its
@@ -737,8 +737,8 @@ private:
     // No-op when the service catalog is unset.
     void ApplyDailyMinePayout();
 
-    // M23: classify an owned-service owner team color relative to the player,
-    // reusing the alliance determination used by HostileOccupiedNodeIds. Empty
+    // Classify an owned-service owner team color relative to the player, reusing
+    // the alliance determination used by HostileOccupiedNodeIds. Empty
     // color => Unowned; player color => Player; a color whose active team is
     // allied to the player => AlliedToPlayer; otherwise HostileToPlayer.
     [[nodiscard]] economy::ServiceOwnerRelationship OwnerRelationshipForColor(
