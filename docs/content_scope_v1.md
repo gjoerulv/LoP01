@@ -2,13 +2,15 @@
 
 ## Purpose
 
-This is the active content-scope document for the post-M20 Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`. Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
+This is the active content-scope document for the post-M21 Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`.
+
+Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
 
 Related active docs:
 
-- `docs/implementation_roadmap.md` — active technical roadmap after M20.
+- `docs/implementation_roadmap.md` — active technical roadmap after M21.
 - `docs/content_schema.md` — intended and current authored data shapes.
-- `docs/scenario_authoring.md` — authoring rules and validation expectations.
+- `docs/scenario_authoring.md` — Scenario authoring rules and validation expectations.
 - `docs/core_loop_rules.md` — systemic gameplay rules.
 - `docs/technical_direction.md` — architecture and performance principles.
 - `docs/terminology_map.md` — current terminology.
@@ -17,16 +19,13 @@ Archived docs should be read only for historical context.
 
 ## 1. Current playable baseline
 
-The current baseline is post-M20:
+The current baseline is post-M21:
 
 - C++20 / raylib / CMake project.
 - Content-driven JSON loading through `ContentRepository`.
-- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, passive-effect, Trading Post transaction, and Trading Post interaction foundations exist.
+- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, passive-effect, Trading Post transaction, Trading Post interaction, and Scenario start-state foundations exist.
 - The playable content is a bounded multi-Region, multi-Scenario vertical slice.
-- M17 introduced the owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, daily mine payout, trader ownership tiers, and authored/default trader curves.
-- M18 introduced a narrow unit passive-effect spine: canonical `passive_effects`, legacy mine-passive authoring compatibility, `mine_production` effects for owned mines, and `leader_energy` effects for daily starting Energy.
-- M19 introduced the Trading Post transaction layer: pure barter/Gold quote rules, GameSession transaction APIs, service-specific ownership/use gates, tier-0 fallback behavior, and validation/test proof.
-- M20 introduced the playable Trading Post interaction flow: bounded Location-mode service interaction, buy/sell/barter commands, live feedback, and per-visit time cost.
+- Scenario content can now author player starting Gold, non-Gold resources, and initial player-owned service state through `playerStart`.
 - Full per-Scenario Region Contexts, per-scenario content directories, authored starting rosters, full campaign branching UI, full shop/inventory UI, and other trader-service behaviors are not implemented.
 
 The current content should prove systems generically. Do not add demo-specific source branches to make authored content work.
@@ -35,7 +34,7 @@ The current content should prove systems generically. Do not add demo-specific s
 
 The v1 content goal is a compact strategic-economy proof:
 
-> A compact campaign slice where owned services matter: mines produce resources, stationed guards can influence mine output through explicit passive effects, owned trader services create service-type-specific economy advantages, Trading Posts can exchange resources through the bounded interaction flow, and leader passives can affect daily strategic Energy.
+> A compact campaign slice where Scenario-authored starting economy/service control, owned services, mines, Trading Posts, and narrow passive effects interact coherently.
 
 Recommended scale for v1:
 
@@ -46,11 +45,30 @@ Recommended scale for v1:
 - A small number of owned services: at least one mine/resource service, at least one storage/garrison-compatible service, and at least one trader service type.
 - A small number of units with passive service/economy hooks: `mine_production` and `leader_energy`.
 - Enough authored Trading Post data/content to prove barter and Gold trade behavior without becoming a full item economy.
+- Enough Scenario `playerStart` data to prove starting resources and player-owned services without broad roster/team authoring.
 - Enough enemy teams to test ownership pressure and guarded services, but not a full AI economy.
 
 This target is intentionally modest. The project should gain systemic depth before content volume.
 
-## 3. Owned service content rules
+## 3. Scenario start-state content rules
+
+Scenario `playerStart` may author:
+
+- `gold` as an alias for legacy top-level `startGold`;
+- non-Gold starting resources;
+- initial player-owned service state through service ids, with optional `locked` / `destroyed` flags.
+
+Rules:
+
+- Do not author both top-level `startGold` and `playerStart.gold`.
+- Do not author Gold inside `playerStart.resources`; use `playerStart.gold` / `startGold`.
+- Owned service entries are player-owned only in the current slice; do not add team/owner fields in content until a team-authoring milestone exists.
+- `ownedServices` should reference services that are meaningful to own, such as mines/resource services and trader services.
+- `playerStart` applies to runtime state when a Scenario starts; content definitions are not mutated.
+- World Map initial unlocks remain authored in World Map content. Do not invent Scenario `unlockedRegions` overrides without a selected milestone.
+- Do not author starting rosters, item/artifact state, team definitions, or per-scenario content directories under v1 unless the roadmap explicitly promotes them.
+
+## 4. Owned service content rules
 
 Ownership benefits apply to the owning team only unless a later system explicitly changes alliance benefits. Allies do not automatically receive ownership benefits.
 
@@ -64,7 +82,7 @@ Service ownership must not bypass:
 - story/event requirements;
 - service-specific availability rules.
 
-## 4. Mine and resource-service scope
+## 5. Mine and resource-service scope
 
 Mines/resource services may generate passive daily resources for the owning team.
 
@@ -80,9 +98,9 @@ Owned resource output rules:
 - If a service outputs multiple resources, compute the strongest modifier separately per resource.
 - Stationed-unit defensive behavior remains separate from production behavior.
 
-Do not implement or author broad passive-skill trees just to support this rule. Use the narrow passive-effect surfaces implemented by M18.
+Do not implement or author broad passive-skill trees just to support these rules.
 
-## 5. Trader-service ownership and Trading Post transactions
+## 6. Trader-service ownership and Trading Post transactions
 
 Trader service types:
 
@@ -99,8 +117,6 @@ Ownership tier rules:
 - Benefits apply when the owning team uses a service of that same type that it owns.
 - Allied-owned, enemy-owned, and neutral services do not grant ownership benefits to the player.
 
-M17 established the ownership tier model, validation, default curves, and minimal proof. M19 added Trading Post transaction rules/APIs. M20 exposed Trading Post use through a bounded Location service interaction.
-
 Current Trading Post scope:
 
 - Non-Gold resource barter uses resolved Trading Post exchange matrices.
@@ -112,7 +128,7 @@ Current Trading Post scope:
 
 Future milestones may broaden service UI, add other trader-service behaviors, item economy, AI economy, or service ownership transfer only when explicitly selected.
 
-## 6. Passive-effect content scope
+## 7. Passive-effect content scope
 
 The current passive-effect spine supports only unit passive effects with immediate consumers:
 
@@ -129,7 +145,7 @@ Rules:
 
 Artifact `statBonus` battle effects remain on the artifact path. Artifact Energy, item effects, status effects, active abilities, and skill-tree UI are out of v1 content scope unless a later milestone explicitly promotes them.
 
-## 7. Content constraints for AI agents
+## 8. Content constraints for AI agents
 
 When modifying content:
 
@@ -141,7 +157,7 @@ When modifying content:
 - Keep authored proof content minimal and representative.
 - Every new content system must have loader tests, validation tests, and at least one end-to-end or integration proof where practical.
 
-## 8. Not in v1 content scope
+## 9. Not in v1 content scope
 
 The following remain out of scope unless explicitly promoted by the active roadmap:
 
@@ -151,6 +167,8 @@ The following remain out of scope unless explicitly promoted by the active roadm
 - large campaign branching UI;
 - per-scenario content directories;
 - full Scenario Region Context implementation;
+- authored starting rosters;
+- general team-definition authoring;
 - full hero-instance identity model;
 - full skill tree UI;
 - full AI economy;
@@ -162,6 +180,6 @@ The following remain out of scope unless explicitly promoted by the active roadm
 - Market, Black Market, and Freelancer's Guild behavior beyond ownership-tier foundation;
 - artifact Energy and item-effect execution until selected by roadmap.
 
-## 9. Update rule
+## 10. Update rule
 
 Update this document when the playable content target changes. Do not use it as a changelog. The implementation roadmap owns milestone status.
