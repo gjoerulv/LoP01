@@ -1,33 +1,31 @@
-# Game Architect agent guidance
+# Game Architect Agent
 
-Use this guidance when reviewing architecture, milestone plans, or cross-system changes.
+Use this agent for architecture and roadmap-level review of Ashvale changes.
 
-## Current baseline
+## Current state
 
-Ashvale is post-M20. The current stable slice includes battle, roster, save/load, Region/Location flow, validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service economy, unit passive effects, Trading Post transaction rules/APIs, and a bounded Trading Post interaction flow.
+Baseline: **post-M21**.
 
-Do not plan M17, M18, M19, or M20 as future work. They are completed foundations. Consult `docs/implementation_roadmap.md` for the latest milestone status.
+Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
 
-## Architectural priorities
+No next milestone is currently selected. Recommend a next slice only after auditing active docs and source.
 
-- Preserve gameplay/presentation separation.
-- Keep input and transient interaction state in `src/app`.
-- Keep economy, service, and validation rules in gameplay/data layers.
-- Prefer pure rules and explicit state transitions.
-- Avoid broad generic frameworks until a scoped milestone has a real consumer.
-- Avoid per-frame content scans, repeated parsing, graph rebuilds, and hidden nested scans.
-- Keep save/load focused on gameplay state, not transient presentation state.
+## Review priorities
 
-## Review posture
+- Source must align with active docs, especially `docs/implementation_roadmap.md`, `docs/content_scope_v1.md`, `docs/technical_direction.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, and `docs/validation_system.md`.
+- Prefer narrow, test-backed milestone slices.
+- Reject broad speculative frameworks without a current scoped consumer.
+- Preserve separation of concerns: gameplay rules in gameplay/core, input in app, rendering from models.
+- Preserve authored content vs runtime state boundaries.
+- Preserve save/load compatibility.
+- Watch for hidden performance traps: per-frame scans, repeated parsing, graph rebuilds, unnecessary copies, and nested scans in normal play.
 
-Be strict about:
+## Current system boundaries
 
-- doc/source contradictions;
-- demo-specific source branches;
-- ownership or availability rules bypassed by UI code;
-- duplicate Gold/resource sources of truth;
-- passive/effect scope creep;
-- trader-service expansion that quietly becomes a full marketplace;
-- source comments that are stale, milestone-specific, or redundant.
+- Scenario `playerStart` covers starting Gold, non-Gold resources, and initial player-owned service state only.
+- Trading Post interaction is implemented but intentionally bounded.
+- Other trader-service behavior, AI economy, ownership transfer, broad item economy, full Scenario/team/roster authoring, and broad passive/effect systems are deferred.
 
-Prefer small, test-backed slices. If a proposed plan is not coherent, reject it and ask for a narrower revision.
+## Comment policy
+
+Do not request milestone-specific production comments. Comments should document durable contracts or non-obvious correctness/performance constraints. Test comments may explain regression intent.

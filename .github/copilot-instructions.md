@@ -12,15 +12,19 @@ Use these rules when working in this repository.
 
 ## Current baseline
 
-The current codebase should be treated as a post-M20 bounded multi-Region, multi-Scenario vertical slice. Completed foundations include battle, roster, save/load, content validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, and the bounded Trading Post interaction flow.
+The current codebase should be treated as a **post-M21** bounded multi-Region, multi-Scenario vertical slice.
 
-Do not describe the project as post-M8, post-M11, post-M16, post-M17, post-M18, post-M19, or a single-Region-only slice. Those were older baselines.
+Completed foundations include battle, roster, save/load, content validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, and Scenario-authored player economy/service start state.
+
+Do not describe the project as post-M8, post-M11, post-M16, post-M17, post-M18, post-M19, post-M20, or a single-Region-only slice. Those were older baselines.
 
 ## Current milestone
 
-Current implementation sequencing lives in `docs/implementation_roadmap.md`. The selected next milestone is **M21 — Scenario Economy Start-State Authoring Foundation**.
+Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
-M21 is a narrow authored Scenario start-state milestone. It should not expand into full Scenario directories, full team definitions, authored starting rosters, ownership transfer/claiming UI, AI economy, item economy, or full shell flow unless the active roadmap is explicitly revised.
+Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+
+No next milestone is currently selected. Do not assume M22. A new milestone should begin with a fresh audit of the active roadmap/docs/source.
 
 ## Technical rules
 
@@ -39,15 +43,13 @@ Read `docs/technical_direction.md` before architecture or system work.
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code.
-
-Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M21 Phase 1:` in production source unless they are temporary and removed before merge.
+Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code. Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M21 Phase 1:` in production source unless they are temporary and removed before merge.
 
 Test comments are acceptable when they explain a non-obvious regression or scenario intent.
 
-## Owned service, economy, passive-effect, and Trading Post rules
+## Economy, Trading Post, passive-effect, and Scenario start-state rules
 
-When touching owned services, economy systems, unit passive effects, or Trading Post interaction/transactions, follow `docs/core_loop_rules.md`, `docs/content_schema.md`, `docs/content_scope_v1.md`, and `docs/implementation_roadmap.md`.
+When touching owned services, economy systems, unit passive effects, Trading Post interaction/transactions, or Scenario start-state, follow `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, `docs/content_scope_v1.md`, and `docs/implementation_roadmap.md`.
 
 Settled rules:
 
@@ -58,19 +60,14 @@ Settled rules:
 - Artifact `statBonus` remains on the artifact battle-stat path; artifact Energy and item effects are deferred.
 - Trader-service ownership benefits are per service type and only apply when using an owned same-type service.
 - Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
-- Trading Post transactions are exposed through a bounded Location-mode interaction:
-  - non-Gold resource barter uses resolved Trading Post exchange matrices;
-  - Gold buy/sell uses resource base values and tier `priceFactor`;
-  - usable unowned/allied/enemy/neutral Trading Posts resolve at effective tier 0;
-  - locked, destroyed, or hostile-occupied Trading Posts are refused outright;
-  - resource and Gold mutation must route through existing GameSession resource APIs;
-  - the 20-minute visit cost is charged once on exit only if at least one trade succeeded.
+- Trading Post transactions are exposed through a bounded Location-mode interaction.
+- Resource and Gold mutation must route through existing GameSession resource APIs.
+- The 20-minute Trading Post visit cost is charged once on exit only if at least one trade succeeded.
+- Scenario `playerStart` can author starting Gold, non-Gold resources, and initial player-owned service state.
+- `playerStart.gold` and top-level `startGold` are aliases; authoring both is invalid.
+- Scenario start-state applies to runtime `GameSession` state at Scenario start. It must not mutate content definitions.
 
-Do not assume Market/Black Market/Freelancer's Guild behavior, full item-market transactions, AI economy, ownership-transfer loops, or a broad passive/skill system exist.
-
-## Scenario start-state rules
-
-M21 may add a narrow content-authored player start-state surface for Scenario start economy/service setup. Keep it focused on the active roadmap scope. Do not turn it into full team authoring, roster authoring, per-scenario content directories, campaign branching UI, or a general shell/save-slot rewrite.
+Do not assume Market/Black Market/Freelancer's Guild behavior, full item-market transactions, AI economy, ownership-transfer loops, broad Scenario/team/roster authoring, or a broad passive/skill system exist.
 
 ## Key docs to follow
 
@@ -97,7 +94,7 @@ Archived docs are historical context only. Do not use archived files as active s
 
 - Make the smallest clean change that solves the task.
 - Prefer narrow, test-backed iterations over broad rewrites.
-- Move faster than the early M12-M20 micro-slices only when the phase remains coherent and testable.
+- Move faster than early micro-slices only when the phase remains coherent and testable.
 - Call out doc/code mismatches explicitly.
 - If a design area is still ambiguous, tighten the docs/vision before implementing broad behavior.
 - When changing durable behavior, update relevant docs/tests in the same pass.

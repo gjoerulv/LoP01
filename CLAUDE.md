@@ -1,10 +1,18 @@
-# Project Ashvale - Claude Code Instructions
+# Claude Guidance for Ashvale
 
-This project is documentation-driven. Before making design, architecture, roadmap, or implementation changes, read the authoritative docs listed below.
+## Current baseline
 
-## Authoritative docs
+Treat the repository as a **post-M21** C++20 / raylib / CMake game project.
 
-Read these first when relevant:
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, and Scenario-authored player economy/service start state.
+
+Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+
+No next milestone is currently selected. Do not assume M22. Start the next planning pass by auditing the active docs and source.
+
+## Required reading
+
+Before architecture, roadmap, economy, Scenario, or content work, read:
 
 1. `README.md`
 2. `README_DECISIONS.md`
@@ -15,85 +23,38 @@ Read these first when relevant:
 7. `docs/game_shell_flow.md`
 8. `docs/presentation_game_feel.md`
 9. `docs/core_loop_rules.md`
-10. `docs/combat_rules.md`
-11. `docs/scenario_authoring.md`
+10. `docs/scenario_authoring.md`
+11. `docs/content_schema.md`
 12. `docs/validation_system.md`
-13. `docs/content_schema.md`
-14. `docs/terminology_map.md`
-15. `.github/copilot-instructions.md`
-16. `.github/instructions/gameplay.instructions.md`
+13. `docs/terminology_map.md`
 
-For UI work, also read `.github/instructions/ui.instructions.md`. For architecture work, also read `.github/agents/game-architect.agent.md`.
+Archived files are historical context only. Do not use archived roadmap/scope files as current requirements.
 
-Archived docs and historical milestone prompts are historical context only. Do not use archived files as current scope, roadmap, or behavior truth.
+## Working rules
 
-## Current baseline
+- Keep implementation slices narrow, test-backed, and aligned with the active roadmap.
+- If docs and source disagree, stop and report the mismatch.
+- Keep gameplay rules out of rendering/input layers.
+- Keep authored static content separate from runtime mutable state.
+- Preserve save/load compatibility unless the task explicitly includes migration work.
+- Avoid per-frame scans, repeated content parsing, graph rebuilds, large needless copies, and hidden nested scans.
+- Avoid demo-specific source branches; prove systems through generic data and tests.
+- Do not introduce broad frameworks before a scoped consumer needs them.
 
-The current codebase is post-M20.
+## Source comments
 
-Completed foundations include:
+Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M21 Phase 1:` in production source. Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations.
 
-- battle, roster, save/load, Region/Location flow, and content validation foundation;
-- typed events and scenario outcome rules;
-- practical enemy-team Region-layer foundation;
-- inventory and artifacts foundation;
-- team Energy pool foundation;
-- minimal World Map region-to-region travel;
-- minimal Campaign System foundation;
-- owned-service/economy foundation: resources, owned services, mine outputs, stack-backed stationing, day-boundary mine payout, trader ownership tiers, authored/default trader curves, validation, and proof tests;
-- passive-effect spine foundation: canonical unit `passive_effects`, legacy mine-passive authoring compatibility, `mine_production` effects for owned mines, and current-leader `leader_energy` effects for daily Energy;
-- Trading Post transaction foundation: pure barter/Gold quote rules, service-specific ownership/use gates, GameSession transaction APIs, tier-0 fallback/default behavior, Gold delegation, and validation/test coverage;
-- Trading Post interaction flow: bounded Location-mode service interaction, buy/sell/barter commands, live prompt feedback, per-visit time cost charged once on exit after at least one successful trade, and a small authored playable Trading Post.
+Test comments are acceptable when they explain non-obvious regression intent.
 
-Do not treat M8, M11, M12, M13, M14, M15, M16, M17, M18, M19, or M20 as future work.
+## Current settled system boundaries
 
-## Current planning posture
-
-The selected next milestone is **M21 — Scenario Economy Start-State Authoring Foundation**.
-
-M21 should make the player's initial economy/service-control state more content-driven through a narrow Scenario start-state surface. It must not become the full Scenario authoring system, full team-definition model, roster authoring system, ownership-transfer flow, AI economy, item economy, or full shell flow.
-
-Before implementing M21, re-read `docs/implementation_roadmap.md`, `docs/content_scope_v1.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, `docs/validation_system.md`, and the relevant source. If the branch/source does not match the post-M20 baseline, stop and report the mismatch.
-
-## Core rules
-
-- Respect `docs/technical_direction.md` for architectural principles, performance posture, and source-layout constraints.
-- Respect `docs/content_scope_v1.md` for current post-M20 content scope.
-- Respect `docs/presentation_game_feel.md` for presentation, audio/visual tone, transitions, and feedback.
-- Do not invent new game-design rules that contradict the docs.
-- Use current terms: World Map, Region, Location, Service, node content, Scenario Info screen, Adventure button strip.
-- Treat content schema rules in `docs/content_schema.md` as authoritative for authored JSON direction.
-- Treat validation rules in `docs/validation_system.md` as authoritative for validation planning.
-- Keep authored initial state separate from runtime save state.
-- Avoid demo-specific source branches; prove systems through authored content and generic rules.
-
-## Source comments and code documentation
-
-Keep production source comments durable and sparse. Do not add comments merely to describe milestone progress, patch phases, or agent workflow.
-
-Good production comments explain one of these:
-
-- a non-obvious invariant or contract;
-- a correctness, security, data-integrity, or save/load trap;
-- a performance-sensitive choice;
-- a deliberate limitation that prevents accidental broadening;
-- compatibility behavior that looks wrong but is intentional.
-
-Avoid milestone labels such as `M21 Phase 1` in production source unless the comment is temporary and removed before merge. Milestone context belongs in roadmap docs, decision logs, prompts, commits, and tests — not durable source contracts.
-
-Test comments are acceptable when they clarify non-obvious regression intent or why a scenario matters. Do not clutter tests with restatements of obvious assertions.
-
-When reviewing diffs, flag comments that are stale, milestone-specific, redundant, or inconsistent with the code. Prefer deleting weak comments over rewriting them into longer comments.
-
-## Workflow
-
-- Work on a git branch.
-- Before editing, summarize the plan and list the files you intend to change.
-- Prefer small, reviewable patches.
-- Run available build/tests after meaningful code changes.
-- Do not delete or archive docs unless explicitly asked.
-- Do not make broad rewrites when a targeted change is enough.
-- If the docs conflict, stop and report the conflict instead of guessing.
-- If implementation conflicts with the docs, report it and propose options before changing the design.
-- For Claude-plan review, expect binary feedback: accepted 100%, or rejected with a revision prompt.
-- Do not ask for an "Exact Next Prompt" unless explicitly requested.
+- `playerStart` is the Scenario-authored surface for starting Gold, non-Gold resources, and initial player-owned service state.
+- `playerStart.gold` is an alias for legacy top-level `startGold`; authoring both is invalid.
+- Scenario start-state applies to runtime `GameSession` state when a Scenario starts; it is not persisted back into content.
+- Gold remains a single source of truth through the existing `gold_` / ResourceType delegation path.
+- Owned-service state uses existing runtime fields and player ownership for M21 start-state; no general team authoring exists yet.
+- World Map initial unlocks remain authored through World Map content; no Scenario `unlockedRegions` override exists.
+- Trading Post interaction is implemented as a bounded Location-mode service flow; broader shop/inventory UI is deferred.
+- Unit `passive_effects` currently support only `mine_production` and `leader_energy`.
+- Artifact `statBonus` remains on the artifact battle-stat path; artifact Energy, item effects, statuses, active abilities, and broad skill systems are deferred.

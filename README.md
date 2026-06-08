@@ -1,11 +1,30 @@
-# Project Ashvale
+# Ashvale
 
-Ashvale is a turn-based strategy/RPG built as a content-driven C++20/raylib/CMake project. The repository is a post-M20 bounded multi-Region, multi-Scenario playable vertical slice. Current implementation status, milestone sequencing, and explicit not-yet boundaries live in `docs/implementation_roadmap.md`. For terminology, see `docs/terminology_map.md`.
+Ashvale is a C++20 / raylib / CMake strategy-RPG prototype. The current codebase is a **post-M21** bounded multi-Region, multi-Scenario vertical slice.
 
-## Design truth and doc priority
+The implemented foundation includes battle, roster, save/load, Region/Location flow, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned services/economy, unit passive effects, Trading Post transactions, Trading Post interaction flow, and Scenario-authored player economy/service start state.
 
-Use these files as the main current design references:
+## Current baseline
 
+Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+
+M21 added a narrow `playerStart` surface on Scenario content:
+
+- starting Gold through the existing `startGold` runtime path;
+- starting non-Gold resources;
+- initial player-owned service state using existing owned-service runtime fields;
+- strict shape/type/semantic validation;
+- application through `GameSession::TransitionToScenario` when a Scenario starts;
+- save/load compatibility through existing SaveData fields.
+
+No next milestone is currently selected. The next planning pass should audit the post-M21 source/docs and choose the highest-value narrow slice.
+
+## Active docs
+
+Read these before planning or implementation:
+
+- `CLAUDE.md`
+- `README_DECISIONS.md`
 - `docs/implementation_roadmap.md`
 - `docs/content_scope_v1.md`
 - `docs/technical_direction.md`
@@ -13,108 +32,9 @@ Use these files as the main current design references:
 - `docs/game_shell_flow.md`
 - `docs/presentation_game_feel.md`
 - `docs/core_loop_rules.md`
-- `docs/combat_rules.md`
 - `docs/scenario_authoring.md`
-- `docs/validation_system.md`
 - `docs/content_schema.md`
-- `README_DECISIONS.md`
+- `docs/validation_system.md`
 - `docs/terminology_map.md`
 
-Archived docs, including `docs/content_scope_v0.md.archived` and `docs/implementation_roadmap.md.00.archived`, are historical context only.
-
-## Implementation planning
-
-Current implementation sequencing lives in `docs/implementation_roadmap.md`. M20 is complete. No next milestone is currently selected; start the next planning pass by auditing the active roadmap, docs, and current source before choosing the next narrow slice.
-
-## Current implementation baseline
-
-Completed foundations include:
-
-- battle engine, CTB, static formation, leader aura, deterministic damage, and battle write-back;
-- persistent roster, active/reserve party, mustering, and save/load;
-- daily clock, Region travel, wake/recovery penalty, and basic services;
-- content validation foundation;
-- typed event foundation;
-- practical enemy-team Region-layer foundation, including patrol movement, hostile occupation, hostile-contact battles, event mutation actions, and save/load;
-- deterministic scenario outcome rules with authored victory and defeat conditions;
-- inventory and artifact foundation, including per-hero equipment and equipped-artifact battle stat bonuses;
-- team Energy pool with daily-starting formula, spend/recover, day-rollover reset, save/load, HUD exposure, and current-leader `leader_energy` passive contribution;
-- minimal World Map region-to-region travel from authored exit nodes;
-- minimal Campaign System with thin scenarios, transition graph, explicit allow-list carry-over, campaign state, and campaign selection;
-- owned-service and economy foundation with resource pool, owned-service runtime state, mine outputs, stack-backed stationing, day-boundary mine payout, trader ownership tiers, authored/default trader curves, and validation/test coverage;
-- passive/effect spine foundation with canonical unit `passive_effects`, legacy mine-passive authoring compatibility, typed validation, M17 mine-production behavior preservation, and leader `leader_energy` feeding the daily Energy passive term;
-- Trading Post transaction layer with pure barter/Gold quote rules, service-specific ownership/use gates, GameSession transaction APIs, Gold delegation, validation hardening, and end-to-end tests;
-- Trading Post interaction flow in Location mode, including a bounded modal service interaction, buy/sell/barter commands, live feedback, resource/Gold previews, and the 20-minute visit time cost applied once on exit after at least one successful trade.
-
-## Current architecture baseline
-
-The current codebase follows these principles:
-
-- explicit app shell and gameplay session flow;
-- controller / mapper / renderer split;
-- gameplay logic separated from rendering and input;
-- typed content loaded from JSON;
-- content-driven Regions, Locations, Services, units, battles, quests, events, outcomes, items, artifacts, World Map, scenarios, campaigns, owned services, resources, mine outputs, unit passive effects, trader ownership curves, Trading Post transaction rules, and Trading Post interaction flow;
-- pure or mostly-pure gameplay rules where practical;
-- save/load focused on gameplay state rather than presentation state.
-
-Future work should preserve this baseline unless there is a strong reason to refactor it.
-
-## World structure baseline
-
-Use this hierarchy:
-
-- **Campaign**
-- **Scenario**
-- **World Map**
-- **Region**
-- **Node**
-- **Location**
-- **Service**
-
-Older runtime/serialized terms such as `overworld`, `overworld_mode`, or `overworld_selection` are compatibility names, not preferred design language.
-
-## Energy baseline
-
-Daily starting Energy is:
-
-`1000 + (lowest traveling-party agility * 100) + leader passive bonus + leader item/artifact bonus`
-
-The leader passive bonus is implemented through the current leader unit's `leader_energy` passive effects. The leader item/artifact Energy term remains deferred.
-
-## Owned service and economy baseline
-
-Owned services are strategic objects controlled by a team.
-
-Implemented foundation and settled direction:
-
-- Mines can be owned and generate passive daily resources for the owning team.
-- Stationed guards can increase mine output only through explicit `mine_production` passive effects.
-- Mine production passives do not stack.
-- For each owned service instance and output resource, only the strongest applicable stationed passive counts.
-- Ties do not stack.
-- Heroes and generic units are both valid if they have the applicable passive effect.
-- Trader services can be owned: Trading Post, Market, Freelancer's Guild, Black Market.
-- Ownership benefits are per service type and apply only when the owning team uses a service of that same type that it owns.
-- Allied-owned, enemy-owned, and neutral services do not grant ownership benefits to the player.
-- Ownership tiers cap at 8 owned services of the same type.
-- Ownership does not bypass lock, destruction, hostile occupation, stock, eligibility, story, or service availability rules.
-- Trading Post transactions are playable through the bounded Location service interaction flow:
-  - non-Gold resource barter uses the resolved Trading Post exchange matrix;
-  - Gold buy/sell uses base resource values and tier `priceFactor`;
-  - usable unowned/allied/enemy/neutral Trading Posts resolve at effective tier 0;
-  - locked, destroyed, or hostile-occupied Trading Posts are refused outright;
-  - time cost is charged once per visit on exit only if at least one trade succeeded.
-
-Market/Freelancer's Guild/Black Market behavior, broader item-market transactions, AI economy, ownership-transfer loops, and broad passive/skill systems remain future work.
-
-## Passive effect baseline
-
-Unit definitions may author canonical `passive_effects`:
-
-- `mine_production` applies only to stationed units on owned mine/resource services and feeds mine-output calculation.
-- `leader_energy` applies only from the current leader and feeds the daily Energy passive bonus.
-
-The legacy `mine_production_passive` authoring key is still accepted as compatibility input and is converted at load to canonical `passive_effects`. Authoring both keys on the same unit is invalid. Runtime consumers read the canonical passive-effect representation, not a legacy runtime field. Artifact `statBonus` battle effects remain on the existing artifact path.
-
-Artifact Energy, item effects, status effects, skill trees, and active abilities are not part of the current passive-effect spine.
+Archived docs are historical context only.

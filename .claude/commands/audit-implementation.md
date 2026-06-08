@@ -8,14 +8,17 @@ When auditing an implementation:
    - `docs/content_scope_v1.md`
    - `docs/technical_direction.md`
    - `docs/core_loop_rules.md`
+   - `docs/scenario_authoring.md`
    - `docs/content_schema.md`
    - `docs/validation_system.md`
-3. Treat the baseline as post-M20 unless the checked commit proves otherwise.
+3. Treat the baseline as post-M21 unless the checked commit proves otherwise.
 4. Check correctness, separation of concerns, performance, save/load compatibility, validation coverage, and tests.
 5. Be strict about:
    - UI or App code duplicating gameplay/economy rules;
    - ownership/service gates being bypassed;
    - resource/Gold mutations bypassing GameSession APIs;
+   - Scenario start-state mutating content definitions instead of runtime state;
+   - malformed authored schema being silently skipped or defaulted;
    - per-frame scans, repeated parsing, graph rebuilds, or hidden nested scans;
    - broad systems added without a current scoped consumer;
    - stale or milestone-specific production comments.

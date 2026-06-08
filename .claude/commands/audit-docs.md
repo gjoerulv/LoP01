@@ -2,14 +2,11 @@
 
 When auditing docs:
 
-1. Treat active docs as current source-of-truth candidates, but verify against source.
-2. Archived docs are historical context only.
-3. Current active docs should describe a post-M20 baseline.
-4. Look for:
-   - stale milestone status;
-   - contradictions between roadmap, content scope, schema, validation, and code;
-   - references to M17/M18/M19/M20 as future work;
-   - claims that Trading Post transaction or interaction flow is unimplemented;
-   - excessive or redundant documentation.
-5. Keep fixes concise. Do not turn docs into a changelog.
-6. If a doc update is needed, update only the files that prevent ambiguity or agent misdirection.
+1. Verify the exact branch/commit.
+2. Treat `docs/implementation_roadmap.md` and `docs/content_scope_v1.md` as the active roadmap/scope documents.
+3. Treat archived roadmap/scope files as historical context only.
+4. Confirm active docs agree on the implementation baseline. Current expected baseline is post-M21.
+5. Confirm active docs do not describe completed M17-M21 work as future work.
+6. Confirm no next milestone is invented unless the roadmap explicitly selects one.
+7. Look for ambiguity, redundancy, contradiction, stale milestone posture, and stale schema/rule descriptions.
+8. Keep fixes concise. Do not bloat docs into changelogs.
