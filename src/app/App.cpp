@@ -399,12 +399,27 @@ void App::ResolveBattleOutcomeIfNeeded() {
 
     if (summary.alliesWon) {
         if (!pendingHostileContactTeamColor_.empty()) {
+            // Capture the guarded node before clearing the pending fields so the
+            // claim runs at the node the defeated team was occupying.
+            const std::string clearedNodeId = pendingHostileContactNodeId_;
             session_.ClearEnemyTeamByColor(pendingHostileContactTeamColor_);
+            // M23: defeating the guarding team claims the eligible ownable
+            // services at that node. Runs after the team is cleared so the
+            // still-contested guard sees the updated occupation.
+            const auto claimedServices = session_.ClaimContestedServicesAtNode(clearedNodeId);
             pendingHostileContactNodeId_.clear();
             pendingHostileContactTeamColor_.clear();
             statusMessage_ = summary.playerSetToOneHp
                 ? "Hostile team defeated. Player recovered to 1 HP."
                 : "Hostile team defeated.";
+            if (!claimedServices.empty()) {
+                std::string claimList;
+                for (const auto& id : claimedServices) {
+                    if (!claimList.empty()) { claimList += ", "; }
+                    claimList += id;
+                }
+                statusMessage_ += " | Claimed: " + claimList;
+            }
             if (writeBackFailed) { statusMessage_ += " | Roster write-back failed"; }
             // ClearEnemyTeamByColor latches default victory if this was the last
             // hostile team. Surface it in status so the player sees the outcome.
