@@ -3,7 +3,7 @@
 When implementing a scoped Ashvale change:
 
 1. Read `CLAUDE.md` and the relevant active docs first.
-2. Verify the branch baseline. Expected current baseline is post-M21 unless the branch proves otherwise.
+2. Verify the branch baseline. Expected current baseline is post-M22 unless the branch proves otherwise.
 3. Keep the implementation slice narrow and test-backed.
 4. Do not expand into unselected systems.
 5. Preserve separation of concerns and save/load compatibility.

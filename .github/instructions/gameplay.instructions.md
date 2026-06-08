@@ -4,16 +4,14 @@ Use these instructions for gameplay, economy, Scenario, Campaign, service, battl
 
 ## Current baseline
 
-The repository is post-M21. Do not treat M17, M18, M19, M20, or M21 as future work.
-
-Implemented foundations include owned services, resources, mine payout, unit passive effects, Trading Post transaction rules/APIs, Trading Post interaction flow, and Scenario-authored player economy/service start state.
+The repository is post-M22. Do not treat M17, M18, M19, M20, M21, or M22 as future work. Implemented foundations include owned services, resources, mine payout, unit passive effects, Trading Post transaction rules/APIs, Trading Post interaction flow, Scenario-authored player economy/service start state, and dedicated Scenario Result presentation.
 
 ## Core rules
 
 - Keep gameplay rules deterministic and testable.
 - Keep rendering/input separate from gameplay state mutation.
 - Keep authored initial/static content separate from runtime save state.
-- Use existing `GameSession` APIs for Gold/resources, owned services, Trading Post transactions, time, Energy, and save/load.
+- Use existing `GameSession` APIs for Gold/resources, owned services, Trading Post transactions, time, Energy, Scenario outcomes, campaign progression, and save/load.
 - Do not bypass service gates: lock, destruction, hostile occupation, eligibility, story, stock, and availability remain authoritative.
 - Preserve Gold single-source-of-truth through the existing `gold_` / `ResourceType::Gold` delegation path.
 - Preserve save/load compatibility unless migration is explicitly part of the task.
@@ -24,6 +22,10 @@ Scenario `playerStart` can author player starting Gold, non-Gold resources, and 
 
 Do not expand this into general team authoring, authored starting rosters, item/artifact start-state, per-scenario content directories, or World Map unlock overrides unless the active roadmap explicitly selects that scope.
 
+## Scenario result flow
+
+Scenario Result mode presents a latched deterministic scenario outcome before campaign/terminal progression continues. It is a transient presentation mode, not gameplay state to persist. Do not add scores, rewards, branch choices, fanfare, animations, or post-victory event chains unless the active roadmap explicitly selects that scope.
+
 ## Economy and service systems
 
 Trading Post interaction is currently bounded to buy/sell/barter, prompt feedback, and a 20-minute per-visit time cost charged once on exit after at least one successful trade.
@@ -32,6 +34,4 @@ Do not assume broader Market, Black Market, Freelancer's Guild, item-market, AI 
 
 ## Comments and tests
 
-Production comments should explain durable invariants, compatibility, validation traps, save/load contracts, or performance-sensitive choices. Avoid milestone/phase labels in source comments.
-
-Tests should cover the rule boundary being changed. Test comments may explain non-obvious regression intent.
+Production comments should explain durable invariants, compatibility, validation traps, save/load contracts, or performance-sensitive choices. Avoid milestone/phase labels in source comments. Tests should cover the rule boundary being changed. Test comments may explain non-obvious regression intent.

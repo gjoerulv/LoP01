@@ -1,23 +1,14 @@
 # Ashvale
 
-Ashvale is a C++20 / raylib / CMake strategy-RPG prototype. The current codebase is a **post-M21** bounded multi-Region, multi-Scenario vertical slice.
-
-The implemented foundation includes battle, roster, save/load, Region/Location flow, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned services/economy, unit passive effects, Trading Post transactions, Trading Post interaction flow, and Scenario-authored player economy/service start state.
+Ashvale is a C++20 / raylib / CMake strategy-RPG prototype. The current codebase is a **post-M22** bounded multi-Region, multi-Scenario vertical slice. The implemented foundation includes battle, roster, save/load, Region/Location flow, typed events, enemy teams, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned services/economy, unit passive effects, Trading Post transactions, Trading Post interaction flow, and Scenario-authored player economy/service start state.
 
 ## Current baseline
 
-Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-M21 added a narrow `playerStart` surface on Scenario content:
+M22 added a dedicated player-facing Scenario Result mode that appears when a deterministic scenario outcome latches. It shows Victory/Defeat, the outcome reason, and the next step before the existing campaign/terminal progression runs on Continue. The mode is transient, suppresses save/load while active, does not change scenario outcome rules, campaign progression, carry-over, content, or save schema, and keeps result rendering separate through a mapper/renderer path.
 
-- starting Gold through the existing `startGold` runtime path;
-- starting non-Gold resources;
-- initial player-owned service state using existing owned-service runtime fields;
-- strict shape/type/semantic validation;
-- application through `GameSession::TransitionToScenario` when a Scenario starts;
-- save/load compatibility through existing SaveData fields.
-
-Selected next milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** — a dedicated player-facing scenario-end result step (outcome, reason, next step) over the existing deterministic outcome and campaign-progress paths. See `docs/implementation_roadmap.md` for the full definition.
+No next milestone is currently selected. The next planning pass should audit the post-M22 roadmap, active docs, and source before choosing the next narrow milestone.
 
 ## Active docs
 

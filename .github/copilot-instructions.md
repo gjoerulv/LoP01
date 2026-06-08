@@ -12,19 +12,17 @@ Use these rules when working in this repository.
 
 ## Current baseline
 
-The current codebase should be treated as a **post-M21** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase should be treated as a **post-M22** bounded multi-Region, multi-Scenario vertical slice. Completed foundations include battle, roster, save/load, content validation, typed events, enemy teams, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, and Scenario-authored player economy/service start state.
 
-Completed foundations include battle, roster, save/load, content validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, and Scenario-authored player economy/service start state.
-
-Do not describe the project as post-M8, post-M11, post-M16, post-M17, post-M18, post-M19, post-M20, or a single-Region-only slice. Those were older baselines.
+Do not describe the project as post-M8, post-M11, post-M16, post-M17, post-M18, post-M19, post-M20, post-M21, or a single-Region-only slice. Those were older baselines.
 
 ## Current milestone
 
 Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
-Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-Next selected milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** (see `docs/implementation_roadmap.md`). Do not assume any milestone beyond M22; the one after it should begin with a fresh audit of the active roadmap/docs/source.
+No next milestone is currently selected. Do not assume M23. The milestone after M22 should begin with a fresh audit of active roadmap/docs/source.
 
 ## Technical rules
 
@@ -43,13 +41,11 @@ Read `docs/technical_direction.md` before architecture or system work.
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code. Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M21 Phase 1:` in production source unless they are temporary and removed before merge.
+Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code. Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M22 Phase 1:` in production source unless they are temporary and removed before merge. Test comments are acceptable when they explain a non-obvious regression or scenario intent.
 
-Test comments are acceptable when they explain a non-obvious regression or scenario intent.
+## Economy, Trading Post, passive-effect, Scenario start-state, and result-flow rules
 
-## Economy, Trading Post, passive-effect, and Scenario start-state rules
-
-When touching owned services, economy systems, unit passive effects, Trading Post interaction/transactions, or Scenario start-state, follow `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, `docs/content_scope_v1.md`, and `docs/implementation_roadmap.md`.
+When touching owned services, economy systems, unit passive effects, Trading Post interaction/transactions, Scenario start-state, or Scenario result presentation, follow `docs/core_loop_rules.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, `docs/content_scope_v1.md`, and `docs/implementation_roadmap.md`.
 
 Settled rules:
 
@@ -66,8 +62,10 @@ Settled rules:
 - Scenario `playerStart` can author starting Gold, non-Gold resources, and initial player-owned service state.
 - `playerStart.gold` and top-level `startGold` are aliases; authoring both is invalid.
 - Scenario start-state applies to runtime `GameSession` state at Scenario start. It must not mutate content definitions.
+- Scenario Result mode presents latched deterministic outcomes and next-step text before campaign/terminal progression continues.
+- Scenario Result mode is transient; save/load is suppressed while it is active.
 
-Do not assume Market/Black Market/Freelancer's Guild behavior, full item-market transactions, AI economy, ownership-transfer loops, broad Scenario/team/roster authoring, or a broad passive/skill system exist.
+Do not assume Market/Black Market/Freelancer's Guild behavior, full item-market transactions, AI economy, ownership-transfer loops, broad Scenario/team/roster authoring, broad passive/skill systems, campaign branch-choice UI, result scores/rewards/fanfare, or post-victory event chains exist.
 
 ## Key docs to follow
 

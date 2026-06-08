@@ -2,9 +2,9 @@
 
 ## Context
 
-The current codebase is a **post-M21** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase is a **post-M22** bounded multi-Region, multi-Scenario vertical slice.
 
-The stable foundation now includes battle, roster, save/load, Region/Location flow, content validation, typed events, enemy teams on the Region layer, deterministic scenario outcomes, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, a narrow unit passive-effect spine, a headless Trading Post transaction layer, a bounded playable Trading Post interaction flow, and Scenario-authored player economy/service start state.
+The stable foundation now includes battle, roster, save/load, Region/Location flow, content validation, typed events, enemy teams on the Region layer, deterministic scenario outcomes, a dedicated Scenario Result screen, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, a narrow unit passive-effect spine, a headless Trading Post transaction layer, a bounded playable Trading Post interaction flow, and Scenario-authored player economy/service start state.
 
 Archived docs, including `docs/content_scope_v0.md.archived` and older `docs/implementation_roadmap.md.*.archived` files, are historical context only. The active scope cap is `docs/content_scope_v1.md`.
 
@@ -23,6 +23,7 @@ Current stable foundation:
 - typed event foundation;
 - enemy-team Region-layer foundation;
 - scenario outcome foundation;
+- dedicated Scenario Result mode with outcome label, reason, next-step text, Continue handling, transient save/load policy, mapper, renderer, and tests;
 - inventory and artifact foundation with equipped-artifact battle stat bonuses;
 - minimal World Map;
 - minimal Campaign System;
@@ -34,7 +35,6 @@ Current stable foundation:
 
 Still incomplete or intentionally deferred:
 
-- polished scenario-end/result screen flow;
 - victory event chains;
 - richer scenario outcome condition leaves;
 - per-team / multi-human scenario outcome tracking;
@@ -74,6 +74,7 @@ Still incomplete or intentionally deferred:
 | 8 | Unit `passive_effects` support only `mine_production` and `leader_energy`; artifact `statBonus` remains on the artifact path. | Intentional M18 scope. Do not fold artifact/item/status behavior into the unit passive spine without a scoped milestone. |
 | 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. Build broader trader UI only in a scoped UI/economy milestone. |
 | 10 | Scenario `playerStart` covers economy/service start state only; authored starting roster, full team definitions, item/artifact start state, and `unlockedRegions` overrides are intentionally absent. | Gap, not conflict. Add only when a scoped milestone needs them. |
+| 11 | Scenario Result mode presents the deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Intentional M22 scope. Add only through future scoped milestones. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -92,44 +93,23 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 11 — Service Economy Expansion:** M19 complete.
 - **Phase 12 — Trading Post Interaction Flow:** M20 complete.
 - **Phase 13 — Scenario Economy Start-State Authoring Foundation:** M21 complete.
+- **Phase 14 — Scenario Result Presentation Flow:** M22 complete.
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-Selected next milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow**.
-
-- **Goal:** Add a dedicated player-facing scenario-end result step that presents the deterministic outcome (Victory/Defeat and reason) and the immediate next step (advance to next scenario, campaign complete, campaign failed, or standalone end) before control resumes, replacing the current single-line HUD status append.
-- **Rationale:** Scenario outcome computation (M12) and campaign progression (M16) are complete and deterministic, but the only player-facing surface is one line appended to the shared HUD status text. This is the one obviously thin spot in an otherwise complete loop. It is presentation-only over stable model state: low architecture risk, high clarity value, no new systems, and no content-scope change.
-- **Acceptance criteria (narrow):**
-  - a new result `GameMode` value entered when an outcome latches, before campaign auto-advance / input-freeze;
-  - a result view-model mapped from the existing `ScenarioOutcome` (state, reason) plus campaign context (next scenario id, campaign completed, campaign failed, or no campaign), with no new gameplay logic;
-  - a dedicated result renderer drawing the outcome label, reason, next-step line, and a Continue affordance;
-  - Continue advances exactly as today through the existing campaign-transition / terminal path; outcome evaluation, campaign progression, carry-over, and save format are unchanged;
-  - tests cover mapper construction for Victory, Defeat, campaign-complete, campaign-failed, and standalone-scenario cases, plus mode entry/exit, with existing outcome/campaign tests still passing.
-- **Non-goals:**
-  - no campaign branch-choice (multiple `nextScenarioIds` still resolves to the first; this stays a candidate);
-  - no score/stats/rewards/fanfare/animation beyond outcome, reason, and next-step;
-  - no inventory/reward display, no shell/menu integration, no post-victory event chains;
-  - no change to outcome evaluation, campaign progression, carry-over, or save/load format;
-  - no content-scope change and no new authored content.
-- **Likely first slice:** add the result `GameMode` value and a minimal pass-through Result mode that renders the already-latched outcome on its own screen with a Continue input that triggers the existing campaign-progress path; then extract a proper result view-model, mapper, renderer, and tests.
-- **Risk notes:**
-  - insert the new mode at the correct scenario-end seam without double-latching or skipping the existing input-freeze / campaign-advance path; keep the single-latch invariant;
-  - cover both entry points: victory (enemy cleared, return to Region) and defeat (battle defeat with wake penalty/recover, and condition-defeat);
-  - standalone (non-campaign) scenarios end with no next, so the result mode must handle "no next" gracefully;
-  - do not entangle result presentation with the known fixed-as-`Green` player-color debt (gap #6).
-
-After M22, the next planning pass should re-audit and select from the candidates below. Do not assume M23 without that audit.
+No next milestone is currently selected. The next planning pass should audit post-M22 source/docs before choosing a narrow milestone. Do not assume M23.
 
 ## 5. Candidate directions after M22
 
-Scenario result / victory presentation flow is now selected as **M22** (see §4). The directions below remain candidates, not selected commitments:
+The directions below are candidates, not selected commitments:
 
 1. **Campaign branch-choice presentation.** The natural successor to the M22 result seam: when a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support already exists, but `CampaignProgressionRules` currently resolves the first entry only, and `docs/content_scope_v1.md` lists large campaign branching UI as out of v1 scope. Select only once authored content needs a real branch; pair it with a narrow `content_scope_v1` update.
-2. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface. Independent, pure-presentation, no logic change; a reasonable successor once the result flow is polished.
+2. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface. Independent, pure-presentation, no logic change.
 3. **Service ownership transfer / claiming loop.** Builds on owned services and Scenario start-state, but should not start until the desired contest/claim interaction is clearly scoped. Sprawl risk; no consumer yet.
 4. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped; currently out of v1 content scope.
 5. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content. No current authored-content pressure; out of v1 content scope.
+6. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but they should not be bundled unless the next milestone explicitly selects one narrow result-extension slice.
 
 The next selected milestone should be narrow, testable, and justified by current gameplay value rather than system excitement.

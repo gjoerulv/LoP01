@@ -4,11 +4,11 @@ Use this agent for architecture and roadmap-level review of Ashvale changes.
 
 ## Current state
 
-Baseline: **post-M21**.
+Baseline: **post-M22**.
 
-Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-Next selected milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** (see `docs/implementation_roadmap.md` §4). Recommend any milestone beyond M22 only after auditing active docs and source.
+No next milestone is currently selected. Recommend the next milestone only after auditing active docs and source.
 
 ## Review priorities
 
@@ -23,6 +23,7 @@ Next selected milestone (planned, not yet implemented): **M22 — Scenario Resul
 ## Current system boundaries
 
 - Scenario `playerStart` covers starting Gold, non-Gold resources, and initial player-owned service state only.
+- Scenario Result mode presents deterministic outcome results and next steps, but not scores, rewards, branch choices, fanfare, or post-victory event chains.
 - Trading Post interaction is implemented but intentionally bounded.
 - Other trader-service behavior, AI economy, ownership transfer, broad item economy, full Scenario/team/roster authoring, and broad passive/effect systems are deferred.
 

@@ -2,17 +2,17 @@
 
 ## Current baseline
 
-Treat the repository as a **post-M21** C++20 / raylib / CMake game project.
+Treat the repository as a **post-M22** C++20 / raylib / CMake game project.
 
-Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, enemy teams, scenario outcomes, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, and Scenario-authored player economy/service start state.
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, enemy teams, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, and Scenario-authored player economy/service start state.
 
-Latest completed milestone: **M21 — Scenario Economy Start-State Authoring Foundation**.
+Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-Selected next milestone (planned, not yet implemented): **M22 — Scenario Result Presentation Flow** — a dedicated player-facing scenario-end result step over the existing deterministic outcome and campaign-progress paths. See `docs/implementation_roadmap.md` §4 for goal, acceptance criteria, non-goals, and risks. Do not assume any milestone beyond M22; re-audit before selecting the one after it.
+No next milestone is currently selected. Do not assume M23. The next milestone must be selected only after a fresh audit of active docs and source.
 
 ## Required reading
 
-Before architecture, roadmap, economy, Scenario, or content work, read:
+Before architecture, roadmap, economy, Scenario, content, UI, or rendering work, read:
 
 1. `README.md`
 2. `README_DECISIONS.md`
@@ -43,17 +43,19 @@ Archived files are historical context only. Do not use archived roadmap/scope fi
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M21 Phase 1:` in production source. Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations.
+Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M22 Phase 1:` in production source. Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations.
 
 Test comments are acceptable when they explain non-obvious regression intent.
 
 ## Current settled system boundaries
 
+- Scenario outcome rules are deterministic and latched through `GameSession`; presentation uses the dedicated transient Scenario Result mode.
+- Scenario Result mode is not normal save/load progression. Save/load is suppressed while it is active, and accidental serialized `scenario_result` mode self-heals to Region mode.
 - `playerStart` is the Scenario-authored surface for starting Gold, non-Gold resources, and initial player-owned service state.
 - `playerStart.gold` is an alias for legacy top-level `startGold`; authoring both is invalid.
 - Scenario start-state applies to runtime `GameSession` state when a Scenario starts; it is not persisted back into content.
 - Gold remains a single source of truth through the existing `gold_` / ResourceType delegation path.
-- Owned-service state uses existing runtime fields and player ownership for M21 start-state; no general team authoring exists yet.
+- Owned-service state uses existing runtime fields and player ownership for current start-state; no general team authoring exists yet.
 - World Map initial unlocks remain authored through World Map content; no Scenario `unlockedRegions` override exists.
 - Trading Post interaction is implemented as a bounded Location-mode service flow; broader shop/inventory UI is deferred.
 - Unit `passive_effects` currently support only `mine_production` and `leader_energy`.

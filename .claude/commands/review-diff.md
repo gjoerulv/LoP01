@@ -3,7 +3,7 @@
 When reviewing a diff:
 
 1. Verify the exact commit or branch state.
-2. Review against active docs and current baseline: post-M21.
+2. Review against active docs and current baseline: post-M22.
 3. Return a binary result:
    - accept 100%, or
    - reject with only blocking fixes.
