@@ -8,7 +8,7 @@ Baseline: **post-M22**.
 
 Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-No next milestone is currently selected. Recommend the next milestone only after auditing active docs and source.
+Next selected milestone (planned, not yet implemented): **M23 — Owned Service Claiming and Contesting Foundation** (see `docs/implementation_roadmap.md` §4). Recommend any milestone beyond M23 only after auditing active docs and source.
 
 ## Review priorities
 

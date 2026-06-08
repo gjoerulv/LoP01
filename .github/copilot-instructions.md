@@ -22,7 +22,7 @@ Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
 Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-No next milestone is currently selected. Do not assume M23. The milestone after M22 should begin with a fresh audit of active roadmap/docs/source.
+Next selected milestone (planned, not yet implemented): **M23 — Owned Service Claiming and Contesting Foundation** (see `docs/implementation_roadmap.md` §4). Do not assume any milestone beyond M23; the one after it should begin with a fresh audit of active roadmap/docs/source.
 
 ## Technical rules
 

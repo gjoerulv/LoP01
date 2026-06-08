@@ -99,17 +99,43 @@ No true design contradictions are currently known. Remaining gaps are implementa
 
 Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-No next milestone is currently selected. The next planning pass should audit post-M22 source/docs before choosing a narrow milestone. Do not assume M23.
+Selected next milestone (planned, not yet implemented): **M23 — Owned Service Claiming and Contesting Foundation**.
 
-## 5. Candidate directions after M22
+- **Goal:** Make service ownership change during play for the first time. When the player defeats the hostile team occupying/guarding a node, the player claims the eligible ownable service(s) (mine / trader) at that node — unless the service is already player-owned — so the existing ownership benefit/gating systems begin applying through a runtime-earned claim rather than only authored start-state.
+- **Rationale:** `docs/content_scope_v1.md` §2 requires enemy teams to test "ownership pressure and guarded services," and `docs/core_loop_rules.md` §18 specifies that ownership "transfers immediately when captured" and that taking a guarded mine requires defeating its guardians first. M17–M22 built owned services, mine payout, trader tiers, Trading Post interaction, Scenario start-state, and result presentation, but ownership is provably static (the only writes to `ownerTeamColor` / `locked` / `destroyed` are scenario-start application and save/load). This is the remaining gap between the source and the v1 strategic-economy proof. The building blocks already exist (hostile-contact battle, `ClearEnemyTeamByColor`, `HostileOccupiedNodeIds`, `OwnedServiceSaveState.ownerTeamColor`), so the slice is narrow.
+- **Claim rule (settled semantics):**
+  - *Trigger:* the player defeats the hostile team occupying/guarding node N.
+  - *Per-service eligibility* for each ownable service S at N's node/location: S kind must be ownable (Mine or a trader service); S must not be locked; S must not be destroyed; then by owner relationship to the player — unowned/neutral is claimable; hostile/enemy-owned is claimable (true contesting, not neutral-only); already player-owned is unchanged; allied-owned is not claimable in M23 (conservative rule reusing the same hostility determination as `HostileOccupiedNodeIds`).
+  - *Runtime mutation (content definitions are never mutated):* create an owned-service entry with `ownerTeamColor = playerColor` if none exists; otherwise set `ownerTeamColor = playerColor` when the current owner is eligible-not-player; clear `stationedUnits` on transfer; preserve `locked` / `destroyed` gates (ineligible services are never claimed).
+  - *Forward-compat note:* v1 content authors no team/owner fields (`content_scope_v1.md` §3), so an enemy-owned service only arises at runtime / in tests, never from authored content.
+- **Acceptance criteria:**
+  - a pure, deterministic claim-eligibility rule over (service, node/defeated-team, owner-relationship) inputs;
+  - a single explicit `GameSession` claim mutation (the first in-play ownership write), wired at the existing post-battle / `ClearEnemyTeamByColor` seam;
+  - tests: unowned guarded mine becomes player-owned after guard defeat; enemy-owned guarded Trading Post becomes player-owned after guard defeat; already player-owned service is unchanged; allied-owned service is not claimed; locked/destroyed services are not claimed; `stationedUnits` cleared on transfer; a claimed mine pays the player on the next daily payout; a claimed Trading Post resolves the player ownership tier and becomes usable; claim persists through save/load (existing serialization, no schema bump); source content remains unchanged;
+  - the claim is surfaced through existing status/result text (no new UI framework);
+  - authored proof content includes at least one contested (unowned) ownable service guarded by an enemy team.
+- **Non-goals:**
+  - no enemy/AI capture of player-owned services (needs AI economy) — player-side claiming on victory only;
+  - no service destruction/restoration loop (`core_loop_rules.md` §20) and no sabotage loop;
+  - no Market / Black Market / Freelancer's Guild behavior;
+  - no team/owner authoring fields in content (preserves `content_scope_v1.md` §3);
+  - no general team-definition authoring; no full ownership-transfer UI framework;
+  - no change to mine payout / trader tier / Trading Post transaction rules beyond letting a runtime-earned claim feed them;
+  - no v2 content scope.
+- **Likely first slice:** a pure claim-eligibility rule plus unit tests over (owned-service, node, defeated-team, owner-relationship) inputs, with no wiring — establish the rule before any mutation or content.
+- **Risk notes:** keep the mutation behind one `GameSession` method and one seam (do not scatter ownership writes); claiming must not bypass locked/destroyed/eligibility gates (`content_scope_v1.md` §5); player-color fixed-as-`Green` debt (gap #6) — assign the player color and reuse the existing hostility determination, do not build a general multi-team capture matrix; ensure default-victory latching still fires when the defeated team is the last hostile team (claim must not interfere with `CheckAndLatchOutcome`).
 
-The directions below are candidates, not selected commitments:
+After M23, the next planning pass should re-audit and select from the remaining candidates below. Do not assume any milestone beyond M23.
 
-1. **Campaign branch-choice presentation.** The natural successor to the M22 result seam: when a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support already exists, but `CampaignProgressionRules` currently resolves the first entry only, and `docs/content_scope_v1.md` lists large campaign branching UI as out of v1 scope. Select only once authored content needs a real branch; pair it with a narrow `content_scope_v1` update.
-2. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface. Independent, pure-presentation, no logic change.
-3. **Service ownership transfer / claiming loop.** Builds on owned services and Scenario start-state, but should not start until the desired contest/claim interaction is clearly scoped. Sprawl risk; no consumer yet.
+## 5. Candidate directions after M23
+
+Service ownership claiming/contesting is now selected as **M23** (see §4); it completes the v1 "ownership pressure and guarded services" goal in `docs/content_scope_v1.md` §2. The directions below remain candidates, not selected commitments:
+
+1. **Service destruction / restoration and enemy-side capture.** The broader contesting loop after M23: occupying-team service destruction/restoration (`core_loop_rules.md` §20) and enemy/AI capture of player services. Deferred — enemy-side capture needs AI economy; both are out of M23's narrow scope.
+2. **Campaign branch-choice presentation.** When a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support exists, but `CampaignProgressionRules` resolves the first entry only, and large campaign branching UI is out of v1 content scope. Select only once authored content needs a real branch; pair it with a narrow `content_scope_v1` update.
+3. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface. Independent, pure-presentation, no logic change.
 4. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped; currently out of v1 content scope.
 5. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content. No current authored-content pressure; out of v1 content scope.
-6. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but they should not be bundled unless the next milestone explicitly selects one narrow result-extension slice.
+6. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but should not be bundled unless a milestone explicitly selects one narrow result-extension slice.
 
 The next selected milestone should be narrow, testable, and justified by current gameplay value rather than system excitement.

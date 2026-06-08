@@ -8,7 +8,7 @@ Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
 M22 added a dedicated player-facing Scenario Result mode that appears when a deterministic scenario outcome latches. It shows Victory/Defeat, the outcome reason, and the next step before the existing campaign/terminal progression runs on Continue. The mode is transient, suppresses save/load while active, does not change scenario outcome rules, campaign progression, carry-over, content, or save schema, and keeps result rendering separate through a mapper/renderer path.
 
-No next milestone is currently selected. The next planning pass should audit the post-M22 roadmap, active docs, and source before choosing the next narrow milestone.
+Selected next milestone (planned, not yet implemented): **M23 — Owned Service Claiming and Contesting Foundation** — when the player defeats the hostile team occupying/guarding a node, the player claims eligible ownable services (mine / trader) at that node, the first in-play change to service ownership. See `docs/implementation_roadmap.md` for the full definition.
 
 ## Active docs
 

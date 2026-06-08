@@ -8,7 +8,7 @@ Completed foundations include battle, roster, save/load, Region/Location flow, c
 
 Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
 
-No next milestone is currently selected. Do not assume M23. The next milestone must be selected only after a fresh audit of active docs and source.
+Selected next milestone (planned, not yet implemented): **M23 — Owned Service Claiming and Contesting Foundation** — when the player defeats the hostile team occupying/guarding a node, the player claims eligible ownable services (mine / trader) at that node, the first in-play change to service ownership. See `docs/implementation_roadmap.md` §4 for goal, claim-rule semantics, acceptance criteria, non-goals, and risks. Do not assume any milestone beyond M23; re-audit before selecting the one after it.
 
 ## Required reading
 
