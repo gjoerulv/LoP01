@@ -517,12 +517,23 @@ void App::Update() {
         UpdateBattleMode(input);
     }
 
-    if (input.save) {
+    if (snapshot.mode == gameplay::GameMode::ScenarioResultMode) {
+        UpdateScenarioResultMode(input);
+    }
+
+    // Save/load is suppressed while the transient ScenarioResultMode is current,
+    // so it is never persisted. The start-of-frame snapshot is stale here (a mode
+    // update this frame may have entered the result screen), so re-read the
+    // current mode rather than trusting `snapshot`.
+    const bool inScenarioResult =
+        session_.Snapshot().mode == gameplay::GameMode::ScenarioResultMode;
+
+    if (input.save && !inScenarioResult) {
         const bool saved = saveRepository_.SaveToFile(session_.ToSaveData(), "saves/slot_1.json");
         statusMessage_ = saved ? "Saved to saves/slot_1.json" : "Save failed";
     }
 
-    if (input.load) {
+    if (input.load && !inScenarioResult) {
         const auto loaded = saveRepository_.LoadFromFile("saves/slot_1.json");
         if (loaded.has_value()) {
             session_.ApplySaveData(*loaded);
@@ -537,14 +548,12 @@ void App::Update() {
 }
 
 void App::UpdateRegionMode(const input::InputState& input) {
-    // M16-c: if a scenario outcome latched while a campaign is active, advance
-    // the campaign (Victory transitions to the next scenario and clears the
-    // latch; Completed/Failed leave the latch in place).
-    HandleCampaignProgressIfLatched();
-
-    // Scenario ended: freeze region inputs. Player sees the last status message
-    // including the Victory!/Defeat. label appended at the latch boundary.
+    // Scenario ended: hand off to the result screen. Campaign progression is
+    // deferred to the player's Continue there (see UpdateScenarioResultMode), so
+    // the outcome is presented before the next scenario loads. This is the single
+    // interception point for both in-region and post-battle latches.
     if (session_.IsScenarioEnded()) {
+        session_.EnterScenarioResultMode();
         return;
     }
 
@@ -806,6 +815,27 @@ void App::UpdateCampaignSelectMode(const input::InputState& input) {
         ResetTransientModeState();
         statusMessage_ = "Campaign started: " +
             (campaign.name.empty() ? campaign.id : campaign.name);
+    }
+}
+
+void App::UpdateScenarioResultMode(const input::InputState& input) {
+    // Hold on the result screen until the player confirms. Idempotent: the mode
+    // changes the instant Continue is handled (campaign advance switches to
+    // RegionMode and clears the latch; terminal/standalone returns to Title), so
+    // a held key cannot double-advance.
+    if (!input.confirm) {
+        return;
+    }
+
+    if (session_.IsCampaignActive()) {
+        HandleCampaignProgressIfLatched();
+        // Terminal Completed/Failed leaves the latch in place; mid-campaign
+        // Victory has already advanced to the next scenario in RegionMode.
+        if (session_.IsScenarioEnded()) {
+            session_.EnterTitleMode();
+        }
+    } else {
+        session_.EnterTitleMode();
     }
 }
 
@@ -1246,10 +1276,16 @@ void App::Draw() const {
         battleRenderer_.Draw(context, model);
         break;
     }
+    case gameplay::GameMode::ScenarioResultMode: {
+        const auto model = scenarioResultModelMapper_.Map(content_, session_);
+        scenarioResultRenderer_.Draw(context, model);
+        break;
+    }
     }
 
     if (snapshot.mode != gameplay::GameMode::Title &&
-        snapshot.mode != gameplay::GameMode::CampaignSelectMode) {
+        snapshot.mode != gameplay::GameMode::CampaignSelectMode &&
+        snapshot.mode != gameplay::GameMode::ScenarioResultMode) {
         hudRenderer_.Draw(context, hudModel);
     }
 

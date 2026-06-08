@@ -138,6 +138,10 @@ void GameSession::AdvanceMode() {
     case GameMode::BattleMode:
         mode_ = GameMode::RegionMode;
         break;
+    case GameMode::ScenarioResultMode:
+        // Driven by App's result-screen Continue handler, not the generic
+        // mode-advance path. No-op here so it can never advance by accident.
+        break;
     }
 }
 
@@ -675,6 +679,10 @@ void GameSession::EnterCampaignSelectMode() {
 
 void GameSession::EnterTitleMode() {
     mode_ = GameMode::Title;
+}
+
+void GameSession::EnterScenarioResultMode() {
+    mode_ = GameMode::ScenarioResultMode;
 }
 
 void GameSession::ExitLocationMode() {
@@ -2097,6 +2105,11 @@ std::string GameSession::ToString(const GameMode mode) {
         return "location_mode";
     case GameMode::BattleMode:
         return "battle_mode";
+    case GameMode::ScenarioResultMode:
+        // Distinct, deliberate value so the switch is exhaustive and the
+        // transient mode never silently serializes as "title". App never
+        // persists this mode; this string is for diagnostics only.
+        return "scenario_result";
     }
 
     return "title";
@@ -2120,6 +2133,14 @@ GameMode GameSession::FromString(const std::string& mode) {
     }
     if (mode == "battle_mode") {
         return GameMode::BattleMode;
+    }
+    if (mode == "scenario_result") {
+        // Safe self-heal: this transient mode is never persisted by App, but a
+        // hand-edited or corrupt save could carry it. Resolve to the stable,
+        // playable RegionMode rather than resuming a transient screen — the
+        // outcome latch survives load and UpdateRegionMode re-derives the
+        // result screen immediately when the scenario is still ended.
+        return GameMode::RegionMode;
     }
 
     return GameMode::Title;

@@ -43,6 +43,29 @@ TEST_CASE("GameSession EnterWorldMapMode switches to the World Map screen") {
     REQUIRE(session.Snapshot().mode == gameplay::GameMode::RegionMode);
 }
 
+TEST_CASE("GameSession ScenarioResultMode is transient and excluded from progression") {
+    gameplay::GameSession session;
+    session.EnterScenarioResultMode();
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::ScenarioResultMode);
+
+    // The generic mode-advance path must never move the transient result screen;
+    // it is driven solely by App's Continue handler.
+    session.AdvanceMode();
+    REQUIRE(session.Snapshot().mode == gameplay::GameMode::ScenarioResultMode);
+}
+
+TEST_CASE("GameSession mode serialization handles ScenarioResultMode deliberately") {
+    // Distinct diagnostic string, never silently serialized as "title".
+    REQUIRE(gameplay::GameSession::ToString(gameplay::GameMode::ScenarioResultMode) ==
+        "scenario_result");
+
+    // Load-side self-heal: a stray persisted value resolves to the stable,
+    // playable RegionMode (the outcome latch re-derives the result screen), not a
+    // transient screen and not Title.
+    REQUIRE(gameplay::GameSession::FromString("scenario_result") ==
+        gameplay::GameMode::RegionMode);
+}
+
 TEST_CASE("GameSession rest advances to the next day start") {
     gameplay::GameSession session;
 
