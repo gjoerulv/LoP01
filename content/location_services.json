@@ -100,6 +100,16 @@
         { "resource": "Steel", "amount": 2 },
         { "resource": "Gold", "amount": 200 }
       ]
+    },
+    {
+      "id": "copper_mine_svc",
+      "location_id": "copper_mine",
+      "zone_id": "mine_face",
+      "kind": "mine",
+      "mine_outputs": [
+        { "resource": "Stone", "amount": 1 },
+        { "resource": "Gold", "amount": 100 }
+      ]
     }
   ]
 }

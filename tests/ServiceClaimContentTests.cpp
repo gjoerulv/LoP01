@@ -209,3 +209,41 @@ TEST_CASE("ServiceClaim shipped content: the Steel Mine is guarded, claimed, and
     REQUIRE(restoredOwned != nullptr);
     REQUIRE(restoredOwned->ownerTeamColor == "Green");
 }
+
+TEST_CASE("ServiceClaim shipped content: the unguarded Copper Mine is claimed on legal entry and pays") {
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(RealContentDir()));
+    REQUIRE_FALSE(HasErrorMessage(repo.ValidationMessages()));
+
+    gameplay::GameSession session;
+    session.SetPlayerColor("Green");
+    session.SetUnitCatalog(repo.Units());
+    session.SetRegionCatalog(repo.Regions());
+    session.SetLocationServiceCatalog(repo.LocationServices());
+    session.InitializeEventDefinitions(repo.EventDefinitions());
+    session.SetScenarioOutcomeDefinition(repo.ScenarioOutcome());
+
+    // The Copper Mine starts unowned and is not guarded by any spawnTeam event.
+    REQUIRE(session.FindOwnedService("copper_mine_svc") == nullptr);
+
+    // M26: legally entering the unguarded node claims it immediately — no battle.
+    const auto claimed = session.ResolveNodeEntryClaims("copper_mine");
+    REQUIRE(claimed.size() == 1);
+    REQUIRE(claimed.front() == "copper_mine_svc");
+    const auto* owned = session.FindOwnedService("copper_mine_svc");
+    REQUIRE(owned != nullptr);
+    REQUIRE(owned->ownerTeamColor == "Green");
+
+    // Guarded Steel Mine stays battle-gated: after the authored town_center event
+    // spawns its guard, entering iron_mine claims nothing until the guard falls.
+    static_cast<void>(session.NotifyRegionNodeEntry("town_center"));
+    REQUIRE(session.ResolveNodeEntryClaims("iron_mine").empty());
+    REQUIRE(session.FindOwnedService("iron_mine_svc") == nullptr);
+
+    // The peacefully-claimed Copper Mine pays its authored Stone + Gold next day.
+    const int goldBefore = session.Snapshot().gold;
+    const int stoneBefore = session.ResourceCount(ResourceType::Stone);
+    session.AddMinutes(kOneDay);
+    REQUIRE(session.ResourceCount(ResourceType::Stone) == stoneBefore + 1);
+    REQUIRE(session.Snapshot().gold == goldBefore + 100);
+}

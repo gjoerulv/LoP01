@@ -163,6 +163,7 @@ if (BUILD_TESTING)
     tests/ServiceClaimRulesTests.cpp
     tests/ServiceClaimEndToEndTests.cpp
     tests/ServiceClaimContentTests.cpp
+    tests/NodeEntryClaimTests.cpp
     tests/V1EconomyProofContentTests.cpp
     tests/TraderOwnershipRulesTests.cpp
     tests/TradingPostTransactionRulesTests.cpp

@@ -2581,6 +2581,13 @@ economy::ServiceOwnerRelationship GameSession::OwnerRelationshipForColor(
 
 std::vector<std::string> GameSession::ClaimContestedServicesAtNode(
     const std::string& nodeId) {
+    // Back-compat alias: the claim logic lives in ResolveNodeEntryClaims, the
+    // single node-entry claim path for both peaceful entry and guarded capture.
+    return ResolveNodeEntryClaims(nodeId);
+}
+
+std::vector<std::string> GameSession::ResolveNodeEntryClaims(
+    const std::string& nodeId) {
     std::vector<std::string> claimed;
     if (nodeId.empty()) {
         return claimed;

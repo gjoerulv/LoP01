@@ -2,17 +2,15 @@
 
 ## Current baseline
 
-Treat the repository as a **post-M25** C++20 / raylib / CMake game project.
+Treat the repository as a **post-M26** C++20 / raylib / CMake game project.
 
-Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, and player-facing mine stationing/unstationing.
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, and general player-side owned-service claiming on legal node entry.
 
-Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
+Latest completed milestone: **M26 — General Owned-Service Claiming Semantics**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-Current selected milestone: **M26 — General Owned-Service Claiming Semantics**.
-
-M26 is planned, not implemented. Do not treat peaceful/unguarded player-side service claiming as complete until M26 ships.
+Current selected milestone: **not yet selected**. Candidate v2 directions are listed in `docs/implementation_roadmap.md` §5 and `docs/content_scope_v2.md` §5. Do not treat enemy-side capture, service destruction/restoration, Storage/Garrison, or other v2 expansion items as already implemented.
 
 ## Required reading
 
@@ -57,12 +55,12 @@ Production source comments should document durable contracts, not milestone book
 - `playerStart.gold` is an alias for legacy top-level `startGold`; authoring both is invalid.
 - Scenario start-state applies to runtime `GameSession` state when a Scenario starts; it is not persisted back into content.
 - Gold remains a single source of truth through the existing `gold_` / `ResourceType` delegation path.
-- Runtime owned-service state is mutable. Current shipped code proves player-side guarded-service claiming after defeating a hostile guard at the node.
-- Owned services do not have to be guarded. The current guarded-capture path is not a universal guard requirement.
-- M26 should add the missing peaceful/unguarded player-side claim path when the player legally enters a claimable service node.
-- Hostile-occupied travel may start battle before the moving player team is placed on the destination node. This is intended final-direction behavior; M26 should preserve it while making victory resolve capture/arrival exactly once.
+- Runtime owned-service state is mutable. Shipped code proves both guarded-service claiming (after defeating a hostile guard) and general player-side claiming on legal node entry.
+- Owned services do not have to be guarded. The guarded-capture path is not a universal guard requirement.
+- M26 added the peaceful/unguarded player-side claim path: legally entering a node claims its eligible ownable services via `GameSession::ResolveNodeEntryClaims` (the single claim path used for both peaceful entry and post-battle capture; `ClaimContestedServicesAtNode` is a back-compat alias). It is a no-op while the node is hostile-occupied, skips player-owned/allied services (so re-entry never clears the player's stationed units), and mutates runtime `OwnedServiceSaveState` only. The App wires it in `OnDestinationArrived` (peaceful) and the post-battle victory path; no save schema bump.
+- Hostile-occupied travel may start battle before the moving player team is placed on the destination node. This is intended final-direction behavior, preserved by M26; the guarded node is claimed once after victory and the player does not move onto it or spend extra travel/Energy/time.
 - Claiming mutates runtime owned-service state only; content definitions are never mutated.
-- M26 is not enemy-side capture, service destruction/restoration, Storage/Garrison, or a general ownership-transfer event system.
+- M26 is not enemy-side capture, service destruction/restoration, Storage/Garrison, or a general ownership-transfer event system. World-map-arrival and location-mode-entry claiming are out of M26 scope (only intra-region travel arrival claims).
 - Allied ownership does not grant player benefits and is not claimable in the current player-side claim path.
 - Runtime `spawnTeam` can create a missing enemy team or reactivate/move an existing one; it is not a general team-definition authoring system.
 - World Map initial unlocks remain authored through World Map content; no Scenario `unlockedRegions` override exists.
