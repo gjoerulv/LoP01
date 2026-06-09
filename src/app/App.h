@@ -10,6 +10,7 @@
 #include "app/BattleController.h"
 #include "app/MusteringInteraction.h"
 #include "app/TradingPostInteraction.h"
+#include "app/StationingInteraction.h"
 #include "app/input/InputTranslator.h"
 #include "app/mappers/RegionModelMapper.h"
 #include "app/mappers/WorldMapModelMapper.h"
@@ -90,6 +91,7 @@ namespace app {
         void AppendScenarioEndedStatusIfLatched();
         [[nodiscard]] MusteringCommand TranslateMusteringCommand(const input::InputState& input) const;
         [[nodiscard]] TradingPostCommand TranslateTradingPostCommand(const input::InputState& input) const;
+        [[nodiscard]] StationingCommand TranslateStationingCommand(const input::InputState& input) const;
         void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
         bool ApplyResolvedLocationService(const data::LocationServiceDefinition& service);
@@ -121,6 +123,7 @@ namespace app {
         CampaignController campaignController_;
         MusteringInteraction musteringInteraction_;
         TradingPostInteraction tradingPostInteraction_;
+        StationingInteraction stationingInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
         mappers::BattleModelMapper battleModelMapper_;

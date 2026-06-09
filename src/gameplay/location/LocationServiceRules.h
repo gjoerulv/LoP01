@@ -19,6 +19,7 @@ namespace gameplay::location {
 	[[nodiscard]] bool IsRecruitService(const data::LocationServiceDefinition* service);
 	[[nodiscard]] bool IsMusterService(const data::LocationServiceDefinition* service);
 	[[nodiscard]] bool IsTradingPostService(const data::LocationServiceDefinition* service);
+	[[nodiscard]] bool IsMineService(const data::LocationServiceDefinition* service);
 
 	struct RecruitServiceApplyResult {
 		bool success = false;

@@ -263,6 +263,52 @@ public:
 	// re-normalization.
 	void NormalizeStationedUnits();
 
+    // M25 player-facing stationing. Physical-placement model: a roster stack is in
+    // exactly one place at a time — an active slot, a reserve slot, or stationed at
+    // one owned service. Stationing moves a slotted stack out of its slot and adds
+    // exactly one stationed ref; unstationing returns the SAME stack id to an empty
+    // reserve slot. No unit is ever created, destroyed, or merged, so total unit
+    // quantity is conserved. Targets are mines only in M25. These methods are the
+    // only stationing-mutation surface — App/UI must route through them and never
+    // edit stationedUnits or roster slots directly.
+
+    // True iff `stackId` could be stationed at `serviceId` right now: the service
+    // is a player-owned, unlocked, undestroyed mine below capacity, and the stack
+    // exists, is currently slotted, is not the Player Character, and is not already
+    // stationed anywhere. Does not include the active-party leader guard, which
+    // only constrains pulling a whole stack out of an active slot. Pure read.
+    [[nodiscard]] bool CanStationStackAtService(
+        const std::string& serviceId, const std::string& stackId) const;
+
+    // Move a whole slotted stack out of its active/reserve slot and station it at
+    // the service, keeping the same stack id. Fails with no state change when
+    // ineligible, when the stack is not currently slotted, or when removing it from
+    // an active slot would leave the active party with no leader-capable unit.
+    [[nodiscard]] bool TryStationStackAtService(
+        const std::string& serviceId, const std::string& stackId);
+
+    // Split `quantity` off a generic slotted stack into a NEW stack (fresh id) and
+    // station that new stack; the source stack keeps its slot and id with the
+    // remaining quantity. Requires 1 <= quantity < source quantity; a quantity
+    // equal to the whole stack routes to TryStationStackAtService. Total unit
+    // quantity is conserved exactly. Fails with no state change when ineligible.
+    [[nodiscard]] bool TryStationSplitAtService(
+        const std::string& serviceId, const std::string& stackId, int quantity);
+
+    // Remove a stationed ref and return the SAME stack id to an empty reserve slot.
+    // Fails atomically (no state change) when there is no free reserve slot. Never
+    // creates, deletes, or merges a stack.
+    [[nodiscard]] bool TryUnstationStackFromService(
+        const std::string& serviceId, const std::string& stackId);
+
+    // Stack ids currently slotted (active first, then reserve) that are eligible to
+    // station at `serviceId` (non-Player-Character, not already stationed), or an
+    // empty list when the service itself cannot currently receive a unit. For the
+    // bounded stationing interaction's "station" list; the confirm path re-checks
+    // full legality (including the active-party leader guard). Pure read.
+    [[nodiscard]] std::vector<std::string> EligibleStationingStackIds(
+        const std::string& serviceId) const;
+
     // M17 Phase 4b: effective ownership tier when the player USES a specific
     // trader service. This is the benefit gate to apply at a trader service:
     // returns 0 unless `serviceId` is a known trader-kind service with owned
@@ -554,6 +600,15 @@ private:
     [[nodiscard]] bool IsLeaderCapableUnitId(const std::string& unitId) const;
     [[nodiscard]] int ActiveLeaderCapableCountExcludingOrderedIndex(int excludedOrderedIndex) const;
     [[nodiscard]] int ActiveLeaderCapableCount() const;
+
+    // M25 stationing helpers. Pure reads over runtime state.
+    [[nodiscard]] bool IsStackStationedAnywhere(const std::string& stackId) const;
+    [[nodiscard]] bool UnitIsPlayerCharacter(const std::string& unitId) const;
+    [[nodiscard]] core::OwnedServiceSaveState* FindOwnedServiceMutable(
+        const std::string& serviceId);
+    // Ordered index (among occupied active slots) of `stackId`, or -1 if it is not
+    // in an active slot. The ordered index is what the leader-guard helpers expect.
+    [[nodiscard]] int ActiveOrderedIndexOfStack(const std::string& stackId) const;
 
     // Shared firing loop for trigger-typed events. Called by NotifyStartOfDay and
     // NotifyRegionNodeEntry. `matches` decides which event definitions are eligible

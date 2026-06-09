@@ -33,11 +33,11 @@ Current stable foundation:
 - Trading Post interaction flow with a bounded Location-mode service interaction, buy/sell/barter modes, live prompt feedback, per-visit time cost, and a small authored playable Home Base Trading Post;
 - Scenario-authored player economy/service start state through `playerStart`, including starting Gold, non-Gold resources, and initial player-owned service state applied at Scenario start;
 - owned-service claiming/contesting foundation: defeating a hostile team occupying/guarding a node can claim eligible ownable services at that node for the player;
-- v1 strategic-economy proof content: shipped `playerStart`, shipped `leader_energy`, shipped `mine_production` authoring, authored Trading Post curve data, guarded Steel Mine claim proof, and tests proving the play-reachable chain plus runtime-stationed mine-production boost.
+- v1 strategic-economy proof content: shipped `playerStart`, shipped `leader_energy`, shipped `mine_production` authoring, authored Trading Post curve data, guarded Steel Mine claim proof, and tests proving the play-reachable chain plus runtime-stationed mine-production boost;
+- player-facing mine stationing flow: a bounded, text-prompt interaction at player-owned mines that stations/unstations/splits eligible owned stacks behind explicit `GameSession` methods (physical one-place-at-a-time placement, Player-Character excluded, up to 5 per mine, no schema bump), making `mine_production` visible in normal play.
 
 Still incomplete or intentionally deferred:
 
-- player-facing stationing / unstationing of units at owned services;
 - Storage/Garrison service kind and defensible-asset system;
 - victory event chains;
 - richer scenario outcome condition leaves;
@@ -82,7 +82,7 @@ Still incomplete or intentionally deferred:
 | 10 | Scenario `playerStart` covers economy/service start state only; authored starting roster, full team definitions, item/artifact start state, and `unlockedRegions` overrides are intentionally absent. | Gap, not conflict. Add only when a scoped milestone needs them. |
 | 11 | Scenario Result mode presents deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Intentional M22 scope. Add only through future scoped milestones. |
 | 12 | Owned-service claiming is player-side guarded capture only. It does not implement enemy-side capture, peaceful/unguarded claiming, sabotage, or destruction/restoration. | Intentional M23 scope. Expand only through future scoped milestones. |
-| 13 | `mine_production` is implemented and content-authored, but player-facing stationing is not implemented. Current proof uses existing runtime/save-data stationing state in tests. | M25 should make stationing reachable through gameplay without becoming full Storage/Garrison. |
+| 13 | `mine_production` is implemented, content-authored, and now player-facing: M25 added a bounded stationing flow at player-owned mines. | Resolved in M25. Stationing stays guard/worker capacity only; do not let it grow into Storage/Garrison, stationed-defender combat, or enemy-side capture without a scoped milestone. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -104,16 +104,21 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 14 — Scenario Result Presentation Flow:** M22 complete.
 - **Phase 15 — Owned Service Claiming and Contesting Foundation:** M23 complete.
 - **Phase 16 — v1 Strategic-Economy Proof Content:** M24 complete.
+- **Phase 17 — Player-facing Service Stationing Flow:** M25 complete.
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
+Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-### M25 — Player-facing Service Stationing Flow  (selected; planned, not yet implemented)
+The next milestone is **not yet selected**. Candidate v2 directions are in §5 below and in `docs/content_scope_v2.md` §5; the natural successor is a bounded Storage/Garrison foundation or an owned-service management view, now that stationing semantics are proven.
 
-**Goal:** Make the existing stationed-unit service path reachable through gameplay. The player should be able to station and unstation eligible owned units at eligible owned services, starting with mines, so `mine_production` becomes visible in normal play rather than only through tests/save-data injection.
+### M25 — Player-facing Service Stationing Flow  (complete)
+
+**Goal:** Make the existing stationed-unit service path reachable through gameplay. The player can station and unstation eligible owned units at eligible owned services, starting with mines, so `mine_production` becomes visible in normal play rather than only through tests/save-data injection.
+
+**Delivered:** a pure `StationingRules` legality module; `GameSession` mutation methods (`TryStationStackAtService`, `TryStationSplitAtService`, `TryUnstationStackFromService`, `CanStationStackAtService`, `EligibleStationingStackIds`) enforcing physical one-place-at-a-time placement, same-stack-id unstation into reserve with atomic-fail when reserve is full, generic-stack split, Player-Character exclusion, active-party leader-guard on active pulls, and capacity 5; a bounded text-prompt `StationingInteraction` reached from the mine Location-zone dispatch; and tests covering pure rules, mutations, save/load round-trip (no schema bump), the interaction, and an end-to-end payout boost reached through the mutation API.
 
 **Rationale:** v1 proved the strategic-economy loop, but the `mine_production` half of the passive system is still not player-facing. Runtime state, save/load, payout calculation, and content-authored `mine_production` already exist. M25 should expose that existing path through one bounded interaction without building the full Storage/Garrison system.
 

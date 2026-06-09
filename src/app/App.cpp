@@ -976,6 +976,31 @@ TradingPostCommand App::TranslateTradingPostCommand(const input::InputState& inp
     return TradingPostCommand::None;
 }
 
+StationingCommand App::TranslateStationingCommand(const input::InputState& input) const {
+    if (input.interact) {
+        return StationingCommand::Exit;
+    }
+    if (input.option1) {
+        return StationingCommand::Confirm;
+    }
+    if (input.option2) {
+        return StationingCommand::CycleList;
+    }
+    if (input.selectPrev) {
+        return StationingCommand::SelectPrev;
+    }
+    if (input.selectNext) {
+        return StationingCommand::SelectNext;
+    }
+    if (input.targetPrev) {
+        return StationingCommand::QuantityDown;
+    }
+    if (input.targetNext) {
+        return StationingCommand::QuantityUp;
+    }
+    return StationingCommand::None;
+}
+
 void App::UpdateLocationScene(const input::InputState& input, const float deltaTime) {
     const LocationUpdateResult result =
         locationController_.Update(input, deltaTime, locationScene_.HasActiveDialogue());
@@ -1021,6 +1046,20 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
 
         if (tradeResult.shouldExit) {
             tradingPostInteraction_.Close();
+        }
+
+        return;
+    }
+
+    if (stationingInteraction_.IsActive()) {
+        const StationingCommand command = TranslateStationingCommand(input);
+        const auto stationingResult = stationingInteraction_.ApplyCommand(command, session_);
+        if (!stationingResult.statusText.empty()) {
+            statusMessage_ = stationingResult.statusText;
+        }
+
+        if (stationingResult.shouldExit) {
+            stationingInteraction_.Close();
         }
 
         return;
@@ -1182,6 +1221,23 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
         return true;
     }
 
+    if (gameplay::location::IsMineService(&service)) {
+        const auto* owned = session_.FindOwnedService(service.id);
+        const bool playerOwned = owned != nullptr && !owned->ownerTeamColor.empty() &&
+            owned->ownerTeamColor == session_.PlayerColor();
+        if (!playerOwned) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "You do not control this mine";
+            return false;
+        }
+        stationingInteraction_.Open(session_, service);
+        statusMessage_ = !service.successText.empty()
+            ? service.successText
+            : "Stationing units at the mine";
+        return true;
+    }
+
     statusMessage_ = "Unknown service";
     return false;
 }
@@ -1228,7 +1284,13 @@ void App::Draw() const {
             true
         };
     }
-    
+    else if (snapshot.mode == gameplay::GameMode::LocationMode && stationingInteraction_.IsActive()) {
+        locationPromptOverride = mappers::InteractPromptOverride{
+            stationingInteraction_.BuildPromptText(session_),
+            true
+        };
+    }
+
     switch (snapshot.mode) {
     case gameplay::GameMode::Title: {
         TitleScreenModel model;

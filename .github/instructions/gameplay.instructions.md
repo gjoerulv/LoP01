@@ -1,7 +1,7 @@
 # Gameplay instructions
 
-- Treat the project as post-M24.
-- Current gameplay foundations include deterministic scenario outcomes, Scenario Result presentation, Scenario `playerStart`, owned-service economy, Trading Post interaction, player-side guarded-service claiming, and v1 strategic-economy proof content.
+- Treat the project as post-M25.
+- Current gameplay foundations include deterministic scenario outcomes, Scenario Result presentation, Scenario `playerStart`, owned-service economy, Trading Post interaction, player-side guarded-service claiming, v1 strategic-economy proof content, and player-facing mine stationing/unstationing.
 - Ownership and guarding are related but separate: an owned service does not have to be guarded, and a guarded service is only one capture path.
 - Claimed services mutate runtime owned-service state only; content definitions must not be mutated.
 - `mine_production` exists and is proven through runtime/save-data stationing state; player-facing service stationing is the selected next milestone and is not yet implemented.
