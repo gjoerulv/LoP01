@@ -2,10 +2,11 @@
 
 When asked to plan the next work:
 
-1. Treat the repository as **post-M23**.
-2. Latest completed milestone is **M23 — Owned Service Claiming and Contesting Foundation**.
-3. No next milestone is currently selected. Do not assume M24.
-4. Read active docs before recommending anything, especially `docs/implementation_roadmap.md`, `docs/content_scope_v1.md`, and `docs/game_vision.md`.
-5. The next planning pass should explicitly decide whether v1 is complete enough to archive and replace with v2, or whether one final v1 milestone is still needed.
+1. Treat the repository as **post-M24**.
+2. Latest completed milestone is **M24 — v1 Strategic-Economy Proof Content**.
+3. Active scope cap is `docs/content_scope_v2.md`.
+4. Current next milestone is **M25 — Player-facing Service Stationing Flow** unless the active roadmap has changed.
+5. Read active docs before recommending anything, especially `docs/implementation_roadmap.md`, `docs/content_scope_v2.md`, and `docs/game_vision.md`.
 6. Do not edit source/tests during a roadmap-only pass.
 7. Keep roadmap edits concise and avoid speculative milestone sprawl.
+8. Do not use archived `content_scope_v1.md` as the active scope after it is archived by the user.

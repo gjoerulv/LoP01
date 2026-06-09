@@ -1,12 +1,13 @@
+# This file is archived
 # Ashvale Implementation Roadmap
 
 ## Context
 
-The current codebase is a **post-M24** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase is a **post-M23** bounded multi-Region, multi-Scenario vertical slice.
 
-The v1 strategic-economy proof is complete: the shipped slice and tests now exercise Scenario-authored player economy/service start state, owned services, mine payout, narrow unit passive effects, authored Trading Post trade data, guarded service claiming, Scenario Result presentation, and Campaign progression.
+The stable foundation now includes battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, deterministic scenario outcomes, a dedicated Scenario Result screen, inventory and artifacts, the team Energy pool, a minimal World Map layer, a minimal Campaign System, owned-service/economy foundation, a narrow unit passive-effect spine, a headless Trading Post transaction layer, a bounded playable Trading Post interaction flow, Scenario-authored player economy/service start state, and in-play owned-service claiming/contesting after defeating hostile guards.
 
-Archived docs, including `docs/content_scope_v0.md.archived`, older `docs/implementation_roadmap.md.*.archived` files, and `docs/content_scope_v1.md` once archived by the user, are historical context only. The active scope cap is now `docs/content_scope_v2.md`.
+Archived docs, including `docs/content_scope_v0.md.archived` and older `docs/implementation_roadmap.md.*.archived` files, are historical context only. The active scope cap remains `docs/content_scope_v1.md` until a deliberate v2 scope is selected.
 
 ## 1. Current implementation baseline
 
@@ -32,13 +33,10 @@ Current stable foundation:
 - Trading Post transaction foundation with pure quote rules, GameSession transaction APIs, service-specific use/ownership gating, tier-0 fallback/default behavior, Gold delegation, validation, and end-to-end tests;
 - Trading Post interaction flow with a bounded Location-mode service interaction, buy/sell/barter modes, live prompt feedback, per-visit time cost, and a small authored playable Home Base Trading Post;
 - Scenario-authored player economy/service start state through `playerStart`, including starting Gold, non-Gold resources, and initial player-owned service state applied at Scenario start;
-- owned-service claiming/contesting foundation: defeating a hostile team occupying/guarding a node can claim eligible ownable services at that node for the player;
-- v1 strategic-economy proof content: shipped `playerStart`, shipped `leader_energy`, shipped `mine_production` authoring, authored Trading Post curve data, guarded Steel Mine claim proof, and tests proving the play-reachable chain plus runtime-stationed mine-production boost.
+- owned-service claiming/contesting foundation: defeating a hostile team occupying/guarding a node can claim eligible ownable services at that node for the player; claimed services feed existing mine payout, trader tier, Trading Post use, and save/load systems.
 
 Still incomplete or intentionally deferred:
 
-- player-facing stationing / unstationing of units at owned services;
-- Storage/Garrison service kind and defensible-asset system;
 - victory event chains;
 - richer scenario outcome condition leaves;
 - per-team / multi-human scenario outcome tracking;
@@ -82,7 +80,6 @@ Still incomplete or intentionally deferred:
 | 10 | Scenario `playerStart` covers economy/service start state only; authored starting roster, full team definitions, item/artifact start state, and `unlockedRegions` overrides are intentionally absent. | Gap, not conflict. Add only when a scoped milestone needs them. |
 | 11 | Scenario Result mode presents deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Intentional M22 scope. Add only through future scoped milestones. |
 | 12 | Owned-service claiming is player-side guarded capture only. It does not implement enemy-side capture, peaceful/unguarded claiming, sabotage, or destruction/restoration. | Intentional M23 scope. Expand only through future scoped milestones. |
-| 13 | `mine_production` is implemented and content-authored, but player-facing stationing is not implemented. Current proof uses existing runtime/save-data stationing state in tests. | M25 should make stationing reachable through gameplay without becoming full Storage/Garrison. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -103,56 +100,27 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 13 — Scenario Economy Start-State Authoring Foundation:** M21 complete.
 - **Phase 14 — Scenario Result Presentation Flow:** M22 complete.
 - **Phase 15 — Owned Service Claiming and Contesting Foundation:** M23 complete.
-- **Phase 16 — v1 Strategic-Economy Proof Content:** M24 complete.
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
+Latest completed milestone: **M23 — Owned Service Claiming and Contesting Foundation**.
 
-Active scope cap: **`docs/content_scope_v2.md`**.
+No next milestone is currently selected.
 
-### M25 — Player-facing Service Stationing Flow  (selected; planned, not yet implemented)
+The next planning pass should perform a **v1 completion audit** before selecting another implementation milestone. The likely question is whether `docs/content_scope_v1.md` is now complete enough to archive and replace with `content_scope_v2.md`, or whether one final v1 cleanup milestone is still needed.
 
-**Goal:** Make the existing stationed-unit service path reachable through gameplay. The player should be able to station and unstation eligible owned units at eligible owned services, starting with mines, so `mine_production` becomes visible in normal play rather than only through tests/save-data injection.
+Do not assume M24. Do not create v2 scope automatically. First audit the active docs/source against `docs/content_scope_v1.md` and `docs/game_vision.md`.
 
-**Rationale:** v1 proved the strategic-economy loop, but the `mine_production` half of the passive system is still not player-facing. Runtime state, save/load, payout calculation, and content-authored `mine_production` already exist. M25 should expose that existing path through one bounded interaction without building the full Storage/Garrison system.
-
-**Narrow acceptance criteria:**
-
-- A player-facing interaction path allows stationing an eligible owned unit at an eligible player-owned service, initially a mine.
-- The interaction preserves the stack-backed invariant: stationed units must correspond to owned units under the current roster model.
-- The player can unstation or replace stationed units without duplicating or losing units.
-- Stationed `mine_production` affects mine payout through the existing strongest-only rules; no payout rewrite.
-- Save/load preserves stationed assignments through existing owned-service serialization; no schema bump unless the implementation audit proves one is unavoidable.
-- The interaction is bounded and text-prompt based, following existing service interaction patterns.
-- Tests cover pure rules where applicable, GameSession mutation behavior, save/load, and an end-to-end payout proof through player-facing stationing.
-
-**Explicit non-goals:**
-
-- No full Storage/Garrison service kind yet.
-- No stationed defenders, combat defense, capacity/loss framework, or service siege system.
-- No enemy-side stationing or AI economy.
-- No enemy capture of player-owned services.
-- No starting-roster authoring or broad team authoring.
-- No broad inventory/trader UI rewrite.
-- No new passive kinds.
-- No v2 scope expansion beyond this selected stationing milestone.
-
-**Likely first slice:** audit the current roster/owned-service/stationed-unit model, then add a pure stationing legality/mutation rule and tests before App interaction wiring. If the existing stack-backed invariant cannot be preserved with current roster APIs, stop and revise the plan before coding UI.
-
-**Risk notes:** the main risk is accidental unit duplication/loss. Do not mutate stationed units directly from the App layer. Keep mutations behind explicit `GameSession` methods. Do not let service stationing become Storage/Garrison by stealth.
-
-## 5. Candidate directions after M25
+## 5. Candidate directions after M23
 
 These are candidates, not selected commitments:
 
-1. **Storage/Garrison Foundation.** Add a bounded storage/garrison service or interaction after M25 proves stationing semantics. This is the most natural v2 successor if stationing holds up.
-2. **Owned Service Presentation / Management View.** Show owned services, stationed units, expected mine output, and ownership status through a dedicated model/renderer.
-3. **Service destruction / restoration and enemy-side capture.** The broader contesting loop after M23/M25. Deferred until stationing/defense semantics exist.
-4. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface.
-5. **Campaign branch-choice presentation.** When a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support exists, but `CampaignProgressionRules` resolves the first entry only.
-6. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped.
-7. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content.
-8. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but should not be bundled unless a milestone explicitly selects one narrow result-extension slice.
+1. **v1 completion audit and v2 scope planning.** Determine whether the compact strategic-economy proof is complete enough to archive `content_scope_v1.md` and define `content_scope_v2.md`. This should be the next planning step before implementation work.
+2. **Service destruction / restoration and enemy-side capture.** The broader contesting loop after M23: occupying-team service destruction/restoration (`core_loop_rules.md` §20) and enemy/AI capture of player services. Deferred — enemy-side capture needs AI economy; both are beyond M23's narrow player-side claim path.
+3. **Campaign branch-choice presentation.** When a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support exists, but `CampaignProgressionRules` resolves the first entry only, and large campaign branching UI is out of v1 content scope.
+4. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface. Independent, pure-presentation, no logic change.
+5. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped; currently out of v1 content scope.
+6. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content. No current authored-content pressure; out of v1 content scope.
+7. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but should not be bundled unless a milestone explicitly selects one narrow result-extension slice.
 
-The next selected milestone after M25 should be narrow, testable, and justified by current gameplay value rather than system excitement.
+The next selected milestone should be narrow, testable, and justified by current gameplay value rather than system excitement.

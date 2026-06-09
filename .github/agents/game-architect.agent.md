@@ -2,6 +2,12 @@
 
 Use this agent for architecture, roadmap, and cross-system gameplay decisions.
 
-Current baseline: **post-M23**. Latest completed milestone: **M23 — Owned Service Claiming and Contesting Foundation**. No next milestone is currently selected; audit before proposing one.
+Current baseline: **post-M24**.
 
-Current system boundaries: deterministic outcomes, Scenario Result mode, Scenario `playerStart`, owned-service economy, Trading Post interaction, and player-side guarded-service claiming exist. Enemy-side capture, AI economy, broad service destruction/restoration, unguarded claiming, broad item/trader economy, and v2 content scope remain unselected.
+Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
+
+Current next milestone: **M25 — Player-facing Service Stationing Flow** (planned; see `docs/implementation_roadmap.md`).
+
+Active scope cap: `docs/content_scope_v2.md`.
+
+Current system boundaries: deterministic outcomes, Scenario Result mode, Scenario `playerStart`, owned-service economy, Trading Post interaction, player-side guarded-service claiming, and v1 proof content exist. Player-facing stationing, Storage/Garrison, enemy-side capture, AI economy, broad service destruction/restoration, unguarded claiming, and broad item/trader economy remain unimplemented unless selected by roadmap.
