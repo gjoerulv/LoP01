@@ -15,9 +15,9 @@
       "zones": [
         {
           "id": "mine_face",
-          "type": "npc",
+          "type": "shop",
           "area": { "x": 620, "y": 320, "width": 80, "height": 20 },
-          "prompt_text": "",
+          "prompt_text": "E: Manage mine workers",
           "result_text": "",
           "failure_text": "",
           "time_cost_minutes": 0,
