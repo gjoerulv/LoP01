@@ -2,11 +2,13 @@
 
 ## Purpose
 
-This is the active content-scope document for the post-M22 Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`. Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
+This is the active content-scope document for the **post-M23** Ashvale project. It replaces the archived pre-M15/M16 bounded-slice scope in `docs/content_scope_v0.md.archived`.
+
+Use this document to decide **how much authored content** a milestone should add and which systems that content is allowed to exercise. It is not the full game vision, not a schema reference, and not the implementation roadmap.
 
 Related active docs:
 
-- `docs/implementation_roadmap.md` — active technical roadmap after M22.
+- `docs/implementation_roadmap.md` — active technical roadmap after M23.
 - `docs/content_schema.md` — intended and current authored data shapes.
 - `docs/scenario_authoring.md` — Scenario authoring rules and validation expectations.
 - `docs/core_loop_rules.md` — systemic gameplay rules.
@@ -17,15 +19,16 @@ Archived docs should be read only for historical context.
 
 ## 1. Current playable baseline
 
-The current baseline is post-M22:
+The current baseline is post-M23:
 
 - C++20 / raylib / CMake project.
 - Content-driven JSON loading through `ContentRepository`.
-- Battle, roster, reserve, save/load, quests, typed events, scenario outcomes, Scenario Result presentation, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, passive-effect, Trading Post transaction, Trading Post interaction, and Scenario start-state foundations exist.
+- Battle, roster, reserve, save/load, quests, typed events, runtime enemy-team spawning, scenario outcomes, Scenario Result presentation, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, passive-effect, Trading Post transaction, Trading Post interaction, Scenario start-state, and owned-service claiming foundations exist.
 - The playable content is a bounded multi-Region, multi-Scenario vertical slice.
 - Scenario content can author player starting Gold, non-Gold resources, and initial player-owned service state through `playerStart`.
-- Scenario outcomes now have a dedicated player-facing result step before campaign/terminal progression continues.
-- Full per-Scenario Region Contexts, per-scenario content directories, authored starting rosters, full campaign branching UI, full shop/inventory UI, and other trader-service behaviors are not implemented.
+- Scenario outcomes have a dedicated player-facing result step before campaign/terminal progression continues.
+- The shipped slice includes a guarded, claimable owned-resource service proof: defeating the hostile guard can claim the service, after which existing mine payout / trader-tier / service-use consumers see the runtime ownership state.
+- Full per-Scenario Region Contexts, per-scenario content directories, authored starting rosters, full campaign branching UI, full shop/inventory UI, other trader-service behaviors, AI economy, and enemy-side ownership capture are not implemented.
 
 The current content should prove systems generically. Do not add demo-specific source branches to make authored content work.
 
@@ -33,7 +36,7 @@ The current content should prove systems generically. Do not add demo-specific s
 
 The v1 content goal is a compact strategic-economy proof:
 
-> A compact campaign slice where Scenario-authored starting economy/service control, owned services, mines, Trading Posts, narrow passive effects, and Scenario result presentation interact coherently.
+> A compact campaign slice where Scenario-authored starting economy/service control, owned services, mines, Trading Posts, narrow passive effects, Scenario result presentation, and guarded service claiming interact coherently.
 
 Recommended scale for v1:
 
@@ -46,9 +49,11 @@ Recommended scale for v1:
 - Enough authored Trading Post data/content to prove barter and Gold trade behavior without becoming a full item economy.
 - Enough Scenario `playerStart` data to prove starting resources and player-owned services without broad roster/team authoring.
 - Enough Scenario outcome authoring to prove Victory/Defeat result presentation and campaign progression, but not broad branching UI.
-- Enough enemy teams to test ownership pressure and guarded services, but not a full AI economy.
+- Enough enemy-team and guarded-service content to prove ownership pressure and guarded claiming, but not a full AI economy.
 
 This target is intentionally modest. The project should gain systemic depth before content volume.
+
+After M23, this scope appears close to functionally complete. Do not archive or replace it until a dedicated v1 completion audit confirms that the current source/content actually satisfies the v1 proof and selects the next scope.
 
 ## 3. Scenario start-state content rules
 
@@ -65,12 +70,15 @@ Rules:
 - Owned service entries are player-owned only in the current slice; do not add team/owner fields in content until a team-authoring milestone exists.
 - `ownedServices` should reference services that are meaningful to own, such as mines/resource services and trader services.
 - `playerStart` applies to runtime state when a Scenario starts; content definitions are not mutated.
-- World Map initial unlocks remain authored in World Map content. Do not invent Scenario `unlockedRegions` overrides without a selected milestone.
+- World Map initial unlocks remain authored in World Map content.
+- Do not invent Scenario `unlockedRegions` overrides without a selected milestone.
 - Do not author starting rosters, item/artifact state, team definitions, or per-scenario content directories under v1 unless the roadmap explicitly promotes them.
 
 ## 4. Scenario outcome and result-presentation content rules
 
-Scenario result presentation uses already-authored deterministic Scenario outcomes. Content may author bounded Victory/Defeat conditions through the existing scenario outcome data, and the result screen presents the latched outcome reason and next campaign step.
+Scenario result presentation uses already-authored deterministic Scenario outcomes.
+
+Content may author bounded Victory/Defeat conditions through the existing scenario outcome data, and the result screen presents the latched outcome reason and next campaign step.
 
 Rules:
 
@@ -78,7 +86,7 @@ Rules:
 - Do not add scores, reward tables, fanfare scripts, animation data, or post-victory event chains under v1 without an explicit roadmap milestone.
 - Campaign branching UI is not in v1 scope. Multiple `nextScenarioIds` remain a future candidate and currently resolve through existing campaign progression rules.
 
-## 5. Owned service content rules
+## 5. Owned service content and claiming rules
 
 Ownership benefits apply to the owning team only unless a later system explicitly changes alliance benefits. Allies do not automatically receive ownership benefits.
 
@@ -91,6 +99,18 @@ Service ownership must not bypass:
 - eligibility checks;
 - story/event requirements;
 - service-specific availability rules.
+
+Current implemented claiming scope:
+
+- Defeating a hostile team occupying/guarding a node can claim eligible ownable services at that node for the player.
+- Ownable service kinds are mines/resource services and trader services.
+- Unowned/neutral services and hostile-owned services are claimable by the player after the guard is defeated.
+- Already player-owned services are unchanged.
+- Allied-owned services are not claimed by the current player-side claiming path.
+- Locked/destroyed services are not claimed.
+- Stationed units are cleared on ownership transfer so the player does not inherit enemy/allied stationed units.
+- Content definitions are never mutated; claiming writes runtime owned-service state and persists through save data.
+- A service does **not** have to be guarded to be owned. M23 proves the guarded capture path only. Unguarded/peaceful claiming remains a future interaction if selected.
 
 ## 6. Mine and resource-service scope
 
@@ -136,7 +156,7 @@ Current Trading Post scope:
 - Locked, destroyed, or hostile-occupied Trading Posts are refused outright.
 - The player-facing Trading Post interaction is intentionally bounded: buy, sell, barter, prompt feedback, and a 20-minute visit cost charged once on exit if at least one trade succeeded.
 
-Future milestones may broaden service UI, add other trader-service behaviors, item economy, AI economy, or service ownership transfer only when explicitly selected.
+Future milestones may broaden service UI, add other trader-service behaviors, item economy, AI economy, enemy-side capture, or broader service ownership transfer only when explicitly selected.
 
 ## 8. Passive-effect content scope
 
@@ -183,6 +203,9 @@ The following remain out of scope unless explicitly promoted by the active roadm
 - full hero-instance identity model;
 - full skill tree UI;
 - full AI economy;
+- enemy-side capture of player services;
+- broad service destruction/restoration/sabotage loops;
+- unguarded/peaceful claiming interactions unless explicitly selected;
 - generic origin-storage across Regions;
 - campaign save-slot UI;
 - broad recipe/cooking/artifact-combination suite unless selected as a milestone;

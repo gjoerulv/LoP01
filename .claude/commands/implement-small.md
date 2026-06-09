@@ -1,14 +1,17 @@
-# Implement small command
+# Implement-small command guidance
 
-When implementing a scoped Ashvale change:
+Use this for narrow implementation slices only.
 
-1. Read `CLAUDE.md` and the relevant active docs first.
-2. Verify the branch baseline. Expected current baseline is post-M22 unless the branch proves otherwise.
-3. Keep the implementation slice narrow and test-backed.
-4. Do not expand into unselected systems.
-5. Preserve separation of concerns and save/load compatibility.
-6. Preserve authored-content vs runtime-state boundaries.
-7. Avoid milestone/phase labels in production source comments.
-8. Add or update tests for the changed behavior.
-9. Run targeted tests and the full test suite when practical.
-10. Report files changed, tests run, and any remaining risks.
+Current baseline: **post-M23**. Do not treat M17-M23 work as future work.
+
+Before editing, read `CLAUDE.md` and the active roadmap. If no milestone is selected, stop and request/perform a planning audit instead of inventing implementation scope.
+
+Implementation rules:
+
+- Change only the files required by the selected slice.
+- Add tests with every gameplay/data/schema change.
+- Keep gameplay logic out of rendering/input layers.
+- Keep content definitions separate from runtime mutable state.
+- Avoid per-frame scans, repeated content parsing, graph rebuilds, large needless copies, and hidden nested scans.
+- Avoid milestone/phase labels in production comments.
+- For ownership work, remember that M23 implements player-side guarded-service claiming only; enemy-side capture, unguarded claiming, service destruction/restoration, and AI economy require explicit future milestones.

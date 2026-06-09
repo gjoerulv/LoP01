@@ -1,13 +1,10 @@
-# Diff review command
+# Review-diff command guidance
 
 When reviewing a diff:
 
-1. Verify the exact commit or branch state.
-2. Review against active docs and current baseline: post-M22.
-3. Return a binary result:
-   - accept 100%, or
-   - reject with only blocking fixes.
-4. Be strict about correctness, validation, save/load compatibility, architecture, and performance.
-5. For docs/comment-only fixes, provide a direct patch instead of asking for unnecessary agent implementation work.
-6. Flag stale milestone labels in production source comments unless they are temporary and removed before merge.
-7. Test comments are acceptable when they explain non-obvious regression intent.
+- Compare the diff to active docs and roadmap, not archived files.
+- Treat the project as post-M23 unless the branch says otherwise.
+- Be binary where possible: accept or reject with a specific revision prompt.
+- Reject stale roadmap/baseline wording, duplicated source-of-truth rules, unsafe save/load behavior, and untested gameplay/schema changes.
+- For comment-only cleanup, prefer a direct patch over sending work back to an agent.
+- Production comments should document durable contracts, not milestone bookkeeping.

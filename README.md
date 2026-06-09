@@ -1,14 +1,16 @@
 # Ashvale
 
-Ashvale is a C++20 / raylib / CMake strategy-RPG prototype. The current codebase is a **post-M22** bounded multi-Region, multi-Scenario vertical slice. The implemented foundation includes battle, roster, save/load, Region/Location flow, typed events, enemy teams, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned services/economy, unit passive effects, Trading Post transactions, Trading Post interaction flow, and Scenario-authored player economy/service start state.
+Ashvale is a C++20 / raylib / CMake strategy-RPG prototype. The current codebase is a **post-M23** bounded multi-Region, multi-Scenario vertical slice.
+
+The implemented foundation includes battle, roster, save/load, Region/Location flow, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned services/economy, unit passive effects, Trading Post transactions, Trading Post interaction flow, Scenario-authored player economy/service start state, and in-play owned-service claiming after defeating hostile guards.
 
 ## Current baseline
 
-Latest completed milestone: **M22 — Scenario Result Presentation Flow**.
+Latest completed milestone: **M23 — Owned Service Claiming and Contesting Foundation**.
 
-M22 added a dedicated player-facing Scenario Result mode that appears when a deterministic scenario outcome latches. It shows Victory/Defeat, the outcome reason, and the next step before the existing campaign/terminal progression runs on Continue. The mode is transient, suppresses save/load while active, does not change scenario outcome rules, campaign progression, carry-over, content, or save schema, and keeps result rendering separate through a mapper/renderer path.
+M23 added the first in-play ownership-transfer path: when the player defeats a hostile team occupying/guarding a node, eligible ownable services at that node can become player-owned. The implementation uses a pure claim rule, one explicit `GameSession` mutation path, the hostile-contact victory seam, runtime `spawnTeam` creation/reactivation, shipped guarded-mine proof content, and tests for claiming, payout/tier/use, save/load, and content integrity.
 
-Selected next milestone (planned, not yet implemented): **M23 — Owned Service Claiming and Contesting Foundation** — when the player defeats the hostile team occupying/guarding a node, the player claims eligible ownable services (mine / trader) at that node, the first in-play change to service ownership. See `docs/implementation_roadmap.md` for the full definition.
+No next milestone is currently selected. The next planning pass should audit the post-M23 source/docs against `docs/content_scope_v1.md` and `docs/game_vision.md` before deciding whether v1 is complete enough to archive and move to v2, or whether one final v1 cleanup milestone is still needed.
 
 ## Active docs
 

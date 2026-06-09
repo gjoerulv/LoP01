@@ -1,12 +1,15 @@
-# Documentation audit command
+# Audit docs command guidance
 
-When auditing docs:
+Use this to check documentation after a milestone or planning pass.
 
-1. Verify the exact branch/commit.
-2. Treat `docs/implementation_roadmap.md` and `docs/content_scope_v1.md` as the active roadmap/scope documents.
-3. Treat archived roadmap/scope files as historical context only.
-4. Confirm active docs agree on the implementation baseline. Current expected baseline is post-M22.
-5. Confirm active docs do not describe completed M17-M22 work as future work.
-6. Confirm no next milestone is invented unless the roadmap explicitly selects one.
-7. Look for ambiguity, redundancy, contradiction, stale milestone posture, and stale schema/rule descriptions.
-8. Keep fixes concise. Do not bloat docs into changelogs.
+Current baseline: **post-M23**.
+
+Checklist:
+
+- Active docs must not describe the repo as post-M22 or earlier.
+- Latest completed milestone should be **M23 — Owned Service Claiming and Contesting Foundation** unless a later milestone is completed.
+- If no next milestone is selected, active guidance must say so clearly and must not imply an implementation phase.
+- `docs/content_scope_v1.md` remains active until a deliberate v2 scope is created.
+- Archived docs are historical context only.
+- Do not update broad vision/scope docs just to record milestone status; update them only when the playable content target or rules actually change.
+- Prefer concise targeted edits over broad rewrites.
