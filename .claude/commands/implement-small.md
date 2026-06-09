@@ -2,9 +2,11 @@
 
 Use this for narrow implementation slices only.
 
-Current baseline: **post-M23**. Do not treat M17-M23 work as future work.
+Current baseline: **post-M24**. Do not treat M17-M24 work as future work.
 
-Before editing, read `CLAUDE.md` and the active roadmap. If no milestone is selected, stop and request/perform a planning audit instead of inventing implementation scope.
+Before editing, read `CLAUDE.md`, `docs/implementation_roadmap.md`, and `docs/content_scope_v2.md`.
+
+If no milestone is selected in the active roadmap, stop and request/perform a planning audit instead of inventing implementation scope. At this baseline, M25 is selected unless the active roadmap has changed.
 
 Implementation rules:
 
@@ -14,4 +16,4 @@ Implementation rules:
 - Keep content definitions separate from runtime mutable state.
 - Avoid per-frame scans, repeated content parsing, graph rebuilds, large needless copies, and hidden nested scans.
 - Avoid milestone/phase labels in production comments.
-- For ownership work, remember that M23 implements player-side guarded-service claiming only; enemy-side capture, unguarded claiming, service destruction/restoration, and AI economy require explicit future milestones.
+- For stationing work, preserve the stack-backed stationed-unit invariant and avoid unit duplication/loss. Do not implement full Storage/Garrison unless the active milestone explicitly selects it.

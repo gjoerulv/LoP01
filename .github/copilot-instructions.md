@@ -12,19 +12,19 @@ Use these rules when working in this repository.
 
 ## Current baseline
 
-The current codebase should be treated as a **post-M23** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase should be treated as a **post-M24** bounded multi-Region, multi-Scenario vertical slice.
 
-Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, and in-play owned-service claiming/contesting after defeating hostile guards.
+Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, and v1 strategic-economy proof content.
 
-Do not describe the project as post-M8, post-M11, post-M16, post-M17, post-M18, post-M19, post-M20, post-M21, or post-M22. Those were older baselines.
+Do not describe the project as post-M23 or earlier. Those were older baselines.
 
 ## Current milestone
 
 Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
-Latest completed milestone: **M23 — Owned Service Claiming and Contesting Foundation**.
+Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
 
-No next milestone is currently selected. Do not assume M24. The next planning pass should audit active roadmap/docs/source and decide whether v1 is complete enough for a v2 scope, or whether one final v1 milestone is still needed.
+Current next milestone: **M25 — Player-facing Service Stationing Flow** (planned; not implemented). Active scope cap: `docs/content_scope_v2.md`.
 
 ## Technical rules
 
@@ -43,8 +43,6 @@ Read `docs/technical_direction.md` before architecture or system work.
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping.
-
-Prefer no comment over a comment that merely says which milestone or phase introduced code. Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M23 Phase 1:` in production source unless they are temporary and removed before merge.
+Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code. Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M25 Phase 1:` in production source unless they are temporary and removed before merge.
 
 Test comments are acceptable when they explain a non-obvious regression or scenario intent.
