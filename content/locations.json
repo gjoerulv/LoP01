@@ -109,6 +109,14 @@
       "overworld_destination": true,
       "scene_id": "iron_mine_proto",
       "battle_scenario_id": "debug_intro_battle"
+    },
+    {
+      "id": "copper_mine",
+      "name": "Copper Mine",
+      "type": "service",
+      "allows_sleep": false,
+      "overworld_destination": true,
+      "scene_id": "copper_mine_proto"
     }
   ]
 }

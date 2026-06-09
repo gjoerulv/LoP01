@@ -12,23 +12,23 @@ Use these rules when working in this repository.
 
 ## Current baseline
 
-The current codebase should be treated as a **post-M25** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase should be treated as a **post-M26** bounded multi-Region, multi-Scenario vertical slice.
 
-Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, and player-facing mine stationing/unstationing.
+Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, and general player-side owned-service claiming on legal node entry.
 
-Do not describe the project as post-M24 or earlier. Those were older baselines.
+Do not describe the project as post-M25 or earlier. Those were older baselines.
 
 ## Current milestone
 
 Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
-Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
+Latest completed milestone: **M26 — General Owned-Service Claiming Semantics**.
 
-Current selected milestone: **M26 — General Owned-Service Claiming Semantics**.
+Current selected milestone: **not yet selected** (see `docs/implementation_roadmap.md` §5 for candidates).
 
 Active scope cap: `docs/content_scope_v2.md`.
 
-M26 is planned, not implemented. Peaceful/unguarded player-side service claiming should not be treated as complete until M26 ships.
+M26 shipped: legally entering an unguarded node claims its eligible ownable services via `GameSession::ResolveNodeEntryClaims`; guarded battle-before-placement is preserved. Do not treat enemy-side capture, service destruction/restoration, or Storage/Garrison as implemented.
 
 ## Technical rules
 

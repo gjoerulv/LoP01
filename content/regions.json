@@ -85,6 +85,13 @@
           "y": 250,
           "discovered": true,
           "travel_available": true
+        },
+        {
+          "location_id": "copper_mine",
+          "x": 470,
+          "y": 470,
+          "discovered": true,
+          "travel_available": true
         }
       ],
       "links": [
@@ -98,7 +105,8 @@
         [ "bridge_checkpoint", "orchard_pass" ],
         [ "orchard_pass", "clocktower_square" ],
         [ "survivor_recruit_post", "bridge_checkpoint" ],
-        [ "town_center", "iron_mine" ]
+        [ "town_center", "iron_mine" ],
+        [ "old_inn", "copper_mine" ]
       ]
     },
     {

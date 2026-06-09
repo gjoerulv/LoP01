@@ -45,11 +45,11 @@ M25 answered:
 - how the result is shown clearly enough for the player;
 - how save/load preserves stationed assignments.
 
-The next selected v2 milestone is: **M26 — General Owned-Service Claiming Semantics** *(planned)*.
+The second selected v2 milestone was: **M26 — General Owned-Service Claiming Semantics** *(complete)*.
 
-M26 should close the gap between the final ownership model and the current implementation: guarded claiming works after defeating a hostile guard, but peaceful/unguarded player-side claiming on legal node entry is still missing. M26 should make player-side claiming systemic without expanding into enemy-side capture, service destruction/restoration, or Storage/Garrison.
+M26 closed the gap between the final ownership model and the prior implementation: guarded claiming works after defeating a hostile guard, and peaceful/unguarded player-side claiming now happens on legal node entry via `GameSession::ResolveNodeEntryClaims`. Player-side claiming is systemic without expanding into enemy-side capture, service destruction/restoration, or Storage/Garrison. The questions below record the settled M26 answers; see `docs/implementation_roadmap.md` §4.
 
-M26 should answer:
+M26 answered:
 
 - when legal node entry claims unguarded ownable services;
 - how guarded/hostile-occupied service nodes resolve battle-before-placement, victory, loss, and capture;

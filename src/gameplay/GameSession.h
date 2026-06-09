@@ -235,14 +235,23 @@ public:
     [[nodiscard]] const core::OwnedServiceSaveState* FindOwnedService(
         const std::string& serviceId) const;
 
-    // After the hostile team occupying/guarding `nodeId` is defeated, claim for
-    // the player every eligible ownable service at that node's location.
-    // Eligible = ownable kind, not locked, not destroyed, and currently unowned
-    // or hostile-owned (player-owned unchanged; allied-owned not claimed). On
-    // claim the service's ownerTeamColor becomes the player color and its
-    // stationed units are cleared. No-op (returns empty) when `nodeId` is empty
-    // or still hostile-occupied by another team. Content definitions are never
-    // mutated. Returns the claimed service ids. Call after ClearEnemyTeamByColor.
+    // M26 general node-entry claim resolver. Claim for the player every eligible
+    // ownable service at `nodeId`'s location when the node is not blocked by a
+    // hostile guard/occupier. Eligible = ownable kind, not locked, not destroyed,
+    // and currently unowned or hostile-owned (player-owned unchanged so the
+    // player's own stationed units are never cleared on re-entry; allied-owned not
+    // claimed). On claim the service's ownerTeamColor becomes the player color and
+    // any inherited (enemy) stationed units are cleared. No-op (returns empty) when
+    // `nodeId` is empty or still hostile-occupied by another team. Content
+    // definitions are never mutated. Returns the claimed service ids.
+    //
+    // This is the single claim path used for BOTH peaceful legal node entry and
+    // post-battle guarded capture (call after ClearEnemyTeamByColor so the cleared
+    // node is no longer hostile-occupied).
+    std::vector<std::string> ResolveNodeEntryClaims(const std::string& nodeId);
+
+    // Back-compat alias for ResolveNodeEntryClaims. Retained for existing callers
+    // and tests; identical behavior.
     std::vector<std::string> ClaimContestedServicesAtNode(const std::string& nodeId);
 
     // M17 Phase 3a: resolve an owned service's normalized stack-backed stationed

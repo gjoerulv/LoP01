@@ -406,8 +406,9 @@ void App::ResolveBattleOutcomeIfNeeded() {
             session_.ClearEnemyTeamByColor(pendingHostileContactTeamColor_);
             // Defeating the guarding team claims the eligible ownable services
             // at that node. Runs after the team is cleared so the still-contested
-            // guard sees the updated occupation.
-            const auto claimedServices = session_.ClaimContestedServicesAtNode(clearedNodeId);
+            // guard sees the updated occupation. Same single claim path as peaceful
+            // node entry (App::OnDestinationArrived).
+            const auto claimedServices = session_.ResolveNodeEntryClaims(clearedNodeId);
             pendingHostileContactNodeId_.clear();
             pendingHostileContactTeamColor_.clear();
             statusMessage_ = summary.playerSetToOneHp
@@ -917,6 +918,21 @@ void App::OnDestinationArrived(const std::string& destinationId) {
         if (!result.message.empty()) {
             statusMessage_ += " | " + result.message;
         }
+    }
+
+    // M26 general player-side claiming: legally entering an unguarded node claims
+    // its eligible ownable services. Runs AFTER node-entry events so a guard
+    // spawned by one of those events blocks the claim (ResolveNodeEntryClaims is a
+    // no-op while the node is hostile-occupied). Guarded nodes never reach here —
+    // hostile contact starts battle before placement and claims post-victory.
+    const auto claimedServices = session_.ResolveNodeEntryClaims(destinationId);
+    if (!claimedServices.empty()) {
+        std::string claimList;
+        for (const auto& id : claimedServices) {
+            if (!claimList.empty()) { claimList += ", "; }
+            claimList += id;
+        }
+        statusMessage_ += " | Claimed: " + claimList;
     }
 }
 
