@@ -1222,13 +1222,10 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
     }
 
     if (gameplay::location::IsMineService(&service)) {
-        const auto* owned = session_.FindOwnedService(service.id);
-        const bool playerOwned = owned != nullptr && !owned->ownerTeamColor.empty() &&
-            owned->ownerTeamColor == session_.PlayerColor();
-        if (!playerOwned) {
+        if (!session_.CanOpenStationingAtMine(service.id)) {
             statusMessage_ = !service.failureText.empty()
                 ? service.failureText
-                : "You do not control this mine";
+                : "This mine is not available";
             return false;
         }
         stationingInteraction_.Open(session_, service);

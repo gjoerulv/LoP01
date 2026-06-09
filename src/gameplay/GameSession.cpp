@@ -341,6 +341,18 @@ bool GameSession::IsStackStationedAnywhere(const std::string& stackId) const {
     return false;
 }
 
+bool GameSession::IsStackSlotted(const std::string& stackId) const {
+    if (stackId.empty()) {
+        return false;
+    }
+    if (std::find(activeSlotStackIds_.begin(), activeSlotStackIds_.end(), stackId) !=
+        activeSlotStackIds_.end()) {
+        return true;
+    }
+    return std::find(reserveSlotStackIds_.begin(), reserveSlotStackIds_.end(), stackId) !=
+        reserveSlotStackIds_.end();
+}
+
 bool GameSession::UnitIsPlayerCharacter(const std::string& unitId) const {
     if (unitId.empty()) {
         return false;
@@ -525,17 +537,30 @@ bool GameSession::TryUnstationStackFromService(
     if (refIt == refs.end()) {
         return false;
     }
-    // The same stack returns to a free reserve slot — never recreated or merged.
-    // Without a live roster stack there is nothing to return (a stale ref should
-    // already have been dropped by NormalizeStationedUnits); fail rather than guess.
+
+    // Heal the legacy/permissive double-placement case first. NormalizeStationed-
+    // Units stays permissive, so old/injected save-data can leave a stack BOTH
+    // slotted (active or reserve) AND stationed. Returning it to reserve again
+    // would duplicate the stack id across two placements. Instead, remove only the
+    // stationed ref and leave the existing slot placement untouched.
+    if (IsStackSlotted(stackId)) {
+        refs.erase(refIt);
+        MarkRosterProjectionDirty();
+        return true;
+    }
+
+    // From here the stack is slot-less (the normal stationed state). Without a live
+    // roster stack there is nothing to return; never recreate a unit (a stale ref
+    // should already have been dropped by NormalizeStationedUnits).
     if (FindStackById(stackId) == nullptr) {
         return false;
     }
+
+    // Return the SAME stack id to a free reserve slot — never recreated or merged.
     const int reserveSlot = FindFirstEmptySlotIndex(reserveSlotStackIds_);
     if (reserveSlot < 0) {
         return false;  // atomic fail: no free reserve slot, stack stays stationed
     }
-
     reserveSlotStackIds_[reserveSlot] = stackId;
     refs.erase(refIt);
     MarkRosterProjectionDirty();
@@ -578,6 +603,20 @@ std::vector<std::string> GameSession::EligibleStationingStackIds(
         consider(slotStackId);
     }
     return result;
+}
+
+bool GameSession::CanOpenStationingAtMine(const std::string& serviceId) const {
+    const core::OwnedServiceSaveState* owned = FindOwnedService(serviceId);
+    const data::LocationServiceDefinition* def = FindLocationServiceById(serviceId);
+    if (owned == nullptr || def == nullptr) {
+        return false;
+    }
+    if (def->kind != data::LocationServiceKind::Mine) {
+        return false;
+    }
+    const bool playerOwned =
+        !owned->ownerTeamColor.empty() && owned->ownerTeamColor == playerColor_;
+    return playerOwned && !owned->locked && !owned->destroyed;
 }
 
 void GameSession::ApplyDailyMinePayout() {

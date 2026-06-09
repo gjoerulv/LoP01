@@ -309,6 +309,11 @@ public:
     [[nodiscard]] std::vector<std::string> EligibleStationingStackIds(
         const std::string& serviceId) const;
 
+    // Gate for OPENING the stationing interaction at a mine: true iff `serviceId`
+    // is a player-owned, unlocked, undestroyed mine. Capacity is intentionally not
+    // considered — a full mine can still be opened to unstation. Pure read.
+    [[nodiscard]] bool CanOpenStationingAtMine(const std::string& serviceId) const;
+
     // M17 Phase 4b: effective ownership tier when the player USES a specific
     // trader service. This is the benefit gate to apply at a trader service:
     // returns 0 unless `serviceId` is a known trader-kind service with owned
@@ -603,6 +608,8 @@ private:
 
     // M25 stationing helpers. Pure reads over runtime state.
     [[nodiscard]] bool IsStackStationedAnywhere(const std::string& stackId) const;
+    // True iff `stackId` currently occupies an active or reserve slot.
+    [[nodiscard]] bool IsStackSlotted(const std::string& stackId) const;
     [[nodiscard]] bool UnitIsPlayerCharacter(const std::string& unitId) const;
     [[nodiscard]] core::OwnedServiceSaveState* FindOwnedServiceMutable(
         const std::string& serviceId);

@@ -296,6 +296,69 @@ TEST_CASE("Stationing mutation - unstationing never merges into a compatible res
     RequireNoOrphans(session);
 }
 
+TEST_CASE("Stationing mutation - unstation heals a legacy reserve+stationed double-placement without duplicating") {
+    // NormalizeStationedUnits is permissive, so injected/legacy save-data can leave
+    // a stack BOTH in a reserve slot and stationed. stk_2 (kobold) sits in reserve
+    // (MakeBaseSave) and is also stationed here.
+    auto save = MakeBaseSave();
+    save.ownedServices = {core::OwnedServiceSaveState{"iron_mine_svc", "Green", false, false,
+        {core::StationedUnitSaveState{"kobold", "stk_2"}}}};
+    auto session = Load(save);
+    REQUIRE(SlotsContain(session.ReserveSlotStackIds(), "stk_2"));
+    REQUIRE(StationedRefCount(session, "iron_mine_svc") == 1);
+
+    REQUIRE(session.TryUnstationStackFromService("iron_mine_svc", "stk_2"));
+
+    // The stationed ref is removed; the reserve placement is left untouched, and
+    // stk_2 is NOT duplicated into a second reserve slot.
+    REQUIRE(StationedRefCount(session, "iron_mine_svc") == 0);
+    int reserveOccurrences = 0;
+    for (const auto& s : session.ReserveSlotStackIds()) {
+        if (s == "stk_2") ++reserveOccurrences;
+    }
+    REQUIRE(reserveOccurrences == 1);
+    REQUIRE(session.OwnedUnitCount("kobold") == 3);
+    RequireNoOrphans(session);
+}
+
+TEST_CASE("Stationing mutation - unstation heals a legacy active+stationed double-placement without duplicating") {
+    auto save = MakeBaseSave();
+    save.activeSlotStackIds = {"stk_1", "stk_2", "", "", ""};
+    save.reserveSlotStackIds = {"stk_3", "", "", "", "", "", "", ""};
+    save.ownedServices = {core::OwnedServiceSaveState{"iron_mine_svc", "Green", false, false,
+        {core::StationedUnitSaveState{"kobold", "stk_2"}}}};
+    auto session = Load(save);
+    REQUIRE(SlotsContain(session.ActiveSlotStackIds(), "stk_2"));
+    REQUIRE(StationedRefCount(session, "iron_mine_svc") == 1);
+
+    REQUIRE(session.TryUnstationStackFromService("iron_mine_svc", "stk_2"));
+
+    // Ref removed; the active placement is untouched and stk_2 is NOT added to reserve.
+    REQUIRE(StationedRefCount(session, "iron_mine_svc") == 0);
+    REQUIRE(SlotsContain(session.ActiveSlotStackIds(), "stk_2"));
+    REQUIRE_FALSE(SlotsContain(session.ReserveSlotStackIds(), "stk_2"));
+    REQUIRE(session.OwnedUnitCount("kobold") == 3);
+    RequireNoOrphans(session);  // exactly one placement per stack -> no duplicates
+}
+
+TEST_CASE("Stationing mutation - CanOpenStationingAtMine gates on a usable owned mine") {
+    REQUIRE(Load(MakeBaseSave()).CanOpenStationingAtMine("iron_mine_svc"));
+
+    auto locked = MakeBaseSave();
+    locked.ownedServices = {core::OwnedServiceSaveState{"iron_mine_svc", "Green", true, false, {}}};
+    REQUIRE_FALSE(Load(locked).CanOpenStationingAtMine("iron_mine_svc"));
+
+    auto destroyed = MakeBaseSave();
+    destroyed.ownedServices = {core::OwnedServiceSaveState{"iron_mine_svc", "Green", false, true, {}}};
+    REQUIRE_FALSE(Load(destroyed).CanOpenStationingAtMine("iron_mine_svc"));
+
+    auto hostile = MakeBaseSave();
+    hostile.ownedServices = {core::OwnedServiceSaveState{"iron_mine_svc", "Red", false, false, {}}};
+    REQUIRE_FALSE(Load(hostile).CanOpenStationingAtMine("iron_mine_svc"));
+
+    REQUIRE_FALSE(Load(MakeBaseSave()).CanOpenStationingAtMine("no_such_svc"));
+}
+
 TEST_CASE("Stationing mutation - cannot station into a non-owned or non-existent service") {
     auto save = MakeBaseSave();
     save.ownedServices = {core::OwnedServiceSaveState{"iron_mine_svc", "Red", false, false, {}}};
