@@ -6,11 +6,13 @@ Prepare a focused documentation patch for the requested design area.
 
 - read `CLAUDE.md`;
 - read `docs/implementation_roadmap.md`;
-- read `docs/content_scope_v1.md`;
+- read `docs/content_scope_v2.md`;
 - read `docs/technical_direction.md`;
 - read the current docs relevant to the requested area;
 - identify the single best source-of-truth doc for the detailed rules;
 - identify only the minimal reference updates needed elsewhere.
+
+Archived `docs/content_scope_v1.md` is historical only and must not be used as the active scope.
 
 ## Patch rules
 

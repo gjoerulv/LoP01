@@ -10,7 +10,9 @@ Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-Current next milestone: **not yet selected**. Candidate v2 directions are listed in `docs/implementation_roadmap.md` §5 and `docs/content_scope_v2.md` §5. Do not treat Storage/Garrison, an owned-service management view, enemy-side capture, or other v2 expansion items as already implemented.
+Current selected milestone: **M26 — General Owned-Service Claiming Semantics**.
+
+M26 is planned, not implemented. Do not treat peaceful/unguarded player-side service claiming as complete until M26 ships.
 
 ## Required reading
 
@@ -45,9 +47,7 @@ Archived files, including `docs/content_scope_v1.md` once archived by the user, 
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M25 Phase 1:` in production source. Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations.
-
-Test comments are acceptable when they explain non-obvious regression intent.
+Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M25 Phase 1:` in production source. Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations. Test comments are acceptable when they explain non-obvious regression intent.
 
 ## Current settled system boundaries
 
@@ -57,14 +57,20 @@ Test comments are acceptable when they explain non-obvious regression intent.
 - `playerStart.gold` is an alias for legacy top-level `startGold`; authoring both is invalid.
 - Scenario start-state applies to runtime `GameSession` state when a Scenario starts; it is not persisted back into content.
 - Gold remains a single source of truth through the existing `gold_` / `ResourceType` delegation path.
-- Runtime owned-service state is mutable: player-side guarded-service claiming is implemented after defeating a hostile guard at the node.
+- Runtime owned-service state is mutable. Current shipped code proves player-side guarded-service claiming after defeating a hostile guard at the node.
+- Owned services do not have to be guarded. The current guarded-capture path is not a universal guard requirement.
+- M26 should add the missing peaceful/unguarded player-side claim path when the player legally enters a claimable service node.
+- Hostile-occupied travel may start battle before the moving player team is placed on the destination node. This is intended final-direction behavior; M26 should preserve it while making victory resolve capture/arrival exactly once.
 - Claiming mutates runtime owned-service state only; content definitions are never mutated.
-- Owned services do not have to be guarded. The current capture path proves guarded claiming, not a universal guard requirement.
+- M26 is not enemy-side capture, service destruction/restoration, Storage/Garrison, or a general ownership-transfer event system.
 - Allied ownership does not grant player benefits and is not claimable in the current player-side claim path.
 - Runtime `spawnTeam` can create a missing enemy team or reactivate/move an existing one; it is not a general team-definition authoring system.
 - World Map initial unlocks remain authored through World Map content; no Scenario `unlockedRegions` override exists.
 - Trading Post interaction is implemented as a bounded Location-mode service flow; broader shop/inventory UI is deferred.
 - Unit `passive_effects` currently support only `mine_production` and `leader_energy`.
-- `mine_production` is reachable through gameplay: M25 added a bounded, text-prompt stationing flow at player-owned mines. Stationing is physical placement — a roster stack is in exactly one place at a time (an active slot, a reserve slot, or stationed at one owned service), so stationed units stay owned, leave the travelling/battle party, and never duplicate. Generic stacks may be split; capacity is up to 5 stationed stacks per mine; the Player Character can never be stationed. Mutations live only behind `GameSession` (`TryStationStackAtService`, `TryStationSplitAtService`, `TryUnstationStackFromService`); `App`/`StationingInteraction` never edits stationing or roster slots directly. No schema bump was required.
-- M25 stationing is guard/worker capacity only. It is not Storage/Garrison: there are no stationed-defender combat, capacity-loss/siege, enemy-side stationing, or service-defense rules. Stationing targets are mines only; other ownable (trader) kinds are not stationing targets yet.
+- `mine_production` is reachable through gameplay: M25 added a bounded, text-prompt stationing flow at player-owned mines.
+- Stationing is physical placement — a roster stack is in exactly one place at a time (an active slot, a reserve slot, or stationed at one owned service), so stationed units stay owned, leave the travelling/battle party, and never duplicate. Generic stacks may be split; capacity is up to 5 stationed stacks per mine; the Player Character can never be stationed.
+- Stationing mutations live only behind `GameSession` (`TryStationStackAtService`, `TryStationSplitAtService`, `TryUnstationStackFromService`); `App`/`StationingInteraction` never edits stationing or roster slots directly. No schema bump was required.
+- M25 stationing is guard/worker capacity only. It is not Storage/Garrison: there are no stationed-defender combat, capacity-loss/siege, enemy-side stationing, or service-defense rules.
+- Stationing targets are mines only; other ownable (trader) kinds are not stationing targets yet.
 - Artifact `statBonus` remains on the artifact battle-stat path; artifact Energy, item effects, statuses, active abilities, and broad skill systems are deferred.

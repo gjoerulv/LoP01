@@ -2,9 +2,7 @@
 
 ## 1. Purpose
 
-`content_scope_v2.md` is the active content and systems scope cap after M24.
-
-v1 proved the compact strategic-economy loop: Scenario-authored player economy start state, owned services, mine payout, unit passive hooks, Trading Post trade data, guarded service claiming, Scenario Result presentation, and campaign progression all work together in the shipped slice and tests.
+`content_scope_v2.md` is the active content and systems scope cap after M24. v1 proved the compact strategic-economy loop: Scenario-authored player economy start state, owned services, mine payout, unit passive hooks, Trading Post trade data, guarded service claiming, Scenario Result presentation, and campaign progression all work together in the shipped slice and tests.
 
 v2 should build on that proof by making infrastructure management more player-facing and strategically legible. The next work should not inflate into a full AI economy, full item economy, editor tooling, or a broad campaign shell. The goal is to turn the existing runtime systems into deliberate player decisions.
 
@@ -14,29 +12,28 @@ v2 targets a stronger infrastructure-control loop:
 
 - player-facing stationing/unstationing of eligible units at owned services;
 - visible benefit from stationed `mine_production` units in normal play;
-- a bounded Storage/Garrison foundation only after the stationing seam is proven;
+- consistent player-side ownership claiming for both unguarded legal node-entry and guarded post-battle capture;
+- a bounded Storage/Garrison foundation only after the stationing and ownership-claiming seams are proven;
 - clearer presentation of owned services, claimed services, and stationed units;
 - continued use of authored Scenario start-state, runtime ownership, save/load, and content validation discipline;
 - minimal content additions that exercise the loop without creating a large campaign or full economy simulation.
 
 ## 3. v2 design constraints
 
-- Use existing runtime state where practical: `OwnedServiceSaveState`, stationed units, owned roster, resources, Gold, and service IDs.
+- Use existing runtime state where practical: `OwnedServiceSaveState`, stationed units, owned roster, resources, Gold, service IDs, and existing Region travel / enemy-team occupancy state.
 - Keep authored static content separate from runtime mutable state.
 - Preserve the stack-backed stationed-unit invariant: stationed units must correspond to owned units where that invariant currently applies.
-- Do not add broad team/owner authoring just to support stationing.
-- Do not mutate content definitions during gameplay.
+- Keep ownership claiming as runtime state mutation. Do not mutate content definitions during gameplay.
+- Do not add broad team/owner authoring just to support stationing or player-side claiming.
 - Preserve existing save/load compatibility unless a scoped migration is explicitly selected.
 - Avoid per-frame catalog scans, repeated content parsing, graph rebuilds, or hidden nested scans.
 - Keep UI/service interactions bounded and text-prompt based until the current rendering model is intentionally expanded.
 
-## 4. v2 first priority
+## 4. Selected v2 milestones
 
-The first selected v2 milestone was:
+The first selected v2 milestone was: **M25 — Player-facing Service Stationing Flow** *(complete)*.
 
-**M25 — Player-facing Service Stationing Flow**  *(complete)*
-
-M25 made stationing reachable in gameplay through a narrow interaction path without becoming a full Storage/Garrison system: a player can assign an eligible owned unit to an eligible owned mine and see the existing `mine_production` payout benefit through normal play. The questions below record the settled M25 answers; see `docs/implementation_roadmap.md` §4.
+M25 made stationing reachable in gameplay through a narrow interaction path without becoming a full Storage/Garrison system: a player can assign an eligible owned unit to an eligible owned mine and see the existing `mine_production` payout benefit through normal play.
 
 M25 answered:
 
@@ -48,11 +45,24 @@ M25 answered:
 - how the result is shown clearly enough for the player;
 - how save/load preserves stationed assignments.
 
-## 5. Candidate v2 milestones after M25
+The next selected v2 milestone is: **M26 — General Owned-Service Claiming Semantics** *(planned)*.
+
+M26 should close the gap between the final ownership model and the current implementation: guarded claiming works after defeating a hostile guard, but peaceful/unguarded player-side claiming on legal node entry is still missing. M26 should make player-side claiming systemic without expanding into enemy-side capture, service destruction/restoration, or Storage/Garrison.
+
+M26 should answer:
+
+- when legal node entry claims unguarded ownable services;
+- how guarded/hostile-occupied service nodes resolve battle-before-placement, victory, loss, and capture;
+- how claim logic stays centralized behind `GameSession` rather than scattered through `App`;
+- how runtime `OwnedServiceSaveState` changes without mutating authored content;
+- how claiming interacts safely with existing stationed units and save/load;
+- how tests prove no double-claim, double-arrival, or no-claim regressions.
+
+## 5. Candidate v2 milestones after M26
 
 These are candidates, not commitments:
 
-1. **Storage/Garrison Foundation.** Add a bounded service kind or interaction that stores units/guards services, with clear capacity and persistence rules. This should follow M25, not precede it.
+1. **Storage/Garrison Foundation.** Add a bounded service kind or interaction that stores units/guards services, with clear capacity and persistence rules. This should follow proven stationing and ownership-claiming semantics, not precede them.
 2. **Owned Service Presentation / Management View.** Show owned services, claim state, stationed units, and expected payout/tier effects through a readable model/renderer without broad UI sprawl.
 3. **Service Destruction / Restoration Slice.** Add a narrow destruction/restoration loop only after ownership and stationing are visible and testable.
 4. **Enemy-side Capture Pressure.** Let non-player teams contest or capture player-owned services only after service defense and stationing rules are established.
@@ -63,6 +73,8 @@ These are candidates, not commitments:
 ## 6. Not in early v2 scope unless explicitly selected
 
 - Full AI economy.
+- Enemy-side capture of player-owned services.
+- Service destruction/restoration, sabotage, siege, and stationed-defender combat.
 - Full item economy, crafting, cooking, seeds, ingredients, or broad item-use systems.
 - Full skill tree, broad passive-effect system, statuses, active abilities, or spell system.
 - Full shell/menu/character-creation/settings flow.

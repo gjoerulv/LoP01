@@ -24,7 +24,11 @@ Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
 Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
 
-Current next milestone: **not yet selected** (see `docs/implementation_roadmap.md` §5 for candidates). Active scope cap: `docs/content_scope_v2.md`.
+Current selected milestone: **M26 — General Owned-Service Claiming Semantics**.
+
+Active scope cap: `docs/content_scope_v2.md`.
+
+M26 is planned, not implemented. Peaceful/unguarded player-side service claiming should not be treated as complete until M26 ships.
 
 ## Technical rules
 
@@ -43,6 +47,6 @@ Read `docs/technical_direction.md` before architecture or system work.
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code. Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M25 Phase 1:` in production source unless they are temporary and removed before merge.
+Production source comments should document durable contracts, not milestone bookkeeping. Prefer no comment over a comment that merely says which milestone or phase introduced code.
 
-Test comments are acceptable when they explain a non-obvious regression or scenario intent.
+Use comments for non-obvious invariants, correctness traps, data-integrity/save-load traps, compatibility behavior, performance-sensitive choices, or deliberate limitations. Avoid comments such as `M25 Phase 1:` in production source unless they are temporary and removed before merge. Test comments are acceptable when they explain a non-obvious regression or scenario intent.

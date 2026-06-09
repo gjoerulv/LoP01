@@ -6,7 +6,7 @@ Plan the smallest safe implementation milestone. Do not edit files.
 
 - `CLAUDE.md`
 - `docs/implementation_roadmap.md`
-- `docs/content_scope_v1.md`
+- `docs/content_scope_v2.md`
 - `docs/technical_direction.md`
 - `docs/content_schema.md`
 - `docs/validation_system.md`
@@ -14,6 +14,8 @@ Plan the smallest safe implementation milestone. Do not edit files.
 - `docs/core_loop_rules.md`
 - `README_DECISIONS.md`
 - relevant source/test files
+
+Archived `docs/content_scope_v1.md` is historical only and must not be used as the active scope.
 
 ## Produce
 
@@ -34,5 +36,5 @@ Plan the smallest safe implementation milestone. Do not edit files.
 - Avoid renderer/input changes unless the milestone requires them.
 - Identify docs that become stale after completion.
 - Keep source-of-truth behavior docs separate from implementation-status roadmap updates.
-- Respect `docs/content_scope_v1.md`; do not expand authored content volume to fake system depth.
+- Respect `docs/content_scope_v2.md`; do not expand authored content volume to fake system depth.
 - Respect `docs/technical_direction.md`; do not introduce needless per-frame scans, repeated parsing, repeated graph rebuilds, large needless copies, or speculative generic infrastructure.
