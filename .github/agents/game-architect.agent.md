@@ -2,11 +2,11 @@
 
 Use this agent for architecture, roadmap, and cross-system gameplay decisions.
 
-Current baseline: **post-M24**.
+Current baseline: **post-M25**.
 
-Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
+Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
 
-Current next milestone: **M25 — Player-facing Service Stationing Flow** (planned; see `docs/implementation_roadmap.md`).
+Current next milestone: **not yet selected** (see `docs/implementation_roadmap.md` §5 for candidates).
 
 Active scope cap: `docs/content_scope_v2.md`.
 

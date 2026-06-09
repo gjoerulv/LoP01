@@ -1,6 +1,7 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/EnergyRules.h"
 #include "gameplay/economy/MinePayoutRules.h"
+#include "gameplay/economy/StationingRules.h"
 #include "gameplay/economy/TraderOwnershipRules.h"
 #include "gameplay/economy/TradingPostTransactionRules.h"
 #include "gameplay/effects/UnitPassiveEffects.h"
@@ -324,6 +325,259 @@ GameSession::CollectStationedMineProductionPassives(
 
     const auto stationedDefs = ResolveStationedUnitDefs(*owned, stackUnitById, defById);
     return economy::CollectMineProductionPassives(stationedDefs, serviceKind);
+}
+
+bool GameSession::IsStackStationedAnywhere(const std::string& stackId) const {
+    if (stackId.empty()) {
+        return false;
+    }
+    for (const auto& owned : ownedServices_) {
+        for (const auto& ref : owned.stationedUnits) {
+            if (ref.stackId == stackId) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool GameSession::UnitIsPlayerCharacter(const std::string& unitId) const {
+    if (unitId.empty()) {
+        return false;
+    }
+    for (const auto& unit : unitCatalog_) {
+        if (unit.id == unitId) {
+            return unit.isPlayerCharacter;
+        }
+    }
+    return false;
+}
+
+core::OwnedServiceSaveState* GameSession::FindOwnedServiceMutable(
+    const std::string& serviceId) {
+    if (serviceId.empty()) {
+        return nullptr;
+    }
+    for (auto& owned : ownedServices_) {
+        if (owned.serviceId == serviceId) {
+            return &owned;
+        }
+    }
+    return nullptr;
+}
+
+int GameSession::ActiveOrderedIndexOfStack(const std::string& stackId) const {
+    if (stackId.empty()) {
+        return -1;
+    }
+    int orderedIndex = 0;
+    for (const auto& slotStackId : activeSlotStackIds_) {
+        if (slotStackId.empty()) {
+            continue;
+        }
+        if (slotStackId == stackId) {
+            return orderedIndex;
+        }
+        ++orderedIndex;
+    }
+    return -1;
+}
+
+bool GameSession::CanStationStackAtService(
+    const std::string& serviceId, const std::string& stackId) const {
+    const core::OwnedServiceSaveState* owned = FindOwnedService(serviceId);
+    if (owned == nullptr) {
+        return false;
+    }
+    const data::LocationServiceDefinition* def = FindLocationServiceById(serviceId);
+    if (def == nullptr) {
+        return false;
+    }
+    const bool playerOwned =
+        !owned->ownerTeamColor.empty() && owned->ownerTeamColor == playerColor_;
+    if (!economy::ServiceCanReceiveStationedUnit(
+            def->kind, playerOwned, owned->locked, owned->destroyed,
+            static_cast<int>(owned->stationedUnits.size()))) {
+        return false;
+    }
+
+    const RosterStackState* stack = FindStackById(stackId);
+    if (stack == nullptr || stack->quantity <= 0) {
+        return false;
+    }
+    if (!economy::StackIsStationable(
+            /*stackExists=*/true,
+            UnitIsPlayerCharacter(stack->unitId),
+            IsStackStationedAnywhere(stackId))) {
+        return false;
+    }
+
+    // To be stationed, the stack must currently occupy a slot (active or reserve);
+    // a slot-less stack is already stationed or orphaned and cannot be moved again.
+    const bool slotted =
+        ActiveOrderedIndexOfStack(stackId) >= 0 ||
+        std::find(reserveSlotStackIds_.begin(), reserveSlotStackIds_.end(), stackId) !=
+            reserveSlotStackIds_.end();
+    return slotted;
+}
+
+bool GameSession::TryStationStackAtService(
+    const std::string& serviceId, const std::string& stackId) {
+    if (!CanStationStackAtService(serviceId, stackId)) {
+        return false;
+    }
+
+    core::OwnedServiceSaveState* owned = FindOwnedServiceMutable(serviceId);
+    const RosterStackState* stack = FindStackById(stackId);
+    if (owned == nullptr || stack == nullptr) {
+        return false;  // defensive; CanStation already verified both exist
+    }
+    const std::string unitId = stack->unitId;
+
+    // Pulling from an active slot is a removal from the active party and must
+    // respect the leader guard. The Player Character is already excluded by
+    // CanStationStackAtService.
+    const int activeOrdered = ActiveOrderedIndexOfStack(stackId);
+    if (activeOrdered >= 0) {
+        if (WouldRemovingActivePartyUnitLeaveNoLeader(activeOrdered)) {
+            return false;
+        }
+        for (auto& slot : activeSlotStackIds_) {
+            if (slot == stackId) {
+                slot.clear();
+                break;
+            }
+        }
+    } else {
+        bool cleared = false;
+        for (auto& slot : reserveSlotStackIds_) {
+            if (slot == stackId) {
+                slot.clear();
+                cleared = true;
+                break;
+            }
+        }
+        if (!cleared) {
+            return false;  // defensive: not slotted
+        }
+    }
+
+    owned->stationedUnits.push_back(core::StationedUnitSaveState{unitId, stackId});
+    MarkRosterProjectionDirty();
+    return true;
+}
+
+bool GameSession::TryStationSplitAtService(
+    const std::string& serviceId, const std::string& stackId, const int quantity) {
+    if (quantity <= 0) {
+        return false;
+    }
+    const RosterStackState* stack = FindStackById(stackId);
+    if (stack == nullptr) {
+        return false;
+    }
+    // A whole-stack amount is not a split — route to the move path; a larger amount
+    // is invalid.
+    if (quantity >= stack->quantity) {
+        return quantity == stack->quantity
+            ? TryStationStackAtService(serviceId, stackId)
+            : false;
+    }
+    if (!economy::IsLegalSplitQuantity(quantity, stack->quantity)) {
+        return false;
+    }
+    // The source stack stays slotted; we station a NEW stack. Static eligibility
+    // (service capacity/ownership, source not PC, source not already stationed,
+    // source slotted) is identical to a whole-stack station, so reuse the gate.
+    if (!CanStationStackAtService(serviceId, stackId)) {
+        return false;
+    }
+
+    core::OwnedServiceSaveState* owned = FindOwnedServiceMutable(serviceId);
+    RosterStackState* source = FindStackById(stackId);
+    if (owned == nullptr || source == nullptr || quantity >= source->quantity) {
+        return false;  // defensive
+    }
+
+    const std::string unitId = source->unitId;
+    source->quantity -= quantity;  // read unitId and decrement before push_back may
+    const std::string newStackId = GenerateNextStackId();  // invalidate `source`
+    rosterStacks_.push_back(RosterStackState{newStackId, unitId, quantity});
+    owned->stationedUnits.push_back(core::StationedUnitSaveState{unitId, newStackId});
+    MarkRosterProjectionDirty();
+    return true;
+}
+
+bool GameSession::TryUnstationStackFromService(
+    const std::string& serviceId, const std::string& stackId) {
+    if (stackId.empty()) {
+        return false;
+    }
+    core::OwnedServiceSaveState* owned = FindOwnedServiceMutable(serviceId);
+    if (owned == nullptr) {
+        return false;
+    }
+    auto& refs = owned->stationedUnits;
+    const auto refIt = std::find_if(refs.begin(), refs.end(),
+        [&](const core::StationedUnitSaveState& ref) {
+            return ref.stackId == stackId;
+        });
+    if (refIt == refs.end()) {
+        return false;
+    }
+    // The same stack returns to a free reserve slot — never recreated or merged.
+    // Without a live roster stack there is nothing to return (a stale ref should
+    // already have been dropped by NormalizeStationedUnits); fail rather than guess.
+    if (FindStackById(stackId) == nullptr) {
+        return false;
+    }
+    const int reserveSlot = FindFirstEmptySlotIndex(reserveSlotStackIds_);
+    if (reserveSlot < 0) {
+        return false;  // atomic fail: no free reserve slot, stack stays stationed
+    }
+
+    reserveSlotStackIds_[reserveSlot] = stackId;
+    refs.erase(refIt);
+    MarkRosterProjectionDirty();
+    return true;
+}
+
+std::vector<std::string> GameSession::EligibleStationingStackIds(
+    const std::string& serviceId) const {
+    const core::OwnedServiceSaveState* owned = FindOwnedService(serviceId);
+    const data::LocationServiceDefinition* def = FindLocationServiceById(serviceId);
+    if (owned == nullptr || def == nullptr) {
+        return {};
+    }
+    const bool playerOwned =
+        !owned->ownerTeamColor.empty() && owned->ownerTeamColor == playerColor_;
+    if (!economy::ServiceCanReceiveStationedUnit(
+            def->kind, playerOwned, owned->locked, owned->destroyed,
+            static_cast<int>(owned->stationedUnits.size()))) {
+        return {};
+    }
+
+    std::vector<std::string> result;
+    auto consider = [&](const std::string& slotStackId) {
+        if (slotStackId.empty()) {
+            return;
+        }
+        const RosterStackState* stack = FindStackById(slotStackId);
+        if (stack == nullptr || stack->quantity <= 0) {
+            return;
+        }
+        if (UnitIsPlayerCharacter(stack->unitId) || IsStackStationedAnywhere(slotStackId)) {
+            return;
+        }
+        result.push_back(slotStackId);
+    };
+    for (const auto& slotStackId : activeSlotStackIds_) {
+        consider(slotStackId);
+    }
+    for (const auto& slotStackId : reserveSlotStackIds_) {
+        consider(slotStackId);
+    }
+    return result;
 }
 
 void GameSession::ApplyDailyMinePayout() {

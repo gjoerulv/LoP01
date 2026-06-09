@@ -2,15 +2,15 @@
 
 ## Current baseline
 
-Treat the repository as a **post-M24** C++20 / raylib / CMake game project.
+Treat the repository as a **post-M25** C++20 / raylib / CMake game project.
 
-Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, and v1 strategic-economy proof content.
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, and player-facing mine stationing/unstationing.
 
-Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
+Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-Current next milestone: **M25 — Player-facing Service Stationing Flow**. M25 is planned, not implemented. Do not treat stationing UI, Storage/Garrison, enemy-side capture, or v2 expansion items as already implemented.
+Current next milestone: **not yet selected**. Candidate v2 directions are listed in `docs/implementation_roadmap.md` §5 and `docs/content_scope_v2.md` §5. Do not treat Storage/Garrison, an owned-service management view, enemy-side capture, or other v2 expansion items as already implemented.
 
 ## Required reading
 
@@ -65,5 +65,6 @@ Test comments are acceptable when they explain non-obvious regression intent.
 - World Map initial unlocks remain authored through World Map content; no Scenario `unlockedRegions` override exists.
 - Trading Post interaction is implemented as a bounded Location-mode service flow; broader shop/inventory UI is deferred.
 - Unit `passive_effects` currently support only `mine_production` and `leader_energy`.
-- `mine_production` is implemented and proven through existing runtime/save-data stationing state, but player-facing stationing is not implemented yet. M25 is expected to make this path reachable through gameplay.
+- `mine_production` is reachable through gameplay: M25 added a bounded, text-prompt stationing flow at player-owned mines. Stationing is physical placement — a roster stack is in exactly one place at a time (an active slot, a reserve slot, or stationed at one owned service), so stationed units stay owned, leave the travelling/battle party, and never duplicate. Generic stacks may be split; capacity is up to 5 stationed stacks per mine; the Player Character can never be stationed. Mutations live only behind `GameSession` (`TryStationStackAtService`, `TryStationSplitAtService`, `TryUnstationStackFromService`); `App`/`StationingInteraction` never edits stationing or roster slots directly. No schema bump was required.
+- M25 stationing is guard/worker capacity only. It is not Storage/Garrison: there are no stationed-defender combat, capacity-loss/siege, enemy-side stationing, or service-defense rules. Stationing targets are mines only; other ownable (trader) kinds are not stationing targets yet.
 - Artifact `statBonus` remains on the artifact battle-stat path; artifact Energy, item effects, statuses, active abilities, and broad skill systems are deferred.

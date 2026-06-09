@@ -35,6 +35,7 @@ add_library(ashvale_logic
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
   src/gameplay/economy/MineProductionRules.cpp
   src/gameplay/economy/StationedProductionRules.cpp
+  src/gameplay/economy/StationingRules.cpp
   src/gameplay/effects/UnitPassiveEffects.cpp
   src/gameplay/economy/MinePayoutRules.cpp
   src/gameplay/economy/ServiceClaimRules.cpp
@@ -73,6 +74,7 @@ add_executable(ashvale_slice
   src/app/App.cpp
   src/app/MusteringInteraction.cpp
   src/app/TradingPostInteraction.cpp
+  src/app/StationingInteraction.cpp
   src/app/main.cpp
   src/app/input/InputTranslator.cpp
   src/app/RegionController.cpp
@@ -121,6 +123,7 @@ if (BUILD_TESTING)
     src/app/BattleEventTextFormatter.cpp
     src/app/MusteringInteraction.cpp
     src/app/TradingPostInteraction.cpp
+    src/app/StationingInteraction.cpp
     src/app/mappers/HudModelMapper.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/RegionModelMapper.cpp
@@ -150,6 +153,10 @@ if (BUILD_TESTING)
     tests/MineProductionRulesTests.cpp
     tests/StationedProductionRulesTests.cpp
     tests/StationedUnitsTests.cpp
+    tests/StationingRulesTests.cpp
+    tests/StationingMutationTests.cpp
+    tests/StationingInteractionTests.cpp
+    tests/StationingFlowEndToEndTests.cpp
     tests/MinePayoutRulesTests.cpp
     tests/MinePayoutTests.cpp
     tests/ServiceClaimRulesTests.cpp

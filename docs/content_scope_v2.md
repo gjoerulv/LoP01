@@ -32,13 +32,13 @@ v2 targets a stronger infrastructure-control loop:
 
 ## 4. v2 first priority
 
-The first selected v2 milestone is expected to be:
+The first selected v2 milestone was:
 
-**M25 — Player-facing Service Stationing Flow**
+**M25 — Player-facing Service Stationing Flow**  *(complete)*
 
-M25 should make stationing reachable in gameplay through a narrow interaction path. It should not become a full Storage/Garrison system. It should prove that a player can assign an eligible owned unit to an eligible owned mine/service and see the existing `mine_production` payout benefit through normal play.
+M25 made stationing reachable in gameplay through a narrow interaction path without becoming a full Storage/Garrison system: a player can assign an eligible owned unit to an eligible owned mine and see the existing `mine_production` payout benefit through normal play. The questions below record the settled M25 answers; see `docs/implementation_roadmap.md` §4.
 
-M25 should answer:
+M25 answered:
 
 - where the player initiates stationing;
 - which owned services can receive stationed units;

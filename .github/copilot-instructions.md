@@ -12,19 +12,19 @@ Use these rules when working in this repository.
 
 ## Current baseline
 
-The current codebase should be treated as a **post-M24** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase should be treated as a **post-M25** bounded multi-Region, multi-Scenario vertical slice.
 
-Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, and v1 strategic-economy proof content.
+Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, and player-facing mine stationing/unstationing.
 
-Do not describe the project as post-M23 or earlier. Those were older baselines.
+Do not describe the project as post-M24 or earlier. Those were older baselines.
 
 ## Current milestone
 
 Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
-Latest completed milestone: **M24 — v1 Strategic-Economy Proof Content**.
+Latest completed milestone: **M25 — Player-facing Service Stationing Flow**.
 
-Current next milestone: **M25 — Player-facing Service Stationing Flow** (planned; not implemented). Active scope cap: `docs/content_scope_v2.md`.
+Current next milestone: **not yet selected** (see `docs/implementation_roadmap.md` §5 for candidates). Active scope cap: `docs/content_scope_v2.md`.
 
 ## Technical rules
 
