@@ -273,6 +273,8 @@ void App::ResetTransientModeState() {
     musteringInteraction_.Close();
     tradingPostInteraction_.Close();
     stationingInteraction_.Close();
+    ownedServiceOverviewModel_ = {};
+    ownedServiceSelectedIndex_ = 0;
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     observedDay_ = snapshot.day;
@@ -538,19 +540,26 @@ void App::Update() {
         UpdateScenarioResultMode(input);
     }
 
-    // Save/load is suppressed while the transient ScenarioResultMode is current,
-    // so it is never persisted. The start-of-frame snapshot is stale here (a mode
-    // update this frame may have entered the result screen), so re-read the
-    // current mode rather than trusting `snapshot`.
-    const bool inScenarioResult =
-        session_.Snapshot().mode == gameplay::GameMode::ScenarioResultMode;
+    if (snapshot.mode == gameplay::GameMode::OwnedServiceOverviewMode) {
+        UpdateOwnedServiceOverviewMode(input);
+    }
 
-    if (input.save && !inScenarioResult) {
+    // Save/load is suppressed while a transient screen (ScenarioResult / owned-
+    // service overview) is current, so those modes are never persisted. The start-
+    // of-frame snapshot is stale here (a mode update this frame may have entered a
+    // transient screen), so re-read the current mode rather than trusting
+    // `snapshot`.
+    const gameplay::GameMode currentMode = session_.Snapshot().mode;
+    const bool inTransientScreen =
+        currentMode == gameplay::GameMode::ScenarioResultMode ||
+        currentMode == gameplay::GameMode::OwnedServiceOverviewMode;
+
+    if (input.save && !inTransientScreen) {
         const bool saved = saveRepository_.SaveToFile(session_.ToSaveData(), "saves/slot_1.json");
         statusMessage_ = saved ? "Saved to saves/slot_1.json" : "Save failed";
     }
 
-    if (input.load && !inScenarioResult) {
+    if (input.load && !inTransientScreen) {
         const auto loaded = saveRepository_.LoadFromFile("saves/slot_1.json");
         if (loaded.has_value()) {
             session_.ApplySaveData(*loaded);
@@ -580,6 +589,16 @@ void App::UpdateRegionMode(const input::InputState& input) {
         session_.EnterWorldMapMode();
         worldMapSelectedIndex_ = 0;
         statusMessage_ = "World Map: choose a destination Region";
+        return;
+    }
+
+    // M27: open the read-only owned-service overview from anywhere in Region mode.
+    // The model is assembled once here (read-only panel, static while open) so the
+    // Draw path never re-scans the catalog.
+    if (input.openOwnedServices) {
+        ownedServiceOverviewModel_ = ownedServiceOverviewModelMapper_.Map(content_, session_);
+        ownedServiceSelectedIndex_ = 0;
+        session_.EnterOwnedServiceOverviewMode();
         return;
     }
 
@@ -853,6 +872,25 @@ void App::UpdateScenarioResultMode(const input::InputState& input) {
         }
     } else {
         session_.EnterTitleMode();
+    }
+}
+
+void App::UpdateOwnedServiceOverviewMode(const input::InputState& input) {
+    // Read-only: navigate the cached row list or leave. No session mutation.
+    if (input.cancel || input.openOwnedServices) {
+        session_.ExitOwnedServiceOverviewMode();
+        return;
+    }
+
+    const int rowCount = static_cast<int>(ownedServiceOverviewModel_.rows.size());
+    if (rowCount <= 0) {
+        return;
+    }
+    if (input.targetPrev) {
+        ownedServiceSelectedIndex_ =
+            (ownedServiceSelectedIndex_ - 1 + rowCount) % rowCount;
+    } else if (input.targetNext) {
+        ownedServiceSelectedIndex_ = (ownedServiceSelectedIndex_ + 1) % rowCount;
     }
 }
 
@@ -1372,11 +1410,19 @@ void App::Draw() const {
         scenarioResultRenderer_.Draw(context, model);
         break;
     }
+    case gameplay::GameMode::OwnedServiceOverviewMode: {
+        // Render the model cached on mode-enter; only the selection is per-frame.
+        ashvale::rendering::OwnedServiceOverviewModel model = ownedServiceOverviewModel_;
+        model.selectedIndex = ownedServiceSelectedIndex_;
+        ownedServiceOverviewRenderer_.Draw(context, model);
+        break;
+    }
     }
 
     if (snapshot.mode != gameplay::GameMode::Title &&
         snapshot.mode != gameplay::GameMode::CampaignSelectMode &&
-        snapshot.mode != gameplay::GameMode::ScenarioResultMode) {
+        snapshot.mode != gameplay::GameMode::ScenarioResultMode &&
+        snapshot.mode != gameplay::GameMode::OwnedServiceOverviewMode) {
         hudRenderer_.Draw(context, hudModel);
     }
 

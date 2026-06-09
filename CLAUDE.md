@@ -2,11 +2,11 @@
 
 ## Current baseline
 
-Treat the repository as a **post-M26** C++20 / raylib / CMake game project.
+Treat the repository as a **post-M27** C++20 / raylib / CMake game project.
 
-Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, and general player-side owned-service claiming on legal node entry.
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, general player-side owned-service claiming on legal node entry, and a bounded read-only owned-service presentation/overview panel.
 
-Latest completed milestone: **M26 — General Owned-Service Claiming Semantics**.
+Latest completed milestone: **M27 — Owned Service Presentation / Management View**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
@@ -61,6 +61,8 @@ Production source comments should document durable contracts, not milestone book
 - Hostile-occupied travel may start battle before the moving player team is placed on the destination node. This is intended final-direction behavior, preserved by M26; the guarded node is claimed once after victory and the player does not move onto it or spend extra travel/Energy/time.
 - Claiming mutates runtime owned-service state only; content definitions are never mutated.
 - M26 is not enemy-side capture, service destruction/restoration, Storage/Garrison, or a general ownership-transfer event system. World-map-arrival and location-mode-entry claiming are out of M26 scope (only intra-region travel arrival claims).
+- M27 added a bounded, READ-ONLY owned-service overview: a transient `GameMode::OwnedServiceOverviewMode` opened with `O` from Region mode, rendered by a pure `OwnedServiceOverviewModelMapper` → render-model → `OwnedServiceOverviewRenderer`. It lists only player-owned services with location/region, kind, owner/status, stationed `count/5` + unit names, a daily-output preview, and Trading Post tier. It mutates nothing (no ownership/stationing/payout changes); M25 stationing stays reachable through the mine Location-zone interaction, not the panel. The mode is never persisted (`ToString` is diagnostic-only; `FromString("owned_service_overview")` self-heals to `RegionMode`; App suppresses save/load while open); no schema bump.
+- `GameSession::PreviewMineDailyOutput(serviceId)` is a pure read used by the overview; it reuses the exact payout rules (base + strongest-only stationed `mine_production`) and equals the daily payout delta for a payable mine. It does not apply the payability gate (lock/destroy/occupation) — that is shown as status, not folded into the number. `ApplyDailyMinePayout` is unchanged.
 - Allied ownership does not grant player benefits and is not claimable in the current player-side claim path.
 - Runtime `spawnTeam` can create a missing enemy team or reactivate/move an existing one; it is not a general team-definition authoring system.
 - World Map initial unlocks remain authored through World Map content; no Scenario `unlockedRegions` override exists.

@@ -33,7 +33,8 @@ Current stable foundation:
 - owned-service claiming/contesting foundation: defeating a hostile team occupying/guarding a node can claim eligible ownable services at that node for the player;
 - v1 strategic-economy proof content: shipped `playerStart`, shipped `leader_energy`, shipped `mine_production` authoring, authored Trading Post curve data, guarded Steel Mine claim proof, and tests proving the play-reachable chain plus runtime-stationed mine-production boost;
 - player-facing mine stationing flow: a bounded, text-prompt interaction at player-owned mines that stations/unstations/splits eligible owned stacks behind explicit `GameSession` methods (physical one-place-at-a-time placement, Player-Character excluded, up to 5 per mine, no schema bump), making `mine_production` visible in normal play;
-- general player-side owned-service claiming: legally entering an unguarded node claims its eligible ownable services immediately via `GameSession::ResolveNodeEntryClaims` (the single claim path, with `ClaimContestedServicesAtNode` as a back-compat alias), wired into `App::OnDestinationArrived` and the post-battle victory path; guarded battle-before-placement preserved; idempotent re-entry never clears the player's stationed units; no schema bump; an unguarded Copper Mine proves the peaceful path in shipped content.
+- general player-side owned-service claiming: legally entering an unguarded node claims its eligible ownable services immediately via `GameSession::ResolveNodeEntryClaims` (the single claim path, with `ClaimContestedServicesAtNode` as a back-compat alias), wired into `App::OnDestinationArrived` and the post-battle victory path; guarded battle-before-placement preserved; idempotent re-entry never clears the player's stationed units; no schema bump; an unguarded Copper Mine proves the peaceful path in shipped content;
+- owned-service presentation: a bounded, read-only overview panel (transient `OwnedServiceOverviewMode`, opened with `O` from Region mode) listing player-owned services with location/region, kind, owner/status (locked/destroyed/occupied), stationed `count/5` + unit names for mines, daily output preview (base + strongest-only `mine_production` via `GameSession::PreviewMineDailyOutput`, matching payout), and Trading Post ownership tier — assembled by a pure mapper/render-model/renderer, mutating nothing; never persisted (FromString self-heals to Region); no schema bump.
 
 Still incomplete or intentionally deferred:
 
@@ -104,14 +105,19 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 16 — v1 Strategic-Economy Proof Content:** M24 complete.
 - **Phase 17 — Player-facing Service Stationing Flow:** M25 complete.
 - **Phase 18 — General Owned-Service Claiming Semantics:** M26 complete.
+- **Phase 19 — Owned Service Presentation / Management View:** M27 complete.
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M26 — General Owned-Service Claiming Semantics**.
+Latest completed milestone: **M27 — Owned Service Presentation / Management View**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-The next milestone is **not yet selected**. Candidate v2 directions are in §5 below and in `docs/content_scope_v2.md` §5; the natural successors are a Storage/Garrison foundation or an owned-service management/presentation view now that stationing and ownership-claiming semantics are proven.
+The next milestone is **not yet selected**. Candidate v2 directions are in §5 below and in `docs/content_scope_v2.md` §5; the natural successor is a Storage/Garrison foundation now that stationing, ownership-claiming, and owned-service presentation are proven.
+
+### M27 — Owned Service Presentation / Management View (complete)
+
+**Delivered:** a bounded, read-only owned-service overview reached with `O` from Region mode. It is hosted by a transient `GameMode::OwnedServiceOverviewMode` mirroring `ScenarioResultMode` (never persisted; `ToString` is diagnostic-only and `FromString` self-heals to `RegionMode`; App suppresses save/load while open; no schema bump). A pure `OwnedServiceOverviewModelMapper` assembles a render-model from existing `GameSession` read accessors — listing only player-owned services with location/region, kind, owner/status (Owned, Locked, Destroyed, Unavailable: occupied), stationed `count/5` + unit names for mines, a daily-output preview, and Trading Post ownership tier — and an `OwnedServiceOverviewRenderer` draws it. The new `GameSession::PreviewMineDailyOutput(serviceId)` reuses the exact payout building blocks (base parse + strongest-only stationed passives + `ComputeMineDailyOutput`) so the preview equals the daily payout delta for a payable mine; `ApplyDailyMinePayout` is unchanged. The panel is read-only — no ownership, stationing, or payout mutation; M25 stationing stays reachable through the mine Location-zone interaction. Tests cover the mode persistence policy, preview==payout consistency, and the mapper (owned-only rows, mine preview/stationing, trader tier, locked/destroyed status without mutation, empty state).
 
 ### M26 — General Owned-Service Claiming Semantics (complete)
 
@@ -182,7 +188,7 @@ The player should claim eligible ownable services when their team legally enters
 These are candidates, not selected commitments:
 
 1. **Storage/Garrison Foundation.** Add a bounded storage/garrison service or interaction after M25 proves stationing semantics and M26 stabilizes ownership claiming.
-2. **Owned Service Presentation / Management View.** Show owned services, stationed units, expected mine output, and ownership status through a dedicated model/renderer.
+2. ~~**Owned Service Presentation / Management View.**~~ Delivered by **M27** (read-only overview panel).
 3. **Service destruction / restoration and enemy-side capture.** The broader contesting loop after M23/M25/M26. Deferred until stationing/defense semantics exist.
 4. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface.
 5. **Campaign branch-choice presentation.** When a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support exists, but `CampaignProgressionRules` resolves the first entry only.

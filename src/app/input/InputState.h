@@ -11,6 +11,7 @@ namespace app::input
         bool save = false;
         bool load = false;
         bool openWorldMap = false;
+        bool openOwnedServices = false;
 
         bool moveLeft = false;
         bool moveRight = false;
