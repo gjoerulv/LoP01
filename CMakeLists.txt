@@ -65,6 +65,7 @@ add_library(ashvale_rendering
   src/rendering/LocationRenderer.cpp
   src/rendering/BattleRenderer.cpp
   src/rendering/ScenarioResultRenderer.cpp
+  src/rendering/OwnedServiceOverviewRenderer.cpp
 )
 
 target_include_directories(ashvale_rendering PUBLIC src)
@@ -89,6 +90,7 @@ add_executable(ashvale_slice
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
   src/app/mappers/ScenarioResultModelMapper.cpp
+  src/app/mappers/OwnedServiceOverviewModelMapper.cpp
   src/app/BattleEventTextFormatter.cpp
   src/app/formatters/LocationServicePromptFormatter.cpp
 )
@@ -132,6 +134,7 @@ if (BUILD_TESTING)
     src/app/CampaignController.cpp
     src/app/mappers/CampaignModelMapper.cpp
     src/app/mappers/ScenarioResultModelMapper.cpp
+    src/app/mappers/OwnedServiceOverviewModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
     tests/BattleTests.cpp
     tests/BattleEventTextFormatterTests.cpp
@@ -164,6 +167,8 @@ if (BUILD_TESTING)
     tests/ServiceClaimEndToEndTests.cpp
     tests/ServiceClaimContentTests.cpp
     tests/NodeEntryClaimTests.cpp
+    tests/OwnedServiceOverviewSessionTests.cpp
+    tests/OwnedServiceOverviewMapperTests.cpp
     tests/V1EconomyProofContentTests.cpp
     tests/TraderOwnershipRulesTests.cpp
     tests/TradingPostTransactionRulesTests.cpp

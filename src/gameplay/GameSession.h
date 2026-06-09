@@ -52,7 +52,11 @@ enum class GameMode {
     // latched; left on the player's Continue. Never persisted (App refuses to
     // save while in this mode; see GameSession::FromString for the load-side
     // self-heal).
-    ScenarioResultMode
+    ScenarioResultMode,
+    // M27 transient read-only owned-service overview panel. Opened from Region
+    // mode, left on cancel/toggle. Never persisted (App refuses to save while in
+    // this mode; FromString self-heals it to RegionMode on the load side).
+    OwnedServiceOverviewMode
 };
 
 // M16-b campaign run lifecycle. None = no campaign active (standalone play).
@@ -265,6 +269,17 @@ public:
 		const std::string& serviceId,
 		data::LocationServiceKind serviceKind) const;
 
+	// M27 read-only daily-output preview for a mine service: authored base outputs
+	// combined with the service's stationed strongest-only mine_production passives
+	// via the SAME rules ApplyDailyMinePayout uses (parse base, collect passives,
+	// ComputeMineDailyOutput). Returns the production the mine would yield in one
+	// day; the payability gate (lock/destroy/hostile occupation) is intentionally
+	// NOT applied here — it is surfaced separately as status. For a currently
+	// payable owned mine this equals the resource delta a day boundary applies.
+	// Empty for a non-mine / unknown service. Pure read; mutates nothing.
+	[[nodiscard]] std::vector<economy::MineResourceOutput>
+	PreviewMineDailyOutput(const std::string& serviceId) const;
+
 	// M17 Phase 3a: drop stationed refs that are not stack-backed. A valid ref
 	// must have a non-empty unitId and stackId, stackId must resolve to a live
 	// roster stack, and that stack's unitId must match the ref's unitId.
@@ -368,6 +383,10 @@ public:
     void EnterCampaignSelectMode();
     void EnterTitleMode();
     void EnterScenarioResultMode();
+    // M27 transient owned-service overview. Enter from Region mode; Exit returns to
+    // Region mode. Read-only screen; never persisted (see ToString/FromString).
+    void EnterOwnedServiceOverviewMode();
+    void ExitOwnedServiceOverviewMode();
     void ExitLocationMode();
     void EnterBattleMode();
     [[nodiscard]] bool IsInLocationMode() const;

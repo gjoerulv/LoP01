@@ -19,6 +19,7 @@
 #include "app/mappers/HudModelMapper.h"
 #include "app/mappers/BattleModelMapper.h"
 #include "app/mappers/ScenarioResultModelMapper.h"
+#include "app/mappers/OwnedServiceOverviewModelMapper.h"
 #include "app/BattleEventTextFormatter.h"
 #include "core/SaveGame.h"
 #include "data/ContentRepository.h"
@@ -34,6 +35,7 @@
 #include "rendering/CampaignSelectRenderer.h"
 #include "rendering/RenderContext.h"
 #include "rendering/ScenarioResultRenderer.h"
+#include "rendering/OwnedServiceOverviewRenderer.h"
 #include "rendering/TitleRenderer.h"
 
 
@@ -80,6 +82,9 @@ namespace app {
         // deferred campaign-progress path (or returns to Title for standalone /
         // terminal runs).
         void UpdateScenarioResultMode(const input::InputState& input);
+        // M27 transient read-only owned-service overview panel. Navigates the
+        // selection or exits back to Region mode; mutates no session state.
+        void UpdateOwnedServiceOverviewMode(const input::InputState& input);
         // If a campaign is active and a scenario outcome has latched, advance the
         // campaign (Victory), or mark it Completed/Failed, and update the status
         // message. No-op otherwise. Invoked from the result screen's Continue.
@@ -113,6 +118,7 @@ namespace app {
         ashvale::rendering::LocationRenderer locationRenderer_;
         ashvale::rendering::BattleRenderer battleRenderer_;
         ashvale::rendering::ScenarioResultRenderer scenarioResultRenderer_;
+        ashvale::rendering::OwnedServiceOverviewRenderer ownedServiceOverviewRenderer_;
 
         input::InputTranslator inputTranslator_;
         BattleController battleController_;
@@ -132,8 +138,9 @@ namespace app {
         mappers::WorldMapModelMapper worldMapModelMapper_;
         mappers::CampaignModelMapper campaignModelMapper_;
         mappers::ScenarioResultModelMapper scenarioResultModelMapper_;
+        mappers::OwnedServiceOverviewModelMapper ownedServiceOverviewModelMapper_;
 
-        BattleEventTextFormatter battleEventTextFormatter_;        
+        BattleEventTextFormatter battleEventTextFormatter_;
 
         bool battleInitialized_ = false;
         bool locationInitialized_ = false;
@@ -143,6 +150,10 @@ namespace app {
         int regionSelectedNodeIndex_ = 0;
         int worldMapSelectedIndex_ = 0;
         int campaignSelectedIndex_ = 0;
+        // M27 owned-service overview: model cached on mode-enter (read-only panel,
+        // static while open) so Draw needs no per-frame catalog scan.
+        ashvale::rendering::OwnedServiceOverviewModel ownedServiceOverviewModel_;
+        int ownedServiceSelectedIndex_ = 0;
         int observedDay_ = -1;
         bool restedThisDay_ = false;
         gameplay::GameMode battleReturnMode_ = gameplay::GameMode::RegionMode;

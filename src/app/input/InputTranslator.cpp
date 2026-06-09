@@ -16,6 +16,7 @@ namespace app::input
         input.save = IsKeyPressed(KEY_F5);
         input.load = IsKeyPressed(KEY_F9);
         input.openWorldMap = IsKeyPressed(KEY_M);
+        input.openOwnedServices = IsKeyPressed(KEY_O);
 
         input.moveLeft = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
         input.moveRight = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);

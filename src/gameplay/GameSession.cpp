@@ -143,6 +143,10 @@ void GameSession::AdvanceMode() {
         // Driven by App's result-screen Continue handler, not the generic
         // mode-advance path. No-op here so it can never advance by accident.
         break;
+    case GameMode::OwnedServiceOverviewMode:
+        // Transient read-only panel; left explicitly via ExitOwnedServiceOverview-
+        // Mode, never through the generic mode-advance path. No-op.
+        break;
     }
 }
 
@@ -325,6 +329,32 @@ GameSession::CollectStationedMineProductionPassives(
 
     const auto stationedDefs = ResolveStationedUnitDefs(*owned, stackUnitById, defById);
     return economy::CollectMineProductionPassives(stationedDefs, serviceKind);
+}
+
+std::vector<economy::MineResourceOutput>
+GameSession::PreviewMineDailyOutput(const std::string& serviceId) const {
+    const data::LocationServiceDefinition* def = FindLocationServiceById(serviceId);
+    if (def == nullptr || def->kind != data::LocationServiceKind::Mine) {
+        return {};
+    }
+
+    // Authored base outputs -> typed, mirroring ApplyDailyMinePayout. Unparseable
+    // resource names are skipped defensively (validation guarantees valid names for
+    // loaded content; a hand-edited save cannot inject an unknown resource).
+    std::vector<economy::MineResourceOutput> base;
+    base.reserve(def->mineOutputs.size());
+    for (const auto& out : def->mineOutputs) {
+        ResourceType resource;
+        if (TryResourceTypeFromString(out.resource, resource)) {
+            base.push_back(economy::MineResourceOutput{resource, out.amount});
+        }
+    }
+
+    // Same strongest-only combination payout uses. CollectStationedMineProduction-
+    // Passives returns empty when the service is not owned or has no stationed
+    // units, so an unowned/empty mine previews its base output.
+    const auto passives = CollectStationedMineProductionPassives(serviceId, def->kind);
+    return economy::ComputeMineDailyOutput(base, passives);
 }
 
 bool GameSession::IsStackStationedAnywhere(const std::string& stackId) const {
@@ -976,6 +1006,14 @@ void GameSession::EnterTitleMode() {
 
 void GameSession::EnterScenarioResultMode() {
     mode_ = GameMode::ScenarioResultMode;
+}
+
+void GameSession::EnterOwnedServiceOverviewMode() {
+    mode_ = GameMode::OwnedServiceOverviewMode;
+}
+
+void GameSession::ExitOwnedServiceOverviewMode() {
+    mode_ = GameMode::RegionMode;
 }
 
 void GameSession::ExitLocationMode() {
@@ -2419,6 +2457,10 @@ std::string GameSession::ToString(const GameMode mode) {
         // transient mode never silently serializes as "title". App never
         // persists this mode; this string is for diagnostics only.
         return "scenario_result";
+    case GameMode::OwnedServiceOverviewMode:
+        // Diagnostics/logging only — deliberately NOT reversible. App never
+        // persists this transient mode; FromString self-heals it to RegionMode.
+        return "owned_service_overview";
     }
 
     return "title";
@@ -2449,6 +2491,13 @@ GameMode GameSession::FromString(const std::string& mode) {
         // playable RegionMode rather than resuming a transient screen — the
         // outcome latch survives load and UpdateRegionMode re-derives the
         // result screen immediately when the scenario is still ended.
+        return GameMode::RegionMode;
+    }
+    if (mode == "owned_service_overview") {
+        // Safe self-heal (M27): the transient overview panel is never persisted by
+        // App. A hand-edited/corrupt save carrying it resolves to RegionMode — the
+        // player can simply reopen the panel. This is deliberately not the inverse
+        // of ToString(OwnedServiceOverviewMode).
         return GameMode::RegionMode;
     }
 

@@ -58,12 +58,16 @@ M26 answered:
 - how claiming interacts safely with existing stationed units and save/load;
 - how tests prove no double-claim, double-arrival, or no-claim regressions.
 
-## 5. Candidate v2 milestones after M26
+The third selected v2 milestone was: **M27 — Owned Service Presentation / Management View** *(complete)*.
+
+M27 added a bounded, read-only owned-service overview opened with `O` from Region mode (transient `OwnedServiceOverviewMode`), assembled by a pure mapper/render-model/renderer from existing `GameSession` accessors. It lists player-owned services with location/region, kind, owner/status, stationed `count/5` + unit names, a daily-output preview (`GameSession::PreviewMineDailyOutput`, matching payout), and Trading Post tier. It mutates nothing and is never persisted; no schema bump. M25 stationing remains reachable through the mine Location-zone interaction.
+
+## 5. Candidate v2 milestones after M27
 
 These are candidates, not commitments:
 
 1. **Storage/Garrison Foundation.** Add a bounded service kind or interaction that stores units/guards services, with clear capacity and persistence rules. This should follow proven stationing and ownership-claiming semantics, not precede them.
-2. **Owned Service Presentation / Management View.** Show owned services, claim state, stationed units, and expected payout/tier effects through a readable model/renderer without broad UI sprawl.
+2. ~~**Owned Service Presentation / Management View.**~~ Delivered by **M27** (read-only overview panel).
 3. **Service Destruction / Restoration Slice.** Add a narrow destruction/restoration loop only after ownership and stationing are visible and testable.
 4. **Enemy-side Capture Pressure.** Let non-player teams contest or capture player-owned services only after service defense and stationing rules are established.
 5. **Inventory / Artifact HUD Presentation.** Present inventory/artifacts in a bounded render model without implementing full item use or crafting.
