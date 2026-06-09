@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a **post-M24** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase is a **post-M25** bounded multi-Region, multi-Scenario vertical slice.
 
 The v1 strategic-economy proof is complete: the shipped slice and tests now exercise Scenario-authored player economy/service start state, owned services, mine payout, narrow unit passive effects, authored Trading Post trade data, guarded service claiming, Scenario Result presentation, and Campaign progression.
 
