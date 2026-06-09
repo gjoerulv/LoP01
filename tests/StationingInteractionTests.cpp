@@ -143,6 +143,17 @@ TEST_CASE("StationingInteraction - exit signals close and stops consuming") {
     REQUIRE_FALSE(ignored.consumed);
 }
 
+TEST_CASE("StationingInteraction - Close resets an open visit (mode-reset path)") {
+    // Mirrors App::ResetTransientModeState closing the interaction on a mode change.
+    auto session = MakeSession();
+    StationingInteraction interaction;
+    interaction.Open(session, MakeMine("iron_mine_svc"));
+    REQUIRE(interaction.IsActive());
+
+    interaction.Close();
+    REQUIRE_FALSE(interaction.IsActive());
+}
+
 TEST_CASE("StationingInteraction - prompt text reflects the active list and capacity") {
     auto session = MakeSession();
     StationingInteraction interaction;

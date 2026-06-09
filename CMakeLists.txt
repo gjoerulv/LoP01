@@ -157,6 +157,7 @@ if (BUILD_TESTING)
     tests/StationingMutationTests.cpp
     tests/StationingInteractionTests.cpp
     tests/StationingFlowEndToEndTests.cpp
+    tests/MineStationingZoneTests.cpp
     tests/MinePayoutRulesTests.cpp
     tests/MinePayoutTests.cpp
     tests/ServiceClaimRulesTests.cpp

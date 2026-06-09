@@ -272,6 +272,7 @@ void App::ResetTransientModeState() {
     battleStartStackIds_.clear();
     musteringInteraction_.Close();
     tradingPostInteraction_.Close();
+    stationingInteraction_.Close();
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     observedDay_ = snapshot.day;
