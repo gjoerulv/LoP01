@@ -7,7 +7,16 @@
       "id": "scenario_intro",
       "name": "The Cleansing of Ashvale",
       "startRegionId": "ashvale_heartland",
-      "standaloneSelectable": true
+      "standaloneSelectable": true,
+      "playerStart": {
+        "gold": 1200,
+        "resources": [
+          { "resource": "Wood", "amount": 50 }
+        ],
+        "ownedServices": [
+          { "serviceId": "home_base_trading_post" }
+        ]
+      }
     },
     {
       "id": "scenario_second",

@@ -19,7 +19,10 @@
       "agility": 8,
       "life": 1,
       "position": "leader",
-      "range": "long_ranged"
+      "range": "long_ranged",
+      "passive_effects": [
+        { "kind": "leader_energy", "amount": 150 }
+      ]
     },
     {
       "id": "hero_mira",
@@ -163,7 +166,10 @@
       "agility": 8,
       "life": 2,
       "position": "front",
-      "range": "melee"
+      "range": "melee",
+      "passive_effects": [
+        { "kind": "mine_production", "resource": "Steel", "amount": 1, "target": "mine" }
+      ]
     },
     {
       "id": "unit_slingshot",

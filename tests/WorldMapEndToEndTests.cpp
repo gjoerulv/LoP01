@@ -93,7 +93,8 @@ TEST_CASE("WorldMap end-to-end - the model lists riverside_vale as a legal 1-day
 TEST_CASE("WorldMap end-to-end - traveling to riverside_vale arrives next-day 11:00 at its arrival node") {
     data::ContentRepository repo;
     auto session = MakeRealContentSession(repo);
-    REQUIRE(session.CurrentEnergy() == 1800); // lowest agility 8 (hero) vs 10 (guard)
+    // lowest agility 8 (hero) vs 10 (guard); +150 from the leader's authored leader_energy.
+    REQUIRE(session.CurrentEnergy() == 1950);
 
     // Open the World Map (as the App does) so travel commits from WorldMapMode.
     session.EnterWorldMapMode();
@@ -111,10 +112,11 @@ TEST_CASE("WorldMap end-to-end - traveling to riverside_vale arrives next-day 11
     // Arrival returns to the Region layer, not the World Map screen.
     REQUIRE(snap.mode == gameplay::GameMode::RegionMode);
 
-    // Generic dropped, hero retained; arrival-day Energy reset to hero-only max.
+    // Generic dropped, hero retained; arrival-day Energy reset to hero-only max
+    // (1000 + 8*100 + 150 leader_energy).
     REQUIRE(session.OwnedUnitCount("unit_guard") == 0);
-    REQUIRE(session.MaxEnergy() == 1800);
-    REQUIRE(session.CurrentEnergy() == 1800);
+    REQUIRE(session.MaxEnergy() == 1950);
+    REQUIRE(session.CurrentEnergy() == 1950);
 
     // M12 scenario outcome is unaffected by World Map travel.
     REQUIRE_FALSE(session.IsScenarioEnded());
