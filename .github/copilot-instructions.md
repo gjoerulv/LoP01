@@ -14,7 +14,7 @@ Use these rules when working in this repository.
 
 The current codebase should be treated as a **post-M27** bounded multi-Region, multi-Scenario vertical slice.
 
-Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, general player-side owned-service claiming on legal node entry, and a bounded read-only owned-service overview panel.
+Completed foundations include battle, roster, save/load, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, general player-side owned-service claiming on legal node entry, and a bounded read-only owned-service overview / strategic service readout panel.
 
 Do not describe the project as post-M26 or earlier. Those were older baselines.
 
@@ -22,13 +22,13 @@ Do not describe the project as post-M26 or earlier. Those were older baselines.
 
 Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
-Latest completed milestone: **M27 — Owned Service Presentation / Management View**.
+Latest completed milestone: **M27 — Owned Service Overview / Strategic Service Readout**.
 
 Current selected milestone: **not yet selected** (see `docs/implementation_roadmap.md` §5 for candidates).
 
 Active scope cap: `docs/content_scope_v2.md`.
 
-M27 shipped: a bounded, read-only owned-service overview (transient `OwnedServiceOverviewMode`, opened with `O` from Region mode) built by a pure mapper/render-model/renderer from existing `GameSession` accessors; it mutates nothing and is never persisted. Do not treat enemy-side capture, service destruction/restoration, or Storage/Garrison as implemented.
+M27 shipped a bounded, read-only owned-service overview (transient `OwnedServiceOverviewMode`, opened with `O` from Region mode) built by a pure mapper/render-model/renderer from existing `GameSession` accessors; it mutates nothing and is never persisted. Treat it as a strategic visibility/readout foundation, not as final service-management UI. Do not treat enemy-side capture, service destruction/restoration, Storage/Garrison, or remote service management as implemented.
 
 ## Technical rules
 
