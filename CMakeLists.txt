@@ -36,6 +36,7 @@ add_library(ashvale_logic
   src/gameplay/economy/MineProductionRules.cpp
   src/gameplay/economy/StationedProductionRules.cpp
   src/gameplay/economy/StationingRules.cpp
+  src/gameplay/economy/StorageRules.cpp
   src/gameplay/effects/UnitPassiveEffects.cpp
   src/gameplay/economy/MinePayoutRules.cpp
   src/gameplay/economy/ServiceClaimRules.cpp
@@ -76,6 +77,7 @@ add_executable(ashvale_slice
   src/app/MusteringInteraction.cpp
   src/app/TradingPostInteraction.cpp
   src/app/StationingInteraction.cpp
+  src/app/StorageInteraction.cpp
   src/app/main.cpp
   src/app/input/InputTranslator.cpp
   src/app/RegionController.cpp
@@ -126,6 +128,7 @@ if (BUILD_TESTING)
     src/app/MusteringInteraction.cpp
     src/app/TradingPostInteraction.cpp
     src/app/StationingInteraction.cpp
+    src/app/StorageInteraction.cpp
     src/app/mappers/HudModelMapper.cpp
     src/app/mappers/LocationModelMapper.cpp
     src/app/mappers/RegionModelMapper.cpp
@@ -158,6 +161,10 @@ if (BUILD_TESTING)
     tests/StationedUnitsTests.cpp
     tests/StationingRulesTests.cpp
     tests/StationingMutationTests.cpp
+    tests/StorageRulesTests.cpp
+    tests/StorageMutationTests.cpp
+    tests/StorageInteractionTests.cpp
+    tests/StorageContentTests.cpp
     tests/StationingInteractionTests.cpp
     tests/StationingFlowEndToEndTests.cpp
     tests/MineStationingZoneTests.cpp

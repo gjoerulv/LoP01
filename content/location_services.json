@@ -64,6 +64,15 @@
       "time_cost_minutes": 20
     },
     {
+      "id": "home_base_storage",
+      "location_id": "home_base",
+      "zone_id": "storage_chest",
+      "kind": "storage",
+      "prompt_text": "E: Store / retrieve units",
+      "success_text": "Opened storage",
+      "failure_text": "Storage is not available"
+    },
+    {
       "id": "survivor_post_recruitment",
       "location_id": "survivor_recruit_post",
       "zone_id": "recruit_board",

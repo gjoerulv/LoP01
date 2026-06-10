@@ -168,6 +168,28 @@ TEST_CASE("Overview mapper - locked/destroyed status is shown without mutating s
     }
 }
 
+TEST_CASE("Overview mapper - storage row shows stored count, capacity, and unit names read-only") {
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(RealContentDir()));
+    auto save = BaseSave();  // stk_2 = unit_miner in reserve
+    save.ownedServices = {Owned("home_base_storage", "Green", false, false)};
+    auto session = WireSession(repo, save);
+    REQUIRE(session.TryStoreStackAtService("home_base_storage", "stk_2"));  // store via the API
+
+    app::mappers::OwnedServiceOverviewModelMapper mapper;
+    const auto model = mapper.Map(repo, session);
+    const auto* row = FindRow(model, "home_base_storage");
+    REQUIRE(row != nullptr);
+    REQUIRE(row->isStorage);
+    REQUIRE(row->kindLabel == "Storage");
+    REQUIRE(row->displayName == "Home Base");
+    REQUIRE(row->statusLabel == "Owned");
+    REQUIRE(row->storageCapacity == 7);
+    REQUIRE(row->storedCount == 1);
+    REQUIRE(row->storedUnitNames.size() == 1);
+    REQUIRE(row->storedUnitNames[0] == "Tunnel Miner");
+}
+
 TEST_CASE("Overview mapper - empty model when the player owns nothing") {
     data::ContentRepository repo;
     REQUIRE(repo.LoadFromDirectory(RealContentDir()));

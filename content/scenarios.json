@@ -14,7 +14,8 @@
           { "resource": "Wood", "amount": 50 }
         ],
         "ownedServices": [
-          { "serviceId": "home_base_trading_post" }
+          { "serviceId": "home_base_trading_post" },
+          { "serviceId": "home_base_storage" }
         ]
       }
     },

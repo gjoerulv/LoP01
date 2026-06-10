@@ -66,11 +66,15 @@ It lists player-owned services with location/region, kind, owner/status, station
 
 M27 is a strategic visibility foundation, not the final service-management UI. It serves the milestone-agnostic vision by making owned-service state legible and by establishing a reusable read model for future Region map overlays, selected-node panels, Adventure-strip screens, Storage/Garrison, service defense, and service-state presentation.
 
-## 5. Candidate v2 milestones after M27
+The fourth selected v2 milestone was: **M28 — Storage Foundation** *(complete)*.
+
+M28 built **Storage** — the final-vision 7-slot per-service unit store (units persist in-Region, don't travel, are retrievable) — as a placement bucket distinct from M25 stationed guards. The "Storage/Garrison" milestone label was pressure-tested: the docs make Storage a concrete concept while "garrison" is the stationed-guards concept M25 already covers, so M28 implemented Storage and deferred all defense/capture/loss. Owned non-Player-Character stacks store/retrieve at a player-owned storage service behind explicit `GameSession` methods, preserving the one-place-at-a-time stack invariant; additive `stored_units` save (no schema bump); a `home_base_storage` service is authored and player-owned via `playerStart`; the M27 overview shows a read-only `Stored n/7` row.
+
+## 5. Candidate v2 milestones after M28
 
 These are candidates, not commitments:
 
-1. **Storage/Garrison Foundation.** Add a bounded service kind or interaction that stores units/guards services, with clear capacity and persistence rules. This should follow proven stationing, ownership-claiming, and service-readout semantics, not precede them.
+1. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28**. Remaining work — storage gate defense, stationed-defender combat, storage loss/capture (the "garrison"/defense half) — stays deferred; sequence it after service-defense rules exist.
 2. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
 3. **Service Destruction / Restoration Slice.** Add a narrow destruction/restoration loop only after ownership and stationing are visible and testable.
 4. **Enemy-side Capture Pressure.** Let non-player teams contest or capture player-owned services only after service defense and stationing rules are established.

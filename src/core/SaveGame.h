@@ -87,16 +87,29 @@ struct StationedUnitSaveState {
     std::string stackId;
 };
 
+// M28 stored-unit reference. Storage is a DISTINCT final-vision concept from M25
+// stationing (different capacity and meaning), so it gets its own ref type rather
+// than reusing StationedUnitSaveState. The stack-backed invariant is identical to
+// the stationed ref: unitId/stackId non-empty, stackId resolves to a live roster
+// stack, and that stack's unitId matches. Invalid/stale refs are dropped by
+// GameSession::NormalizeStoredUnits().
+struct StoredUnitSaveState {
+    std::string unitId;
+    std::string stackId;
+};
+
 // M17 owned-service runtime state. Phase 1 stable fields plus the Phase 3a
-// additive stationing list. serviceId is the global owned-service instance key
-// (LocationServiceDefinition::id, validated unique). Legacy/Phase-1 saves with
-// no stationed_units key load stationedUnits as empty.
+// additive stationing list and the M28 additive storage list. serviceId is the
+// global owned-service instance key (LocationServiceDefinition::id, validated
+// unique). Legacy saves with no stationed_units / stored_units key load those as
+// empty.
 struct OwnedServiceSaveState {
     std::string serviceId;
     std::string ownerTeamColor;
     bool locked = false;
     bool destroyed = false;
     std::vector<StationedUnitSaveState> stationedUnits;
+    std::vector<StoredUnitSaveState> storedUnits;
 };
 
 struct SaveData {

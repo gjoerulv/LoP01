@@ -26,6 +26,11 @@ namespace ashvale::rendering
 
         bool isTrader = false;
         int traderTier = 0;
+
+        bool isStorage = false;
+        int storedCount = 0;
+        int storageCapacity = 0;              // 7 for storage services
+        std::vector<std::string> storedUnitNames;
     };
 
     // Read-only owned-service overview screen model. Built once on mode-enter; the

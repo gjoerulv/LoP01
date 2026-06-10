@@ -2,15 +2,15 @@
 
 ## Current baseline
 
-Treat the repository as a **post-M27** C++20 / raylib / CMake game project.
+Treat the repository as a **post-M28** C++20 / raylib / CMake game project.
 
-Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, general player-side owned-service claiming on legal node entry, and a bounded read-only owned-service overview / strategic service readout panel.
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, in-play owned-service claiming/contesting after defeating hostile guards, v1 strategic-economy proof content, player-facing mine stationing/unstationing, general player-side owned-service claiming on legal node entry, a bounded read-only owned-service overview / strategic service readout panel, and a bounded unit-storage foundation (store/retrieve at an owned storage service).
 
-Latest completed milestone: **M27 — Owned Service Overview / Strategic Service Readout**.
+Latest completed milestone: **M28 — Storage Foundation**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-Current selected milestone: **not yet selected**. Candidate v2 directions are listed in `docs/implementation_roadmap.md` §5 and `docs/content_scope_v2.md` §5. Do not treat enemy-side capture, service destruction/restoration, Storage/Garrison, or other v2 expansion items as already implemented.
+Current selected milestone: **not yet selected**. Candidate v2 directions are listed in `docs/implementation_roadmap.md` §5 and `docs/content_scope_v2.md` §5. Do not treat enemy-side capture, service destruction/restoration, storage/garrison defense (gate defense, stationed-defender combat, storage loss/capture), or other v2 expansion items as already implemented.
 
 ## Required reading
 
@@ -70,4 +70,7 @@ Use comments only for non-obvious invariants, validation traps, save/load contra
 - The M27 overview is an early strategic visibility surface and read-model foundation. It is not the final service-management UI and must not grow into remote stationing, storage, garrison management, repair/destruction, or ownership-transfer UI without a scoped milestone.
 - `OwnedServiceOverviewMode` is never persisted (`ToString` is diagnostic-only; `FromString("owned_service_overview")` self-heals to `RegionMode`; App suppresses save/load while open); no schema bump.
 - `GameSession::PreviewMineDailyOutput(serviceId)` is a pure read used by the overview; it reuses the exact payout rules (base + strongest-only stationed `mine_production`) and equals the daily payout delta for a payable mine. It does not apply the payability gate (lock/destroy/occupation) — that is shown as status, not folded into the number. `ApplyDailyMinePayout` is unchanged.
+- M28 added a bounded **Storage** foundation, a DISTINCT placement concept from M25 stationing (pressure-tested against `core_loop_rules` §4/§21 + `game_vision` §5: "garrison" is not a separate final-vision system — it is M25's stationed guards). Storage holds owned non-Player-Character stacks at a player-owned `Storage`-kind service, capacity **7** (`StorageRules::kMaxStoredUnitsPerService`, separate from the mine cap of 5). Units persist (don't travel) and are retrievable. Defense/capture/loss/garrison combat are deferred.
+- Storage uses its own `core::StoredUnitSaveState` + additive `OwnedServiceSaveState.storedUnits` (`stored_units`; absent → empty; no schema bump). Mutations live only behind `GameSession` (`TryStoreStackAtService`, `TryRetrieveStackFromService`, `CanStore…`/`CanOpenStorageAtService`, `EligibleStorageStackIds`, `NormalizeStoredUnits`). Store requires the stack be slotted (so a stationed stack can't be stored and a stored stack can't be stationed — automatic cross-exclusion); retrieve returns the same stack id to reserve, fails atomically when reserve is full, and heals a corrupt slotted+stored double-placement by dropping only the stored ref. One-place-at-a-time and no-duplication/no-loss invariants span active/reserve/stationed/stored.
+- `LocationServiceKind::Storage` is intentionally NOT in `IsOwnableServiceKind`, so M26 claiming is unchanged; storage claimability is deferred. The one shipped `home_base_storage` service is player-owned via `playerStart` (the `playerStart` ownable-kind check was extended to accept storage). The M27 overview shows a read-only `Stored n/7` row for storage services; no management actions there.
 - Allied ownership does not grant player benefits and is not claimable in the current player-side claim path.

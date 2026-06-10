@@ -19,7 +19,12 @@ namespace data
         TradingPost,
         Market,
         FreelancersGuild,
-        BlackMarket
+        BlackMarket,
+        // M28: a unit-storage service. Holds owned non-traveling units (up to 7
+        // per service); distinct from mine stationing. Not added to
+        // IsOwnableServiceKind in M28 — storage claimability is deferred; the one
+        // shipped storage service is player-owned via Scenario playerStart.
+        Storage
     };
 
     inline LocationServiceKind LocationServiceKindFromString(const std::string& value)
@@ -33,6 +38,7 @@ namespace data
         if (value == "market")            return LocationServiceKind::Market;
         if (value == "freelancers_guild") return LocationServiceKind::FreelancersGuild;
         if (value == "black_market")      return LocationServiceKind::BlackMarket;
+        if (value == "storage")           return LocationServiceKind::Storage;
         return LocationServiceKind::Unknown;
     }
 

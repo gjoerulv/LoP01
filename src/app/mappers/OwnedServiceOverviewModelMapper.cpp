@@ -8,6 +8,7 @@
 #include "gameplay/ResourceState.h"
 #include "gameplay/economy/MineProductionRules.h"
 #include "gameplay/economy/StationingRules.h"
+#include "gameplay/economy/StorageRules.h"
 
 namespace app::mappers
 {
@@ -35,6 +36,7 @@ namespace app::mappers
             case data::LocationServiceKind::Market:           return "Market";
             case data::LocationServiceKind::FreelancersGuild: return "Freelancer's Guild";
             case data::LocationServiceKind::BlackMarket:      return "Black Market";
+            case data::LocationServiceKind::Storage:          return "Storage";
             default:                                          return "Service";
             }
         }
@@ -113,7 +115,11 @@ namespace app::mappers
             }
             const data::LocationServiceDefinition* def =
                 FindServiceById(content, owned.serviceId);
-            if (def == nullptr || !data::IsOwnableServiceKind(def->kind))
+            // Ownable services (mine/trader) plus M28 storage services (which are
+            // player-owned via playerStart but intentionally not IsOwnableServiceKind).
+            if (def == nullptr ||
+                (!data::IsOwnableServiceKind(def->kind) &&
+                 def->kind != data::LocationServiceKind::Storage))
             {
                 continue;
             }
@@ -164,6 +170,17 @@ namespace app::mappers
             {
                 row.isTrader = true;
                 row.traderTier = session.OwnedTraderServiceTierForService(owned.serviceId);
+            }
+            else if (def->kind == data::LocationServiceKind::Storage)
+            {
+                row.isStorage = true;
+                row.storageCapacity = gameplay::economy::kMaxStoredUnitsPerService;
+                row.storedCount = static_cast<int>(owned.storedUnits.size());
+                for (const auto& ref : owned.storedUnits)
+                {
+                    const data::UnitDefinition* unit = content.FindUnitById(ref.unitId);
+                    row.storedUnitNames.push_back(unit != nullptr ? unit->name : ref.unitId);
+                }
             }
 
             model.rows.push_back(std::move(row));

@@ -36,11 +36,12 @@ Current stable foundation:
 - v1 strategic-economy proof content: shipped `playerStart`, shipped `leader_energy`, shipped `mine_production` authoring, authored Trading Post curve data, guarded Steel Mine claim proof, and tests proving the play-reachable chain plus runtime-stationed mine-production boost;
 - player-facing mine stationing flow: a bounded, text-prompt interaction at player-owned mines that stations/unstations/splits eligible owned stacks behind explicit `GameSession` methods (physical one-place-at-a-time placement, Player-Character excluded, up to 5 per mine, no schema bump), making `mine_production` visible in normal play;
 - general player-side owned-service claiming: legally entering an unguarded node claims its eligible ownable services immediately via `GameSession::ResolveNodeEntryClaims` (the single claim path, with `ClaimContestedServicesAtNode` as a back-compat alias), wired into `App::OnDestinationArrived` and the post-battle victory path; guarded battle-before-placement preserved; idempotent re-entry never clears the player's stationed units; no schema bump; an unguarded Copper Mine proves the peaceful path in shipped content;
-- owned-service strategic readout: a bounded, read-only overview panel (transient `OwnedServiceOverviewMode`, opened with `O` from Region mode) listing player-owned services with location/region, kind, owner/status (locked/destroyed/occupied), stationed `count/5` + unit names for mines, daily output preview (base + strongest-only `mine_production` via `GameSession::PreviewMineDailyOutput`, matching payout), and Trading Post ownership tier — assembled by a pure mapper/render-model/renderer, mutating nothing; never persisted (`FromString` self-heals to Region); no schema bump.
+- owned-service strategic readout: a bounded, read-only overview panel (transient `OwnedServiceOverviewMode`, opened with `O` from Region mode) listing player-owned services with location/region, kind, owner/status (locked/destroyed/occupied), stationed `count/5` + unit names for mines, daily output preview (base + strongest-only `mine_production` via `GameSession::PreviewMineDailyOutput`, matching payout), Trading Post ownership tier, and (M28) stored `count/7` + unit names for storage — assembled by a pure mapper/render-model/renderer, mutating nothing; never persisted (`FromString` self-heals to Region); no schema bump;
+- storage foundation: a bounded unit-storage placement distinct from M25 stationing. Owned non-Player-Character stacks can be stored at and retrieved from a player-owned storage service (cap 7) behind explicit `GameSession` methods (`TryStoreStackAtService`, `TryRetrieveStackFromService`, `CanStore…`/`CanOpenStorageAtService`, `EligibleStorageStackIds`, `NormalizeStoredUnits`), preserving the one-place-at-a-time stack invariant (store requires slotted → automatic cross-exclusion with stationing; retrieve returns the same stack id to reserve, fails atomically when reserve is full, and heals corrupt double-placement). Additive `stored_units` save field (no schema bump); a `home_base_storage` service is authored and player-owned via `playerStart`; a bounded text-prompt `StorageInteraction` opens from the Home Base storage zone. Defense/capture/loss/garrison remain deferred.
 
 Still incomplete or intentionally deferred:
 
-- Storage/Garrison service kind and defensible-asset system;
+- Storage defense / garrison combat and the defensible-asset system (storage gate defense, stationed-defender combat, storage loss/capture) — the storage *placement* foundation shipped in M28; defense remains deferred;
 - victory event chains;
 - richer scenario outcome condition leaves;
 - per-team / multi-human scenario outcome tracking;
@@ -109,14 +110,21 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 17 — Player-facing Service Stationing Flow:** M25 complete.
 - **Phase 18 — General Owned-Service Claiming Semantics:** M26 complete.
 - **Phase 19 — Owned Service Overview / Strategic Service Readout:** M27 complete.
+- **Phase 20 — Storage Foundation:** M28 complete.
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M27 — Owned Service Overview / Strategic Service Readout**.
+Latest completed milestone: **M28 — Storage Foundation**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-The next milestone is **not yet selected**. Candidate v2 directions are in §5 below and in `docs/content_scope_v2.md` §5. The natural successor is likely a bounded Storage/Garrison foundation now that stationing, ownership-claiming, and owned-service visibility are proven, but the next selected milestone should still be chosen against the final-vision docs and current gameplay value.
+The next milestone is **not yet selected**. Candidate v2 directions are in §5 below and in `docs/content_scope_v2.md` §5. With storage proven, natural successors are the storage/service-defense loop (storage gate defense, stationed-defender combat, capture/loss — all currently deferred) or service destruction/restoration; the next selected milestone should still be chosen against the final-vision docs and current gameplay value.
+
+### M28 — Storage Foundation (complete)
+
+**Design call (pressure-tested against the final-vision docs):** "Storage" and "Garrison" are NOT the same concept. The final-vision rules (`core_loop_rules` §4/§21, `game_vision` §5) specify **Storage** as a concrete 7-slot per-service unit store (units persist in-Region, don't travel, retrievable, defensible gate); "garrison" is not a separate system — it is the **stationed guards** concept already implemented by M25 for mines. M28 therefore built **Storage** as a distinct placement bucket and deferred all garrison/defense/capture/loss.
+
+**Delivered:** a distinct `core::StoredUnitSaveState` + additive `OwnedServiceSaveState.storedUnits` (`stored_units`, no schema bump); a pure `StorageRules` module (`kMaxStoredUnitsPerService = 7`); `GameSession` store/retrieve API mirroring M25 stationing (whole-stack only, PC excluded, active-pull leader guard, same-stack-id retrieve to reserve with atomic reserve-full fail and corrupt double-placement healing, `NormalizeStoredUnits` on load); a new `LocationServiceKind::Storage` + `IsStorageService`; a bounded text-prompt `StorageInteraction` reached from a Home Base storage zone; an authored `home_base_storage` service player-owned via `playerStart` (the `playerStart` ownable check was extended for storage; `IsOwnableServiceKind`/M26 claiming left unchanged, so storage claimability is deferred); and a read-only `Stored n/7` row in the M27 overview. Cross-exclusion with mine stationing is automatic (both require the stack to be slotted). M25/M26/M27 behavior and tests are unchanged.
 
 ### M27 — Owned Service Overview / Strategic Service Readout (complete)
 
@@ -162,7 +170,7 @@ The player can station and unstation eligible owned units at eligible owned serv
 
 These are candidates, not selected commitments:
 
-1. **Storage/Garrison Foundation.** Add a bounded storage/garrison service or interaction after M25 proves stationing semantics, M26 stabilizes ownership claiming, and M27 makes owned-service state inspectable. This should be a real final-vision step, not a remote-management shortcut hidden inside the overview panel.
+1. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28** (7-slot store/retrieve at an owned storage service, distinct from M25 stationed guards). The remaining "garrison"/defense work — storage gate defense, stationed-defender combat, storage loss/capture — stays deferred (see candidate #4 and the destruction/restoration slice).
 2. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
 3. **Service destruction / restoration and enemy-side capture.** The broader contesting loop after M23/M25/M26/M27. Deferred until stationing/defense semantics exist.
 4. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface.
