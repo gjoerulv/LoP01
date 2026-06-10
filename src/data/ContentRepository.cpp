@@ -1120,10 +1120,14 @@ namespace data {
                                             "Owned-service references unknown service \"" + owned.serviceId + "\".", ""});
                                         continue;
                                     }
-                                    if (svc->kind != LocationServiceKind::Mine && !IsTraderServiceKind(svc->kind)) {
+                                    // M28: storage services are player-ownable via playerStart too
+                                    // (claimability deferred, but they can be seeded as owned).
+                                    if (svc->kind != LocationServiceKind::Mine &&
+                                        svc->kind != LocationServiceKind::Storage &&
+                                        !IsTraderServiceKind(svc->kind)) {
                                         msgs.push_back({Severity::Error, "SCENARIO_OWNED_SERVICE_NOT_OWNABLE",
                                             spath + ".serviceId",
-                                            "Service \"" + owned.serviceId + "\" is not an ownable (mine/trader) service.", ""});
+                                            "Service \"" + owned.serviceId + "\" is not an ownable (mine/trader/storage) service.", ""});
                                         continue;
                                     }
                                     def.startOwnedServices.push_back(std::move(owned));

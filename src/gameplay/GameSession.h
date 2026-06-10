@@ -338,6 +338,49 @@ public:
     // considered — a full mine can still be opened to unstation. Pure read.
     [[nodiscard]] bool CanOpenStationingAtMine(const std::string& serviceId) const;
 
+    // === M28 storage placement (parallel to stationing; distinct concept) ===
+    // A stored stack lives slot-less in the roster, referenced by exactly one owned
+    // service's storedUnits. Storage cap is 7 (StorageRules::kMaxStoredUnitsPer
+    // Service), separate from the mine-stationing cap of 5. Store requires the stack
+    // be slotted (auto cross-exclusion with stationing); retrieve mirrors unstation.
+
+    // True iff `stackId` could be stored at `serviceId` now: the service is a
+    // player-owned, unlocked, undestroyed Storage below capacity, and the stack
+    // exists, is currently slotted, is not the Player Character, and is not already
+    // stationed or stored anywhere. Excludes the active-party leader guard (that
+    // only constrains pulling from an active slot). Pure read.
+    [[nodiscard]] bool CanStoreStackAtService(
+        const std::string& serviceId, const std::string& stackId) const;
+
+    // Move a whole slotted stack out of its active/reserve slot and store it at the
+    // service, keeping the same stack id. Fails with no state change when ineligible,
+    // not slotted, or when pulling from an active slot would leave no leader. Whole-
+    // stack only in M28 (no split into storage).
+    [[nodiscard]] bool TryStoreStackAtService(
+        const std::string& serviceId, const std::string& stackId);
+
+    // Remove a stored ref and return the SAME stack id to an empty reserve slot.
+    // Fails atomically when reserve is full. Heals a corrupt slotted+stored double-
+    // placement by removing only the stored ref. Never creates, deletes, or merges a
+    // stack.
+    [[nodiscard]] bool TryRetrieveStackFromService(
+        const std::string& serviceId, const std::string& stackId);
+
+    // Stack ids currently slotted that are eligible to store at `serviceId` (non-PC,
+    // not already stationed/stored), or empty when the service cannot receive a unit.
+    // Pure read; the confirm path re-checks full legality (leader guard).
+    [[nodiscard]] std::vector<std::string> EligibleStorageStackIds(
+        const std::string& serviceId) const;
+
+    // Gate for OPENING the storage interaction: true iff `serviceId` is a player-
+    // owned, unlocked, undestroyed Storage service. Capacity not considered (a full
+    // storage can still be opened to retrieve). Pure read.
+    [[nodiscard]] bool CanOpenStorageAtService(const std::string& serviceId) const;
+
+    // M28: drop stored refs that are not stack-backed (mirrors NormalizeStationed-
+    // Units). Idempotent; runs on ApplySaveData.
+    void NormalizeStoredUnits();
+
     // M17 Phase 4b: effective ownership tier when the player USES a specific
     // trader service. This is the benefit gate to apply at a trader service:
     // returns 0 unless `serviceId` is a known trader-kind service with owned
@@ -636,6 +679,8 @@ private:
 
     // M25 stationing helpers. Pure reads over runtime state.
     [[nodiscard]] bool IsStackStationedAnywhere(const std::string& stackId) const;
+    // M28: true iff `stackId` is stored at any owned service.
+    [[nodiscard]] bool IsStackStoredAnywhere(const std::string& stackId) const;
     // True iff `stackId` currently occupies an active or reserve slot.
     [[nodiscard]] bool IsStackSlotted(const std::string& stackId) const;
     [[nodiscard]] bool UnitIsPlayerCharacter(const std::string& unitId) const;

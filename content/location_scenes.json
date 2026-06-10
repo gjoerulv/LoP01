@@ -485,6 +485,24 @@
           "dialogue_choices": []
         },
         {
+          "id": "storage_chest",
+          "type": "shop",
+          "area": {
+            "x": 390,
+            "y": 500,
+            "width": 50,
+            "height": 40
+          },
+          "prompt_text": "E: Store / retrieve units",
+          "result_text": "",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
           "id": "npc_old_man",
           "type": "npc",
           "area": {

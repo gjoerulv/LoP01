@@ -79,6 +79,18 @@ namespace ashvale::rendering
                     context.theme.textColor);
                 y += 24.0f;
             }
+            else if (row.isStorage)
+            {
+                std::string stored = "   Stored: " + std::to_string(row.storedCount) +
+                    "/" + std::to_string(row.storageCapacity);
+                if (!row.storedUnitNames.empty())
+                {
+                    stored += "  (" + JoinNames(row.storedUnitNames) + ")";
+                }
+                DrawTextEx(font, stored.c_str(), { 74.0f, y }, context.smallFontSize, 1.0f,
+                    context.theme.textColor);
+                y += 24.0f;
+            }
 
             if (context.debugEnabled && !row.serviceId.empty())
             {

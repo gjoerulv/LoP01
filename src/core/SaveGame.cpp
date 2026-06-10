@@ -364,13 +364,26 @@ void from_json(const json& j, StationedUnitSaveState& data) {
     data.stackId = j.value("stack_id", std::string{});
 }
 
+void to_json(json& j, const StoredUnitSaveState& data) {
+    j = json{
+        {"unit_id", data.unitId},
+        {"stack_id", data.stackId}
+    };
+}
+
+void from_json(const json& j, StoredUnitSaveState& data) {
+    j.at("unit_id").get_to(data.unitId);
+    data.stackId = j.value("stack_id", std::string{});
+}
+
 void to_json(json& j, const OwnedServiceSaveState& data) {
     j = json{
         {"service_id", data.serviceId},
         {"owner_team_color", data.ownerTeamColor},
         {"locked", data.locked},
         {"destroyed", data.destroyed},
-        {"stationed_units", data.stationedUnits}
+        {"stationed_units", data.stationedUnits},
+        {"stored_units", data.storedUnits}
     };
 }
 
@@ -383,6 +396,11 @@ void from_json(const json& j, OwnedServiceSaveState& data) {
     data.stationedUnits.clear();
     if (j.contains("stationed_units") && j["stationed_units"].is_array()) {
         data.stationedUnits = j["stationed_units"].get<std::vector<StationedUnitSaveState>>();
+    }
+    // M28 additive: absent stored_units (pre-M28 saves) -> empty.
+    data.storedUnits.clear();
+    if (j.contains("stored_units") && j["stored_units"].is_array()) {
+        data.storedUnits = j["stored_units"].get<std::vector<StoredUnitSaveState>>();
     }
 }
 

@@ -273,6 +273,7 @@ void App::ResetTransientModeState() {
     musteringInteraction_.Close();
     tradingPostInteraction_.Close();
     stationingInteraction_.Close();
+    storageInteraction_.Close();
     ownedServiceOverviewModel_ = {};
     ownedServiceSelectedIndex_ = 0;
 
@@ -1056,6 +1057,25 @@ StationingCommand App::TranslateStationingCommand(const input::InputState& input
     return StationingCommand::None;
 }
 
+StorageCommand App::TranslateStorageCommand(const input::InputState& input) const {
+    if (input.interact) {
+        return StorageCommand::Exit;
+    }
+    if (input.option1) {
+        return StorageCommand::Confirm;
+    }
+    if (input.option2) {
+        return StorageCommand::CycleList;
+    }
+    if (input.selectPrev) {
+        return StorageCommand::SelectPrev;
+    }
+    if (input.selectNext) {
+        return StorageCommand::SelectNext;
+    }
+    return StorageCommand::None;
+}
+
 void App::UpdateLocationScene(const input::InputState& input, const float deltaTime) {
     const LocationUpdateResult result =
         locationController_.Update(input, deltaTime, locationScene_.HasActiveDialogue());
@@ -1115,6 +1135,20 @@ void App::UpdateLocationScene(const input::InputState& input, const float deltaT
 
         if (stationingResult.shouldExit) {
             stationingInteraction_.Close();
+        }
+
+        return;
+    }
+
+    if (storageInteraction_.IsActive()) {
+        const StorageCommand command = TranslateStorageCommand(input);
+        const auto storageResult = storageInteraction_.ApplyCommand(command, session_);
+        if (!storageResult.statusText.empty()) {
+            statusMessage_ = storageResult.statusText;
+        }
+
+        if (storageResult.shouldExit) {
+            storageInteraction_.Close();
         }
 
         return;
@@ -1290,6 +1324,20 @@ bool App::ApplyResolvedLocationService(const data::LocationServiceDefinition& se
         return true;
     }
 
+    if (gameplay::location::IsStorageService(&service)) {
+        if (!session_.CanOpenStorageAtService(service.id)) {
+            statusMessage_ = !service.failureText.empty()
+                ? service.failureText
+                : "This storage is not available";
+            return false;
+        }
+        storageInteraction_.Open(session_, service);
+        statusMessage_ = !service.successText.empty()
+            ? service.successText
+            : "Storing units";
+        return true;
+    }
+
     statusMessage_ = "Unknown service";
     return false;
 }
@@ -1339,6 +1387,12 @@ void App::Draw() const {
     else if (snapshot.mode == gameplay::GameMode::LocationMode && stationingInteraction_.IsActive()) {
         locationPromptOverride = mappers::InteractPromptOverride{
             stationingInteraction_.BuildPromptText(session_),
+            true
+        };
+    }
+    else if (snapshot.mode == gameplay::GameMode::LocationMode && storageInteraction_.IsActive()) {
+        locationPromptOverride = mappers::InteractPromptOverride{
+            storageInteraction_.BuildPromptText(session_),
             true
         };
     }

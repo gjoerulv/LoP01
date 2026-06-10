@@ -11,6 +11,7 @@
 #include "app/MusteringInteraction.h"
 #include "app/TradingPostInteraction.h"
 #include "app/StationingInteraction.h"
+#include "app/StorageInteraction.h"
 #include "app/input/InputTranslator.h"
 #include "app/mappers/RegionModelMapper.h"
 #include "app/mappers/WorldMapModelMapper.h"
@@ -97,6 +98,7 @@ namespace app {
         [[nodiscard]] MusteringCommand TranslateMusteringCommand(const input::InputState& input) const;
         [[nodiscard]] TradingPostCommand TranslateTradingPostCommand(const input::InputState& input) const;
         [[nodiscard]] StationingCommand TranslateStationingCommand(const input::InputState& input) const;
+        [[nodiscard]] StorageCommand TranslateStorageCommand(const input::InputState& input) const;
         void OnDestinationArrived(const std::string& destinationId);
         bool ApplyLocationOutcome(const gameplay::location::InteractionOutcome& outcome);
         bool ApplyResolvedLocationService(const data::LocationServiceDefinition& service);
@@ -130,6 +132,7 @@ namespace app {
         MusteringInteraction musteringInteraction_;
         TradingPostInteraction tradingPostInteraction_;
         StationingInteraction stationingInteraction_;
+        StorageInteraction storageInteraction_;
 
         mappers::HudModelMapper hudModelMapper_;
         mappers::BattleModelMapper battleModelMapper_;
