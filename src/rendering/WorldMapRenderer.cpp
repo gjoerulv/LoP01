@@ -45,6 +45,26 @@ namespace ashvale::rendering
             y += 40.0f;
         }
 
+        if (model.confirmingLoss)
+        {
+            y += 12.0f;
+            DrawTextEx(font, model.confirmTitle.c_str(), { 74.0f, y },
+                context.normalFontSize, 1.0f, context.theme.highlightTextColor);
+            y += 28.0f;
+            DrawTextEx(font, "These generic units will be LOST:", { 74.0f, y },
+                context.normalFontSize, 1.0f, context.theme.textColor);
+            y += 28.0f;
+            for (const auto& lossLine : model.lossLines)
+            {
+                DrawTextEx(font, ("  " + lossLine).c_str(), { 74.0f, y },
+                    context.normalFontSize, 1.0f, context.theme.textColor);
+                y += 24.0f;
+            }
+            DrawTextEx(font, "(stored and stationed units stay behind and are safe)",
+                { 74.0f, y }, context.normalFontSize, 1.0f, context.theme.mutedTextColor);
+            y += 28.0f;
+        }
+
         DrawTextEx(font, model.footerHint.c_str(), { 74.0f, y + 16.0f }, context.normalFontSize, 1.0f,
             context.theme.mutedTextColor);
     }

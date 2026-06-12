@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a **post-M28** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase is a **post-M29** bounded multi-Region, multi-Scenario vertical slice.
 
 The v1 strategic-economy proof is complete: the shipped slice and tests exercise Scenario-authored player economy/service start state, owned services, mine payout, narrow unit passive effects, authored Trading Post trade data, guarded and unguarded service claiming, Scenario Result presentation, Campaign progression, and player-facing mine stationing.
 
@@ -37,7 +37,8 @@ Current stable foundation:
 - player-facing mine stationing flow: a bounded, text-prompt interaction at player-owned mines that stations/unstations/splits eligible owned stacks behind explicit `GameSession` methods (physical one-place-at-a-time placement, Player-Character excluded, up to 5 per mine, no schema bump), making `mine_production` visible in normal play;
 - general player-side owned-service claiming: legally entering an unguarded node claims its eligible ownable services immediately via `GameSession::ResolveNodeEntryClaims` (the single claim path, with `ClaimContestedServicesAtNode` as a back-compat alias), wired into `App::OnDestinationArrived` and the post-battle victory path; guarded battle-before-placement preserved; idempotent re-entry never clears the player's stationed units; no schema bump; an unguarded Copper Mine proves the peaceful path in shipped content;
 - owned-service strategic readout: a bounded, read-only overview panel (transient `OwnedServiceOverviewMode`, opened with `O` from Region mode) listing player-owned services with location/region, kind, owner/status (locked/destroyed/occupied), stationed `count/5` + unit names for mines, daily output preview (base + strongest-only `mine_production` via `GameSession::PreviewMineDailyOutput`, matching payout), Trading Post ownership tier, and (M28) stored `count/7` + unit names for storage — assembled by a pure mapper/render-model/renderer, mutating nothing; never persisted (`FromString` self-heals to Region); no schema bump;
-- storage foundation: a bounded unit-storage placement distinct from M25 stationing. Owned non-Player-Character stacks can be stored at and retrieved from a player-owned storage service (cap 7) behind explicit `GameSession` methods (`TryStoreStackAtService`, `TryRetrieveStackFromService`, `CanStore…`/`CanOpenStorageAtService`, `EligibleStorageStackIds`, `NormalizeStoredUnits`), preserving the one-place-at-a-time stack invariant (store requires slotted → automatic cross-exclusion with stationing; retrieve returns the same stack id to reserve, fails atomically when reserve is full, and heals corrupt double-placement). Additive `stored_units` save field (no schema bump); a `home_base_storage` service is authored and player-owned via `playerStart`; a bounded text-prompt `StorageInteraction` opens from the Home Base storage zone. Defense/capture/loss/garrison remain deferred.
+- storage foundation: a bounded unit-storage placement distinct from M25 stationing. Owned non-Player-Character stacks can be stored at and retrieved from a player-owned storage service (cap 7) behind explicit `GameSession` methods (`TryStoreStackAtService`, `TryRetrieveStackFromService`, `CanStore…`/`CanOpenStorageAtService`, `EligibleStorageStackIds`, `NormalizeStoredUnits`), preserving the one-place-at-a-time stack invariant (store requires slotted → automatic cross-exclusion with stationing; retrieve returns the same stack id to reserve, fails atomically when reserve is full, and heals corrupt double-placement). Additive `stored_units` save field (no schema bump); a `home_base_storage` service is authored and player-owned via `playerStart`; a bounded text-prompt `StorageInteraction` opens from the Home Base storage zone. Defense/capture/loss/garrison remain deferred;
+- cross-Region generic-unit preservation / travel warning: confirmed World Map travel removes only traveling (slotted) generic stacks via `GameSession::TravelToRegion` — heroes and the Player Character travel, while M25-stationed and M28-stored stacks stay behind with refs intact (fixing the M15-era removal that scanned the whole roster). A pure `PreviewRegionTravelGenericLosses()` read drives a two-stage World Map confirmation listing per-stack `Nx Name` losses (cancel keeps the screen open so units can be stored first; a no-loss party travels on the first confirm); App-local pending state, no new GameMode, no schema bump.
 
 Still incomplete or intentionally deferred:
 
@@ -61,7 +62,6 @@ Still incomplete or intentionally deferred:
 - HUD/raylib inventory rendering and inventory render-model;
 - event-driven Region unlock;
 - per-Region world/enemy state partitioning;
-- cross-Region generic-unit preservation/loss warning — selected next as M29;
 - authored starting roster / hero-pool support;
 - full per-Scenario content directories and Scenario Region Contexts;
 - general team-definition authoring;
@@ -111,31 +111,25 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 18 — General Owned-Service Claiming Semantics:** M26 complete.
 - **Phase 19 — Owned Service Overview / Strategic Service Readout:** M27 complete.
 - **Phase 20 — Storage Foundation:** M28 complete.
+- **Phase 21 — Cross-Region Generic Unit Preservation / Travel Warning:** M29 complete.
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M28 — Storage Foundation**.
+Latest completed milestone: **M29 — Cross-Region Generic Unit Preservation / Travel Warning**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-The next selected milestone is **M29 — Cross-Region Generic Unit Preservation / Travel Warning**.
+The next milestone is **not yet selected**. See §5 for candidates; service defense remains the strongest likely successor because M25/M28/M29 have created stationed and stored units that the player now deliberately leaves behind, but they still do not defend anything.
 
-**Why M29 now:** M28 created the Storage foundation, but Storage is not yet mechanically necessary. The final-vision docs say generic units in the traveling party do **not** survive Region change, while stored units remain in their original Region. M29 should connect those rules without broadening into Storage defense, enemy capture, or service destruction/restoration.
+### M29 — Cross-Region Generic Unit Preservation / Travel Warning (complete)
 
-### M29 — Cross-Region Generic Unit Preservation / Travel Warning (planned)
+**Audit finding resolved:** a crude generic-loss-on-travel already existed since M15, but it scanned the **whole roster**, so once M25 stationing and M28 storage existed it would also have deleted placed stacks (their refs then silently healed away on load). M29's core fix restricts the at-risk set to the traveling party.
 
-**Goal:** make Storage strategically meaningful by implementing the final travel consequence for generic units. When the player begins Region-to-Region travel with generic stacks still in the traveling party (active + reserve), the game must clearly warn which generics will be lost; if the player confirms, those traveling generic stacks are removed during the travel transition. Stored units remain stored and are not affected.
+**Delivered:** the at-risk set is exactly the slotted (active + reserve) generic stacks. A pure `GameSession::PreviewRegionTravelGenericLosses()` read returns per-stack `{stackId, unitId, quantity}` entries; `GenericTravelingPartyUnitCount()` is its quantity sum; and the confirmed-travel removal inside `TravelToRegion` deletes exactly the previewed set, so the warning the player confirms is the loss that happens. Heroes (category Hero/Leader) travel; the Player Character is additionally protected by an explicit `isPlayerCharacter` guard; M25-stationed and M28-stored stacks survive with refs intact and remain retrievable after returning (proven end-to-end against shipped content: store at `home_base_storage` → travel to `riverside_vale` → return → retrieve).
 
-**Expected behavior:**
+The warning is a two-stage confirm on the existing World Map screen: confirming a legal destination while at-risk generics exist shows a bounded text block ("Confirm travel to X?", one `Nx Name` line per stack, stored/stationed-safe note); a second confirm commits travel, while cancel/selection-change dismisses the warning and keeps the screen open so units can be stored first. A no-loss party travels on the first confirm; illegal destinations keep reporting their commit-time block reason without the warning. The pending flag is App-local UI state (reset on screen entry, load, and `ResetTransientModeState`), with a stale-pending guard so a confirm never commits travel to a destination other than the warned one. No new GameMode, no schema bump, no content changes; `WorldMapController` stays a pure input→intent function and `TravelToRegion` remains the single loss-resolution owner (direct callers bypass the UI warning by design).
 
-- Detect generic, non-Player-Character, non-hero stacks in the traveling party before confirming World Map Region travel.
-- Show a bounded warning/confirmation listing affected unit names/counts; do not surprise-delete units.
-- On confirmed travel, remove only traveling generic stacks from active/reserve/roster through explicit `GameSession` methods, preserving save/load and active-party/leader legality.
-- Heroes and the Player Character travel normally.
-- Stored units are untouched and remain assigned to their storage service.
-- If no traveling generic stacks would be lost, travel proceeds without the extra warning.
-
-**Hard boundaries:** no remote storage management from the warning, no generic auto-storage, no enemy-side Region travel, no Storage defense/capture/loss, no service destruction/restoration, no per-Scenario content partitioning, and no broad shell/menu rewrite. If current World Map travel lacks a suitable confirmation seam, M29 should add only the narrow confirmation needed for this loss warning.
+**Boundaries preserved:** no remote storage management, no generic auto-storage, no travel hard-block, no enemy-side Region travel, no Storage defense/capture/loss, no service destruction/restoration, no per-Scenario content partitioning, no shell/menu rewrite.
 
 ### M28 — Storage Foundation (complete)
 
@@ -183,11 +177,11 @@ The player can station and unstation eligible owned units at eligible owned serv
 - No broad inventory/trader UI rewrite.
 - No new passive kinds.
 
-## 5. Candidate directions after M29 selection
+## 5. Candidate directions after M29
 
 These are candidates/sequence notes, not blanket commitments:
 
-1. **M29 — Cross-Region Generic Unit Preservation / Travel Warning.** Selected next. It should connect the final storage/travel rule: generics in the traveling party are lost on Region change unless stored first. Keep it narrow: warning + confirmed removal + stored-units unaffected.
+1. ~~**M29 — Cross-Region Generic Unit Preservation / Travel Warning.**~~ Delivered by **M29**: traveling generic stacks are lost only after an explicit warning/confirmation, while stored/stationed units survive Region change.
 2. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28** (7-slot store/retrieve at an owned storage service, distinct from M25 stationed guards). The remaining defense work — storage gate defense, stationed-defender combat, storage loss/capture — stays deferred until service-defense rules are selected.
 3. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
 4. **Service defense / stationed-defender resolution.** Natural after M29 if the next goal is contested infrastructure: storage gate defense, mine/stationed-guard defense, and attack/defense battle resolution. Do this before enemy-side capture/destruction if those systems need defenders.
@@ -199,4 +193,4 @@ These are candidates/sequence notes, not blanket commitments:
 10. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content.
 11. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but should not be bundled unless a milestone explicitly selects one narrow result-extension slice.
 
-After M29, prefer the highest-value direct continuation from the final-vision docs rather than system excitement. Service defense is the strongest likely successor because M25/M28 have already created stationed and stored units, but they still do not defend anything.
+After M29, prefer the highest-value direct continuation from the final-vision docs rather than system excitement. Service defense is the strongest likely successor because M25/M28/M29 have created stationed and stored units the player now deliberately leaves behind, but they still do not defend anything.

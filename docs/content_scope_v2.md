@@ -70,15 +70,15 @@ The fourth selected v2 milestone was: **M28 — Storage Foundation** *(complete)
 
 M28 built **Storage** — the final-vision 7-slot per-service unit store (units persist in-Region, don't travel, are retrievable) — as a placement bucket distinct from M25 stationed guards. The "Storage/Garrison" milestone label was pressure-tested: the docs make Storage a concrete concept while "garrison" is the stationed-guards concept M25 already covers, so M28 implemented Storage and deferred all defense/capture/loss. Owned non-Player-Character stacks store/retrieve at a player-owned storage service behind explicit `GameSession` methods, preserving the one-place-at-a-time stack invariant; additive `stored_units` save (no schema bump); a `home_base_storage` service is authored and player-owned via `playerStart`; the M27 overview shows a read-only `Stored n/7` row.
 
-The fifth selected v2 milestone is: **M29 — Cross-Region Generic Unit Preservation / Travel Warning** *(planned)*.
+The fifth selected v2 milestone was: **M29 — Cross-Region Generic Unit Preservation / Travel Warning** *(complete)*.
 
-M29 should make Storage strategically necessary by implementing the final travel consequence: generic units in the traveling party are lost on Region-to-Region travel unless they are stored first. The milestone should stay narrow: warn before confirmed World Map travel, remove only traveling generic stacks on confirmation, leave stored units untouched, and preserve heroes/Player Character. It should not become remote storage management, service defense, enemy capture, or a broad shell/menu rewrite.
+M29 made Storage strategically necessary by implementing the final travel consequence (`core_loop_rules` §5): only traveling (slotted active/reserve) generic stacks are lost on confirmed Region-to-Region travel, while stored and stationed stacks survive with refs intact and heroes/Player Character travel. The at-risk set is exposed through the pure `GameSession::PreviewRegionTravelGenericLosses()` read, and the confirmed-travel removal inside `TravelToRegion` deletes exactly that set — also fixing the M15-era whole-roster removal that would otherwise have deleted placed stacks. A bounded two-stage confirmation on the existing World Map screen lists per-stack `Nx Name` losses; cancel keeps the screen open so units can be stored first, and a no-loss party travels on the first confirm. App-local pending state only — no new GameMode, no schema bump, no content changes. It did not add remote storage management, service defense, enemy capture, or a shell/menu rewrite.
 
-## 5. Candidate v2 milestones after M29 selection
+## 5. Candidate v2 milestones after M29
 
 These are candidates/sequence notes, not blanket commitments:
 
-1. **M29 — Cross-Region Generic Unit Preservation / Travel Warning.** Selected next. It should connect storage to the final travel rule: traveling generic stacks are lost on Region change, while stored units remain.
+1. ~~**M29 — Cross-Region Generic Unit Preservation / Travel Warning.**~~ Delivered by **M29**: traveling generic stacks are lost on Region change after an explicit warning/confirmation, while stored/stationed units remain.
 2. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28**. Remaining work — storage gate defense, stationed-defender combat, storage loss/capture — stays deferred; sequence it after service-defense rules exist.
 3. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
 4. **Service Defense / Stationed-Defender Resolution.** Build the narrow defense resolver before enemy-side capture/destruction if contested infrastructure becomes the next priority.

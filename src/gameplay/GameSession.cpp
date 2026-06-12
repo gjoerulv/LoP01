@@ -3368,44 +3368,76 @@ bool GameSession::IsHeroUnit(const std::string& unitId) const {
     return IsLeaderCapableUnitId(unitId);
 }
 
+std::vector<GameSession::TravelGenericLossEntry>
+GameSession::PreviewRegionTravelGenericLosses() const {
+    // Travel-loss rule (docs/core_loop_rules.md §5): only the traveling party
+    // is at risk, i.e. stacks currently occupying an active or reserve slot.
+    // Stationed (M25) and stored (M28) stacks are unslotted, so they are
+    // excluded by construction and survive Region change. The Player Character
+    // is excluded explicitly as a hard guard even though its Leader category
+    // already makes it a hero.
+    std::vector<TravelGenericLossEntry> losses;
+    auto considerSlots = [&](const std::vector<std::string>& slotStackIds) {
+        for (const auto& slotStackId : slotStackIds) {
+            if (slotStackId.empty()) {
+                continue;
+            }
+            const auto* stack = FindStackById(slotStackId);
+            if (stack == nullptr) {
+                continue;
+            }
+            if (IsHeroUnit(stack->unitId) || UnitIsPlayerCharacter(stack->unitId)) {
+                continue;
+            }
+            // A corrupt double-slotted stack is still one stack: list it once.
+            const bool alreadyListed = std::any_of(losses.begin(), losses.end(),
+                [&](const TravelGenericLossEntry& entry) {
+                    return entry.stackId == stack->stackId;
+                });
+            if (alreadyListed) {
+                continue;
+            }
+            losses.push_back(TravelGenericLossEntry{
+                stack->stackId, stack->unitId, std::max(0, stack->quantity) });
+        }
+    };
+    considerSlots(activeSlotStackIds_);
+    considerSlots(reserveSlotStackIds_);
+    return losses;
+}
+
 int GameSession::GenericTravelingPartyUnitCount() const {
     int total = 0;
-    for (const auto& stack : rosterStacks_) {
-        if (!IsHeroUnit(stack.unitId)) {
-            total += std::max(0, stack.quantity);
-        }
+    for (const auto& entry : PreviewRegionTravelGenericLosses()) {
+        total += entry.quantity;
     }
     return total;
 }
 
 int GameSession::RemoveGenericTravelingPartyUnits() {
-    // Collect generic stack ids first (don't mutate roster while scanning).
-    std::vector<std::string> genericStackIds;
-    int dropped = 0;
-    for (const auto& stack : rosterStacks_) {
-        if (!IsHeroUnit(stack.unitId)) {
-            genericStackIds.push_back(stack.stackId);
-            dropped += std::max(0, stack.quantity);
-        }
-    }
+    // Collect first (don't mutate roster while scanning), then remove exactly
+    // the previewed set so the confirmed warning matches the applied loss.
+    const auto losses = PreviewRegionTravelGenericLosses();
 
-    for (const auto& stackId : genericStackIds) {
+    int dropped = 0;
+    for (const auto& loss : losses) {
         for (auto& activeSlot : activeSlotStackIds_) {
-            if (activeSlot == stackId) {
+            if (activeSlot == loss.stackId) {
                 activeSlot.clear();
             }
         }
         for (auto& reserveSlot : reserveSlotStackIds_) {
-            if (reserveSlot == stackId) {
+            if (reserveSlot == loss.stackId) {
                 reserveSlot.clear();
             }
         }
         std::erase_if(rosterStacks_, [&](const RosterStackState& entry) {
-            return entry.stackId == stackId;
+            return entry.stackId == loss.stackId;
         });
+        dropped += loss.quantity;
     }
 
-    if (dropped > 0) {
+    if (!losses.empty()) {
         MarkRosterProjectionDirty();
     }
     return dropped;

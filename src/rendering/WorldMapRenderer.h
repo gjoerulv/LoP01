@@ -28,6 +28,12 @@ namespace ashvale::rendering
         int travelEnergyCost = 1000;
         int genericLossCount = 0;  // generics that would be lost on departure
         std::vector<WorldMapDestinationView> destinations;
+        // M29 loss-confirmation stage: when confirmingLoss, a bounded text block
+        // below the destinations lists each at-risk traveling generic stack
+        // ("3x Swordsman") so the player confirms exactly what will be lost.
+        bool confirmingLoss = false;
+        std::string confirmTitle;            // "Confirm travel to <Region>?"
+        std::vector<std::string> lossLines;  // one per at-risk stack
         std::string footerHint;
     };
 
