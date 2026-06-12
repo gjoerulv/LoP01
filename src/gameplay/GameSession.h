@@ -18,6 +18,7 @@
 #include "data/definitions/RegionDefinition.h"
 #include "data/definitions/ScenarioDefinition.h"
 #include "data/definitions/ScenarioOutcomeDefinition.h"
+#include "data/definitions/EnemyGroupDefinition.h"
 #include "data/definitions/UnitDefinition.h"
 #include "data/definitions/WorldMapDefinition.h"
 #include "gameplay/EnemyTeamState.h"
@@ -184,7 +185,12 @@ struct TradingPostOffer {
 
 struct EnemyTeamActionResult {
     std::string teamColor;
+    // "idle" | "moved" | "service_attack" (resolved in-session) |
+    // "service_attack_pending_battle" (player party on the node: the App must
+    // run the defense battle and report back).
     std::string actionType;
+    std::string nodeId;       // attack target; empty for idle/moved
+    std::string summaryText;  // bounded player-facing line for service attacks
 };
 
 struct SessionSnapshot {
@@ -629,6 +635,82 @@ public:
     [[nodiscard]] std::string HostileTeamColorAtNode(
         const std::string& nodeId, const std::string& playerColor) const;
 
+    // M30 contested infrastructure. Service attacks are node-level: an attack
+    // against a node resolves every eligible player-owned service there together
+    // (occupation, payout gating, and claiming are already node-keyed). Eligible
+    // = attackable kind (mine / trader / storage), player-owned, not locked, not
+    // destroyed. Arrival nodes are never attacked (protected per
+    // docs/core_loop_rules.md §8/§17); ProcessEnemyPhase enforces that gate.
+    void SetEnemyGroupCatalog(std::vector<data::EnemyGroupDefinition> catalog);
+
+    struct ServiceAttackOutcome {
+        bool attacked = false;             // an eligible target existed; the attack was processed
+        bool playerBattleRequired = false; // player party stands on the node: the App must run the
+                                           // defense battle and report back via
+                                           // ApplyServiceDefenseVictory/Defeat. No mutation yet.
+        bool defendersFought = false;      // placed defenders auto-resolved a defense
+        bool attackerWon = false;
+        std::vector<std::string> capturedServiceIds;
+        std::string summaryText;           // bounded player-facing line ("" when !attacked)
+    };
+
+    // Service ids at `nodeId` that `attackerColor` may legally attack right now.
+    // Pure read; empty when the attacker is unknown/inactive/allied to the player.
+    [[nodiscard]] std::vector<std::string> AttackableServiceIdsAtNodeFor(
+        const std::string& attackerColor, const std::string& nodeId) const;
+
+    // Resolve one enemy service attack against `nodeId`. Player absent:
+    // deterministic auto-resolve (ServiceDefenseRules strength comparison) —
+    // defenders hold -> the attacker team is defeated/deactivated; attacker wins
+    // (or no defenders exist) -> every eligible service is captured, its placed
+    // defender stacks are resolved (generics dismissed, heroes Temporarily
+    // Unavailable, refs cleared in the same mutation), and the attacker occupies
+    // the node. Player party standing on the node: returns playerBattleRequired
+    // and mutates nothing — the existing interactive battle surface decides, then
+    // the App reports the result through the two methods below.
+    ServiceAttackOutcome ResolveServiceAttack(
+        const std::string& attackerColor, const std::string& nodeId);
+
+    // Player-involved defense battle results (App battle surface callbacks).
+    // Victory: the attacker team is defeated/deactivated; services unchanged.
+    // Defeat: eligible services at the node are captured exactly as in the
+    // auto-resolve attacker-win path, and the attacker occupies the node. The
+    // active party itself follows the existing battle defeat semantics (no
+    // roster mutation here).
+    void ApplyServiceDefenseVictory(const std::string& attackerColor, const std::string& nodeId);
+    void ApplyServiceDefenseDefeat(const std::string& attackerColor, const std::string& nodeId);
+
+    // M30 Temporarily Unavailable heroes (minimal storage-loss pipeline). While
+    // listed here a hero owns no roster stack, so it is hidden from active/
+    // reserve/stationing/storage automatically. Heroes become returnable after
+    // economy::kUnavailableHeroReturnDays and rejoin the reserve at the next day
+    // start with a free reserve slot (stand-in for shared-hero-pool re-entry,
+    // which is future scope). The Player Character never enters this list.
+    [[nodiscard]] const std::vector<core::TemporarilyUnavailableHeroSaveState>&
+    UnavailableHeroes() const;
+
+    // M30 bounded service event log (newest last, capped). Read-only surface for
+    // overview/log presentation.
+    [[nodiscard]] const std::vector<core::ServiceEventLogEntrySaveState>&
+    ServiceEventLog() const;
+
+    // M30 minimal destruction/restoration (docs/core_loop_rules.md §20).
+    // Destruction is opt-in via the authored `destroyable` flag, requires the
+    // player to occupy the node (standing on it in Region mode, no hostile
+    // occupier), costs 1000 Energy + 1 hour, and is blocked while the service
+    // has placed (stationed/stored) units. Destroying a destroyed service whose
+    // restoration is queued cancels the queue (§20), at full cost. Restoration
+    // requires standing on the node, spends the authored restore cost (no
+    // Energy, no time), queues, and completes at the next day start — before
+    // that day's mine payout, so a restored mine pays immediately.
+    [[nodiscard]] bool CanDestroyServiceAtCurrentNode(const std::string& serviceId) const;
+    bool TryDestroyServiceAtCurrentNode(const std::string& serviceId);
+    [[nodiscard]] bool CanQueueServiceRestorationAtCurrentNode(const std::string& serviceId) const;
+    bool TryQueueServiceRestorationAtCurrentNode(const std::string& serviceId);
+    // First destroyable service authored at the player's current node, if any.
+    // Read used by the App's bounded maintenance action.
+    [[nodiscard]] const data::LocationServiceDefinition* DestroyableServiceAtCurrentNode() const;
+
     void InitializeQuestState(const std::vector<data::QuestDefinition>& questDefinitions);
     [[nodiscard]] std::vector<std::string> NotifyDestinationReached(const std::string& destinationId);
     [[nodiscard]] std::vector<std::string> NotifyCombatNodeCleared(const std::string& nodeId);
@@ -761,6 +843,40 @@ private:
 
     std::vector<EnemyTeamState> enemyTeams_;
     static const std::vector<std::string> kTeamColorOrder;
+
+    // M30 contested-infrastructure runtime state.
+    std::vector<data::EnemyGroupDefinition> enemyGroupCatalog_;
+    std::vector<core::TemporarilyUnavailableHeroSaveState> unavailableHeroes_;
+    std::vector<core::ServiceEventLogEntrySaveState> serviceEventLog_;
+    static constexpr int kMaxServiceEventLogEntries = 24;
+
+    // Append one bounded player-facing service event line (day = current day);
+    // trims the oldest entries beyond kMaxServiceEventLogEntries.
+    void AppendServiceEvent(std::string text);
+    // Deterministic attack strength of an authored enemy group (sum of unit
+    // defense powers; unknown group/units contribute 0).
+    [[nodiscard]] int EnemyGroupPower(const std::string& enemyGroupId) const;
+    // Total defense power of the placed (stationed + stored) stacks across the
+    // eligible services at a node.
+    [[nodiscard]] int NodeDefenderPower(const std::vector<std::string>& serviceIds) const;
+    // Capture worker shared by the auto-resolve attacker-win path and the
+    // player-defeat path: resolves placed defender stacks (generic -> dismissed,
+    // hero -> Temporarily Unavailable, Player Character stack never removed),
+    // clears the refs in the same mutation, and transfers ownership. Returns the
+    // captured service ids.
+    std::vector<std::string> ApplyServiceCaptureAtNode(
+        const std::string& attackerColor, const std::string& nodeId);
+    // Day-start TU hero return: entries past returnDay rejoin the reserve when a
+    // slot is free (otherwise retried at later day starts).
+    void ApplyDailyHeroReturns();
+    // Day-start restoration completion: destroyed services with a queued
+    // restoration become intact again (runs before the day's mine payout).
+    void ApplyDailyServiceRestorations();
+    static constexpr int kServiceDestructionEnergyCost = 1000;
+    static constexpr int kServiceDestructionMinutes = 60;
+    // Drop TU entries that are not minimally valid (empty unitId, or the Player
+    // Character, which must never be unavailable). Runs on load.
+    void NormalizeUnavailableHeroes();
 
     std::string playerColor_ = "Green";
     // M16-b: global fallback (from scenario_outcome.json, never mutated) kept

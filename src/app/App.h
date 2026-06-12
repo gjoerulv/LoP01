@@ -66,6 +66,10 @@ namespace app {
         // Deliberately does NOT set restedThisDay_ = true.
         void MarkCurrentDayObservedAfterIntentionalTimeAdvance();
         void ResolveBattleOutcomeIfNeeded();
+        // M30: surface enemy-phase service-attack results in the status line and
+        // start the player-involved defense battle when one is required. Returns
+        // true when a battle was started (callers must stop further mode work).
+        bool HandleEnemyPhaseResults(const std::vector<gameplay::EnemyTeamActionResult>& results);
         void ApplyWakePenaltyAndRecover(const std::string& reason);
         // Returns a safe recovery node within the current Region (not globally):
         // 1. the current Region's arrivalNodeId (preferred)
@@ -172,6 +176,15 @@ namespace app {
         std::string pendingBattleScenarioId_;
         std::string pendingHostileContactNodeId_;
         std::string pendingHostileContactTeamColor_;
+        // M30 player-involved service defense: set when the enemy phase attacks
+        // the node the party stands on; the battle outcome reports back through
+        // GameSession::ApplyServiceDefenseVictory/Defeat. Transient UI state.
+        std::string pendingServiceDefenseNodeId_;
+        std::string pendingServiceDefenseTeamColor_;
+        // M30 service maintenance two-press destruction confirm (App-local UI
+        // state, never persisted).
+        bool serviceMaintenanceConfirmPending_ = false;
+        std::string serviceMaintenancePendingServiceId_;
     };
 
 } // namespace app

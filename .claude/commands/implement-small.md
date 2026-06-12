@@ -2,9 +2,9 @@
 
 Use this for narrow implementation slices only.
 
-Current baseline: **post-M25**. Do not treat M17-M25 work as future work.
+Current baseline: **post-M30**. Do not treat M17-M30 work as future work.
 
-Before editing, read `CLAUDE.md`, `docs/implementation_roadmap.md`, and `docs/content_scope_v2.md`. If no milestone is selected in the active roadmap, stop and request/perform a planning audit instead of inventing implementation scope. At this baseline, M26 is selected unless the active roadmap has changed.
+Before editing, read `CLAUDE.md`, `docs/implementation_roadmap.md`, and the active content scope. If no milestone is selected in the active roadmap, stop and request/perform a planning audit instead of inventing implementation scope. As of the post-M30 baseline, no next milestone is selected and v2 is ready to archive.
 
 Implementation rules:
 
@@ -14,5 +14,5 @@ Implementation rules:
 - Keep content definitions separate from runtime mutable state.
 - Avoid per-frame scans, repeated content parsing, graph rebuilds, large needless copies, and hidden nested scans.
 - Avoid milestone/phase labels in production comments.
-- For M26 claiming work, preserve battle-before-placement for hostile-occupied travel, centralize ownership mutation behind `GameSession`, and avoid double-running arrival/capture side effects.
-- Preserve M25 stationing invariants and avoid unit duplication/loss. Do not implement full Storage/Garrison unless the active milestone explicitly selects it.
+- Preserve battle-before-placement for hostile-occupied travel, centralize ownership mutation behind `GameSession`, and avoid double-running arrival/capture side effects.
+- Preserve M25 stationing, M28 storage, M29 travel-loss, and M30 service-defense/destruction/TU invariants; avoid unit duplication/loss and dangling stationed/stored refs. Do not add full-simulation defense battles, shared hero pool, or other v3 systems unless the active milestone explicitly selects them.

@@ -12,6 +12,9 @@ namespace app::input
         bool load = false;
         bool openWorldMap = false;
         bool openOwnedServices = false;
+        // M30: destroy / queue restoration of a destroyable service at the
+        // current Region node (two-press confirm for destruction).
+        bool serviceMaintenance = false;
 
         bool moveLeft = false;
         bool moveRight = false;

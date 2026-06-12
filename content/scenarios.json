@@ -15,7 +15,8 @@
         ],
         "ownedServices": [
           { "serviceId": "home_base_trading_post" },
-          { "serviceId": "home_base_storage" }
+          { "serviceId": "home_base_storage" },
+          { "serviceId": "river_depot_storage" }
         ]
       }
     },

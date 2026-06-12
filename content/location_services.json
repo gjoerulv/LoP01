@@ -118,7 +118,21 @@
       "mine_outputs": [
         { "resource": "Stone", "amount": 1 },
         { "resource": "Gold", "amount": 100 }
+      ],
+      "destroyable": true,
+      "restore_cost": [
+        { "resource": "Wood", "amount": 2 },
+        { "resource": "Stone", "amount": 1 }
       ]
+    },
+    {
+      "id": "river_depot_storage",
+      "location_id": "river_depot",
+      "zone_id": "storage_chest",
+      "kind": "storage",
+      "prompt_text": "E: Store / retrieve units",
+      "success_text": "Opened storage",
+      "failure_text": "Storage is not available"
     }
   ]
 }

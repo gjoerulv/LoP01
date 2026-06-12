@@ -45,7 +45,16 @@
       "trigger": { "type": "regionNodeEntry", "nodeId": "town_center" },
       "actions": [
         { "type": "showMessage", "text": { "en": "Raiders have seized the Steel Mine to the north." } },
-        { "type": "spawnTeam", "teamColor": "Red", "nodeId": "iron_mine" }
+        { "type": "spawnTeam", "teamColor": "Red", "nodeId": "iron_mine", "enemyGroupId": "eg_mine_01" }
+      ],
+      "repeat": { "mode": "once" }
+    },
+    {
+      "id": "evt_raiders_eye_depot",
+      "trigger": { "type": "regionNodeEntry", "nodeId": "river_depot" },
+      "actions": [
+        { "type": "showMessage", "text": { "en": "Raiders have been spotted at the bridge — the River Depot is in danger." } },
+        { "type": "spawnTeam", "teamColor": "Blue", "nodeId": "bridge_checkpoint", "enemyGroupId": "eg_patrol_01" }
       ],
       "repeat": { "mode": "once" }
     }

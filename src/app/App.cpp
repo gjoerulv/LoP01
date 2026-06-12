@@ -88,6 +88,9 @@ App::App() {
         // Feed authored trader curves so player-facing Trading Post transactions
         // resolve ownership-tier rates (omitted curves fall back to defaults).
         session_.SetTraderCurveCatalog(content_.TraderCurves());
+        // M30: feed authored enemy groups so enemy teams resolve their
+        // deterministic service-attack strength.
+        session_.SetEnemyGroupCatalog(content_.EnemyGroups());
         session_.ApplyDailyStartingEnergy();
         // M15-b: feed the World Map (seeds the unlocked-region set) and the
         // region catalog (resolves a destination's arrival node at travel time).
@@ -278,6 +281,10 @@ void App::ResetTransientModeState() {
     ownedServiceSelectedIndex_ = 0;
     worldMapLossConfirmPending_ = false;
     worldMapPendingRegionId_.clear();
+    pendingServiceDefenseNodeId_.clear();
+    pendingServiceDefenseTeamColor_.clear();
+    serviceMaintenanceConfirmPending_ = false;
+    serviceMaintenancePendingServiceId_.clear();
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     observedDay_ = snapshot.day;
@@ -396,7 +403,19 @@ void App::ResolveBattleOutcomeIfNeeded() {
     battleStartStackIds_.clear();
 
     if (summary.enemiesWon) {
+        // M30 service defense lost: capture/loss consequences resolve through the
+        // session before the standard defeat recovery relocates the party.
+        const std::string defenseNode = pendingServiceDefenseNodeId_;
+        const std::string defenseColor = pendingServiceDefenseTeamColor_;
+        pendingServiceDefenseNodeId_.clear();
+        pendingServiceDefenseTeamColor_.clear();
+        if (!defenseColor.empty()) {
+            session_.ApplyServiceDefenseDefeat(defenseColor, defenseNode);
+        }
         ApplyWakePenaltyAndRecover("Party defeated in battle");
+        if (!defenseColor.empty()) {
+            statusMessage_ += " | " + defenseNode + " captured by " + defenseColor + ".";
+        }
         if (writeBackFailed) {
             statusMessage_ += " | Roster write-back failed";
         }
@@ -404,6 +423,24 @@ void App::ResolveBattleOutcomeIfNeeded() {
     }
 
     if (summary.alliesWon) {
+        if (!pendingServiceDefenseTeamColor_.empty()) {
+            // M30 service defense held: the attacker team is defeated; owned
+            // services and their placed defenders are untouched.
+            session_.ApplyServiceDefenseVictory(
+                pendingServiceDefenseTeamColor_, pendingServiceDefenseNodeId_);
+            statusMessage_ = pendingServiceDefenseTeamColor_ + " attack on " +
+                pendingServiceDefenseNodeId_ + " repelled.";
+            if (summary.playerSetToOneHp) {
+                statusMessage_ += " Player recovered to 1 HP.";
+            }
+            pendingServiceDefenseNodeId_.clear();
+            pendingServiceDefenseTeamColor_.clear();
+            if (writeBackFailed) { statusMessage_ += " | Roster write-back failed"; }
+            // Defeating the last hostile team can latch default victory.
+            AppendScenarioEndedStatusIfLatched();
+            session_.EnterRegionMode();
+            return;
+        }
         if (!pendingHostileContactTeamColor_.empty()) {
             // Capture the guarded node before clearing the pending fields so the
             // claim runs at the node the defeated team was occupying.
@@ -484,11 +521,47 @@ void App::ResolveBattleOutcomeIfNeeded() {
 
     pendingHostileContactNodeId_.clear();
     pendingHostileContactTeamColor_.clear();
+    // Unresolved service defense (neither side won): the attack lapses; the
+    // attacker remains and may attack again next phase.
+    pendingServiceDefenseNodeId_.clear();
+    pendingServiceDefenseTeamColor_.clear();
     session_.EnterRegionMode();
     statusMessage_ = "Battle ended.";
     if (writeBackFailed) {
         statusMessage_ += " | Roster write-back failed";
     }
+}
+
+bool App::HandleEnemyPhaseResults(const std::vector<gameplay::EnemyTeamActionResult>& results) {
+    std::string defenseBattleNodeId;
+    std::string defenseBattleTeamColor;
+    for (const auto& enemyResult : results) {
+        if (enemyResult.actionType == "service_attack" && !enemyResult.summaryText.empty()) {
+            statusMessage_ += " | " + enemyResult.summaryText;
+        } else if (enemyResult.actionType == "service_attack_pending_battle" &&
+                   defenseBattleNodeId.empty()) {
+            defenseBattleNodeId = enemyResult.nodeId;
+            defenseBattleTeamColor = enemyResult.teamColor;
+        }
+    }
+    if (defenseBattleNodeId.empty()) {
+        return false;
+    }
+    const auto* defenseLocation = content_.FindLocationById(defenseBattleNodeId);
+    const std::string defenseScenarioId =
+        defenseLocation != nullptr ? defenseLocation->battleScenarioId : std::string{};
+    if (defenseScenarioId.empty()) {
+        // Same missing-encounter pattern as hostile travel: the attack stalls
+        // until content authors an encounter for this node.
+        statusMessage_ += " | " + defenseBattleTeamColor + " threatens " +
+            defenseBattleNodeId + " — no encounter defined.";
+        return false;
+    }
+    pendingServiceDefenseNodeId_ = defenseBattleNodeId;
+    pendingServiceDefenseTeamColor_ = defenseBattleTeamColor;
+    StartBattleScenario(defenseScenarioId,
+        defenseBattleTeamColor + " attacks " + defenseBattleNodeId + " — defend!");
+    return true;
 }
 
 std::string App::ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const {
@@ -604,6 +677,81 @@ void App::UpdateRegionMode(const input::InputState& input) {
         ownedServiceOverviewModel_ = ownedServiceOverviewModelMapper_.Map(content_, session_);
         ownedServiceSelectedIndex_ = 0;
         session_.EnterOwnedServiceOverviewMode();
+        return;
+    }
+
+    // M30 service maintenance at the current node: queue restoration of a
+    // destroyed service (single press) or destroy a destroyable one (two-press
+    // confirm; also the §20 cancel-queued-restoration path).
+    if (input.serviceMaintenance) {
+        const auto* maintSvc = session_.DestroyableServiceAtCurrentNode();
+        if (maintSvc == nullptr) {
+            statusMessage_ = "No destroyable service at this node.";
+            serviceMaintenanceConfirmPending_ = false;
+            serviceMaintenancePendingServiceId_.clear();
+            return;
+        }
+        const std::string maintServiceId = maintSvc->id;
+        const auto* ownedState = session_.FindOwnedService(maintServiceId);
+        const bool isDestroyed = ownedState != nullptr && ownedState->destroyed;
+        const bool isQueued = ownedState != nullptr && ownedState->restorationQueued;
+
+        if (isDestroyed && !isQueued) {
+            // Restoration path: non-destructive, single press.
+            if (session_.TryQueueServiceRestorationAtCurrentNode(maintServiceId)) {
+                statusMessage_ = "Restoration of " + maintServiceId +
+                    " queued — completes at next day start.";
+            } else {
+                statusMessage_ = "Cannot queue restoration of " + maintServiceId +
+                    " (restore cost not affordable).";
+            }
+            serviceMaintenanceConfirmPending_ = false;
+            serviceMaintenancePendingServiceId_.clear();
+            return;
+        }
+
+        if (!serviceMaintenanceConfirmPending_ ||
+            serviceMaintenancePendingServiceId_ != maintServiceId) {
+            if (!session_.CanDestroyServiceAtCurrentNode(maintServiceId)) {
+                statusMessage_ = "Cannot destroy " + maintServiceId +
+                    " (occupied, garrisoned units present, or not enough Energy).";
+                serviceMaintenanceConfirmPending_ = false;
+                serviceMaintenancePendingServiceId_.clear();
+                return;
+            }
+            serviceMaintenanceConfirmPending_ = true;
+            serviceMaintenancePendingServiceId_ = maintServiceId;
+            statusMessage_ = (isQueued
+                ? "Cancel queued restoration of " + maintServiceId + " by destruction?"
+                : "Destroy " + maintServiceId + "?") +
+                " (1000 Energy, 1h) — press K again to confirm.";
+            return;
+        }
+
+        serviceMaintenanceConfirmPending_ = false;
+        serviceMaintenancePendingServiceId_.clear();
+        if (session_.TryDestroyServiceAtCurrentNode(maintServiceId)) {
+            statusMessage_ = isQueued
+                ? "Queued restoration of " + maintServiceId + " cancelled."
+                : maintServiceId + " destroyed.";
+            if (session_.IsScenarioEnded()) {
+                AppendScenarioEndedStatusIfLatched();
+                return;
+            }
+            // Destruction costs an hour: the enemy phase runs after every
+            // time-costing Region action (core_loop_rules §12).
+            const auto* region = content_.FindRegionById(session_.Snapshot().regionId);
+            const auto enemyResults = session_.ProcessEnemyPhase(
+                region != nullptr ? region->links
+                                  : std::vector<data::RegionLinkDefinition>{});
+            if (session_.IsScenarioEnded()) {
+                AppendScenarioEndedStatusIfLatched();
+                return;
+            }
+            static_cast<void>(HandleEnemyPhaseResults(enemyResults));
+        } else {
+            statusMessage_ = "Cannot destroy " + maintServiceId + ".";
+        }
         return;
     }
 
@@ -773,12 +921,18 @@ void App::UpdateRegionMode(const input::InputState& input) {
         // Contract: call after every Region-mode time-costing player action.
         // Location-mode time costs are intentionally excluded (core_loop_rules §12).
         // Extension point: add a call here when new Region-mode actions are introduced.
-        static_cast<void>(session_.ProcessEnemyPhase(links));
+        const auto enemyResults = session_.ProcessEnemyPhase(links);
 
         // M12-b outcome check #2: enemy phase may flip outcome state. ProcessEnemyPhase
         // already latched if appropriate; just observe and skip battle/location entry.
         if (session_.IsScenarioEnded()) {
             AppendScenarioEndedStatusIfLatched();
+            return;
+        }
+
+        // M30: surface auto-resolved service attacks, and start the defense battle
+        // when the enemy phase attacked the node the party is standing on.
+        if (HandleEnemyPhaseResults(enemyResults)) {
             return;
         }
 

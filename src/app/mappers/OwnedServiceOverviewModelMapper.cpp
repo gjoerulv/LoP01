@@ -136,7 +136,11 @@ namespace app::mappers
                 : row.displayName + " — " + regionName;
 
             const bool hostile = hostileNodes.count(def->locationId) != 0;
-            if (owned.destroyed)
+            if (owned.destroyed && owned.restorationQueued)
+            {
+                row.statusLabel = "Owned (Destroyed — restoring at next day start)";
+            }
+            else if (owned.destroyed)
             {
                 row.statusLabel = "Owned (Destroyed)";
             }
@@ -184,6 +188,26 @@ namespace app::mappers
             }
 
             model.rows.push_back(std::move(row));
+        }
+
+        // M30 Temporarily Unavailable heroes (storage/service-defense losses).
+        for (const auto& entry : session.UnavailableHeroes())
+        {
+            const data::UnitDefinition* unit = content.FindUnitById(entry.unitId);
+            model.unavailableHeroLines.push_back(
+                (unit != nullptr ? unit->name : entry.unitId)
+                + " — returns day " + std::to_string(entry.returnDay));
+        }
+
+        // M30 recent service events, newest last, bounded for the panel.
+        constexpr std::size_t kMaxEventLines = 6;
+        const auto& log = session.ServiceEventLog();
+        const std::size_t firstShown =
+            log.size() > kMaxEventLines ? log.size() - kMaxEventLines : 0;
+        for (std::size_t i = firstShown; i < log.size(); ++i)
+        {
+            model.eventLogLines.push_back(
+                "Day " + std::to_string(log[i].day) + ": " + log[i].text);
         }
 
         return model;

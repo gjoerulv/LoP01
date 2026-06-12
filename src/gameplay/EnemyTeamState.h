@@ -24,6 +24,10 @@ struct EnemyTeamState {
     bool active = true;
     int energy = 0;                    // placeholder; full formula in M11-b+
     int cooldownExpiresAtMinutes = 0;
+    // M30: authored enemy-group id giving the team its deterministic service-
+    // attack strength (EnemyGroupDefinition lookup). Empty -> zero strength;
+    // the team can still capture undefended services.
+    std::string enemyGroupId;
 };
 
 } // namespace gameplay

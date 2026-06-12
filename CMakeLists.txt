@@ -35,6 +35,7 @@ add_library(ashvale_logic
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
   src/gameplay/economy/MineProductionRules.cpp
   src/gameplay/economy/StationedProductionRules.cpp
+  src/gameplay/economy/ServiceDefenseRules.cpp
   src/gameplay/economy/StationingRules.cpp
   src/gameplay/economy/StorageRules.cpp
   src/gameplay/effects/UnitPassiveEffects.cpp
@@ -154,6 +155,10 @@ if (BUILD_TESTING)
     tests/RegionModelMapperTests.cpp
     tests/RegionTravelRulesTests.cpp
     tests/RegionTravelGenericLossTests.cpp
+    tests/ServiceDefenseTests.cpp
+    tests/EnemyServicePressureTests.cpp
+    tests/ServiceDestructionTests.cpp
+    tests/ContestedInfrastructureContentTests.cpp
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
     tests/ResourceStateTests.cpp

@@ -2,13 +2,13 @@
 
 ## Context
 
-The previous roadmap was archived after M29. This file is the new active implementation roadmap for finishing the active v2 scope in `docs/content_scope_v2.md`.
+The previous roadmap was archived after M29. This file is the active implementation roadmap that finished the v2 scope in `docs/content_scope_v2.md`.
 
-The current codebase is a **post-M29** bounded multi-Region, multi-Scenario vertical slice. The v1 strategic-economy proof is complete, and v2 has already delivered the major player-facing infrastructure-control foundations: player-facing mine stationing, systemic player-side service claiming, owned-service overview/readout, Storage, and cross-Region generic-unit loss warnings.
+The current codebase is a **post-M30** bounded multi-Region, multi-Scenario vertical slice. The v1 strategic-economy proof and the v2 contested-infrastructure loop are complete: stationing, storage, claiming, cross-Region loss warnings, service defense, storage loss with Temporarily Unavailable heroes, enemy-side capture pressure, destruction/restoration, and the service-state readout/log all work together in shipped content and tests.
 
-The active scope cap is still `docs/content_scope_v2.md`. Archived docs, including `docs/content_scope_v0.md.archived`, older `docs/implementation_roadmap.md.*.archived` files, and `docs/content_scope_v1.md.archived`, are historical context only.
+The active scope cap is `docs/content_scope_v2.md`, which M30 completed. **v2 is complete and ready to archive**: archive `docs/content_scope_v2.md` and create `docs/content_scope_v3.md` before selecting the next milestone (§6). Archived docs, including `docs/content_scope_v0.md.archived`, older `docs/implementation_roadmap.md.*.archived` files, and `docs/content_scope_v1.md.archived`, are historical context only.
 
-M30 is intentionally an umbrella completion milestone. It should finish the remaining v2 infrastructure-control loop, then leave the project ready to archive `docs/content_scope_v2.md` and create a future v3 scope. Do **not** treat M30 as permission to implement the entire final game.
+M30 was an umbrella completion milestone, not permission to implement the entire final game; its deliberate simplifications are documented in §4 and its deferred systems in §5.
 
 ---
 
@@ -42,17 +42,13 @@ Current stable foundation:
 - general player-side owned-service claiming: legal unguarded node-entry claims eligible ownable services; guarded battle-before-placement preserved; Copper Mine proves the peaceful path;
 - owned-service strategic readout: bounded read-only overview panel opened with `O` from Region mode, showing owned services, location/region, kind, status, stationed units, mine payout preview, Trading Post tier, and stored-unit state;
 - Storage foundation: storage service kind, 7-slot per-service stored-unit placement distinct from stationing, `StoredUnitSaveState`, additive `stored_units`, Home Base storage service, store/retrieve interaction, and same-stack-id retrieve into reserve;
-- cross-Region generic-unit preservation / travel warning: confirmed World Map travel removes only traveling active/reserve generic stacks; heroes/Player Character travel; stored and stationed stacks stay behind; two-stage World Map warning lists the at-risk stacks.
-
-Still incomplete or intentionally deferred before v2 can close:
-
-- service defense / stationed-defender resolution;
-- direct-storage gate defense and storage loss consequences;
-- service destruction/restoration;
-- enemy-side capture or denial pressure against owned services;
-- Temporarily Unavailable hero pipeline needed by storage-loss and other hero-dismissal rules;
-- service-state presentation for capture, defense, destruction, restoration, and loss events;
-- v2 closure audit to decide what remains for v3 rather than leaving ambiguous candidate lists behind.
+- cross-Region generic-unit preservation / travel warning: confirmed World Map travel removes only traveling active/reserve generic stacks; heroes/Player Character travel; stored and stationed stacks stay behind; two-stage World Map warning lists the at-risk stacks;
+- service defense / stationed-defender resolution (M30): node-level attacks against player-owned attackable services (mines, traders, storage) resolved by the pure deterministic `ServiceDefenseRules` strength comparison when the player is absent — defenders hold ties, a repelled attacker team is defeated, a winning attacker captures every eligible service at the node and occupies it; the player-present case routes through the existing interactive battle surface (`ApplyServiceDefenseVictory`/`Defeat` callbacks);
+- storage loss + minimal Temporarily Unavailable hero pipeline (M30): captured services resolve their placed stacks atomically — generics dismissed, heroes enter the TU list (`unavailable_heroes`, additive save) with a weekly return-to-reserve at day start when a slot is free; the Player Character can never be placed, lost, or TU;
+- enemy-side service capture pressure (M30): `ProcessEnemyPhase` lets hostile teams attack player-owned service nodes (same node or adjacent, patrol-radius legal, never the arrival node, current region only) with deterministic first-target selection; teams carry an authored `enemyGroupId` (save + `spawnTeam` arg) resolving their attack strength from `enemy_groups.json`;
+- service destruction/restoration (M30): authored opt-in `destroyable` flag + mandatory validated `restore_cost`; destruction requires standing on the unoccupied node, costs 1000 Energy + 1 hour, and is blocked by placed units; restoration spends the authored cost, queues, and completes at next day start before that day's payout; destroying again cancels the queue (§20); bounded two-press `K` maintenance action in Region mode;
+- service-state presentation (M30): bounded persisted service event log (capped, additive `service_event_log`), enemy-phase status lines, and M27 overview extensions (restoring status, Temporarily Unavailable section, recent-events section);
+- M30 content proof: a player-owned direct storage depot (`river_depot`, playerStart-owned, raid event pressure), a destroyable copper mine with authored restore cost, and enemy groups on the authored raider spawns — proven end-to-end against shipped content.
 
 ---
 
@@ -61,21 +57,21 @@ Still incomplete or intentionally deferred before v2 can close:
 | # | Issue | Action |
 |---|-------|--------|
 | 1 | Team Energy has an implemented leader passive term (`leader_energy`) and a still-deferred leader item/artifact Energy term. | Keep `leader_energy` on the current unit passive spine. Do not fake item/artifact Energy until an item/artifact effect milestone exists. |
-| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Recipes, full Scenario Region Contexts, and several long-term authored structures still do not exist. | Add structs/loaders only when a scoped phase requires them. M30 should not create broad content directories unless service-defense/destruction authoring proves it necessary. |
-| 3 | `docs/game_shell_flow.md` specifies the full shell flow, while code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred unless M30 needs only a tiny warning/result surface. |
-| 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | M30 may add validation only for service-defense/destruction/storage-loss authoring that it introduces. |
+| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Recipes, full Scenario Region Contexts, and several long-term authored structures still do not exist. | Add structs/loaders only when a scoped phase requires them. M30 added only the additive `destroyable`/`restore_cost` service fields, no new content kinds. |
+| 3 | `docs/game_shell_flow.md` specifies the full shell flow, while code still focuses on the playable slice and direct mode transitions. | Gap, not conflict. Full shell remains deferred (v3 candidate). |
+| 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | M30 added the destroyable/restore-cost validation contract only. The broader model remains expandable. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader command depth. | Gap; acceptable until skill/status phases. |
-| 6 | Player color is still effectively fixed as `Green` in several Region/enemy-team/outcome/economy/start-state/claiming paths. | Known debt. Do not fix opportunistically unless M30 needs a real player-team identity model. Prefer color-parametric helper APIs where touched. |
-| 7 | `scenario_outcome.json` remains a bounded-slice authoring file, while `ScenarioDefinition` supports only a subset of long-term Scenario authoring. | Intentional sequencing. M30 should not expand Scenario authoring except if v2 closure needs a narrow proof scenario. |
-| 8 | Unit `passive_effects` support only `mine_production` and `leader_energy`; artifact `statBonus` remains on the artifact path. | Do not fold artifact/item/status behavior into the unit passive spine during M30. |
-| 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. M30 should not build a broad shop UI unless explicitly kept to a tiny service-state proof. |
-| 10 | Scenario `playerStart` covers economy/service start state only; authored starting roster, full team definitions, item/artifact start state, and `unlockedRegions` overrides are intentionally absent. | Add only if M30's v2-completion proof cannot be authored otherwise. |
-| 11 | Scenario Result mode presents deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Leave for v3 unless M30's closure audit explicitly selects a tiny branch-choice or result-extension proof. |
-| 12 | Owned-service claiming covers both player-side guarded capture and general player-side claiming. It does not implement enemy-side capture, sabotage, or destruction/restoration. | M30 should address the narrow enemy-side/service-defense/destruction path needed for v2 infrastructure pressure. |
-| 13 | `mine_production` is implemented, content-authored, and player-facing. | Do not change payout semantics during M30. Service defense may use stationed units defensively, but production rules remain strongest-only and unchanged. |
-| 14 | M27 implements an owned-service overview/readout, not the final service-management UI. | M30 may extend the readout/logs with defense/destruction/restoration state. Do not turn it into remote management. |
-| 15 | Storage placement exists, but direct-storage gate defense, storage-loss consequences, and Temporarily Unavailable heroes are not implemented. | M30 should implement the minimal final-rule-compatible version if service defense includes storage gates. |
-| 16 | World Map generic-loss warning now makes Storage strategically necessary, but stored/stationed units still cannot defend anything. | M30 should make placed units strategically matter through service defense. |
+| 6 | Player color is still effectively fixed as `Green` in several Region/enemy-team/outcome/economy/start-state/claiming paths. | Known debt. The M30 service-defense paths use `PlayerColor()` rather than literals, but older paths keep the hardcode. Fix only with a real player-team identity model. |
+| 7 | `scenario_outcome.json` remains a bounded-slice authoring file, while `ScenarioDefinition` supports only a subset of long-term Scenario authoring. | Intentional sequencing. M30 did not expand Scenario authoring (the proof reuses `playerStart`). |
+| 8 | Unit `passive_effects` support only `mine_production` and `leader_energy`; artifact `statBonus` remains on the artifact path. | Do not fold artifact/item/status behavior into the unit passive spine without a scoped milestone. |
+| 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. Build broader trader UI only in a scoped v3 milestone. |
+| 10 | Scenario `playerStart` covers economy/service start state only; authored starting roster, full team definitions, item/artifact start state, and `unlockedRegions` overrides are intentionally absent. | Gap, not conflict. The M30 proof was authored with `playerStart` alone; add the rest only when a scoped milestone needs them. |
+| 11 | Scenario Result mode presents deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Left for v3 (candidate list). |
+| 12 | Owned-service claiming covers both player-side guarded capture and general player-side claiming. It does not implement enemy-side capture, sabotage, or destruction/restoration. | Resolved by M30: enemy-side capture pressure, service defense, and player-facing destruction/restoration shipped. Enemy-side destruction/sabotage and AI restoration remain v3. |
+| 13 | `mine_production` is implemented, content-authored, and player-facing. | Unchanged by M30: payout semantics intact; stationed units now also defend, but production stays strongest-only. |
+| 14 | M27 implements an owned-service overview/readout, not the final service-management UI. | M30 extended the readout with restoring status, TU heroes, and a recent-events log. It remains read-only; remote management stays out of scope. |
+| 15 | Storage gate defense, storage-loss consequences, and the minimal Temporarily Unavailable pipeline shipped in M30. | Resolved by M30: stored stacks defend their node, storage loss dismisses generics and makes heroes Temporarily Unavailable (weekly reserve return as the pool stand-in). Shared hero pool re-entry is v3. |
+| 16 | World Map generic-loss warning makes Storage strategically necessary. | Resolved by M30: placed (stationed/stored) units now defend their services through the deterministic service-defense resolver. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -104,186 +100,47 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 19 — Owned Service Overview / Strategic Service Readout:** M27 complete.
 - **Phase 20 — Storage Foundation:** M28 complete.
 - **Phase 21 — Cross-Region Generic Unit Preservation / Travel Warning:** M29 complete.
+- **Phase 22 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit:** M30 complete.
 
 ---
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M29 — Cross-Region Generic Unit Preservation / Travel Warning**.
+Latest completed milestone: **M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit**.
 
-Active scope cap: **`docs/content_scope_v2.md`**.
+`docs/content_scope_v2.md` is **complete and ready to archive**. The next milestone is **not yet selected** — per §6, archive v2 and create `docs/content_scope_v3.md` first. §5 lists the candidates; service-defense depth (full-simulation auto-resolve / battle AI) and the shared hero pool are the most direct continuations of what M30 bounded.
 
-Selected next milestone: **M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit**.
+### M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit (complete)
 
-M30 is planned, not implemented.
+**Goal met:** the service/storage/stationing loop is now a contested infrastructure loop. Placed units strategically matter: stationed and stored stacks defend their nodes, enemy teams legally pressure player-owned services, losses resolve without dangling refs, destroyed services can be restored, and the player can see all of it.
 
-M30 should complete the active v2 scope by turning the already-built service/storage/stationing loop into a contested infrastructure loop. It must directly serve the milestone-agnostic docs and should be ambitious enough to close v2, but it must not silently expand into the full final game.
+#### Settled pressure-test answers
 
-### M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit (planned)
+1. **Defensible Service:** a player-owned service of an attackable kind — Mine, the four trader kinds, or Storage — at a Region node (`ServiceKindIsAttackable`). Attacks are node-level: every eligible service at the node resolves together, mirroring node-keyed occupation/claiming. Rest/Shop/Recruit/Muster interactions are never systemically attackable; arrival nodes are protected. There is no separate "direct Region service" type in code — services bind to Locations placed 1:1 on Region nodes, and the authored `destroyable` flag is the §20 "Region Services only" gate.
+2. **Defender roster:** player absent → the union of stationed + stored stacks at the node's eligible services; player party standing on the node → the active party via the existing interactive battle surface (§21); no defenders + player absent → capture without battle (mirror of peaceful claiming).
+3. **Battle path:** player-involved defense reuses the existing battle flow (location `battleScenarioId`, hostile-contact pattern, existing victory/defeat write-back; `ApplyServiceDefenseVictory`/`Defeat` report the result). Absent-player defense uses the pure deterministic `ServiceDefenseRules` strength comparison (unit power = attack + defense + maxHp; stack power × quantity; defender wins ties). No second battle engine; no battle AI exists, so full-simulation auto-resolve is explicitly v3.
+4. **Refs after battle:** one atomic `GameSession` mutation (`ApplyServiceCaptureAtNode`) resolves losing defenders — generic stacks erased, hero stacks erased + appended to the Temporarily Unavailable list, refs cleared in the same pass; the Player Character is excluded by the M25/M28 placement gates plus an explicit capture-time guard. Winning defenders are untouched.
+5. **Enemy capture:** immediate `ownerTeamColor` transfer for all eligible services at the node (Mine/traders/Storage). Storage capture = storage loss. Inherited refs are resolved, never transferred. Enemy-side destruction is deferred (capture already denies payouts); the reclaim loop is the existing M26 guarded capture.
+6. **AI pressure path:** one new deterministic `ProcessEnemyPhase` action — a player-hostile team standing on or adjacent to an eligible node (patrol-radius legal, current region, never the arrival node) attacks it instead of patrolling; first target by sorted node id; fixed color order. Teams carry an authored `enemyGroupId` for strength. No AI economy, no pathing.
+7. **Content proof:** shipped `river_depot` (direct storage, playerStart-owned, storage zone, defense battle scenario, raid-warning spawn event), destroyable `copper_mine_svc` with authored `restore_cost`, `enemyGroupId` on the authored raider spawns, and end-to-end tests driving store → pressure → hold/loss → TU → return → claim → destroy → queue → restore against the real content directory.
 
-#### Goal
+#### Documented M30 simplifications (deliberate, final-rule-compatible stand-ins)
 
-Complete `docs/content_scope_v2.md` by implementing the remaining narrow infrastructure-control consequences that make owned Services, stationed units, stored units, and enemy pressure form a coherent playable loop.
+- Absent-player defense is a deterministic strength comparison, not a full battle simulation; the winning side survives intact and the losing side is eliminated (no partial losses). Full-sim auto-resolve belongs to the v3 battle-depth candidate.
+- A repelled attacker team is defeated/deactivated outright.
+- Temporarily Unavailable heroes return to the **player's reserve** after `kUnavailableHeroReturnDays` (7) at a day start with a free reserve slot. This stands in for shared-hero-pool re-entry, which does not exist yet (v3).
+- Enemy pressure targets **player-owned** services only and captures rather than destroys; enemy-vs-enemy contention and AI sabotage/restoration are v3.
+- Player-present defense battles use the location's authored battle scenario as the attacker roster — the same simplification the existing hostile-contact flow makes.
+- The destruction/restoration trigger surface is a bounded two-press `K` action in Region mode, not a final service-management UI.
+- Service event log lines use service/location ids; the overview rows keep display names.
 
-M30 should finish v2 through these deliverables:
+#### Save/load
 
-1. **Service defense / stationed-defender resolution**
-   - Implement a narrow resolver for attacks against owned Region Services that have defenders.
-   - Mines may use stationed units as defenders where applicable.
-   - Direct storage Services may use stored units as defenders, following the final storage-gate rule.
-   - If the traveling party is present on the attacked storage node, use the active party for the defense battle as the final docs specify.
-   - AI-vs-AI or enemy-vs-absent-service battles may auto-resolve without interrupting the player, but must be deterministic and testable.
-   - Player-involved defense should use the existing battle/result surfaces where practical; do not build the full threat-preview/redo/manual-battle system unless the current battle flow already supports the needed path safely.
+All M30 state is additive, no schema bump: `OwnedServiceSaveState.restoration_queued`, `EnemyTeamSaveState.enemy_group_id`, `SaveData.unavailable_heroes`, `SaveData.service_event_log` (capped, re-trimmed and PC-healed on load).
 
-2. **Storage loss and Temporarily Unavailable hero foundation**
-   - If a direct storage defense is lost, generic stored units at that storage are dismissed.
-   - Stored heroes become Temporarily Unavailable through a minimal explicit runtime/save pipeline.
-   - The Player Character must never enter the Temporarily Unavailable path.
-   - Temporarily Unavailable heroes should remain hidden/unavailable until the defined return timing. Use the simplest final-rule-compatible weekly return if implementing return is required; otherwise clearly keep return timing bounded and tested.
-   - Do not implement broad hero pool/recruitment redesign beyond what storage-loss requires.
+#### Tests
 
-3. **Enemy-side service capture pressure**
-   - Let enemy teams contest or capture player-owned Region Services only through legal Region-layer action and the defense resolver.
-   - Ownership transfers immediately when capture succeeds, matching the final ownership rule.
-   - Do not allow enemy teams to enter Locations or use Location-only service interactions.
-   - Do not implement a full AI economy. Use a narrow priority/action path that can attack/capture/deny strategically relevant owned Services when legal.
-   - Preserve allied ownership boundaries: allies do not automatically share ownership or benefits.
-
-4. **Service destruction / restoration slice**
-   - Implement the minimal systemic destruction/restoration model for Region Services only.
-   - A service must be explicitly destroyable before it can be destroyed.
-   - Destruction requires legal occupation and the specified Energy/time cost.
-   - Restoration uses resources, queues restoration, and completes at next day start unless destroyed again before restoration completes.
-   - Guarded services may not be destroyed until guardians/defenders are defeated.
-   - Do not apply systemic destruction to ordinary Location-mode service interactions unless a service is authored as a Region Service / direct Service node.
-
-5. **Service-state presentation and logs**
-   - Extend the existing overview/readout, Region-node status, or bounded notifications so the player can understand:
-     - owned service captured/lost;
-     - service attacked/defended;
-     - service destroyed/restoring/restored;
-     - storage lost and heroes becoming Temporarily Unavailable;
-     - stationed/stored defenders participating or being lost.
-   - Use existing render-model/mapper/renderer patterns.
-   - Do not build a full final service-management UI.
-
-6. **Minimal content proof**
-   - Add only the content needed to prove the loop:
-     - at least one direct Region storage Service or storage gate if Home Base storage is Location-only and cannot prove direct gate defense;
-     - at least one destroyable owned Region Service or mine;
-     - an enemy team that can legally pressure the service without requiring a full AI economy;
-     - tests and one manual path proving attack/defense/capture/destruction/restoration.
-   - Do not create a large campaign, full economy simulation, editor tooling, or broad Scenario Region Context system.
-
-7. **v2 closure audit**
-   - At the end of M30, update this roadmap and `docs/content_scope_v2.md` to state that v2 is complete and ready to archive.
-   - Move unfinished large systems into a future v3 candidate list rather than leaving them as ambiguous v2 promises.
-   - Do not rewrite milestone-agnostic docs unless M30 exposes an actual source-of-truth contradiction.
-
-#### Required planning pressure-tests before implementation
-
-Claude/Fable must explicitly answer these before coding:
-
-1. **What is a defensible Service in current code and content?**
-   - Distinguish direct Region Services, Location Services, mines, and storage gates.
-   - Do not treat every Location service as systemically attackable.
-
-2. **What exact defender roster is used?**
-   - Mine: stationed units only, or stationed units plus occupying team if present?
-   - Direct storage: stored units when the owner is absent; active party if the traveling party is present on the node.
-   - Empty storage/mine: define whether capture/destruction succeeds without battle.
-
-3. **What battle path is used?**
-   - Reuse existing battle simulation/write-back where possible.
-   - For absent-player service defense, prefer deterministic auto-resolve and log the outcome.
-   - Do not invent a second battle engine.
-
-4. **How are stored/stationed refs updated after battle?**
-   - No dangling refs.
-   - No duplicate stacks.
-   - No Player Character loss.
-   - Stored hero loss uses the Temporarily Unavailable path if storage-loss is implemented.
-
-5. **What does enemy capture mean?**
-   - Which service kinds transfer ownership?
-   - Which service kinds can be destroyed instead?
-   - How does capture interact with stationed/stored defenders?
-   - Are inherited stationed/stored refs cleared, transferred, dismissed, or preserved? Pick explicit rules and test them.
-
-6. **What is the minimal AI pressure path?**
-   - Enemy teams should be able to threaten infrastructure, but M30 must not become a full AI economy/minimax project.
-   - Use deterministic, medium-depth, bounded action selection.
-
-7. **What content proves completion without turning v2 into a campaign rewrite?**
-   - Prefer one tight proof loop over many shallow systems.
-
-#### Hard constraints
-
-- Do not implement full AI economy.
-- Do not implement full item economy, crafting, cooking, recipes, seeds, or broad item-use systems.
-- Do not implement full shell/menu/character-creation/load/settings flow.
-- Do not implement full fog-of-war / scouting.
-- Do not implement full Scenario Region Context / per-Scenario content directories unless M30 proves it is unavoidable.
-- Do not implement broad trader-service families unless one narrow service is required for the infrastructure proof.
-- Do not implement remote stationing/storage management from the overview.
-- Do not mutate authored content definitions during gameplay.
-- Keep runtime state in save/runtime structures.
-- Keep mutations behind `GameSession` or dedicated gameplay services, not direct `App` edits.
-- Preserve M25/M28 one-place-at-a-time stack placement invariants.
-- Preserve M29 cross-Region generic-loss semantics.
-- Preserve save/load compatibility unless a scoped migration is explicitly justified.
-- Keep UI bounded and inspectable.
-
-#### Exact source areas to inspect when planning M30
-
-- `src/gameplay/GameSession.h`
-- `src/gameplay/GameSession.cpp`
-- service ownership / claim / station / storage methods
-- enemy-team Region action phase
-- battle setup, auto-resolve, and battle write-back
-- `src/core/SaveGame.h`
-- `src/core/SaveGame.cpp`
-- `src/data/definitions/LocationServiceDefinition.h`
-- content loading and validation around service definitions
-- Region node/service content files
-- `src/app/App.cpp`
-- owned-service overview mapper/renderer
-- World Map / Region render models and notifications
-- tests around service claiming, stationing, storage, generic travel loss, enemy teams, battle, save/load, and content validation
-
-#### Expected tests
-
-M30 should include focused tests for:
-
-- service-defense rule selection;
-- mine stationed-defender battle/auto-resolve path;
-- direct-storage defense path;
-- storage-loss consequences, including generic dismissal and stored hero Temporarily Unavailable behavior;
-- Player Character cannot be stored/lost/TU through service defense;
-- enemy capture transfers ownership only when legal;
-- destroyed/restoring/restored service state, day rollover, and availability gates;
-- no dangling stationed/stored refs after capture/destruction/loss;
-- no duplicate or lost unintended roster stacks;
-- save/load round-trip for new service-defense/destruction/TU state;
-- overview/log/status presentation of service attack, capture, destruction, restoration, and TU events;
-- real-content proof loop;
-- all M25/M26/M27/M28/M29 tests remain green.
-
-#### Manual validation target
-
-A successful M30 manual proof should look like this:
-
-1. Player owns a mine and/or direct storage gate.
-2. Player leaves generic units stationed/stored there deliberately.
-3. Enemy pressure reaches the service.
-4. If defenders exist, a service-defense result is resolved and reported.
-5. If the defender wins, ownership/state remains stable.
-6. If the attacker wins, ownership/loss/destruction consequences resolve without dangling refs.
-7. Destroyable service can be destroyed and later restored through the bounded rules.
-8. Overview/readout/logs show what happened.
-9. Save/reload preserves the result.
-
-M30 is complete only when this proof works and `docs/content_scope_v2.md` can be marked complete/ready to archive.
+`ServiceDefenseTests` (rules, resolver outcomes, TU pipeline + weekly return, PC guards, save/load), `EnemyServicePressureTests` (phase targeting, patrol/arrival/alliance/region gates, pending player battle, spawnTeam group authoring), `ServiceDestructionTests` (gates, costs, payout interaction, queue/cancel/day-start completion, validation contract), overview mapper presentation tests, and `ContestedInfrastructureContentTests` (real-content proof loop). All prior M25/M26/M27/M28/M29 suites remain green.
 
 ---
 
@@ -291,23 +148,31 @@ M30 is complete only when this proof works and `docs/content_scope_v2.md` can be
 
 These are not v2 commitments. After M30, create a new active content scope before selecting one.
 
-1. **Full enemy AI economy and equipment behavior.** Trading Post, Market, Black Market, Freelancer's Guild, artifact combination, cooking, service use, and resource strategy across AI teams.
-2. **Full item economy and item-use systems.** Items, seeds, ingredients, food, consumables, field use, battle `Item` command, and broader item-effect execution.
-3. **Artifact inventory/equipment UI and artifact-combination services.** Inventory presentation can start narrow, but broad artifact management belongs in its own scope.
-4. **Fog-of-war, scouting, reveal, and enemy inspection.** Includes team-specific explored/revealed state, scouting levels, visibility, and threat/inspection detail.
-5. **Full shell/menu/character creation/load/settings flow.** Implement according to `docs/game_shell_flow.md` when the project is ready for shell-level polish.
-6. **Scenario Region Context / per-Scenario content partitioning.** Useful when authored content needs scenario-specific Region/enemy/service state rather than global content.
-7. **Campaign branch-choice and richer Scenario Result presentation.** Branch-choice UI, scores, rewards, fanfare, post-victory event chains, and scenario-transition carry-over policy.
-8. **Advanced battle command depth.** Timed status effects, active abilities, spells, broader MP/item use, auto-combat controls, threat preview, and redo/manual battle flow.
-9. **Editor tooling.** Only after content schema and validation needs justify it.
+Direct continuations of the M30 simplifications (see §4):
+
+1. **Service-defense battle depth.** Replace the deterministic strength comparison with full-simulation auto-resolve (requires a battle AI that can drive both sides), partial defender losses, attacker retreat instead of elimination, and threat preview / redo / manual-defense selection per `core_loop_rules` §16/§21.
+2. **Shared hero pool and Temporarily Unavailable re-entry.** Hero recruitment from a scenario hero pool, TU heroes returning to the pool (not the player's reserve), and hero-availability competition between teams.
+3. **Enemy-side destruction, sabotage, and restoration.** AI teams destroying/restoring services per personality (Warrior sabotage, Builder restore), enemy-vs-enemy service contention, and enemy use of captured services.
+4. **Service-management presentation.** Region-map service-state overlays, selected-node panels, display-name event logs, and the final service-management UI (the M27/M30 overview is a read-model foundation, not the end state).
+
+Larger systems (unchanged from the pre-M30 candidate list):
+
+5. **Full enemy AI economy and equipment behavior.** Trading Post, Market, Black Market, Freelancer's Guild, artifact combination, cooking, service use, and resource strategy across AI teams.
+6. **Full item economy and item-use systems.** Items, seeds, ingredients, food, consumables, field use, battle `Item` command, and broader item-effect execution.
+7. **Artifact inventory/equipment UI and artifact-combination services.** Inventory presentation can start narrow, but broad artifact management belongs in its own scope.
+8. **Fog-of-war, scouting, reveal, and enemy inspection.** Includes team-specific explored/revealed state, scouting levels, visibility, and threat/inspection detail.
+9. **Full shell/menu/character creation/load/settings flow.** Implement according to `docs/game_shell_flow.md` when the project is ready for shell-level polish.
+10. **Scenario Region Context / per-Scenario content partitioning.** Useful when authored content needs scenario-specific Region/enemy/service state rather than global content.
+11. **Campaign branch-choice and richer Scenario Result presentation.** Branch-choice UI, scores, rewards, fanfare, post-victory event chains, and scenario-transition carry-over policy.
+12. **Advanced battle command depth.** Timed status effects, active abilities, spells, broader MP/item use, auto-combat controls, threat preview, and redo/manual battle flow.
+13. **Editor tooling.** Only after content schema and validation needs justify it.
 
 ---
 
 ## 6. Roadmap discipline
 
-- `docs/content_scope_v2.md` remains the active scope cap until M30 is complete.
-- When M30 completes, archive `docs/content_scope_v2.md` and create a new `docs/content_scope_v3.md` before selecting the next milestone.
-- Do not keep extending v2 indefinitely.
+- M30 is complete: archive `docs/content_scope_v2.md` (user action) and create a new `docs/content_scope_v3.md` before selecting the next milestone.
+- Do not keep extending v2; new infrastructure work belongs in the v3 scope.
 - Milestone-agnostic docs remain source-of-truth for final rules:
   - `docs/game_vision.md`
   - `docs/technical_direction.md`

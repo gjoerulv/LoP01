@@ -361,6 +361,23 @@ namespace data {
                     }
                 }
 
+                // M30: optional destruction/restoration authoring. Absent for
+                // legacy services -> not destroyable, no restore cost. Validity
+                // (destroyable requires a non-empty valid cost) is checked by
+                // ContentValidator.
+                service.destroyable = serviceJson.value("destroyable", false);
+                if (serviceJson.contains("restore_cost") && serviceJson["restore_cost"].is_array()) {
+                    for (const auto& costJson : serviceJson["restore_cost"]) {
+                        if (!costJson.is_object()) {
+                            continue;
+                        }
+                        MineOutputDefinition cost;
+                        cost.resource = costJson.value("resource", "");
+                        cost.amount = costJson.value("amount", 0);
+                        service.restoreCost.push_back(cost);
+                    }
+                }
+
                 output.push_back(service);
             }
 

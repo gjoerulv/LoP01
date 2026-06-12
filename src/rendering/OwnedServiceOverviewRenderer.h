@@ -42,6 +42,13 @@ namespace ashvale::rendering
         std::string emptyText = "You own no services yet.";
         std::string footerHint = "Up/Down: select   Esc/O: back";
         int selectedIndex = 0;
+
+        // M30: bounded contested-infrastructure readouts. Temporarily Unavailable
+        // heroes ("Mira — returns day 12") and the most recent service events
+        // ("Day 5: Red captured iron_mine ..."), newest last. Both empty when
+        // there is nothing to report.
+        std::vector<std::string> unavailableHeroLines;
+        std::vector<std::string> eventLogLines;
     };
 
     class OwnedServiceOverviewRenderer

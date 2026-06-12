@@ -382,6 +382,7 @@ void to_json(json& j, const OwnedServiceSaveState& data) {
         {"owner_team_color", data.ownerTeamColor},
         {"locked", data.locked},
         {"destroyed", data.destroyed},
+        {"restoration_queued", data.restorationQueued},
         {"stationed_units", data.stationedUnits},
         {"stored_units", data.storedUnits}
     };
@@ -392,6 +393,8 @@ void from_json(const json& j, OwnedServiceSaveState& data) {
     data.ownerTeamColor = j.value("owner_team_color", std::string{});
     data.locked = j.value("locked", false);
     data.destroyed = j.value("destroyed", false);
+    // M30 additive: absent restoration_queued (pre-M30 saves) -> false.
+    data.restorationQueued = j.value("restoration_queued", false);
     // M17 Phase 3a additive: absent stationed_units (Phase 1 saves) -> empty.
     data.stationedUnits.clear();
     if (j.contains("stationed_units") && j["stationed_units"].is_array()) {
@@ -411,7 +414,8 @@ void to_json(json& j, const EnemyTeamSaveState& data) {
         {"active", data.active},
         {"energy", data.energy},
         {"cooldown_expires_at_minutes", data.cooldownExpiresAtMinutes},
-        {"alliances", data.alliances}
+        {"alliances", data.alliances},
+        {"enemy_group_id", data.enemyGroupId}
     };
 }
 
@@ -425,6 +429,34 @@ void from_json(const json& j, EnemyTeamSaveState& data) {
     if (j.contains("alliances") && j["alliances"].is_array()) {
         data.alliances = j["alliances"].get<std::vector<std::string>>();
     }
+    // M30 additive: absent enemy_group_id (pre-M30 saves) -> empty.
+    data.enemyGroupId = j.value("enemy_group_id", std::string{});
+}
+
+void to_json(json& j, const TemporarilyUnavailableHeroSaveState& data) {
+    j = json{
+        {"unit_id", data.unitId},
+        {"became_unavailable_day", data.becameUnavailableDay},
+        {"return_day", data.returnDay}
+    };
+}
+
+void from_json(const json& j, TemporarilyUnavailableHeroSaveState& data) {
+    j.at("unit_id").get_to(data.unitId);
+    data.becameUnavailableDay = j.value("became_unavailable_day", 0);
+    data.returnDay = j.value("return_day", 0);
+}
+
+void to_json(json& j, const ServiceEventLogEntrySaveState& data) {
+    j = json{
+        {"day", data.day},
+        {"text", data.text}
+    };
+}
+
+void from_json(const json& j, ServiceEventLogEntrySaveState& data) {
+    data.day = j.value("day", 0);
+    data.text = j.value("text", std::string{});
 }
 
 void to_json(json& j, const SaveData& data) {
@@ -465,7 +497,9 @@ void to_json(json& j, const SaveData& data) {
         {"campaign_flags", data.campaignFlags},
         {"campaign_state", data.campaignState},
         {"resources", data.resources},
-        {"owned_services", data.ownedServices}
+        {"owned_services", data.ownedServices},
+        {"unavailable_heroes", data.unavailableHeroes},
+        {"service_event_log", data.serviceEventLog}
     };
 }
 
@@ -568,6 +602,18 @@ void from_json(const json& j, SaveData& data) {
     data.ownedServices.clear();
     if (j.contains("owned_services") && j["owned_services"].is_array()) {
         data.ownedServices = j["owned_services"].get<std::vector<OwnedServiceSaveState>>();
+    }
+
+    // M30 additive: absent keys (pre-M30 saves) -> empty vectors.
+    data.unavailableHeroes.clear();
+    if (j.contains("unavailable_heroes") && j["unavailable_heroes"].is_array()) {
+        data.unavailableHeroes =
+            j["unavailable_heroes"].get<std::vector<TemporarilyUnavailableHeroSaveState>>();
+    }
+    data.serviceEventLog.clear();
+    if (j.contains("service_event_log") && j["service_event_log"].is_array()) {
+        data.serviceEventLog =
+            j["service_event_log"].get<std::vector<ServiceEventLogEntrySaveState>>();
     }
 
     const bool hasCanonicalStructuralFields =

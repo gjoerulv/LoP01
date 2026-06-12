@@ -1,6 +1,7 @@
 #include "gameplay/GameSession.h"
 #include "gameplay/EnergyRules.h"
 #include "gameplay/economy/MinePayoutRules.h"
+#include "gameplay/economy/ServiceDefenseRules.h"
 #include "gameplay/economy/StationingRules.h"
 #include "gameplay/economy/StorageRules.h"
 #include "gameplay/economy/TraderOwnershipRules.h"
@@ -161,7 +162,13 @@ void GameSession::AdvanceClock(const int minutes) {
         // payout per detected crossing (the docs say "at the start of each day"
         // but do not require accumulating skipped days; see Phase 3b notes).
         ApplyDailyStartingEnergy();
+        // M30: queued restorations complete at the day start BEFORE the payout,
+        // so a restored mine pays on its restoration day.
+        ApplyDailyServiceRestorations();
         ApplyDailyMinePayout();
+        // M30: Temporarily Unavailable heroes past their return day rejoin the
+        // reserve at the day start (when a slot is free).
+        ApplyDailyHeroReturns();
     }
 }
 
@@ -1544,6 +1551,9 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
             if (mut.type == events::EnemyTeamMutationType::Spawn) {
                 match->nodeId = mut.nodeId;
                 match->active = true;
+                if (!mut.enemyGroupId.empty()) {
+                    match->enemyGroupId = mut.enemyGroupId;
+                }
             } else if (mut.type == events::EnemyTeamMutationType::Remove) {
                 match->active = false;
             } else if (mut.type == events::EnemyTeamMutationType::ChangeAlliance) {
@@ -1563,6 +1573,7 @@ std::vector<events::ActionResult> GameSession::FireMatchingEvents(
             created.teamColor = mut.teamColor;
             created.nodeId = mut.nodeId;
             created.active = true;
+            created.enemyGroupId = mut.enemyGroupId;
             enemyTeams_.push_back(created);
         }
     }
@@ -2136,7 +2147,8 @@ core::SaveData GameSession::ToSaveData() const {
             states.reserve(enemyTeams_.size());
             for (const auto& team : enemyTeams_) {
                 states.push_back({team.teamColor, team.nodeId, team.active,
-                    team.energy, team.cooldownExpiresAtMinutes, team.alliances});
+                    team.energy, team.cooldownExpiresAtMinutes, team.alliances,
+                    team.enemyGroupId});
             }
             return states;
         }(),
@@ -2205,7 +2217,11 @@ core::SaveData GameSession::ToSaveData() const {
             return out;
         }(),
         // M17 owned services: stable runtime state, persisted as-is.
-        ownedServices_
+        ownedServices_,
+        // M30 contested infrastructure: Temporarily Unavailable heroes and the
+        // bounded service event log, persisted as-is.
+        unavailableHeroes_,
+        serviceEventLog_
     };
 }
 
@@ -2349,6 +2365,11 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
                 team.energy = saved.energy;
                 team.cooldownExpiresAtMinutes = saved.cooldownExpiresAtMinutes;
                 team.alliances = saved.alliances;
+                // M30 additive: pre-M30 saves carry an empty group id; keep the
+                // seeded value in that case rather than wiping authored strength.
+                if (!saved.enemyGroupId.empty()) {
+                    team.enemyGroupId = saved.enemyGroupId;
+                }
                 break;
             }
         }
@@ -2445,6 +2466,17 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     ownedServices_ = saveData.ownedServices;
     NormalizeStationedUnits();
     NormalizeStoredUnits();
+
+    // M30: restore Temporarily Unavailable heroes (dropping invalid/PC entries)
+    // and the bounded service event log (re-trimmed to the cap).
+    unavailableHeroes_ = saveData.unavailableHeroes;
+    NormalizeUnavailableHeroes();
+    serviceEventLog_ = saveData.serviceEventLog;
+    if (serviceEventLog_.size() > static_cast<std::size_t>(kMaxServiceEventLogEntries)) {
+        serviceEventLog_.erase(
+            serviceEventLog_.begin(),
+            serviceEventLog_.end() - kMaxServiceEventLogEntries);
+    }
 
     MarkRosterProjectionDirty();
 }
@@ -2748,10 +2780,73 @@ const std::vector<EnemyTeamState>& GameSession::EnemyTeams() const {
 std::vector<EnemyTeamActionResult> GameSession::ProcessEnemyPhase(
     const std::vector<data::RegionLinkDefinition>& regionLinks) {
     std::vector<EnemyTeamActionResult> results;
+
+    // M30 attack-target context: targets must be nodes of the player's current
+    // region (enemy teams act only in the same region, core_loop_rules §12) and
+    // never the protected arrival node (§8/§17).
+    const auto* currentRegion = FindRegionDefinition(regionId_);
+    std::set<std::string> currentRegionNodeIds;
+    std::string arrivalNodeId;
+    if (currentRegion != nullptr) {
+        arrivalNodeId = currentRegion->arrivalNodeId;
+        for (const auto& node : currentRegion->nodes) {
+            currentRegionNodeIds.insert(node.locationId);
+        }
+    }
+
     for (const auto& color : kTeamColorOrder) {
         for (auto& team : enemyTeams_) {
             if (!team.active || team.teamColor != color) {
                 continue;
+            }
+
+            // M30 service pressure: one action per team per phase — attacking a
+            // player-owned service node (same node or adjacent, patrol-radius
+            // legal) takes priority over patrol movement. Targets are scanned in
+            // sorted node-id order so the choice is deterministic.
+            if (!team.nodeId.empty() && currentRegionNodeIds.count(team.nodeId) != 0) {
+                std::vector<std::string> reachable;
+                reachable.push_back(team.nodeId);
+                for (const auto& link : regionLinks) {
+                    if (link.fromLocationId == team.nodeId) {
+                        reachable.push_back(link.toLocationId);
+                    } else if (link.toLocationId == team.nodeId) {
+                        reachable.push_back(link.fromLocationId);
+                    }
+                }
+                std::sort(reachable.begin(), reachable.end());
+                reachable.erase(std::unique(reachable.begin(), reachable.end()), reachable.end());
+
+                std::string target;
+                for (const auto& candidate : reachable) {
+                    if (candidate == arrivalNodeId ||
+                        currentRegionNodeIds.count(candidate) == 0) {
+                        continue;
+                    }
+                    if (team.patrol.enabled) {
+                        const int hops = region::FindHopCount(
+                            team.patrol.centerNodeId, candidate, regionLinks);
+                        if (hops < 0 || hops > team.patrol.radius) {
+                            continue;
+                        }
+                    }
+                    if (AttackableServiceIdsAtNodeFor(team.teamColor, candidate).empty()) {
+                        continue;
+                    }
+                    target = candidate;
+                    break;
+                }
+
+                if (!target.empty()) {
+                    const auto outcome = ResolveServiceAttack(team.teamColor, target);
+                    if (outcome.attacked) {
+                        results.push_back({ team.teamColor,
+                            outcome.playerBattleRequired ? "service_attack_pending_battle"
+                                                         : "service_attack",
+                            target, outcome.summaryText });
+                        continue;
+                    }
+                }
             }
 
             if (!team.patrol.enabled || team.nodeId.empty()) {
@@ -2907,6 +3002,425 @@ std::vector<std::string> GameSession::ResolveNodeEntryClaims(
         claimed.push_back(svc.id);
     }
     return claimed;
+}
+
+void GameSession::SetEnemyGroupCatalog(std::vector<data::EnemyGroupDefinition> catalog) {
+    enemyGroupCatalog_ = std::move(catalog);
+}
+
+const std::vector<core::TemporarilyUnavailableHeroSaveState>&
+GameSession::UnavailableHeroes() const {
+    return unavailableHeroes_;
+}
+
+const std::vector<core::ServiceEventLogEntrySaveState>& GameSession::ServiceEventLog() const {
+    return serviceEventLog_;
+}
+
+void GameSession::AppendServiceEvent(std::string text) {
+    serviceEventLog_.push_back({clock_.Day(), std::move(text)});
+    if (serviceEventLog_.size() > static_cast<std::size_t>(kMaxServiceEventLogEntries)) {
+        serviceEventLog_.erase(
+            serviceEventLog_.begin(),
+            serviceEventLog_.end() - kMaxServiceEventLogEntries);
+    }
+}
+
+int GameSession::EnemyGroupPower(const std::string& enemyGroupId) const {
+    if (enemyGroupId.empty()) {
+        return 0;
+    }
+    const auto groupIt = std::find_if(enemyGroupCatalog_.begin(), enemyGroupCatalog_.end(),
+        [&](const data::EnemyGroupDefinition& group) { return group.id == enemyGroupId; });
+    if (groupIt == enemyGroupCatalog_.end()) {
+        return 0;
+    }
+    int power = 0;
+    for (const auto& unitId : groupIt->unitIds) {
+        if (const auto* unit = FindUnitDefinition(unitId)) {
+            power += economy::UnitDefensePower(unit->stats);
+        }
+    }
+    return power;
+}
+
+int GameSession::NodeDefenderPower(const std::vector<std::string>& serviceIds) const {
+    int power = 0;
+    const auto addRefPower = [&](const std::string& stackId) {
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr) {
+            return;
+        }
+        const auto* unit = FindUnitDefinition(stack->unitId);
+        if (unit == nullptr) {
+            return;
+        }
+        power += economy::StackDefensePower(unit->stats, stack->quantity);
+    };
+    for (const auto& serviceId : serviceIds) {
+        const auto* owned = FindOwnedService(serviceId);
+        if (owned == nullptr) {
+            continue;
+        }
+        for (const auto& ref : owned->stationedUnits) {
+            addRefPower(ref.stackId);
+        }
+        for (const auto& ref : owned->storedUnits) {
+            addRefPower(ref.stackId);
+        }
+    }
+    return power;
+}
+
+std::vector<std::string> GameSession::AttackableServiceIdsAtNodeFor(
+    const std::string& attackerColor, const std::string& nodeId) const {
+    std::vector<std::string> eligible;
+    if (attackerColor.empty() || nodeId.empty() || attackerColor == playerColor_) {
+        return eligible;
+    }
+    // The attacker must be a live team hostile to the player; allied teams never
+    // attack player infrastructure (alliance boundary, core_loop_rules §11/§18).
+    const auto teamIt = std::find_if(enemyTeams_.begin(), enemyTeams_.end(),
+        [&](const EnemyTeamState& team) { return team.teamColor == attackerColor; });
+    if (teamIt == enemyTeams_.end() || !teamIt->active) {
+        return eligible;
+    }
+    if (std::find(teamIt->alliances.begin(), teamIt->alliances.end(), playerColor_)
+        != teamIt->alliances.end()) {
+        return eligible;
+    }
+    for (const auto& owned : ownedServices_) {
+        if (owned.ownerTeamColor != playerColor_ || owned.locked || owned.destroyed) {
+            continue;
+        }
+        const auto* def = FindLocationServiceById(owned.serviceId);
+        if (def == nullptr || def->locationId != nodeId) {
+            continue;
+        }
+        if (!economy::ServiceKindIsAttackable(def->kind)) {
+            continue;
+        }
+        eligible.push_back(owned.serviceId);
+    }
+    return eligible;
+}
+
+GameSession::ServiceAttackOutcome GameSession::ResolveServiceAttack(
+    const std::string& attackerColor, const std::string& nodeId) {
+    ServiceAttackOutcome outcome;
+    const auto eligible = AttackableServiceIdsAtNodeFor(attackerColor, nodeId);
+    if (eligible.empty()) {
+        return outcome;
+    }
+    outcome.attacked = true;
+
+    // Player party standing on the attacked node: the final rule (§21) puts the
+    // ACTIVE PARTY on the gate. The interactive battle surface owns that fight;
+    // nothing is mutated until the App reports back.
+    if (mode_ == GameMode::RegionMode && destinationId_ == nodeId) {
+        outcome.playerBattleRequired = true;
+        outcome.summaryText = attackerColor + " attacks " + nodeId + " — your party defends!";
+        return outcome;
+    }
+
+    const auto teamIt = std::find_if(enemyTeams_.begin(), enemyTeams_.end(),
+        [&](const EnemyTeamState& team) { return team.teamColor == attackerColor; });
+    const int defenderPower = NodeDefenderPower(eligible);
+    const int attackerPower =
+        teamIt != enemyTeams_.end() ? EnemyGroupPower(teamIt->enemyGroupId) : 0;
+
+    if (defenderPower <= 0) {
+        // Undefended: capture succeeds without battle (mirror of the player's
+        // peaceful node-entry claim).
+        outcome.attackerWon = true;
+        outcome.capturedServiceIds = ApplyServiceCaptureAtNode(attackerColor, nodeId);
+        if (teamIt != enemyTeams_.end()) {
+            teamIt->nodeId = nodeId;
+        }
+        outcome.summaryText = attackerColor + " seized " + nodeId + " unopposed.";
+        AppendServiceEvent(outcome.summaryText);
+        CheckAndLatchOutcome();
+        return outcome;
+    }
+
+    outcome.defendersFought = true;
+    if (economy::DefendersHoldService(defenderPower, attackerPower)) {
+        if (teamIt != enemyTeams_.end()) {
+            teamIt->active = false;
+        }
+        outcome.summaryText = attackerColor + " attacked " + nodeId + " — defenders held ("
+            + std::to_string(defenderPower) + " vs " + std::to_string(attackerPower) + ").";
+        AppendServiceEvent(outcome.summaryText);
+        CheckAndLatchOutcome();
+        return outcome;
+    }
+
+    outcome.attackerWon = true;
+    outcome.summaryText = attackerColor + " overran " + nodeId + " — defenders lost ("
+        + std::to_string(attackerPower) + " vs " + std::to_string(defenderPower) + ").";
+    AppendServiceEvent(outcome.summaryText);
+    outcome.capturedServiceIds = ApplyServiceCaptureAtNode(attackerColor, nodeId);
+    if (teamIt != enemyTeams_.end()) {
+        teamIt->nodeId = nodeId;
+    }
+    CheckAndLatchOutcome();
+    return outcome;
+}
+
+void GameSession::ApplyServiceDefenseVictory(
+    const std::string& attackerColor, const std::string& nodeId) {
+    for (auto& team : enemyTeams_) {
+        if (team.teamColor == attackerColor) {
+            team.active = false;
+            break;
+        }
+    }
+    AppendServiceEvent(attackerColor + " attack on " + nodeId + " repelled by your party.");
+    CheckAndLatchOutcome();
+}
+
+void GameSession::ApplyServiceDefenseDefeat(
+    const std::string& attackerColor, const std::string& nodeId) {
+    AppendServiceEvent(attackerColor + " overran " + nodeId + " after defeating your party.");
+    static_cast<void>(ApplyServiceCaptureAtNode(attackerColor, nodeId));
+    for (auto& team : enemyTeams_) {
+        if (team.teamColor == attackerColor) {
+            team.nodeId = nodeId;
+            break;
+        }
+    }
+    CheckAndLatchOutcome();
+}
+
+std::vector<std::string> GameSession::ApplyServiceCaptureAtNode(
+    const std::string& attackerColor, const std::string& nodeId) {
+    std::vector<std::string> captured;
+    bool rosterChanged = false;
+
+    const auto resolveLostRef = [&](const std::string& stackId) {
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr) {
+            return;  // stale ref; cleared with the list below
+        }
+        // Hard guard: the Player Character can never be placed (M25/M28 gates),
+        // so a PC stack here is corruption — never remove it, never make it TU.
+        if (UnitIsPlayerCharacter(stack->unitId)) {
+            return;
+        }
+        const std::string unitId = stack->unitId;
+        if (IsHeroUnit(unitId)) {
+            unavailableHeroes_.push_back({unitId, clock_.Day(),
+                clock_.Day() + economy::kUnavailableHeroReturnDays});
+            const auto* unit = FindUnitDefinition(unitId);
+            AppendServiceEvent("Hero " + (unit != nullptr ? unit->name : unitId)
+                + " is temporarily unavailable (returns day "
+                + std::to_string(clock_.Day() + economy::kUnavailableHeroReturnDays) + ").");
+        }
+        // Defensive: placed stacks are never slotted, but clear any slot ref so a
+        // corrupt double-placement cannot leave a dangling slot id.
+        for (auto& slot : activeSlotStackIds_) {
+            if (slot == stackId) {
+                slot.clear();
+            }
+        }
+        for (auto& slot : reserveSlotStackIds_) {
+            if (slot == stackId) {
+                slot.clear();
+            }
+        }
+        std::erase_if(rosterStacks_, [&](const RosterStackState& entry) {
+            return entry.stackId == stackId;
+        });
+        rosterChanged = true;
+    };
+
+    for (const auto& serviceId : AttackableServiceIdsAtNodeFor(attackerColor, nodeId)) {
+        for (auto& owned : ownedServices_) {
+            if (owned.serviceId != serviceId) {
+                continue;
+            }
+            for (const auto& ref : owned.stationedUnits) {
+                resolveLostRef(ref.stackId);
+            }
+            for (const auto& ref : owned.storedUnits) {
+                resolveLostRef(ref.stackId);
+            }
+            owned.stationedUnits.clear();
+            owned.storedUnits.clear();
+            owned.ownerTeamColor = attackerColor;
+            captured.push_back(serviceId);
+            AppendServiceEvent(serviceId + " at " + nodeId + " captured by " + attackerColor + ".");
+            break;
+        }
+    }
+
+    if (rosterChanged) {
+        MarkRosterProjectionDirty();
+    }
+    return captured;
+}
+
+void GameSession::ApplyDailyHeroReturns() {
+    for (auto it = unavailableHeroes_.begin(); it != unavailableHeroes_.end();) {
+        if (clock_.Day() < it->returnDay) {
+            ++it;
+            continue;
+        }
+        // Returnable: rejoin the reserve when a slot is free; otherwise stay
+        // unavailable and retry at the next day start.
+        auto slotIt = std::find(reserveSlotStackIds_.begin(), reserveSlotStackIds_.end(),
+            std::string{});
+        if (slotIt == reserveSlotStackIds_.end()) {
+            ++it;
+            continue;
+        }
+        const std::string stackId = GenerateNextStackId();
+        rosterStacks_.push_back(RosterStackState{stackId, it->unitId, 1});
+        *slotIt = stackId;
+        MarkRosterProjectionDirty();
+        const auto* unit = FindUnitDefinition(it->unitId);
+        AppendServiceEvent("Hero " + (unit != nullptr ? unit->name : it->unitId)
+            + " returned to the reserve.");
+        it = unavailableHeroes_.erase(it);
+    }
+}
+
+void GameSession::NormalizeUnavailableHeroes() {
+    std::erase_if(unavailableHeroes_, [&](const core::TemporarilyUnavailableHeroSaveState& entry) {
+        return entry.unitId.empty() || UnitIsPlayerCharacter(entry.unitId);
+    });
+}
+
+const data::LocationServiceDefinition* GameSession::DestroyableServiceAtCurrentNode() const {
+    for (const auto& svc : locationServiceCatalog_) {
+        if (svc.destroyable && svc.locationId == destinationId_) {
+            return &svc;
+        }
+    }
+    return nullptr;
+}
+
+bool GameSession::CanDestroyServiceAtCurrentNode(const std::string& serviceId) const {
+    if (mode_ != GameMode::RegionMode) {
+        return false;
+    }
+    const auto* def = FindLocationServiceById(serviceId);
+    if (def == nullptr || !def->destroyable || def->locationId != destinationId_) {
+        return false;
+    }
+    // Guarded services may not be destroyed until guardians are defeated; a
+    // hostile occupier also means the player cannot legally occupy the node.
+    const auto hostileNodes = HostileOccupiedNodeIds(playerColor_);
+    if (std::find(hostileNodes.begin(), hostileNodes.end(), def->locationId)
+        != hostileNodes.end()) {
+        return false;
+    }
+    const auto* owned = FindOwnedService(serviceId);
+    if (owned != nullptr) {
+        // Already destroyed with nothing queued: nothing further to destroy.
+        if (owned->destroyed && !owned->restorationQueued) {
+            return false;
+        }
+        // Placed units block destruction: unstation/retrieve first so no
+        // stationed/stored ref can ever dangle through a destruction.
+        if (!owned->stationedUnits.empty() || !owned->storedUnits.empty()) {
+            return false;
+        }
+    }
+    return CanSpendEnergy(kServiceDestructionEnergyCost);
+}
+
+bool GameSession::TryDestroyServiceAtCurrentNode(const std::string& serviceId) {
+    if (!CanDestroyServiceAtCurrentNode(serviceId)) {
+        return false;
+    }
+    static_cast<void>(TrySpendEnergy(kServiceDestructionEnergyCost));
+
+    core::OwnedServiceSaveState* owned = FindOwnedServiceMutable(serviceId);
+    if (owned == nullptr) {
+        ownedServices_.push_back(core::OwnedServiceSaveState{serviceId, "", false, false, {}, {}});
+        owned = &ownedServices_.back();
+    }
+    if (owned->destroyed && owned->restorationQueued) {
+        // §20: destroying again before the next day begins cancels the queued
+        // restoration. The service stays destroyed.
+        owned->restorationQueued = false;
+        AppendServiceEvent("Restoration of " + serviceId + " cancelled by destruction.");
+    } else {
+        owned->destroyed = true;
+        owned->restorationQueued = false;
+        AppendServiceEvent("You destroyed " + serviceId + " at " + destinationId_ + ".");
+    }
+    // State mutated before the time cost so a day boundary crossed by the hour
+    // sees consistent destroyed/queued flags.
+    AddMinutes(kServiceDestructionMinutes);
+    return true;
+}
+
+bool GameSession::CanQueueServiceRestorationAtCurrentNode(const std::string& serviceId) const {
+    if (mode_ != GameMode::RegionMode) {
+        return false;
+    }
+    const auto* def = FindLocationServiceById(serviceId);
+    if (def == nullptr || !def->destroyable || def->locationId != destinationId_) {
+        return false;
+    }
+    const auto hostileNodes = HostileOccupiedNodeIds(playerColor_);
+    if (std::find(hostileNodes.begin(), hostileNodes.end(), def->locationId)
+        != hostileNodes.end()) {
+        return false;
+    }
+    const auto* owned = FindOwnedService(serviceId);
+    if (owned == nullptr || !owned->destroyed || owned->restorationQueued) {
+        return false;
+    }
+    // Affordability is checked atomically across the whole authored cost
+    // (duplicate resource lines accumulate).
+    std::map<ResourceType, int> totals;
+    for (const auto& cost : def->restoreCost) {
+        ResourceType type;
+        if (!TryResourceTypeFromString(cost.resource, type) || cost.amount <= 0) {
+            return false;  // invalid authored cost: refuse rather than restore for free
+        }
+        totals[type] += cost.amount;
+    }
+    for (const auto& [type, amount] : totals) {
+        if (ResourceCount(type) < amount) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool GameSession::TryQueueServiceRestorationAtCurrentNode(const std::string& serviceId) {
+    if (!CanQueueServiceRestorationAtCurrentNode(serviceId)) {
+        return false;
+    }
+    const auto* def = FindLocationServiceById(serviceId);
+    std::map<ResourceType, int> totals;
+    for (const auto& cost : def->restoreCost) {
+        ResourceType type;
+        if (TryResourceTypeFromString(cost.resource, type)) {
+            totals[type] += cost.amount;
+        }
+    }
+    for (const auto& [type, amount] : totals) {
+        static_cast<void>(TrySpendResource(type, amount));  // affordability pre-checked
+    }
+    core::OwnedServiceSaveState* owned = FindOwnedServiceMutable(serviceId);
+    owned->restorationQueued = true;
+    AppendServiceEvent("Restoration of " + serviceId + " queued — completes at next day start.");
+    return true;
+}
+
+void GameSession::ApplyDailyServiceRestorations() {
+    for (auto& owned : ownedServices_) {
+        if (owned.destroyed && owned.restorationQueued) {
+            owned.destroyed = false;
+            owned.restorationQueued = false;
+            AppendServiceEvent(owned.serviceId + " restored.");
+        }
+    }
 }
 
 void GameSession::SetPlayerColor(std::string color) {
