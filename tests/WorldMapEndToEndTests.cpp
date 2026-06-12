@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "app/mappers/WorldMapModelMapper.h"
+#include "core/GameClock.h"
 #include "data/ContentRepository.h"
 #include "data/definitions/RegionDefinition.h"
 #include "gameplay/GameSession.h"
@@ -132,6 +133,119 @@ TEST_CASE("WorldMap end-to-end - traveling to riverside_vale arrives next-day 11
         snap.minutesIntoSliceDay,
         vale->links);
     REQUIRE(regionTravel.legal);
+}
+
+// ---------------------------------------------------------------------------
+// M29 cross-Region generic preservation against the SHIPPED content: a generic
+// stored at the authored Home Base storage survives Region travel while a
+// traveling generic is lost, and retrieval works after returning.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Full campaign wiring (mirrors StorageContentTests) so playerStart seeds the
+// authored home_base_storage as player-owned.
+gameplay::GameSession WireCampaignSession(const data::ContentRepository& content) {
+    gameplay::GameSession session;
+    session.SetPlayerColor("Green");
+    session.SetUnitCatalog(content.Units());
+    session.SetLeaderCapableUnitIds({"hero_player"});
+    REQUIRE(session.AddOwnedUnit("hero_player", 1));
+    REQUIRE(session.TryAddUnitToActiveParty("hero_player"));
+    session.SetScenarioOutcomeDefinition(content.ScenarioOutcome());
+    session.SetRegionCatalog(content.Regions());
+    session.SetWorldMap(content.WorldMap());
+    session.SetScenarioCatalog(content.Scenarios());
+    session.SetCampaignCatalog(content.Campaigns());
+    session.SetLocationServiceCatalog(content.LocationServices());
+    session.SetTraderCurveCatalog(content.TraderCurves());
+    return session;
+}
+
+std::string SlottedStackIdOf(const gameplay::GameSession& session, const std::string& unitId) {
+    auto inSlots = [&](const std::vector<std::string>& slots, const std::string& stackId) {
+        return std::find(slots.begin(), slots.end(), stackId) != slots.end();
+    };
+    for (const auto& stack : session.RosterStacks()) {
+        if (stack.unitId == unitId &&
+            (inSlots(session.ActiveSlotStackIds(), stack.stackId) ||
+             inSlots(session.ReserveSlotStackIds(), stack.stackId))) {
+            return stack.stackId;
+        }
+    }
+    return {};
+}
+
+} // namespace
+
+TEST_CASE("WorldMap end-to-end - stored generic survives Region travel, traveling generic is lost, retrieval works after return") {
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(RealContentDir()));
+    REQUIRE_FALSE(HasErrorMessage(repo.ValidationMessages()));
+
+    auto session = WireCampaignSession(repo);
+    session.StartCampaign("campaign_ashvale");
+    session.SetDestination("home_base"); // the authored Ashvale exit node
+    REQUIRE(session.CanOpenWorldMapHere());
+
+    // First guard: into reserve, then stored at the authored Home Base storage.
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    const std::string storedStackId = SlottedStackIdOf(session, "unit_guard");
+    REQUIRE_FALSE(storedStackId.empty());
+    REQUIRE(session.TryStoreStackAtService("home_base_storage", storedStackId));
+
+    // Second guard: a fresh reserve stack that stays in the traveling party.
+    REQUIRE(session.AddOwnedUnit("unit_guard", 1));
+    const std::string travelingStackId = SlottedStackIdOf(session, "unit_guard");
+    REQUIRE_FALSE(travelingStackId.empty());
+    REQUIRE(travelingStackId != storedStackId);
+    session.ApplyDailyStartingEnergy();
+
+    // Only the traveling guard is at risk; the warning model names it.
+    const auto preview = session.PreviewRegionTravelGenericLosses();
+    REQUIRE(preview.size() == 1);
+    REQUIRE(preview[0].stackId == travelingStackId);
+    REQUIRE(preview[0].quantity == 1);
+
+    app::mappers::WorldMapModelMapper mapper;
+    const auto idleModel = mapper.Map(repo, session, /*selectedIndex=*/0);
+    REQUIRE_FALSE(idleModel.confirmingLoss);
+    REQUIRE(idleModel.genericLossCount == 1); // slotted-only: stored guard not counted
+
+    const auto confirmModel = mapper.Map(repo, session, /*selectedIndex=*/0,
+        /*lossConfirmationPending=*/true);
+    REQUIRE(confirmModel.confirmingLoss);
+    REQUIRE(confirmModel.confirmTitle == "Confirm travel to Riverside Vale?");
+    REQUIRE(confirmModel.lossLines.size() == 1);
+    const auto* guardDef = repo.FindUnitById("unit_guard");
+    REQUIRE(guardDef != nullptr);
+    REQUIRE(confirmModel.lossLines[0] == "1x " + guardDef->name);
+
+    // Confirmed travel: the traveling guard is lost, the stored guard survives.
+    const auto outbound = session.TravelToRegion("riverside_vale");
+    REQUIRE(outbound.success);
+    REQUIRE(outbound.genericsDropped == 1);
+    REQUIRE(session.FindRosterStackById(travelingStackId) == nullptr);
+    REQUIRE(session.FindRosterStackById(storedStackId) != nullptr);
+    const auto* storage = session.FindOwnedService("home_base_storage");
+    REQUIRE(storage != nullptr);
+    REQUIRE(storage->storedUnits.size() == 1);
+    REQUIRE(storage->storedUnits[0].stackId == storedStackId);
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 1);
+
+    // Return next day (arrival is 11:00, past the departure deadline) from the
+    // vale's authored exit node, then retrieve the stored guard to reserve.
+    session.AddMinutes(core::GameClock::kMinutesPerSliceDay
+        - session.Snapshot().minutesIntoSliceDay);
+    REQUIRE(session.Snapshot().destinationId == "vale_landing");
+    const auto inbound = session.TravelToRegion("ashvale_heartland");
+    REQUIRE(inbound.success);
+    REQUIRE(inbound.genericsDropped == 0); // heroes-only party, no extra loss
+
+    REQUIRE(session.TryRetrieveStackFromService("home_base_storage", storedStackId));
+    REQUIRE(session.FindOwnedService("home_base_storage")->storedUnits.empty());
+    REQUIRE(session.FindRosterStackById(storedStackId) != nullptr);
+    REQUIRE(session.OwnedUnitCount("unit_guard") == 1);
 }
 
 // ---------------------------------------------------------------------------

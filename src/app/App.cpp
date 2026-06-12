@@ -276,6 +276,8 @@ void App::ResetTransientModeState() {
     storageInteraction_.Close();
     ownedServiceOverviewModel_ = {};
     ownedServiceSelectedIndex_ = 0;
+    worldMapLossConfirmPending_ = false;
+    worldMapPendingRegionId_.clear();
 
     const gameplay::SessionSnapshot snapshot = session_.Snapshot();
     observedDay_ = snapshot.day;
@@ -589,6 +591,8 @@ void App::UpdateRegionMode(const input::InputState& input) {
     if (input.openWorldMap && session_.CanOpenWorldMapHere()) {
         session_.EnterWorldMapMode();
         worldMapSelectedIndex_ = 0;
+        worldMapLossConfirmPending_ = false;
+        worldMapPendingRegionId_.clear();
         statusMessage_ = "World Map: choose a destination Region";
         return;
     }
@@ -797,14 +801,44 @@ void App::UpdateRegionMode(const input::InputState& input) {
 }
 
 void App::UpdateWorldMapMode(const input::InputState& input) {
-    const auto model = worldMapModelMapper_.Map(content_, session_, worldMapSelectedIndex_);
+    const auto model = worldMapModelMapper_.Map(
+        content_, session_, worldMapSelectedIndex_, worldMapLossConfirmPending_);
+
+    // M29: confirming a legal destination while traveling generics would be lost
+    // first shows the loss-confirmation block instead of traveling. Illegal
+    // destinations skip the warning (the commit-time block reason is reported as
+    // before), and a no-loss party travels on the first confirm.
+    const bool selectedDestinationLegal =
+        worldMapSelectedIndex_ >= 0 &&
+        worldMapSelectedIndex_ < static_cast<int>(model.destinations.size()) &&
+        model.destinations[worldMapSelectedIndex_].legal;
+    const bool lossWarningRequired =
+        selectedDestinationLegal && model.genericLossCount > 0;
+
     const auto result = worldMapController_.Update(
-        input, static_cast<int>(model.destinations.size()), worldMapSelectedIndex_);
+        input, static_cast<int>(model.destinations.size()), worldMapSelectedIndex_,
+        worldMapLossConfirmPending_, lossWarningRequired);
     worldMapSelectedIndex_ = result.selectedIndex;
 
     if (result.cancelled) {
+        worldMapLossConfirmPending_ = false;
+        worldMapPendingRegionId_.clear();
         session_.EnterRegionMode();
         statusMessage_ = "Returned to Region";
+        return;
+    }
+
+    if (result.dismissLossConfirmation) {
+        worldMapLossConfirmPending_ = false;
+        worldMapPendingRegionId_.clear();
+        statusMessage_ = "Travel cancelled. Generic units can be stored at a storage service.";
+        return;
+    }
+
+    if (result.requestLossConfirmation) {
+        // lossWarningRequired implies a valid selected index.
+        worldMapLossConfirmPending_ = true;
+        worldMapPendingRegionId_ = model.destinations[worldMapSelectedIndex_].regionId;
         return;
     }
 
@@ -812,6 +846,16 @@ void App::UpdateWorldMapMode(const input::InputState& input) {
         worldMapSelectedIndex_ >= 0 &&
         worldMapSelectedIndex_ < static_cast<int>(model.destinations.size())) {
         const auto& dest = model.destinations[worldMapSelectedIndex_];
+        if (worldMapLossConfirmPending_ && dest.regionId != worldMapPendingRegionId_) {
+            // Stale warning: the selection no longer matches the destination the
+            // player was warned about. Drop the pending state instead of
+            // committing an unwarned trip.
+            worldMapLossConfirmPending_ = false;
+            worldMapPendingRegionId_.clear();
+            return;
+        }
+        worldMapLossConfirmPending_ = false;
+        worldMapPendingRegionId_.clear();
         const auto travel = session_.TravelToRegion(dest.regionId);
         if (travel.success) {
             const auto snapshot = session_.Snapshot();
@@ -1422,7 +1466,8 @@ void App::Draw() const {
         break;
     }
     case gameplay::GameMode::WorldMapMode: {
-        const auto model = worldMapModelMapper_.Map(content_, session_, worldMapSelectedIndex_);
+        const auto model = worldMapModelMapper_.Map(
+            content_, session_, worldMapSelectedIndex_, worldMapLossConfirmPending_);
         worldMapRenderer_.Draw(context, model);
         break;
     }

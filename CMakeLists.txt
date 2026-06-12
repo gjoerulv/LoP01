@@ -153,6 +153,7 @@ if (BUILD_TESTING)
     tests/RegionDeadEndRulesTests.cpp
     tests/RegionModelMapperTests.cpp
     tests/RegionTravelRulesTests.cpp
+    tests/RegionTravelGenericLossTests.cpp
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
     tests/ResourceStateTests.cpp

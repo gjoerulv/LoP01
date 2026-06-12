@@ -34,7 +34,8 @@ namespace app::mappers
     ashvale::rendering::WorldMapModel WorldMapModelMapper::Map(
         const data::ContentRepository& content,
         const gameplay::GameSession& session,
-        const int selectedIndex) const
+        const int selectedIndex,
+        const bool lossConfirmationPending) const
     {
         using namespace ashvale::rendering;
         const auto snapshot = session.Snapshot();
@@ -43,7 +44,17 @@ namespace app::mappers
         WorldMapModel model;
         model.energy = snapshot.energy;
         model.maxEnergy = snapshot.maxEnergy;
-        model.genericLossCount = session.GenericTravelingPartyUnitCount();
+
+        // Slotted-only at-risk preview: stationed/stored stacks are not listed
+        // (they survive travel). The count feeds the passive warning line; the
+        // per-stack lines feed the confirmation block.
+        const auto lossPreview = session.PreviewRegionTravelGenericLosses();
+        for (const auto& loss : lossPreview) {
+            model.genericLossCount += loss.quantity;
+            const auto* unit = content.FindUnitById(loss.unitId);
+            model.lossLines.push_back(std::to_string(loss.quantity) + "x "
+                + (unit != nullptr ? unit->name : loss.unitId));
+        }
 
         if (const auto* region = content.FindRegionById(snapshot.regionId)) {
             model.currentRegionName = region->name;
@@ -91,7 +102,15 @@ namespace app::mappers
             ++index;
         }
 
-        model.footerHint = "Left/Right select  -  Enter travel  -  Esc/M back";
+        if (lossConfirmationPending &&
+            selectedIndex >= 0 && selectedIndex < static_cast<int>(model.destinations.size())) {
+            model.confirmingLoss = true;
+            model.confirmTitle = "Confirm travel to "
+                + model.destinations[selectedIndex].name + "?";
+            model.footerHint = "Enter confirm travel  -  Esc/M cancel";
+        } else {
+            model.footerHint = "Left/Right select  -  Enter travel  -  Esc/M back";
+        }
         return model;
     }
 }

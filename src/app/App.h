@@ -152,6 +152,12 @@ namespace app {
 
         int regionSelectedNodeIndex_ = 0;
         int worldMapSelectedIndex_ = 0;
+        // M29 loss-confirmation stage on the World Map screen. App-local UI state,
+        // deliberately not persisted (after a load the player simply re-confirms
+        // and sees the warning again). The pending region id guards against a
+        // stale confirm committing travel to a different destination.
+        bool worldMapLossConfirmPending_ = false;
+        std::string worldMapPendingRegionId_;
         int campaignSelectedIndex_ = 0;
         // M27 owned-service overview: model cached on mode-enter (read-only panel,
         // static while open) so Draw needs no per-frame catalog scan.

@@ -7,7 +7,9 @@ namespace app
     WorldMapUpdateResult WorldMapController::Update(
         const input::InputState& input,
         const int destinationCount,
-        const int selectedIndex) const
+        const int selectedIndex,
+        const bool lossConfirmationPending,
+        const bool lossWarningRequired) const
     {
         WorldMapUpdateResult result{};
 
@@ -32,6 +34,27 @@ namespace app
 
         result.selectedIndex = nextIndex;
 
+        if (lossConfirmationPending)
+        {
+            // The loss warning is showing. Backing out or moving the selection
+            // dismisses the warning but keeps the screen open (the player may
+            // still want to travel elsewhere or leave to store units); only a
+            // fresh confirm commits the warned travel.
+            if (input.cancel || input.openWorldMap)
+            {
+                result.dismissLossConfirmation = true;
+            }
+            else if (input.selectPrev || input.selectNext)
+            {
+                result.dismissLossConfirmation = true;
+            }
+            else if (input.confirm)
+            {
+                result.travelConfirmed = true;
+            }
+            return result;
+        }
+
         // Cancel, or pressing the open-world-map key again, closes the screen.
         if (input.cancel || input.openWorldMap)
         {
@@ -39,7 +62,8 @@ namespace app
         }
         else if (input.confirm)
         {
-            result.travelConfirmed = true;
+            result.requestLossConfirmation = lossWarningRequired;
+            result.travelConfirmed = !lossWarningRequired;
         }
 
         return result;

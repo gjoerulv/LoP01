@@ -504,8 +504,20 @@ public:
     // True iff on the Region layer and the current node is an authored exit node
     // of the current region's World Map entry.
     [[nodiscard]] bool CanOpenWorldMapHere() const;
-    // Count of generic units in the traveling party (active + reserve) that would
-    // be lost on a World Map departure. Read-only; mirrors the removal helper.
+    // One traveling generic stack that would be lost on a confirmed World Map
+    // departure (docs/core_loop_rules.md §5). Only slotted (active/reserve)
+    // stacks are at risk; stationed and stored stacks are not traveling, stay
+    // behind, and survive Region change.
+    struct TravelGenericLossEntry {
+        std::string stackId;
+        std::string unitId;
+        int quantity = 0;
+    };
+    // At-risk stacks for the travel warning, in active-then-reserve slot order.
+    // Pure read. The confirmed-travel removal deletes exactly this set, so the
+    // loss the player confirms is the loss that happens.
+    [[nodiscard]] std::vector<TravelGenericLossEntry> PreviewRegionTravelGenericLosses() const;
+    // Total at-risk generic unit count (sum of preview quantities). Read-only.
     [[nodiscard]] int GenericTravelingPartyUnitCount() const;
 
     struct WorldMapTravelResult {
@@ -516,10 +528,13 @@ public:
     };
     // Apply a World Map trip to session state. Re-checks legality (exit-node gate
     // + pure rule); on any illegal case returns a result and mutates nothing.
-    // On success: spends 1000 Energy, drops generic traveling-party units (heroes
-    // persist), advances the clock to arrive at 11:00 after `days` (which refreshes
-    // Energy via the day-rollover chokepoint), and switches the current region to
-    // the destination's arrival node. Stays in RegionMode.
+    // On success: spends 1000 Energy, drops traveling (slotted) generic stacks
+    // (heroes/Player Character travel; stationed and stored stacks stay behind
+    // untouched), advances the clock to arrive at 11:00 after `days` (which
+    // refreshes Energy via the day-rollover chokepoint), and switches the current
+    // region to the destination's arrival node. Stays in RegionMode. This method
+    // owns the loss resolution; warning/confirmation before calling it is the
+    // caller's (App's) responsibility.
     WorldMapTravelResult TravelToRegion(const std::string& destinationRegionId);
 
     // Team Energy pool (docs/core_loop_rules.md §6). M14-a: state + daily reset.
@@ -853,8 +868,10 @@ private:
     // generics (which are dropped on World Map travel). Uses the unit catalog
     // category, falling back to the leader-capable set when the unit is absent.
     [[nodiscard]] bool IsHeroUnit(const std::string& unitId) const;
-    // Removes every generic stack from the traveling party (active + reserve),
-    // returning the total generic unit count dropped. Heroes are untouched.
+    // Removes exactly the PreviewRegionTravelGenericLosses() set: traveling
+    // (slotted) generic stacks. Heroes, the Player Character, and stationed/
+    // stored stacks are never in that set, so placed-unit refs cannot dangle.
+    // Returns the total generic unit count dropped.
     int RemoveGenericTravelingPartyUnits();
 
     // Single chokepoint for all time advances. Detects a day-boundary crossing
