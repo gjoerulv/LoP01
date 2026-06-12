@@ -2,7 +2,7 @@
 
 ## Context
 
-The current codebase is a **post-M27** bounded multi-Region, multi-Scenario vertical slice.
+The current codebase is a **post-M28** bounded multi-Region, multi-Scenario vertical slice.
 
 The v1 strategic-economy proof is complete: the shipped slice and tests exercise Scenario-authored player economy/service start state, owned services, mine payout, narrow unit passive effects, authored Trading Post trade data, guarded and unguarded service claiming, Scenario Result presentation, Campaign progression, and player-facing mine stationing.
 
@@ -61,7 +61,7 @@ Still incomplete or intentionally deferred:
 - HUD/raylib inventory rendering and inventory render-model;
 - event-driven Region unlock;
 - per-Region world/enemy state partitioning;
-- generic origin-storage across Regions;
+- cross-Region generic-unit preservation/loss warning — selected next as M29;
 - authored starting roster / hero-pool support;
 - full per-Scenario content directories and Scenario Region Contexts;
 - general team-definition authoring;
@@ -118,7 +118,24 @@ Latest completed milestone: **M28 — Storage Foundation**.
 
 Active scope cap: **`docs/content_scope_v2.md`**.
 
-The next milestone is **not yet selected**. Candidate v2 directions are in §5 below and in `docs/content_scope_v2.md` §5. With storage proven, natural successors are the storage/service-defense loop (storage gate defense, stationed-defender combat, capture/loss — all currently deferred) or service destruction/restoration; the next selected milestone should still be chosen against the final-vision docs and current gameplay value.
+The next selected milestone is **M29 — Cross-Region Generic Unit Preservation / Travel Warning**.
+
+**Why M29 now:** M28 created the Storage foundation, but Storage is not yet mechanically necessary. The final-vision docs say generic units in the traveling party do **not** survive Region change, while stored units remain in their original Region. M29 should connect those rules without broadening into Storage defense, enemy capture, or service destruction/restoration.
+
+### M29 — Cross-Region Generic Unit Preservation / Travel Warning (planned)
+
+**Goal:** make Storage strategically meaningful by implementing the final travel consequence for generic units. When the player begins Region-to-Region travel with generic stacks still in the traveling party (active + reserve), the game must clearly warn which generics will be lost; if the player confirms, those traveling generic stacks are removed during the travel transition. Stored units remain stored and are not affected.
+
+**Expected behavior:**
+
+- Detect generic, non-Player-Character, non-hero stacks in the traveling party before confirming World Map Region travel.
+- Show a bounded warning/confirmation listing affected unit names/counts; do not surprise-delete units.
+- On confirmed travel, remove only traveling generic stacks from active/reserve/roster through explicit `GameSession` methods, preserving save/load and active-party/leader legality.
+- Heroes and the Player Character travel normally.
+- Stored units are untouched and remain assigned to their storage service.
+- If no traveling generic stacks would be lost, travel proceeds without the extra warning.
+
+**Hard boundaries:** no remote storage management from the warning, no generic auto-storage, no enemy-side Region travel, no Storage defense/capture/loss, no service destruction/restoration, no per-Scenario content partitioning, and no broad shell/menu rewrite. If current World Map travel lacks a suitable confirmation seam, M29 should add only the narrow confirmation needed for this loss warning.
 
 ### M28 — Storage Foundation (complete)
 
@@ -158,7 +175,7 @@ The player can station and unstation eligible owned units at eligible owned serv
 
 **Explicit non-goals preserved after M25:**
 
-- No full Storage/Garrison service kind yet.
+- No full Storage/Garrison service kind was added in M25; Storage placement was later delivered by M28, while stationed-defender combat and service-defense semantics remain deferred.
 - No stationed defenders, combat defense, capacity/loss framework, or service siege system.
 - No enemy-side stationing or AI economy.
 - No enemy capture of player-owned services.
@@ -166,17 +183,20 @@ The player can station and unstation eligible owned units at eligible owned serv
 - No broad inventory/trader UI rewrite.
 - No new passive kinds.
 
-## 5. Candidate directions after M27
+## 5. Candidate directions after M29 selection
 
-These are candidates, not selected commitments:
+These are candidates/sequence notes, not blanket commitments:
 
-1. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28** (7-slot store/retrieve at an owned storage service, distinct from M25 stationed guards). The remaining "garrison"/defense work — storage gate defense, stationed-defender combat, storage loss/capture — stays deferred (see candidate #4 and the destruction/restoration slice).
-2. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
-3. **Service destruction / restoration and enemy-side capture.** The broader contesting loop after M23/M25/M26/M27. Deferred until stationing/defense semantics exist.
-4. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface.
-5. **Campaign branch-choice presentation.** When a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support exists, but `CampaignProgressionRules` resolves the first entry only.
-6. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped.
-7. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content.
-8. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but should not be bundled unless a milestone explicitly selects one narrow result-extension slice.
+1. **M29 — Cross-Region Generic Unit Preservation / Travel Warning.** Selected next. It should connect the final storage/travel rule: generics in the traveling party are lost on Region change unless stored first. Keep it narrow: warning + confirmed removal + stored-units unaffected.
+2. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28** (7-slot store/retrieve at an owned storage service, distinct from M25 stationed guards). The remaining defense work — storage gate defense, stationed-defender combat, storage loss/capture — stays deferred until service-defense rules are selected.
+3. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
+4. **Service defense / stationed-defender resolution.** Natural after M29 if the next goal is contested infrastructure: storage gate defense, mine/stationed-guard defense, and attack/defense battle resolution. Do this before enemy-side capture/destruction if those systems need defenders.
+5. **Service destruction / restoration slice.** Add a narrow destruction/restoration loop only after service-defense semantics exist.
+6. **Enemy-side capture pressure.** Let non-player teams contest or capture player-owned services only after service defense and stationing rules are established.
+7. **Inventory render-model / HUD presentation.** Inventory/artifacts exist and are stored/persisted, but there is no render-model or HUD surface.
+8. **Campaign branch-choice presentation.** When a scenario has multiple `nextScenarioIds`, present a player-facing choice. Struct support exists, but `CampaignProgressionRules` resolves the first entry only.
+9. **Market / Black Market / Freelancer's Guild behavior.** Builds on trader ownership tiers, but risks item-economy sprawl unless tightly scoped.
+10. **Scenario Region Context / per-scenario content partitioning.** Useful if upcoming authored content needs scenario-specific Region/enemy/service state rather than global content.
+11. **Scenario result polish extensions.** Scores, rewards, fanfare, animations, or post-victory event chains can build on M22, but should not be bundled unless a milestone explicitly selects one narrow result-extension slice.
 
-The next selected milestone after M27 should be narrow, testable, and justified by current gameplay value and the milestone-agnostic source-of-truth docs rather than system excitement.
+After M29, prefer the highest-value direct continuation from the final-vision docs rather than system excitement. Service defense is the strongest likely successor because M25/M28 have already created stationed and stored units, but they still do not defend anything.

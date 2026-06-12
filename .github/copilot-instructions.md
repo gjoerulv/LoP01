@@ -24,11 +24,15 @@ Current implementation sequencing lives in `docs/implementation_roadmap.md`.
 
 Latest completed milestone: **M28 — Storage Foundation**.
 
-Current selected milestone: **not yet selected** (see `docs/implementation_roadmap.md` §5 for candidates).
+Current selected milestone: **M29 — Cross-Region Generic Unit Preservation / Travel Warning** (planned, not implemented).
 
 Active scope cap: `docs/content_scope_v2.md`.
 
-M28 shipped a bounded **Storage** foundation — a placement bucket DISTINCT from M25 mine stationing (storage cap 7, units persist/retrieve; "garrison" is not a separate system, it is M25's stationed guards). Owned non-Player-Character stacks store/retrieve at a player-owned `Storage`-kind service behind explicit `GameSession` methods, preserving the one-place-at-a-time invariant; additive `stored_units` save (no schema bump); `home_base_storage` is player-owned via `playerStart`; the M27 overview shows a read-only `Stored n/7` row. Do not treat storage/garrison **defense** (gate defense, stationed-defender combat, storage loss/capture), enemy-side capture, or service destruction/restoration as implemented.
+M28 shipped a bounded **Storage** foundation — a placement bucket DISTINCT from M25 mine stationing (storage cap 7, units persist/retrieve; "garrison" is not a separate system, it is M25's stationed guards). Owned non-Player-Character stacks store/retrieve at a player-owned `Storage`-kind service behind explicit `GameSession` methods, preserving the one-place-at-a-time invariant; additive `stored_units` save (no schema bump); `home_base_storage` is player-owned via `playerStart`; the M27 overview shows a read-only `Stored n/7` row. Do not treat M29 generic-unit travel loss, storage/garrison **defense** (gate defense, stationed-defender combat, storage loss/capture), enemy-side capture, or service destruction/restoration as implemented.
+
+## M29 planning boundary
+
+M29 should connect Storage to the final cross-Region travel rule: warn before Region-to-Region travel would lose generic stacks in the traveling party, remove only those traveling generics on confirmed travel, and leave stored units untouched. Do not add remote storage management, service defense/capture/loss, enemy-side capture, or broad shell/World Map rewrites under M29.
 
 ## Technical rules
 
