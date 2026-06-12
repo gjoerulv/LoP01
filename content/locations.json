@@ -117,6 +117,15 @@
       "allows_sleep": false,
       "overworld_destination": true,
       "scene_id": "copper_mine_proto"
+    },
+    {
+      "id": "river_depot",
+      "name": "River Depot",
+      "type": "service",
+      "allows_sleep": false,
+      "overworld_destination": true,
+      "scene_id": "river_depot_proto",
+      "battle_scenario_id": "debug_intro_battle"
     }
   ]
 }

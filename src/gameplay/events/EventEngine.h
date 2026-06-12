@@ -28,6 +28,9 @@ struct EnemyTeamMutation {
     std::string nodeId;       // Spawn only
     std::string allyColor;    // ChangeAlliance only
     bool addAlliance = true;  // ChangeAlliance: true = add, false = remove
+    // M30, Spawn only: optional authored enemy-group id giving the team its
+    // deterministic service-attack strength. Empty leaves any existing value.
+    std::string enemyGroupId;
 };
 
 struct EventEvaluationContext {

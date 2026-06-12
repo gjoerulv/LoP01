@@ -200,4 +200,60 @@ TEST_CASE("Overview mapper - empty model when the player owns nothing") {
     REQUIRE(model.rows.empty());
     REQUIRE(model.selectedIndex == 0);
     REQUIRE_FALSE(model.emptyText.empty());
+    REQUIRE(model.unavailableHeroLines.empty());
+    REQUIRE(model.eventLogLines.empty());
+}
+
+// M30 — contested-infrastructure presentation: restoring status, Temporarily
+// Unavailable heroes, and the bounded recent-event readout.
+
+TEST_CASE("Overview mapper - restoring status, TU hero lines, and event log lines") {
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(RealContentDir()));
+    auto save = BaseSave();
+    auto destroyedQueued = Owned("copper_mine_svc", "Green", false, /*destroyed=*/true);
+    destroyedQueued.restorationQueued = true;
+    save.ownedServices = {destroyedQueued};
+    save.unavailableHeroes = {
+        core::TemporarilyUnavailableHeroSaveState{"hero_mira", 3, 10},
+    };
+    save.serviceEventLog = {
+        core::ServiceEventLogEntrySaveState{2, "Red attacked iron_mine — defenders held."},
+        core::ServiceEventLogEntrySaveState{3, "Red captured river_depot."},
+    };
+    auto session = WireSession(repo, save);
+
+    app::mappers::OwnedServiceOverviewModelMapper mapper;
+    const auto model = mapper.Map(repo, session);
+
+    const auto* row = FindRow(model, "copper_mine_svc");
+    REQUIRE(row != nullptr);
+    REQUIRE(row->statusLabel == "Owned (Destroyed — restoring at next day start)");
+
+    const auto* mira = repo.FindUnitById("hero_mira");
+    REQUIRE(mira != nullptr);
+    REQUIRE(model.unavailableHeroLines.size() == 1);
+    REQUIRE(model.unavailableHeroLines[0] == mira->name + " — returns day 10");
+
+    REQUIRE(model.eventLogLines.size() == 2);
+    REQUIRE(model.eventLogLines[0] == "Day 2: Red attacked iron_mine — defenders held.");
+    REQUIRE(model.eventLogLines[1] == "Day 3: Red captured river_depot.");
+}
+
+TEST_CASE("Overview mapper - event readout is bounded to the most recent entries") {
+    data::ContentRepository repo;
+    REQUIRE(repo.LoadFromDirectory(RealContentDir()));
+    auto save = BaseSave();
+    for (int i = 1; i <= 10; ++i) {
+        save.serviceEventLog.push_back(
+            core::ServiceEventLogEntrySaveState{i, "event " + std::to_string(i)});
+    }
+    auto session = WireSession(repo, save);
+
+    app::mappers::OwnedServiceOverviewModelMapper mapper;
+    const auto model = mapper.Map(repo, session);
+
+    REQUIRE(model.eventLogLines.size() == 6);                       // bounded
+    REQUIRE(model.eventLogLines.front() == "Day 5: event 5");       // oldest shown
+    REQUIRE(model.eventLogLines.back() == "Day 10: event 10");      // newest last
 }

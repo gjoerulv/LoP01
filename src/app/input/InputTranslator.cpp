@@ -17,6 +17,9 @@ namespace app::input
         input.load = IsKeyPressed(KEY_F9);
         input.openWorldMap = IsKeyPressed(KEY_M);
         input.openOwnedServices = IsKeyPressed(KEY_O);
+        // M30 service maintenance (destroy / queue restoration) at the current
+        // Region node.
+        input.serviceMaintenance = IsKeyPressed(KEY_K);
 
         input.moveLeft = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
         input.moveRight = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);

@@ -74,19 +74,15 @@ The fifth selected v2 milestone was: **M29 — Cross-Region Generic Unit Preserv
 
 M29 made Storage strategically necessary by implementing the final travel consequence (`core_loop_rules` §5): only traveling (slotted active/reserve) generic stacks are lost on confirmed Region-to-Region travel, while stored and stationed stacks survive with refs intact and heroes/Player Character travel. The at-risk set is exposed through the pure `GameSession::PreviewRegionTravelGenericLosses()` read, and the confirmed-travel removal inside `TravelToRegion` deletes exactly that set — also fixing the M15-era whole-roster removal that would otherwise have deleted placed stacks. A bounded two-stage confirmation on the existing World Map screen lists per-stack `Nx Name` losses; cancel keeps the screen open so units can be stored first, and a no-loss party travels on the first confirm. App-local pending state only — no new GameMode, no schema bump, no content changes. It did not add remote storage management, service defense, enemy capture, or a shell/menu rewrite.
 
-## 5. Candidate v2 milestones after M29
+The sixth and final selected v2 milestone was: **M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit** *(complete)*.
 
-These are candidates/sequence notes, not blanket commitments:
+M30 turned the service/storage/stationing loop into a contested infrastructure loop: a deterministic node-level service-defense resolver (stationed + stored stacks defend; the active party defends via the existing battle surface when the player stands on the attacked node), storage loss with generic dismissal and a minimal Temporarily Unavailable hero pipeline (weekly return-to-reserve as the hero-pool stand-in; the Player Character can never be lost or TU), enemy-side capture pressure through legal Region-layer `ProcessEnemyPhase` action with authored enemy-group strength, opt-in service destruction/restoration (`destroyable` + validated `restore_cost`, 1000 Energy + 1 hour, day-start completion, §20 cancel-by-destruction), a persisted bounded service event log plus overview/status presentation, and a shipped content proof (player-owned `river_depot` storage gate, destroyable copper mine, raider pressure events). All M30 save fields are additive — no schema bump. Deliberate simplifications and deferrals are recorded in `docs/implementation_roadmap.md` §4/§5.
 
-1. ~~**M29 — Cross-Region Generic Unit Preservation / Travel Warning.**~~ Delivered by **M29**: traveling generic stacks are lost on Region change after an explicit warning/confirmation, while stored/stationed units remain.
-2. ~~**Storage/Garrison Foundation.**~~ Storage placement delivered by **M28**. Remaining work — storage gate defense, stationed-defender combat, storage loss/capture — stays deferred; sequence it after service-defense rules exist.
-3. ~~**Owned Service Overview / Strategic Service Readout.**~~ Delivered by **M27** as a read-only overview panel and future service-presentation data contract.
-4. **Service Defense / Stationed-Defender Resolution.** Build the narrow defense resolver before enemy-side capture/destruction if contested infrastructure becomes the next priority.
-5. **Service Destruction / Restoration Slice.** Add a narrow destruction/restoration loop only after service-defense semantics exist.
-6. **Enemy-side Capture Pressure.** Let non-player teams contest or capture player-owned services only after service defense and stationing rules are established.
-7. **Inventory / Artifact HUD Presentation.** Present inventory/artifacts in a bounded render model without implementing full item use or crafting.
-8. **Campaign Branch-choice Presentation.** Surface multiple `nextScenarioIds` as a choice if authored content needs it.
-9. **Market / Black Market / Freelancer Behavior.** Build only one trader-service behavior at a time and avoid broad item-economy sprawl.
+## 5. v2 closure
+
+**v2 is complete.** All six selected milestones (M25–M30) shipped with tests and shipped-content proof, and the v2 target in §2 is met: infrastructure control is player-facing, strategically legible, and now contested.
+
+This file is **ready to archive** (user action, mirroring the v1 note in §8). Larger systems intentionally NOT built in v2 — full-simulation service-defense battles, the shared hero pool, enemy-side destruction/sabotage, AI economy, item economy, fog-of-war, shell flow, and the final service-management UI — are recorded as v3 candidates in `docs/implementation_roadmap.md` §5, not as open v2 promises. Create `docs/content_scope_v3.md` before selecting the next milestone.
 
 ## 6. Not in early v2 scope unless explicitly selected
 

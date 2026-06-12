@@ -36,6 +36,10 @@ struct EnemyTeamSaveState {
     int energy = 0;
     int cooldownExpiresAtMinutes = 0;
     std::vector<std::string> alliances;
+    // M30 additive: authored enemy-group id giving the team its deterministic
+    // service-attack strength. Absent/empty -> zero strength (the team can still
+    // capture undefended services).
+    std::string enemyGroupId;
 };
 
 // M13-b runtime inventory persistence. items and artifacts are flat
@@ -110,6 +114,30 @@ struct OwnedServiceSaveState {
     bool destroyed = false;
     std::vector<StationedUnitSaveState> stationedUnits;
     std::vector<StoredUnitSaveState> storedUnits;
+    // M30 additive: a destroyed service with a paid, queued restoration completes
+    // at the next day start (docs/core_loop_rules.md §20). Absent in older saves
+    // -> false. Only meaningful while destroyed is true. Kept last so existing
+    // aggregate initializers stay valid.
+    bool restorationQueued = false;
+};
+
+// M30 Temporarily Unavailable hero entry: a hero removed from the roster by a
+// lost service/storage defense. While unavailable the hero owns no roster stack,
+// so it is hidden from active/reserve/stationing/storage automatically. It
+// becomes returnable at returnDay (weekly cadence). The Player Character must
+// never appear here.
+struct TemporarilyUnavailableHeroSaveState {
+    std::string unitId;
+    int becameUnavailableDay = 0;
+    int returnDay = 0;
+};
+
+// M30 bounded service event log entry: one player-facing line describing an
+// owned-service attack/defense/capture/loss/destruction/restoration/TU event.
+// The runtime keeps only the most recent entries, newest last.
+struct ServiceEventLogEntrySaveState {
+    int day = 0;
+    std::string text;
 };
 
 struct SaveData {
@@ -182,6 +210,12 @@ struct SaveData {
     // single `gold` field above.
     std::vector<ResourceSaveState> resources;
     std::vector<OwnedServiceSaveState> ownedServices;
+
+    // M30 contested-infrastructure state. All default to empty so legacy saves
+    // load as no unavailable heroes and an empty service event log. Additive
+    // optional fields — no schemaVersion bump.
+    std::vector<TemporarilyUnavailableHeroSaveState> unavailableHeroes;
+    std::vector<ServiceEventLogEntrySaveState> serviceEventLog;
 };
 
 class SaveGameRepository {

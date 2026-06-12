@@ -942,11 +942,80 @@
           "dialogue_choices": []
         }
       ]
+    },
+    {
+      "id": "river_depot_proto",
+      "spawn": {
+        "x": 96,
+        "y": 520,
+        "width": 24,
+        "height": 24
+      },
+      "blocking_rects": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 40
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "width": 40,
+          "height": 720
+        },
+        {
+          "x": 1240,
+          "y": 0,
+          "width": 40,
+          "height": 720
+        },
+        {
+          "x": 0,
+          "y": 680,
+          "width": 1280,
+          "height": 40
+        }
+      ],
+      "zones": [
+        {
+          "id": "storage_chest",
+          "type": "shop",
+          "area": {
+            "x": 600,
+            "y": 320,
+            "width": 80,
+            "height": 40
+          },
+          "prompt_text": "E: Store / retrieve units",
+          "result_text": "",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        },
+        {
+          "id": "town_exit",
+          "type": "exit",
+          "area": {
+            "x": 70,
+            "y": 560,
+            "width": 80,
+            "height": 80
+          },
+          "prompt_text": "E: Exit To Overworld",
+          "result_text": "Exited to overworld",
+          "failure_text": "",
+          "time_cost_minutes": 0,
+          "gold_cost": 0,
+          "recruit_count": 0,
+          "dialogue_choice_time_cost_minutes": 1,
+          "dialogue_choices": []
+        }
+      ]
     }
-
-
-
-
 
   ]
 }

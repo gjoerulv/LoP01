@@ -142,8 +142,10 @@ ActionResult ExecuteAction(EventEvaluationContext& ctx, const EventAction& actio
             return {false, "spawnTeam: missing required arg 'teamColor'"};
         if (nodeId.empty())
             return {false, "spawnTeam: missing required arg 'nodeId'"};
+        // M30 optional: authored service-attack strength for the spawned team.
+        const std::string enemyGroupId = args.value("enemyGroupId", "");
         ctx.pendingTeamMutations->push_back(
-            {EnemyTeamMutationType::Spawn, teamColor, nodeId, {}, true});
+            {EnemyTeamMutationType::Spawn, teamColor, nodeId, {}, true, enemyGroupId});
         return {true, ""};
     }
 

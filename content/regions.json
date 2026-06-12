@@ -92,6 +92,13 @@
           "y": 470,
           "discovered": true,
           "travel_available": true
+        },
+        {
+          "location_id": "river_depot",
+          "x": 300,
+          "y": 130,
+          "discovered": true,
+          "travel_available": true
         }
       ],
       "links": [
@@ -106,7 +113,8 @@
         [ "orchard_pass", "clocktower_square" ],
         [ "survivor_recruit_post", "bridge_checkpoint" ],
         [ "town_center", "iron_mine" ],
-        [ "old_inn", "copper_mine" ]
+        [ "old_inn", "copper_mine" ],
+        [ "bridge_checkpoint", "river_depot" ]
       ]
     },
     {

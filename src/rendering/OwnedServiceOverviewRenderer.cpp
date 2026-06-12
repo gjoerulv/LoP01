@@ -102,6 +102,36 @@ namespace ashvale::rendering
             y += 10.0f;
         }
 
+        // M30: Temporarily Unavailable heroes (bounded section; absent when empty).
+        if (!model.unavailableHeroLines.empty())
+        {
+            y += 8.0f;
+            DrawTextEx(font, "Temporarily unavailable:", { 70.0f, y },
+                context.smallFontSize, 1.0f, context.theme.textColor);
+            y += 24.0f;
+            for (const auto& line : model.unavailableHeroLines)
+            {
+                DrawTextEx(font, ("   " + line).c_str(), { 74.0f, y },
+                    context.smallFontSize, 1.0f, context.theme.mutedTextColor);
+                y += 22.0f;
+            }
+        }
+
+        // M30: recent service events (bounded, newest last; absent when empty).
+        if (!model.eventLogLines.empty())
+        {
+            y += 8.0f;
+            DrawTextEx(font, "Recent service events:", { 70.0f, y },
+                context.smallFontSize, 1.0f, context.theme.textColor);
+            y += 24.0f;
+            for (const auto& line : model.eventLogLines)
+            {
+                DrawTextEx(font, ("   " + line).c_str(), { 74.0f, y },
+                    context.smallFontSize, 1.0f, context.theme.mutedTextColor);
+                y += 22.0f;
+            }
+        }
+
         DrawTextEx(font, model.footerHint.c_str(),
             { 70.0f, static_cast<float>(context.screenHeight - 44) },
             context.smallFontSize, 1.0f, context.theme.mutedTextColor);

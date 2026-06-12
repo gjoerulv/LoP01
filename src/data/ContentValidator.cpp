@@ -341,6 +341,40 @@ std::vector<ValidationMessage> ContentValidator::ValidateReferences(
                     + std::to_string(output.amount) + ").", ""});
             }
         }
+
+        // M30 destruction/restoration authoring. A destroyable service must
+        // carry a non-empty, valid restoration cost so restoration is never
+        // accidentally free; a restore cost on a non-destroyable service is
+        // unreachable authoring and reports as an error.
+        if (service.destroyable && service.restoreCost.empty()) {
+            msgs.push_back({Severity::Error, "RESTORE_COST_REQUIRED_FOR_DESTROYABLE",
+                si + ".restore_cost",
+                "Destroyable service \"" + service.id
+                + "\" must define a non-empty restore_cost.", ""});
+        }
+        if (!service.destroyable && !service.restoreCost.empty()) {
+            msgs.push_back({Severity::Error, "RESTORE_COST_FOR_NON_DESTROYABLE",
+                si + ".restore_cost",
+                "Service \"" + service.id
+                + "\" defines restore_cost but is not destroyable.", ""});
+        }
+        for (size_t k = 0; k < service.restoreCost.size(); ++k) {
+            const auto& cost = service.restoreCost[k];
+            const std::string ci = si + ".restore_cost[" + std::to_string(k) + "]";
+            gameplay::ResourceType parsedCost;
+            if (!gameplay::TryResourceTypeFromString(cost.resource, parsedCost)) {
+                msgs.push_back({Severity::Error, "RESTORE_COST_RESOURCE_INVALID",
+                    ci + ".resource",
+                    "Restore cost references invalid resource \"" + cost.resource
+                    + "\". Must be a canonical ResourceType name.", ""});
+            }
+            if (cost.amount <= 0) {
+                msgs.push_back({Severity::Error, "RESTORE_COST_AMOUNT_INVALID",
+                    ci + ".amount",
+                    "Restore cost amount must be positive (got "
+                    + std::to_string(cost.amount) + ").", ""});
+            }
+        }
     }
 
     // Unit passive-effect validation (the canonical passiveEffects vector;

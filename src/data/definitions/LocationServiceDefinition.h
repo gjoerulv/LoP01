@@ -111,5 +111,15 @@ namespace data
         // Empty for all non-mine services (backward compatible). Runtime payout
         // is NOT computed here — see gameplay::economy::ComputeMineDailyOutput.
         std::vector<MineOutputDefinition> mineOutputs;
+
+        // M30: systemic destruction is opt-in per service instance
+        // (docs/core_loop_rules.md §20: only Region Services with a destroyable
+        // flag). Designers flag only Region-service-like instances (mines,
+        // depots) — ordinary Location-mode interactions stay non-destroyable.
+        bool destroyable = false;
+        // M30: authored restoration cost ({resource, amount} pairs, same shape
+        // as mine outputs). Validation requires a non-empty, valid cost on every
+        // destroyable service so restoration is never accidentally free.
+        std::vector<MineOutputDefinition> restoreCost;
     };
 }
