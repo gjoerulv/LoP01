@@ -939,6 +939,7 @@ namespace data {
             std::vector<ScenarioDefinition>& output,
             const std::vector<RegionDefinition>& regions,
             const std::vector<LocationServiceDefinition>& services,
+            const std::vector<UnitDefinition>& units,
             std::vector<ValidationMessage>& msgs)
         {
             output.clear();
@@ -955,6 +956,12 @@ namespace data {
             auto findService = [&](const std::string& serviceId) -> const LocationServiceDefinition* {
                 for (const auto& service : services) {
                     if (service.id == serviceId) return &service;
+                }
+                return nullptr;
+            };
+            auto findUnit = [&](const std::string& unitId) -> const UnitDefinition* {
+                for (const auto& unit : units) {
+                    if (unit.id == unitId) return &unit;
                 }
                 return nullptr;
             };
@@ -1151,6 +1158,134 @@ namespace data {
                                 }
                             }
                         }
+
+                        // M32 authored starting roster (playerStart.roster). Strict
+                        // shape; PC required exactly once; heroes unique with qty 1;
+                        // active party needs a leader; capacities respected.
+                        if (ps.contains("roster")) {
+                            const auto& rosterJson = ps["roster"];
+                            if (!rosterJson.is_object()) {
+                                msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_TYPE_INVALID",
+                                    path + ".playerStart.roster",
+                                    "\"playerStart.roster\" must be a JSON object.", ""});
+                            } else {
+                                def.hasAuthoredRoster = true;
+                                std::set<std::string> seenHeroes;
+                                int playerCharacterCount = 0;
+                                auto loadRosterList = [&](const char* key,
+                                                          std::vector<ScenarioStartRosterEntry>& dst,
+                                                          int capacity, const char* capacityCode) {
+                                    if (!rosterJson.contains(key)) return;
+                                    if (!rosterJson[key].is_array()) {
+                                        msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_TYPE_INVALID",
+                                            path + ".playerStart.roster." + key,
+                                            std::string("\"playerStart.roster.") + key +
+                                            "\" must be a JSON array.", ""});
+                                        return;
+                                    }
+                                    const auto& arr = rosterJson[key];
+                                    if (static_cast<int>(arr.size()) > capacity) {
+                                        msgs.push_back({Severity::Error, capacityCode,
+                                            path + ".playerStart.roster." + key,
+                                            std::string("\"playerStart.roster.") + key +
+                                            "\" exceeds the slot capacity.", ""});
+                                    }
+                                    for (size_t e = 0; e < arr.size(); ++e) {
+                                        const auto& re = arr[e];
+                                        const std::string rpath =
+                                            path + ".playerStart.roster." + key + "[" + std::to_string(e) + "]";
+                                        if (!re.is_object()) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_ENTRY_TYPE_INVALID",
+                                                rpath, "Roster entry must be a JSON object.", ""});
+                                            continue;
+                                        }
+                                        if (!re.contains("unitId") || !re["unitId"].is_string() ||
+                                            re["unitId"].get<std::string>().empty()) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_FIELD_INVALID",
+                                                rpath + ".unitId",
+                                                "Roster \"unitId\" is required and must be a non-empty string.", ""});
+                                            continue;
+                                        }
+                                        ScenarioStartRosterEntry rosterEntry;
+                                        rosterEntry.unitId = re["unitId"].get<std::string>();
+                                        if (!re.contains("quantity")) {
+                                            rosterEntry.quantity = 1;
+                                        } else if (!re["quantity"].is_number_integer()) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_QUANTITY_INVALID",
+                                                rpath + ".quantity",
+                                                "Roster \"quantity\" must be a positive integer.", ""});
+                                            continue;
+                                        } else {
+                                            rosterEntry.quantity = re["quantity"].get<int>();
+                                        }
+                                        if (rosterEntry.quantity <= 0) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_QUANTITY_INVALID",
+                                                rpath + ".quantity",
+                                                "Roster \"quantity\" must be greater than zero.", ""});
+                                            continue;
+                                        }
+                                        const UnitDefinition* unit = findUnit(rosterEntry.unitId);
+                                        if (unit == nullptr) {
+                                            msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_UNIT_UNKNOWN",
+                                                rpath + ".unitId",
+                                                "Roster references unknown unit \"" + rosterEntry.unitId + "\".", ""});
+                                            continue;
+                                        }
+                                        const bool isHero =
+                                            unit->category == UnitDefinitionCategory::Hero ||
+                                            unit->category == UnitDefinitionCategory::Leader;
+                                        if (isHero) {
+                                            if (rosterEntry.quantity != 1) {
+                                                msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_HERO_QUANTITY_INVALID",
+                                                    rpath + ".quantity",
+                                                    "Hero unit \"" + rosterEntry.unitId + "\" must have quantity 1.", ""});
+                                                continue;
+                                            }
+                                            if (!seenHeroes.insert(rosterEntry.unitId).second) {
+                                                msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_HERO_DUPLICATE",
+                                                    rpath + ".unitId",
+                                                    "Duplicate hero \"" + rosterEntry.unitId + "\" in starting roster.", ""});
+                                                continue;
+                                            }
+                                            if (unit->isPlayerCharacter) {
+                                                ++playerCharacterCount;
+                                            }
+                                        }
+                                        dst.push_back(std::move(rosterEntry));
+                                    }
+                                };
+                                loadRosterList("active", def.startActiveRoster, 5,
+                                               "SCENARIO_START_ROSTER_ACTIVE_OVERFLOW");
+                                loadRosterList("reserve", def.startReserveRoster, 8,
+                                               "SCENARIO_START_ROSTER_RESERVE_OVERFLOW");
+
+                                bool activeHasLeader = false;
+                                for (const auto& rosterEntry : def.startActiveRoster) {
+                                    const UnitDefinition* unit = findUnit(rosterEntry.unitId);
+                                    if (unit != nullptr &&
+                                        (unit->category == UnitDefinitionCategory::Hero ||
+                                         unit->category == UnitDefinitionCategory::Leader)) {
+                                        activeHasLeader = true;
+                                        break;
+                                    }
+                                }
+                                if (!activeHasLeader) {
+                                    msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_NO_ACTIVE_LEADER",
+                                        path + ".playerStart.roster.active",
+                                        "Authored starting active party has no leader-capable unit.", ""});
+                                }
+
+                                bool catalogHasPlayerCharacter = false;
+                                for (const auto& unit : units) {
+                                    if (unit.isPlayerCharacter) { catalogHasPlayerCharacter = true; break; }
+                                }
+                                if (catalogHasPlayerCharacter && playerCharacterCount != 1) {
+                                    msgs.push_back({Severity::Error, "SCENARIO_START_ROSTER_PLAYER_CHARACTER_MISSING",
+                                        path + ".playerStart.roster",
+                                        "Authored starting roster must include the Player Character exactly once.", ""});
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1185,6 +1320,48 @@ namespace data {
                         "Scenario \"" + def.id + "\" start node \"" + def.startNodeId +
                         "\" does not exist in Region \"" + def.startRegionId + "\".", ""});
                     continue;
+                }
+
+                // M32 Scenario Context: optional "regions" list naming the Region ids
+                // that belong to this Scenario. Empty/absent => default context of all
+                // loaded Regions (backward compatible). When authored, the start Region
+                // must be in the list and normal read models only expose these Regions.
+                if (entry.contains("regions")) {
+                    if (!entry["regions"].is_array()) {
+                        msgs.push_back({Severity::Error, "SCENARIO_REGIONS_TYPE_INVALID",
+                            path + ".regions", "\"regions\" must be a JSON array of Region ids.", ""});
+                    } else {
+                        std::set<std::string> seenRegions;
+                        for (size_t r = 0; r < entry["regions"].size(); ++r) {
+                            const auto& rv = entry["regions"][r];
+                            const std::string rpath = path + ".regions[" + std::to_string(r) + "]";
+                            if (!rv.is_string() || rv.get<std::string>().empty()) {
+                                msgs.push_back({Severity::Error, "SCENARIO_REGION_FIELD_INVALID",
+                                    rpath, "Scenario region entry must be a non-empty string.", ""});
+                                continue;
+                            }
+                            const std::string regionId = rv.get<std::string>();
+                            if (findRegion(regionId) == nullptr) {
+                                msgs.push_back({Severity::Error, "SCENARIO_REGION_UNKNOWN",
+                                    rpath, "Scenario references unknown Region \"" + regionId + "\".", ""});
+                                continue;
+                            }
+                            if (!seenRegions.insert(regionId).second) {
+                                msgs.push_back({Severity::Error, "SCENARIO_REGION_DUPLICATE",
+                                    rpath, "Duplicate Region \"" + regionId + "\" in scenario context.", ""});
+                                continue;
+                            }
+                            def.regionIds.push_back(regionId);
+                        }
+                        if (!def.regionIds.empty() &&
+                            std::find(def.regionIds.begin(), def.regionIds.end(), def.startRegionId) ==
+                                def.regionIds.end()) {
+                            msgs.push_back({Severity::Error, "SCENARIO_START_REGION_NOT_IN_CONTEXT",
+                                path + ".startRegionId",
+                                "Scenario start Region \"" + def.startRegionId +
+                                "\" is not in the scenario \"regions\" context.", ""});
+                        }
+                    }
                 }
 
                 // Inline outcome (optional). Key presence selects inline vs the
@@ -1468,7 +1645,7 @@ namespace data {
         // campaign references resolve against them.
         auto scenariosFileDoc = load(root / "scenarios.json");
         if (scenariosFileDoc) {
-            LoadScenariosFile(*scenariosFileDoc, scenarios_, regions_, locationServices_, messages_);
+            LoadScenariosFile(*scenariosFileDoc, scenarios_, regions_, locationServices_, units_, messages_);
         }
         auto campaignsDoc = load(root / "campaigns.json");
         if (campaignsDoc) {

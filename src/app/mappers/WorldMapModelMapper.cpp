@@ -63,10 +63,11 @@ namespace app::mappers
         }
 
         // Unlocked-region vector for the pure rule (filter entries by the session's
-        // runtime unlock state).
+        // runtime unlock state AND the active Scenario Context — out-of-context
+        // Regions are never exposed or routed through).
         std::vector<std::string> unlocked;
         for (const auto& entry : worldMap.entries) {
-            if (session.IsRegionUnlocked(entry.id)) {
+            if (session.IsRegionUnlocked(entry.id) && session.IsRegionInScenarioContext(entry.id)) {
                 unlocked.push_back(entry.id);
             }
         }
@@ -75,6 +76,9 @@ namespace app::mappers
         for (const auto& entry : worldMap.entries) {
             if (entry.id == snapshot.regionId) {
                 continue;  // never list the current region as a destination
+            }
+            if (!session.IsRegionInScenarioContext(entry.id)) {
+                continue;  // M32: do not list Regions outside the active Scenario
             }
 
             WorldMapDestinationView view;

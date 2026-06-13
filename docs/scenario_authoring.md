@@ -181,6 +181,13 @@ M21 adds a narrow, optional `playerStart` object that authors the player's start
 
 `playerStart` is a canonical authored schema: a malformed block or wrong-typed field fails validation loudly rather than being silently skipped. M21 does **not** add authored starting rosters, team definitions, per-scenario `unlockedRegions` overrides (World Map `unlocked` flags already author initial unlock state), item/inventory start-state, or ownership-claiming.
 
+### Scenario Context boundary and starting roster (M32)
+
+M32 extends authored start-state in two bounded ways:
+
+- **Scenario Context boundary** — an optional top-level `regions` id array on the thin scenario names the Regions the Scenario exposes. Empty/absent keeps the default context of all loaded Regions (existing content is unaffected). When authored, the start Region must be inside the context, and the World Map and inter-Region travel only expose/route in-context Regions. This is the smaller selected-Scenario boundary, not the full Scenario Region Context (per-Region variable/flag/override passing remains deferred).
+- **Starting roster** — an optional `playerStart.roster` object with `active` and `reserve` arrays of `{ unitId, quantity? }`. The Player Character must appear exactly once across the two lists, heroes/leaders must be quantity 1, generic stacks must be positive, the active list must contain a leader-capable unit, and the lists must fit the active (5) / reserve (8) capacities. Authoring a roster makes the scenario start rebuild the roster (and clear inventory/equipment) rather than inherit the previous run; campaign carry-over still overrides afterwards. A scenario that authors no roster keeps the prebuilt default roster. The clock always resets to day 1 at scenario start. This is not character creation — it places existing authored units; it does not create or customize the Player Character identity.
+
 Current Campaign definitions support:
 
 - `id`

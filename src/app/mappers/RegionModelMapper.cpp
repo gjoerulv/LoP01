@@ -168,9 +168,21 @@ namespace app::mappers
 
         for (int i = 0; i < static_cast<int>(nodes.size()); ++i)
         {
-            const bool nodeHostileOccupied =
+            // M32 fog/reveal: a node is "revealed" when the player has uncovered it.
+            // The current node is always treated as revealed (defensive — the
+            // session reveals it on arrival anyway).
+            const bool revealed = (i == currentIndex) ||
+                session.IsNodeRevealed(snapshot.regionId, nodes[i].id);
+
+            // Enemy visibility is gated by reveal: a hostile team is only surfaced
+            // (marker + bounded estimate) on a revealed node. Unrevealed nodes hide
+            // hostile presence entirely so the read model is not omniscient. Travel
+            // mechanics still use the true hostile set below (knowledge != mechanics).
+            const bool trulyHostile =
                 std::ranges::find(hostileOccupiedNodeIds, nodes[i].id) != hostileOccupiedNodeIds.end();
-            model.nodes.push_back(RegionNodeView{
+            const bool nodeHostileOccupied = trulyHostile && revealed;
+
+            RegionNodeView view{
                 nodes[i].id,
                 nodes[i].label,
                 Vector2{ nodes[i].x, nodes[i].y },
@@ -180,7 +192,16 @@ namespace app::mappers
                 i == currentIndex,
                 i == safeSelectedIndex,
                 nodeHostileOccupied
-                });
+            };
+            view.revealed = revealed;
+            if (nodeHostileOccupied)
+            {
+                // Bounded estimate only: known presence + team color. Exact
+                // composition/scouting depth is out of M32 scope.
+                const std::string color = session.HostileTeamColorAtNode(nodes[i].id, "Green");
+                view.enemyEstimate = color.empty() ? "Hostile force" : ("Hostile force (" + color + ")");
+            }
+            model.nodes.push_back(std::move(view));
         }
 
         if (region != nullptr)

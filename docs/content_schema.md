@@ -372,6 +372,11 @@ Current implementation note (M16): a **thin** `Scenario` is loaded from an optio
 
 M21 adds an optional `playerStart` object to the thin scenario for economy/service-control start-state: `{ gold?, resources?[], ownedServices?[] }`. `playerStart.gold` is an integer alias for `startGold` (author one of the two, never both; resolved gold must be a non-negative integer). `resources` is an array of `{ resource (canonical non-Gold name), amount (positive integer) }` with no duplicate resource. `ownedServices` is an array of `{ serviceId (an existing ownable mine/trader service), locked? (bool), destroyed? (bool) }` with no duplicate serviceId; entries are owned by the player team, and `locked`/`destroyed` set initial runtime state without bypassing usability/payout gates. `playerStart` is applied once at scenario start as runtime state and never written back to content (authored initial state vs runtime save state, §41). The schema is strict — a malformed block or field fails validation rather than being coerced.
 
+M32 adds two more authored start-state surfaces to the thin scenario:
+
+- An optional top-level `regions` array of Region ids — the **Scenario Context** boundary (the smaller of the two §10 models). Empty/absent => the default context of all loaded Regions (backward compatible). When authored, the start Region must be in the list, normal read models (World Map) and `TravelToRegion` only expose/route in-context Regions, and references are validated (unknown / duplicate / start-not-in-context). The context is runtime-derived from the active scenario and is not persisted — it is re-derived from the current scenario on load.
+- An optional `playerStart.roster` object `{ active?[], reserve?[] }`, each an array of `{ unitId, quantity? (default 1) }`. Generic-unit entries become quantity stacks; hero/leader entries must be quantity 1. When a scenario authors a roster, the scenario start rebuilds active/reserve from it (and clears inventory/equipment to empty) instead of inheriting the previous run; campaign carry-over still overrides afterwards. A scenario authoring no roster keeps the prebuilt default roster (M16/M31 behavior). The clock always resets to day 1 on scenario start regardless of roster authoring. Validation rules are listed in `docs/validation_system.md` §20. Authored hero pool, banned-content lists, and per-Region Scenario Region Context overrides remain deferred.
+
 ---
 
 ## 10. Scenario Region Context
@@ -393,6 +398,8 @@ Rules:
 - Region files should not hard-own Scenario-level availability rules.
 - Scenario context should not mutate the reusable Region file directly.
 - Save data owns runtime state changes after play begins.
+
+Current implementation note (M32): the only implemented piece of Scenario Region Context is the scenario boundary — an authored `regions` id list that selects which Regions the Scenario exposes (see §9). The richer per-Region context (Scenario variables/flags visible to a Region, availability rules, allowed/banned content, ownership/reveal overrides) is still deferred. Initial reveal is a runtime per-Region node set seeded at scenario start (see §41), not yet an authored Region field.
 
 ---
 

@@ -56,6 +56,22 @@ namespace ashvale::rendering
             }
 
             const Vector2 p{ mapRect.x + node.position.x, mapRect.y + node.position.y };
+
+            // M32 fog/reveal: an unrevealed (unknown) node is drawn as a faded
+            // marker with no content/label and no enemy presence. The selection
+            // ring still shows so navigation toward the unknown remains readable.
+            if (!node.revealed)
+            {
+                DrawCircleV(p, context.theme.nodeRadius, Fade(context.theme.mutedTextColor, 0.22f));
+                DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), context.theme.nodeRadius, Fade(RAYWHITE, 0.35f));
+                DrawTextEx(font, "?", { p.x - 4.0f, p.y - 8.0f }, context.smallFontSize, 1.0f, Fade(context.theme.textColor, 0.6f));
+                if (node.selected)
+                {
+                    DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), context.theme.nodeRadius + 11.0f, context.theme.selectionColor);
+                }
+                continue;
+            }
+
             const Color fill = GetNodeColor(node.type, context.theme);
 
             DrawCircleV(p, context.theme.nodeRadius, fill);
@@ -76,6 +92,10 @@ namespace ashvale::rendering
             {
                 DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), context.theme.nodeRadius + 16.0f, context.theme.dangerColor);
                 DrawTextEx(font, "!", { p.x - 4.0f, p.y - context.theme.nodeRadius - 18.0f }, context.smallFontSize, 1.0f, context.theme.dangerColor);
+                if (!node.enemyEstimate.empty())
+                {
+                    DrawTextEx(font, node.enemyEstimate.c_str(), { p.x - 28.0f, p.y - context.theme.nodeRadius - 34.0f }, context.smallFontSize, 1.0f, context.theme.dangerColor);
+                }
             }
 
             DrawTextEx(font, node.label.c_str(), { p.x - 20.0f, p.y + 22.0f }, context.smallFontSize, 1.0f, context.theme.textColor);

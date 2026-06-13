@@ -11,6 +11,7 @@
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
 #include "gameplay/region/RegionTravelRules.h"
+#include "gameplay/world/RegionRevealRules.h"
 
 #include <algorithm>
 #include <limits>
@@ -1265,6 +1266,9 @@ bool GameSession::IsInLocationMode() const {
 
 void GameSession::SetDestination(const std::string& destinationId) {
     destinationId_ = destinationId;
+    // M32: the current node is the single chokepoint for "where the player is".
+    // Reaching a node reveals its neighborhood (HoMM-persistent fog).
+    RevealAroundNode(regionId_, destinationId_);
 }
 
 void GameSession::ApplyDoorOpenCost() {
@@ -2221,7 +2225,17 @@ core::SaveData GameSession::ToSaveData() const {
         // M30 contested infrastructure: Temporarily Unavailable heroes and the
         // bounded service event log, persisted as-is.
         unavailableHeroes_,
-        serviceEventLog_
+        serviceEventLog_,
+        // M32 fog/reveal: persist per-Region revealed node sets.
+        [&]() {
+            std::vector<core::RegionRevealSaveState> out;
+            out.reserve(revealedNodesByRegion_.size());
+            for (const auto& [regionId, nodes] : revealedNodesByRegion_) {
+                out.push_back(core::RegionRevealSaveState{
+                    regionId, std::vector<std::string>(nodes.begin(), nodes.end())});
+            }
+            return out;
+        }()
     };
 }
 
@@ -2443,8 +2457,13 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
     campaignFlags_ = std::set<std::string>(
         saveData.campaignFlags.begin(), saveData.campaignFlags.end());
     campaignState_ = CampaignStateFromString(saveData.campaignState);
+    // M32 Scenario Context is derived (not persisted): re-derive from the restored
+    // current Scenario so a loaded game keeps the same Region boundary. Absent
+    // scenario (legacy save / no scenarios) => empty context => all Regions.
+    scenarioRegionIds_.clear();
     if (const data::ScenarioDefinition* scenario = FindScenarioDefinition(currentScenarioId_)) {
         SelectActiveOutcomeForScenario(*scenario);
+        scenarioRegionIds_ = scenario->regionIds;
     }
 
     // M17: restore the non-gold resource pool. Reset to zero, then apply saved
@@ -2477,6 +2496,23 @@ void GameSession::ApplySaveData(const core::SaveData& saveData) {
             serviceEventLog_.begin(),
             serviceEventLog_.end() - kMaxServiceEventLogEntries);
     }
+
+    // M32: restore per-Region reveal state. An absent set (legacy save) leaves the
+    // map empty; either way reveal the current node's neighborhood so the player's
+    // position is always known after load.
+    revealedNodesByRegion_.clear();
+    for (const auto& saved : saveData.revealedRegionNodes) {
+        if (saved.regionId.empty()) {
+            continue;
+        }
+        auto& set = revealedNodesByRegion_[saved.regionId];
+        for (const auto& nodeId : saved.nodeIds) {
+            if (!nodeId.empty()) {
+                set.insert(nodeId);
+            }
+        }
+    }
+    RevealAroundNode(regionId_, destinationId_);
 
     MarkRosterProjectionDirty();
 }
@@ -3588,6 +3624,98 @@ void GameSession::ApplyCarrySet(const campaign::CampaignCarrySet& set) {
     MarkRosterProjectionDirty();
 }
 
+const std::vector<std::string>& GameSession::ScenarioRegionIds() const {
+    return scenarioRegionIds_;
+}
+
+bool GameSession::IsNodeRevealed(const std::string& regionId, const std::string& nodeId) const {
+    const auto it = revealedNodesByRegion_.find(regionId);
+    if (it == revealedNodesByRegion_.end()) {
+        return false;
+    }
+    return it->second.find(nodeId) != it->second.end();
+}
+
+std::vector<std::string> GameSession::RevealedNodeIds(const std::string& regionId) const {
+    const auto it = revealedNodesByRegion_.find(regionId);
+    if (it == revealedNodesByRegion_.end()) {
+        return {};
+    }
+    return {it->second.begin(), it->second.end()};
+}
+
+void GameSession::RevealAroundNode(const std::string& regionId, const std::string& nodeId) {
+    if (regionId.empty() || nodeId.empty()) {
+        return;
+    }
+    const data::RegionDefinition* region = FindRegionDefinition(regionId);
+    if (region == nullptr) {
+        // No catalog/region: still mark the node itself so the current node is known.
+        revealedNodesByRegion_[regionId].insert(nodeId);
+        return;
+    }
+    const auto revealed = world::NodesWithinGraphRadius(*region, nodeId, kRevealRadius);
+    if (revealed.empty()) {
+        // nodeId is not a node of this region; mark it directly as a defensive floor.
+        revealedNodesByRegion_[regionId].insert(nodeId);
+        return;
+    }
+    auto& set = revealedNodesByRegion_[regionId];
+    for (const auto& id : revealed) {
+        set.insert(id);
+    }
+}
+
+void GameSession::SeedScenarioReveal() {
+    RevealAroundNode(regionId_, destinationId_);
+    // Owned-service nodes in the current Region start revealed (docs §15: owned
+    // nodes reveal their neighborhood at scenario start). Services in other Regions
+    // are ignored here; RevealAroundNode is a no-op for non-current-region nodes.
+    for (const auto& owned : ownedServices_) {
+        const data::LocationServiceDefinition* svc = FindLocationServiceById(owned.serviceId);
+        if (svc != nullptr && !svc->locationId.empty()) {
+            RevealAroundNode(regionId_, svc->locationId);
+        }
+    }
+}
+
+bool GameSession::IsRegionInScenarioContext(const std::string& regionId) const {
+    if (scenarioRegionIds_.empty()) {
+        return true;   // no authored context => all Regions are in scope
+    }
+    return std::find(scenarioRegionIds_.begin(), scenarioRegionIds_.end(), regionId) !=
+           scenarioRegionIds_.end();
+}
+
+void GameSession::ApplyAuthoredStartRoster(
+    const std::vector<data::ScenarioStartRosterEntry>& active,
+    const std::vector<data::ScenarioStartRosterEntry>& reserve) {
+    rosterStacks_.clear();
+    activeSlotStackIds_.assign(kActiveSlotCount, "");
+    reserveSlotStackIds_.assign(kReserveSlotCount, "");
+    nextStackIdCounter_ = 1;
+
+    auto placeInto = [&](const std::vector<data::ScenarioStartRosterEntry>& entries,
+                         std::vector<std::string>& slots) {
+        int write = 0;
+        for (const auto& entry : entries) {
+            if (write >= static_cast<int>(slots.size()) || entry.unitId.empty() ||
+                entry.quantity <= 0) {
+                continue;
+            }
+            const std::string stackId = GenerateNextStackId();
+            rosterStacks_.push_back(RosterStackState{stackId, entry.unitId, entry.quantity});
+            slots[write] = stackId;
+            ++write;
+        }
+    };
+    placeInto(active, activeSlotStackIds_);
+    placeInto(reserve, reserveSlotStackIds_);
+
+    NormalizeRosterState();
+    MarkRosterProjectionDirty();
+}
+
 void GameSession::ReseedWorldMapUnlock() {
     unlockedRegionIds_.clear();
     for (const auto& entry : worldMap_.entries) {
@@ -3643,8 +3771,31 @@ void GameSession::TransitionToScenario(const std::string& scenarioId,
     recruitServiceStates_.clear();
     dailyServiceStates_.clear();
 
+    // M32: a Scenario start is day 1 at the day-start time. Reset the clock by
+    // assignment (not AdvanceClock) so no day-boundary payout/Energy side effects
+    // fire here; Energy is recomputed explicitly at the end of this method. This
+    // is unconditional and prevents a second New Game in the same process from
+    // inheriting the previous run's day/time.
+    clock_ = core::GameClock{};
+
+    // M32 authored start-state reset. Only when the Scenario authors a starting
+    // roster: rebuild the roster from authored data and clear inventory/equipment
+    // and the contested-infrastructure runtime so the start does not inherit the
+    // previous run. Campaign carry-over (Step 8) still overrides afterwards. When
+    // no roster is authored the existing roster/inventory are preserved exactly as
+    // M16/M31 did (the documented default Player Character roster path).
+    if (scenario->hasAuthoredRoster) {
+        ApplyAuthoredStartRoster(scenario->startActiveRoster, scenario->startReserveRoster);
+        items_.clear();
+        artifacts_.clear();
+        heroEquipment_.clear();
+        unavailableHeroes_.clear();
+        serviceEventLog_.clear();
+    }
+
     // Step 5 + 6: advance to the next scenario and set its start region/node.
     currentScenarioId_ = scenarioId;
+    scenarioRegionIds_ = scenario->regionIds;   // M32 Scenario Context (empty => all)
     regionId_ = scenario->startRegionId;
     if (!scenario->startNodeId.empty()) {
         destinationId_ = scenario->startNodeId;
@@ -3680,6 +3831,11 @@ void GameSession::TransitionToScenario(const std::string& scenarioId,
     for (const auto& flag : campaignFlags_) {
         storyFlags_.insert(flag);
     }
+
+    // M32: a Scenario start reveals only the area around the start node and any
+    // start-owned-service nodes; the rest of the Region begins unknown.
+    revealedNodesByRegion_.clear();
+    SeedScenarioReveal();
 
     // Step 8: apply carry-over (transition only). Overwrites the relevant defaults.
     if (carry.has_value()) {
@@ -3988,7 +4144,17 @@ GameSession::WorldMapTravelResult GameSession::TravelToRegion(
         return WorldMapTravelResult{ false, WorldMapTravelBlockReason::NotAtExitNode, 0, 0 };
     }
 
-    const std::vector<std::string> unlocked(unlockedRegionIds_.begin(), unlockedRegionIds_.end());
+    // M32 Scenario Context: only Regions in the active context are travelable, and
+    // a path may not route through out-of-context Regions. Filtering the unlocked
+    // set is sufficient — EvaluateWorldMapTravel returns DestinationLocked / NoPath
+    // for anything not reachable through it.
+    std::vector<std::string> unlocked;
+    unlocked.reserve(unlockedRegionIds_.size());
+    for (const auto& id : unlockedRegionIds_) {
+        if (IsRegionInScenarioContext(id)) {
+            unlocked.push_back(id);
+        }
+    }
     const auto eval = worldmap::EvaluateWorldMapTravel(
         regionId_,
         destinationRegionId,
@@ -4019,6 +4185,8 @@ GameSession::WorldMapTravelResult GameSession::TravelToRegion(
 
     regionId_ = destinationRegionId;
     destinationId_ = destRegion->arrivalNodeId;
+    // M32: arriving in a new Region reveals the area around its arrival node.
+    RevealAroundNode(regionId_, destinationId_);
     // Arrival drops back onto the Region layer at the destination's arrival node.
     // Travel can be committed from WorldMapMode, so the mode must be reset
     // explicitly here; otherwise the player would remain on the World Map screen
