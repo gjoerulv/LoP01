@@ -2,37 +2,31 @@
 
 ## Current baseline
 
-Treat the repository as a **post-M31** C++20 / raylib / CMake game project.
-
-Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, guarded and unguarded player-side owned-service claiming, v1 strategic-economy proof content, player-facing mine stationing/unstationing, a bounded read-only owned-service overview / strategic service readout panel, a bounded unit-storage foundation, cross-Region generic-unit travel loss with an explicit warning/confirmation, the M30 contested-infrastructure loop (deterministic service defense with stationed/stored defenders, storage loss with Temporarily Unavailable heroes, enemy-side service capture pressure, opt-in service destruction/restoration, persisted service event log with overview presentation), and the M31 shell entry flow (main menu, New Game Campaign/Standalone Scenario selection behind a validation/playability gate, bounded single-save Continue, and the `GameSession::StartStandaloneScenario` start handoff).
-
-Latest completed milestone: **M31 — Shell Entry + Scenario/Campaign Selection**.
+Use `docs/implementation_roadmap.md` as the authoritative source for the current implementation baseline, latest completed milestone, selected next milestone, and milestone candidates. Do not duplicate or infer milestone state from this file.
 
 Active scope: `docs/content_scope_v3.md`.
 
-The next milestone is **not yet selected**. Use `docs/implementation_roadmap.md` §4/§5 as the source of truth.
+Completed foundations include battle, roster, save/load, Region/Location flow, content validation, typed events, runtime enemy-team spawning, scenario outcomes, a dedicated Scenario Result screen, inventory/artifacts, Energy, World Map, Campaign, owned-service/economy systems, the narrow unit passive-effect spine, Trading Post transaction rules/APIs, bounded Trading Post interaction flow, Scenario-authored player economy/service start state, guarded and unguarded player-side owned-service claiming, v1 strategic-economy proof content, player-facing mine stationing/unstationing, a bounded read-only owned-service overview / strategic service readout panel, bounded unit storage, cross-Region generic-unit travel loss with explicit warning/confirmation, the v2 contested-infrastructure loop, and the v3 shell entry flow.
 
-`docs/content_scope_v2.md` is complete and should be archived by the user. Do not keep extending v2.
-
-Do not treat the documented v3 candidates — Scenario Context, fog/reveal, threat preview/auto-resolve, quest/journal, full item economy, full AI economy, full settings/mods shell, or final service-management UI — as already implemented.
+Do not treat documented v3 candidates — Scenario Context, fog/reveal, threat preview/auto-resolve, quest/journal, full item economy, full AI economy, full settings/mods shell, or final service-management UI — as implemented unless `docs/implementation_roadmap.md` says the relevant milestone is complete.
 
 ## Required reading
 
 Before architecture, roadmap, economy, Scenario, content, UI, shell, or rendering work, read:
 
-1. `README.md`
-2. `README_DECISIONS.md`
-3. `docs/implementation_roadmap.md`
-4. `docs/content_scope_v3.md`
-5. `docs/technical_direction.md`
-6. `docs/game_vision.md`
-7. `docs/game_shell_flow.md`
-8. `docs/presentation_game_feel.md`
-9. `docs/core_loop_rules.md`
-10. `docs/scenario_authoring.md`
-11. `docs/content_schema.md`
-12. `docs/validation_system.md`
-13. `docs/terminology_map.md`
+1. `docs/implementation_roadmap.md`
+2. `docs/content_scope_v3.md`
+3. `docs/technical_direction.md`
+4. `docs/game_vision.md`
+5. `docs/game_shell_flow.md`
+6. `docs/presentation_game_feel.md`
+7. `docs/core_loop_rules.md`
+8. `docs/scenario_authoring.md`
+9. `docs/content_schema.md`
+10. `docs/validation_system.md`
+11. `docs/terminology_map.md`
+12. `README.md`
+13. `README_DECISIONS.md`
 
 Archived files are historical context only. Do not use archived roadmap/scope files as current requirements.
 
@@ -49,11 +43,7 @@ Archived files are historical context only. Do not use archived roadmap/scope fi
 
 ## Source comments
 
-Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M25 Phase 1:` in production source.
-
-Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations.
-
-Test comments are acceptable when they explain non-obvious regression intent.
+Production source comments should document durable contracts, not milestone bookkeeping. Avoid comments such as `M25 Phase 1:` in production source. Use comments only for non-obvious invariants, validation traps, save/load contracts, compatibility behavior, performance-sensitive choices, or deliberate limitations. Test comments are acceptable when they explain non-obvious regression intent.
 
 ## Current settled system boundaries
 
@@ -62,14 +52,13 @@ Test comments are acceptable when they explain non-obvious regression intent.
 - `playerStart` is the Scenario-authored surface for starting Gold, non-Gold resources, and initial player-owned service state. It is runtime start-state, not content mutation.
 - Owned services can be claimed by both guarded capture after hostile victory and peaceful legal node entry via `GameSession::ResolveNodeEntryClaims`.
 - Hostile-occupied travel may start battle before the moving player team is placed on the destination node. This is intended final-direction behavior.
-- M27's owned-service overview is read-only presentation. It must not become remote stationing, storage, repair, capture, or service-management UI without a scoped milestone.
-- M28 storage is distinct from M25 stationing: storage cap 7, stationing cap 5; storage uses `StoredUnitSaveState`; stationing uses stationed guard/worker refs.
-- M29 travel loss affects only slotted active/reserve generic stacks. Stored and stationed stacks survive Region travel. Heroes and Player Character travel.
-- M30 service attacks are node-level against player-owned attackable services (Mine, trader kinds, Storage; never Rest/Shop/Recruit/Muster; never the arrival node). Player absent uses deterministic `ServiceDefenseRules`; player present uses the existing interactive battle surface.
-- M30 capture resolves placed stacks atomically: generics dismissed, heroes Temporarily Unavailable, refs cleared, Player Character never placed/lost/TU, ownership transfers immediately.
-- M30 destruction/restoration is opt-in (`destroyable` + validated `restore_cost`) and uses the bounded Region-mode maintenance action.
-- M31 shell: `GameMode::Title` hosts the main menu (Continue / New Game / Quit) and the New Game selection screens through an App-local screen state machine that is never persisted. All content starts go through `GameSession::StartCampaign` / `StartStandaloneScenario` behind the validation gate (global content-error count plus `app::shell::ShellSelectionRules` per-entry reference checks); invalid content is never silently started, and a failed Continue keeps the shell with a readable reason and no session mutation.
-- Standalone Scenario selection enforces `standaloneSelectable`. Settings/Mods/Credits/Tutorial/PvP are hidden (not stubbed) until real systems/content exist.
-- Continue is a bounded single-save path (`saves/slot_1.json`); there are no save slots or save metadata. Quicksave (F5) is suppressed at the shell so a fresh session cannot overwrite a real save; quickload (F9) remains.
-- M31 made no character creation: starts use the prebuilt default Player Character roster, and New Game keeps the M16 start-state semantics (roster/clock/inventory continue from the current session; gold/resources/services/flags reset per `playerStart`). The Scenario Context + Start-State candidate owns the real fix.
-- `GameMode::CampaignSelectMode` and `OpeningSequence` remain only as save-compat paths; the shell does not enter them. `GameSession::AdvanceMode` is the session-level dev/test seam (the old cancel-at-title direct start is gone).
+- The owned-service overview is read-only presentation. It must not become remote stationing, storage, repair, capture, or service-management UI without a scoped milestone.
+- Storage is distinct from stationing: storage cap 7, stationing cap 5; storage uses `StoredUnitSaveState`; stationing uses stationed guard/worker refs.
+- Cross-Region travel loss affects only slotted active/reserve generic stacks. Stored and stationed stacks survive Region travel. Heroes and Player Character travel.
+- Service attacks are node-level against player-owned attackable services. Player absent uses deterministic `ServiceDefenseRules`; player present uses the existing interactive battle surface.
+- Capture resolves placed stacks atomically: generics dismissed, heroes Temporarily Unavailable, refs cleared, Player Character never placed/lost/TU, ownership transfers immediately.
+- Destruction/restoration is opt-in (`destroyable` + validated `restore_cost`) and uses the bounded Region-mode maintenance action.
+- Shell entry uses `GameMode::Title` for the main menu and an App-local screen state machine that is never persisted. Content starts go through `GameSession::StartCampaign` / `StartStandaloneScenario` behind the validation/playability gate.
+- Standalone Scenario selection enforces `standaloneSelectable`. Settings/Mods/Credits/Tutorial/PvP remain hidden until real systems/content exist.
+- Continue is a bounded single-save path (`saves/slot_1.json`); there are no save slots or save metadata. Quicksave is suppressed at the shell so a fresh session cannot overwrite a real save; quickload remains.
+- Starts use the prebuilt default Player Character roster, and New Game currently keeps the historical roster/clock/inventory start-state semantics. Scenario Context + Start-State Authoring is the likely scoped fix when selected in the roadmap.

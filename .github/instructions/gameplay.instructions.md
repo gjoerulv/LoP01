@@ -1,13 +1,12 @@
 # Gameplay instructions
 
-- Treat the project as post-M31. `docs/content_scope_v2.md` is complete; active planning uses `docs/content_scope_v3.md`.
-- Current gameplay foundations include deterministic scenario outcomes, Scenario Result presentation, Scenario `playerStart`, owned-service economy, Trading Post interaction, guarded and unguarded player-side service claiming, v1 proof content, player-facing mine stationing/unstationing, a bounded read-only owned-service overview / strategic service readout panel, bounded Storage, cross-Region generic-unit travel loss with explicit warning/confirmation, and the M30 contested-infrastructure loop: service defense, storage loss with Temporarily Unavailable heroes, enemy capture pressure, destruction/restoration, and service event log.
-- Latest completed milestone: **M31 — Shell Entry + Scenario/Campaign Selection**. The next milestone is not yet selected; use `docs/implementation_roadmap.md` as the source of truth.
-- M31 shell: `GameMode::Title` hosts the main menu and New Game selection (App-local screen state, never persisted). Content starts go through `GameSession::StartCampaign`/`StartStandaloneScenario` behind the validation/playability gate (`app::shell::ShellSelectionRules`); standalone selection enforces `standaloneSelectable`; Continue is the bounded single-save path with safe failure; quicksave is suppressed at the shell. M31 did not add character creation, settings/mods, save-slot metadata, Scenario Region Context, fog/scouting, threat preview, item economy, or AI economy — starts use the prebuilt default Player Character and keep the M16 roster/clock start-state semantics.
-- M29 travel loss is implemented narrowly: the at-risk set is exactly slotted active/reserve generic stacks. Stored and stationed stacks survive Region travel. Heroes and the Player Character travel. The warning is two-stage on the World Map screen; `TravelToRegion` owns the confirmed mutation.
-- M30 service defense: node-level attacks against player-owned attackable services resolve through `GameSession::ResolveServiceAttack` — deterministic `ServiceDefenseRules` when the player is absent, existing interactive battle surface when the player stands on the node.
-- Capture transfers ownership immediately and resolves placed stacks atomically: generics dismissed, heroes Temporarily Unavailable, Player Character never placed/lost/TU, refs cleared in the same mutation.
-- M30 enemy pressure is bounded: `ProcessEnemyPhase` attack action with current-region, patrol-radius, arrival-node, alliance, and deterministic target-order gates.
-- M30 destruction/restoration is opt-in via authored `destroyable` + validated `restore_cost`. Mine payout semantics are unchanged.
-- M27/M30 owned-service overview is READ-ONLY presentation. Do not add remote stationing, storage management, repair/destruction, ownership transfer, or other service-management actions to it unless a scoped roadmap milestone explicitly selects that work.
-- Gameplay-rule changes must be tested in pure/unit tests where practical and integration/end-to-end tests where the rule crosses systems.
+Do not maintain separate milestone status in this file.
+
+Use these documents as the source of truth:
+
+- Current milestone/baseline: `docs/implementation_roadmap.md`
+- Active scope cap: `docs/content_scope_v3.md`
+- General agent/workflow guidance: `CLAUDE.md`
+- Final gameplay rules: `docs/game_vision.md`, `docs/core_loop_rules.md`, `docs/combat_rules.md`, `docs/game_shell_flow.md`, `docs/scenario_authoring.md`, `docs/content_schema.md`, and `docs/validation_system.md`
+
+Gameplay-rule changes must be tested in pure/unit tests where practical and integration/end-to-end tests where the rule crosses systems. Preserve completed v1/v2 systems unless the active roadmap explicitly selects a revision.
