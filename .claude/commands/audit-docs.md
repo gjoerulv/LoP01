@@ -4,12 +4,9 @@ Audit against the active v3 planning layer and the milestone-agnostic final-visi
 
 Active planning docs:
 
-- `docs/content_scope_v3.md`
 - `docs/implementation_roadmap.md`
+- `docs/content_scope_v3.md`
 - `CLAUDE.md`
-- `.github/copilot-instructions.md`
-- `.github/instructions/gameplay.instructions.md`
-- `.github/agents/game-architect.agent.md`
 
 Final-vision/source-of-truth docs:
 
@@ -24,6 +21,4 @@ Final-vision/source-of-truth docs:
 - `docs/validation_system.md`
 - `docs/terminology_map.md`
 
-Baseline: post-M31. v2 is complete; v3 is the active scope. Latest completed milestone: **M31 — Shell Entry + Scenario/Campaign Selection**. The next milestone is not yet selected.
-
-Flag stale references that describe the project as post-M30 or earlier, say v2 is still active, or say M31 is still planned/selected.
+Milestone state should appear in `docs/implementation_roadmap.md`, not be duplicated across agent guidance. Flag stale references that describe archived scopes as active, contradict the roadmap baseline, or treat roadmap candidates as implemented.
