@@ -84,12 +84,14 @@ add_executable(ashvale_slice
   src/app/RegionController.cpp
   src/app/WorldMapController.cpp
   src/app/CampaignController.cpp
+  src/app/ShellSelectionRules.cpp
   src/app/LocationController.cpp
   src/app/BattleController.cpp
   src/app/mappers/HudModelMapper.cpp
   src/app/mappers/RegionModelMapper.cpp
   src/app/mappers/WorldMapModelMapper.cpp
   src/app/mappers/CampaignModelMapper.cpp
+  src/app/mappers/ShellModelMapper.cpp
   src/app/mappers/LocationModelMapper.cpp
   src/app/mappers/BattleModelMapper.cpp
   src/app/mappers/ScenarioResultModelMapper.cpp
@@ -136,7 +138,9 @@ if (BUILD_TESTING)
     src/app/mappers/WorldMapModelMapper.cpp
     src/app/WorldMapController.cpp
     src/app/CampaignController.cpp
+    src/app/ShellSelectionRules.cpp
     src/app/mappers/CampaignModelMapper.cpp
+    src/app/mappers/ShellModelMapper.cpp
     src/app/mappers/ScenarioResultModelMapper.cpp
     src/app/mappers/OwnedServiceOverviewModelMapper.cpp
     src/app/formatters/LocationServicePromptFormatter.cpp
@@ -159,6 +163,8 @@ if (BUILD_TESTING)
     tests/EnemyServicePressureTests.cpp
     tests/ServiceDestructionTests.cpp
     tests/ContestedInfrastructureContentTests.cpp
+    tests/StandaloneScenarioStartTests.cpp
+    tests/ShellSelectionTests.cpp
     tests/QuestStateTests.cpp
     tests/SaveGameTests.cpp
     tests/ResourceStateTests.cpp

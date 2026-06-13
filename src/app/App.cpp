@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cctype>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -22,7 +23,9 @@ namespace app {
 namespace {
 using ashvale::rendering::DebugLine;
 using ashvale::rendering::DebugOverlayModel;
-using ashvale::rendering::TitleScreenModel;
+
+// Single bounded save path (no save slots yet); Continue/F5/F9 all share it.
+constexpr const char* kSaveFilePath = "saves/slot_1.json";
 
 std::vector<std::string> BuildBlockedTransitNodeIds(const std::vector<app::mappers::RegionNodeMeta>& nodes) {
     std::vector<std::string> blockedNodeIds;
@@ -103,13 +106,23 @@ App::App() {
     }
     statusMessage_ = contentLoaded_ ? "Content loaded" : "Content could not be loaded";
     observedDay_ = session_.Snapshot().day;
+
+    // M31 shell gates: validation errors are counted once here (the gate that
+    // keeps invalid content from starting), and save availability is cached so
+    // the shell never probes the filesystem per frame.
+    for (const auto& message : content_.ValidationMessages()) {
+        if (message.severity == Severity::Error) {
+            ++contentValidationErrorCount_;
+        }
+    }
+    shellHasSave_ = std::filesystem::exists(kSaveFilePath);
 }
 
 void App::Run() {
     InitWindow(1280, 720, "Project Ashvale");
     SetTargetFPS(60);
 
-    while (!WindowShouldClose()) {
+    while (!WindowShouldClose() && !quitRequested_) {
         Update();
 
         BeginDrawing();
@@ -225,26 +238,187 @@ void App::InitializeLocationIfNeeded(const gameplay::SessionSnapshot& snapshot) 
 void App::AdvanceFrontEndModesIfRequested(
     const gameplay::SessionSnapshot& snapshot,
     const input::InputState& input) {
-    // M16-c: Title is presence-gated. With campaigns installed, confirm opens
-    // Campaign Selection; cancel skips to standalone play (the existing flow), so
-    // standalone stays reachable. With no campaigns, confirm advances as before.
+    // M31: Title hosts the shell (main menu + New Game selection). The old
+    // direct dev start (cancel-to-skip into the default world) is gone from
+    // player input; GameSession::AdvanceMode remains as the session-level
+    // dev/test seam.
     if (snapshot.mode == gameplay::GameMode::Title) {
-        if (input.confirm) {
-            if (!content_.Campaigns().empty()) {
-                session_.EnterCampaignSelectMode();
-                campaignSelectedIndex_ = 0;
-            } else {
-                session_.AdvanceMode();
-            }
-        } else if (input.cancel && !content_.Campaigns().empty()) {
-            session_.AdvanceMode();   // standalone path when campaigns exist
-        }
+        UpdateTitleShell(input);
         return;
     }
 
-    // OpeningSequence -> RegionMode on confirm (unchanged).
+    // OpeningSequence -> RegionMode on confirm. Unreachable from the M31 shell
+    // (content starts land directly in RegionMode) but kept intact for saves
+    // written mid-opening and for the AdvanceMode dev/test seam.
     if (input.confirm && snapshot.mode == gameplay::GameMode::OpeningSequence) {
         session_.AdvanceMode();
+    }
+}
+
+shell::ShellEntryStatus App::ShellContentGate() const {
+    return shell::ContentGateStatus(contentLoaded_, contentValidationErrorCount_);
+}
+
+void App::EnterShell(const std::string& statusText) {
+    session_.EnterTitleMode();
+    shellScreen_ = ShellScreen::MainMenu;
+    shellSelectedIndex_ = 0;
+    shellStatusText_ = statusText;
+    shellHasSave_ = std::filesystem::exists(kSaveFilePath);
+}
+
+void App::ContinueFromShell() {
+    shellHasSave_ = std::filesystem::exists(kSaveFilePath);
+    if (!shellHasSave_) {
+        shellStatusText_ = "No save found — start a New Game.";
+        return;
+    }
+    const auto loaded = saveRepository_.LoadFromFile(kSaveFilePath);
+    if (!loaded.has_value()) {
+        // Unreadable/incompatible save: nothing was mutated; stay in the shell.
+        shellStatusText_ = "Save could not be loaded (unreadable or incompatible).";
+        return;
+    }
+    session_.ApplySaveData(*loaded);
+    ResetTransientModeState();
+    statusMessage_ = "Loaded " + std::string(kSaveFilePath);
+}
+
+void App::UpdateTitleShell(const input::InputState& input) {
+    using mappers::ShellModelMapper;
+
+    switch (shellScreen_) {
+    case ShellScreen::MainMenu: {
+        const auto result = campaignController_.Update(
+            input, ShellModelMapper::kMainMenuItemCount, shellSelectedIndex_);
+        if (result.selectedIndex != shellSelectedIndex_) {
+            shellSelectedIndex_ = result.selectedIndex;
+            shellStatusText_.clear();
+        }
+        if (!result.confirmed) {
+            return;
+        }
+        if (shellSelectedIndex_ == ShellModelMapper::kMainMenuContinueIndex) {
+            ContinueFromShell();
+        } else if (shellSelectedIndex_ == ShellModelMapper::kMainMenuNewGameIndex) {
+            if (!contentLoaded_) {
+                shellStatusText_ = "Installed content could not be loaded.";
+                return;
+            }
+            shellScreen_ = ShellScreen::GameModeSelect;
+            shellSelectedIndex_ = 0;
+            const auto gate = ShellContentGate();
+            shellStatusText_ = gate.playable ? "" : gate.reason;
+        } else if (shellSelectedIndex_ == ShellModelMapper::kMainMenuQuitIndex) {
+            quitRequested_ = true;
+        }
+        return;
+    }
+    case ShellScreen::GameModeSelect: {
+        const auto result = campaignController_.Update(
+            input, ShellModelMapper::kGameModeRowCount, shellSelectedIndex_);
+        shellSelectedIndex_ = result.selectedIndex;
+        if (result.cancelled) {
+            shellScreen_ = ShellScreen::MainMenu;
+            shellSelectedIndex_ = ShellModelMapper::kMainMenuNewGameIndex;
+            shellStatusText_.clear();
+            return;
+        }
+        if (!result.confirmed) {
+            return;
+        }
+        if (shellSelectedIndex_ == ShellModelMapper::kGameModeCampaignIndex) {
+            if (content_.Campaigns().empty()) {
+                shellStatusText_ = "No campaigns installed.";
+                return;
+            }
+            shellScreen_ = ShellScreen::CampaignSelect;
+        } else {
+            if (shell::StandaloneScenarios(content_).empty()) {
+                shellStatusText_ = "No standalone scenarios installed.";
+                return;
+            }
+            shellScreen_ = ShellScreen::ScenarioSelect;
+        }
+        shellSelectedIndex_ = 0;
+        const auto gate = ShellContentGate();
+        shellStatusText_ = gate.playable ? "" : gate.reason;
+        return;
+    }
+    case ShellScreen::CampaignSelect: {
+        const auto& campaigns = content_.Campaigns();
+        const auto result = campaignController_.Update(
+            input, static_cast<int>(campaigns.size()), shellSelectedIndex_);
+        shellSelectedIndex_ = result.selectedIndex;
+        if (result.cancelled) {
+            shellScreen_ = ShellScreen::GameModeSelect;
+            shellSelectedIndex_ = ShellModelMapper::kGameModeCampaignIndex;
+            shellStatusText_.clear();
+            return;
+        }
+        if (!result.confirmed || campaigns.empty()) {
+            return;
+        }
+        const auto& campaign = campaigns[shellSelectedIndex_];
+        // Validation/playability gate: invalid content is never started silently.
+        const auto gate = ShellContentGate();
+        if (!gate.playable) {
+            shellStatusText_ = gate.reason;
+            return;
+        }
+        const auto entry = shell::CampaignPlayability(content_, campaign);
+        if (!entry.playable) {
+            shellStatusText_ = "Unavailable: " + entry.reason;
+            return;
+        }
+        session_.StartCampaign(campaign.id);
+        if (session_.Snapshot().mode == gameplay::GameMode::Title) {
+            // Defensive: the session refused the start; stay in the shell.
+            shellStatusText_ = "Could not start campaign.";
+            return;
+        }
+        MarkCurrentDayObservedAfterIntentionalTimeAdvance();
+        ResetTransientModeState();
+        statusMessage_ = "Campaign started: " +
+            (campaign.name.empty() ? campaign.id : campaign.name);
+        return;
+    }
+    case ShellScreen::ScenarioSelect: {
+        const auto standalone = shell::StandaloneScenarios(content_);
+        const auto result = campaignController_.Update(
+            input, static_cast<int>(standalone.size()), shellSelectedIndex_);
+        shellSelectedIndex_ = result.selectedIndex;
+        if (result.cancelled) {
+            shellScreen_ = ShellScreen::GameModeSelect;
+            shellSelectedIndex_ = ShellModelMapper::kGameModeScenarioIndex;
+            shellStatusText_.clear();
+            return;
+        }
+        if (!result.confirmed || standalone.empty()) {
+            return;
+        }
+        const auto* scenario = standalone[shellSelectedIndex_];
+        const auto gate = ShellContentGate();
+        if (!gate.playable) {
+            shellStatusText_ = gate.reason;
+            return;
+        }
+        const auto entry = shell::ScenarioPlayability(content_, *scenario);
+        if (!entry.playable) {
+            shellStatusText_ = "Unavailable: " + entry.reason;
+            return;
+        }
+        session_.StartStandaloneScenario(scenario->id);
+        if (session_.Snapshot().mode == gameplay::GameMode::Title) {
+            shellStatusText_ = "Could not start scenario.";
+            return;
+        }
+        MarkCurrentDayObservedAfterIntentionalTimeAdvance();
+        ResetTransientModeState();
+        statusMessage_ = "Scenario started: " +
+            (scenario->name.empty() ? scenario->id : scenario->name);
+        return;
+    }
     }
 }
 
@@ -629,18 +803,25 @@ void App::Update() {
     const bool inTransientScreen =
         currentMode == gameplay::GameMode::ScenarioResultMode ||
         currentMode == gameplay::GameMode::OwnedServiceOverviewMode;
+    // Saving from the shell would overwrite a real save with default session
+    // state; quicksave is gameplay-only. Quickload at the shell stays available
+    // (it is just Continue).
+    const bool inShell = currentMode == gameplay::GameMode::Title;
 
-    if (input.save && !inTransientScreen) {
-        const bool saved = saveRepository_.SaveToFile(session_.ToSaveData(), "saves/slot_1.json");
-        statusMessage_ = saved ? "Saved to saves/slot_1.json" : "Save failed";
+    if (input.save && !inTransientScreen && !inShell) {
+        const bool saved = saveRepository_.SaveToFile(session_.ToSaveData(), kSaveFilePath);
+        statusMessage_ = saved ? "Saved to " + std::string(kSaveFilePath) : "Save failed";
+        if (saved) {
+            shellHasSave_ = true;   // Continue becomes available without an fs probe
+        }
     }
 
     if (input.load && !inTransientScreen) {
-        const auto loaded = saveRepository_.LoadFromFile("saves/slot_1.json");
+        const auto loaded = saveRepository_.LoadFromFile(kSaveFilePath);
         if (loaded.has_value()) {
             session_.ApplySaveData(*loaded);
             ResetTransientModeState();
-            statusMessage_ = "Loaded saves/slot_1.json";
+            statusMessage_ = "Loaded " + std::string(kSaveFilePath);
         } else {
             statusMessage_ = "Load failed";
         }
@@ -1037,7 +1218,7 @@ void App::UpdateCampaignSelectMode(const input::InputState& input) {
     campaignSelectedIndex_ = result.selectedIndex;
 
     if (result.cancelled) {
-        session_.EnterTitleMode();   // back to Title, no session mutation
+        EnterShell("");   // back to the shell main menu, no session mutation
         statusMessage_ = "Campaign selection cancelled";
         return;
     }
@@ -1067,10 +1248,10 @@ void App::UpdateScenarioResultMode(const input::InputState& input) {
         // Terminal Completed/Failed leaves the latch in place; mid-campaign
         // Victory has already advanced to the next scenario in RegionMode.
         if (session_.IsScenarioEnded()) {
-            session_.EnterTitleMode();
+            EnterShell("");
         }
     } else {
-        session_.EnterTitleMode();
+        EnterShell("");
     }
 }
 
@@ -1597,13 +1778,27 @@ void App::Draw() const {
 
     switch (snapshot.mode) {
     case gameplay::GameMode::Title: {
-        TitleScreenModel model;
-        model.title = "Project Ashvale";
-        model.subtitle = "Prototype Vertical Slice";
-        model.menuItems = {"Start"};
-        model.selectedIndex = 0;
-        model.footerHint = "Press Enter to continue";
-        titleRenderer_.Draw(context, model);
+        // M31 shell: Title hosts the main menu and the New Game selection
+        // screens; the lists are tiny, so per-frame mapping follows the existing
+        // selection-screen pattern.
+        switch (shellScreen_) {
+        case ShellScreen::MainMenu:
+            titleRenderer_.Draw(context, shellModelMapper_.MapMainMenu(
+                shellHasSave_, contentLoaded_, shellSelectedIndex_, shellStatusText_));
+            break;
+        case ShellScreen::GameModeSelect:
+            campaignSelectRenderer_.Draw(context, shellModelMapper_.MapGameModeSelect(
+                content_, shellSelectedIndex_, shellStatusText_));
+            break;
+        case ShellScreen::CampaignSelect:
+            campaignSelectRenderer_.Draw(context, shellModelMapper_.MapCampaignSelect(
+                content_, ShellContentGate(), shellSelectedIndex_, shellStatusText_));
+            break;
+        case ShellScreen::ScenarioSelect:
+            campaignSelectRenderer_.Draw(context, shellModelMapper_.MapScenarioSelect(
+                content_, ShellContentGate(), shellSelectedIndex_, shellStatusText_));
+            break;
+        }
         break;
     }
     case gameplay::GameMode::OpeningSequence: {

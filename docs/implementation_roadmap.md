@@ -8,7 +8,7 @@ The v1 strategic-economy proof and the v2 contested-infrastructure loop are comp
 
 `docs/content_scope_v2.md` is complete and should be archived by the user. The active scope cap is now `docs/content_scope_v3.md`.
 
-v3 is about **scenario readiness, player information, and authored progression**. The first selected v3 milestone is **M31 — Shell Entry + Scenario/Campaign Selection**.
+v3 is about **scenario readiness, player information, and authored progression**. The first completed v3 milestone is **M31 — Shell Entry + Scenario/Campaign Selection**.
 
 ---
 
@@ -54,12 +54,12 @@ Current stable foundation:
 | # | Issue | Action |
 |---|-------|--------|
 | 1 | Team Energy has an implemented leader passive term (`leader_energy`) and a still-deferred leader item/artifact Energy term. | Keep `leader_energy` on the current unit passive spine. Do not fake item/artifact Energy until an item/artifact effect milestone exists. |
-| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Recipes, full Scenario Region Contexts, full shell metadata, and several long-term authored structures still do not exist. | Add structs/loaders only when a scoped phase requires them. M31 may add shell/selection-facing metadata only if needed for real selection/validation. |
-| 3 | `docs/game_shell_flow.md` specifies the full shell flow, while code still focuses on the playable slice and direct mode transitions. | v3 gap. M31 is selected to implement the first bounded shell entry and content-selection path. |
-| 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | v3 gap. M31 should add only the validation/playability gate needed for shell selection. Broader release validation belongs to a later v3 closure milestone. |
+| 2 | `ContentRepository` loads only content kinds with C++ struct definitions. Recipes, full Scenario Region Contexts, full shell metadata, and several long-term authored structures still do not exist. | Add structs/loaders only when a scoped phase requires them. M31 added no new content kinds; shell selection reuses the existing definitions. |
+| 3 | `docs/game_shell_flow.md` specifies the full shell flow, while code still focuses on the playable slice and direct mode transitions. | Reduced by M31: bounded shell entry, content selection, the validation gate, and single-save Continue shipped. The remaining shell flow (settings/mods, save metadata, character creation, Load Game browser) stays future scope. |
+| 4 | `docs/validation_system.md` specifies a broader three-level validation model than is currently implemented. | Reduced by M31: the shell runs a global content-error gate plus per-entry reference checks before any start. Broader release validation belongs to a later v3 closure milestone. |
 | 5 | `docs/combat_rules.md` specifies timed status effects and broader command depth. | Gap; acceptable until a scoped battle-depth milestone. |
 | 6 | Player color is still effectively fixed as `Green` in several Region/enemy-team/outcome/economy/start-state/claiming paths. | Known debt. Fix only with a real player-team identity/scenario-start model. |
-| 7 | Scenario/Campaign authoring is thinner than final docs: no full Scenario Region Context, no full starting roster/hero pool, no banned-content list, limited branch/carry-over policy. | v3 target. Do not overbuild in M31 unless required for shell selection safety. |
+| 7 | Scenario/Campaign authoring is thinner than final docs: no full Scenario Region Context, no full starting roster/hero pool, no banned-content list, limited branch/carry-over policy. | v3 target. M31 did not overbuild here; this is the natural next-milestone candidate. |
 | 8 | Unit `passive_effects` support only `mine_production` and `leader_energy`; artifact `statBonus` remains on the artifact path. | Do not fold artifact/item/status behavior into the unit passive spine without a scoped milestone. |
 | 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. Build broader trader UI only in a scoped future milestone. |
 | 10 | Scenario `playerStart` covers economy/service start state only; authored starting roster, full team definitions, item/artifact start state, and `unlockedRegions` overrides are intentionally absent. | v3 candidate after M31, likely Scenario Context + Start-State Authoring. |
@@ -98,84 +98,37 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 20 — Storage Foundation:** M28 complete.
 - **Phase 21 — Cross-Region Generic Unit Preservation / Travel Warning:** M29 complete.
 - **Phase 22 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit:** M30 complete.
+- **Phase 23 - Shell Entry + Scenario/Campaign Selection:** M31 complete.
 
 ---
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit**.
+Latest completed milestone: **M31 — Shell Entry + Scenario/Campaign Selection**.
 
-`docs/content_scope_v2.md` is complete and should be archived. Active planning now uses `docs/content_scope_v3.md`.
+`docs/content_scope_v2.md` is complete and should be archived. Active planning uses `docs/content_scope_v3.md`.
 
-Selected next milestone: **M31 — Shell Entry + Scenario/Campaign Selection** *(planned)*.
+The next milestone is **not yet selected**. See §5 for candidates; Scenario Context + Start-State Authoring is the most direct continuation (the shell now exposes the M16-era start-state limitations documented below).
 
-### M31 — Shell Entry + Scenario/Campaign Selection (planned)
+### M31 — Shell Entry + Scenario/Campaign Selection (complete)
 
-**Goal:** implement the first real shell entry and content-selection gate so authored Campaigns/Scenarios can be started safely through player-facing flow instead of direct/dev-like runtime transitions.
+**Goal met:** the game boots into a real shell entry path. Authored Campaigns and Standalone Scenarios are chosen through player-facing selection with a validation/playability gate, Continue is a bounded single-save load, and invalid content or failed loads keep the player in the shell with readable reasons.
 
-M31 should be ambitious enough to create a useful shell foundation, but not a full final shell.
+#### Delivered
 
-#### Required scope
+- **Boot/main menu:** `GameMode::Title` hosts the shell; the App-local screen state machine (MainMenu → GameModeSelect → CampaignSelect/ScenarioSelect) is never persisted. Main menu: **Continue / New Game / Quit** with per-item enabled state and a bounded status line. Settings/Mods/Credits/Tutorial/PvP are hidden entirely (no real systems/content behind them yet) rather than shown as dead entries.
+- **New Game selection:** Game Mode Selection lists Campaign and Standalone Scenario (rows disabled with reasons when no content of that kind is installed). Campaign rows show authored name + description; scenario rows show authored name plus a generated "Starts in <Region>." context line. Ids appear nowhere as primary text. The standalone list enforces `standaloneSelectable` (`game_shell_flow.md` §9/§11) — `scenario_second` stays campaign-only.
+- **Validation/playability gate:** a global content gate (load failure, or any `ContentValidator` error, counted once at boot) blocks every start and disables every row with the same reason; cheap per-entry reference checks (`app::shell::ShellSelectionRules` — campaign start scenario resolves; scenario start region/node resolve) disable individual rows with their own reasons. The gate re-runs at confirm time, so invalid content is never silently started. Raw validation reports stay dev-facing (§12/§26).
+- **Start handoff:** campaign starts use the existing `GameSession::StartCampaign`; standalone starts use the new `GameSession::StartStandaloneScenario` (campaign-state cleared, same `TransitionToScenario` chokepoint: scenario-local reset, `playerStart`, outcome selection, RegionMode). Nothing bypasses save/load, validation, or outcome assumptions.
+- **Continue:** bounded single-save path (`saves/slot_1.json`). Missing file ⇒ disabled item + "No save found" on confirm; unreadable/incompatible file ⇒ readable failure with no session mutation (`LoadFromFile` is exception-safe and returns nullopt before any state is touched). Load Game is intentionally not a separate entry — there is exactly one save, so it would duplicate Continue. Quicksave (F5) is suppressed at the shell so a fresh session can never overwrite a real save; quickload (F9) remains.
+- **Presentation/tests:** the shell reuses the existing controller/mapper/renderer pattern — the pure `CampaignController` navigates every list (now honoring Up/Down as its footer always promised), `ShellModelMapper` builds all screen models, and the generic `CampaignSelectModel`/`TitleScreenModel` gained enabled/status fields. Tests cover the rules, the mappers, controller navigation, standalone start semantics, and save/load round-trips.
 
-M31 should implement:
+#### Documented M31 limitations (deliberate)
 
-1. **Boot/title/main-menu flow**
-   - A title or main entry mode that can be reached on startup.
-   - Main options at minimum: Continue, New Game, Load Game, Settings/Mods/Credits disabled or placeholder where appropriate, Quit if platform-safe.
-   - Controller/keyboard-friendly command mapping using existing input patterns.
-
-2. **New Game selection path**
-   - Game Mode Selection with at least Campaign and Standalone Scenario.
-   - Tutorial may be shown if there is a designated content entry; otherwise hidden/disabled.
-   - PvP hidden/disabled.
-
-3. **Campaign / Standalone Scenario selection**
-   - Lists installed/loaded Campaigns and Scenarios from current content.
-   - Standalone Scenario selection shows only entries that are intended to be standalone-selectable, or uses an explicit bounded fallback if the current schema lacks that field.
-   - Rows show player-facing name/description plus validation/playability status where available.
-   - Invalid/unplayable content is disabled or blocked with a clear reason.
-
-4. **Validation/playability gate**
-   - Starting selected content must run or reuse the appropriate validation checks.
-   - Invalid content must not be started silently.
-   - Dev-facing raw reports can remain out of scope, but player-facing reason strings must be clear enough to avoid black-box failure.
-
-5. **Start handoff**
-   - Starting a selected Scenario/Campaign should transition into the existing Scenario runtime path without bypassing `playerStart`, save/load, content validation, or Scenario outcome assumptions.
-   - If character creation is not implemented, use an explicit prebuilt/default Player Character path and document it as an M31 limitation.
-
-6. **Continue / Load Game foundation**
-   - Continue should attempt to load the most recent valid save if the current save system exposes that safely; otherwise show a clear disabled/placeholder reason.
-   - Load Game should show at least a bounded list/placeholder path that does not unsafe-load incompatible content.
-   - Do not implement full save-slot metadata/mod compatibility unless required for a safe M31 proof.
-
-7. **Tests and presentation**
-   - Use mapper/render-model/renderer patterns where practical.
-   - Add tests for shell state transitions, selection filtering, validation blocking, start handoff, and safe disabled states.
-
-#### Explicitly out of M31
-
-- full character creation;
-- full settings/options UI;
-- full Mods menu / load-order management;
-- full accessibility/video/audio/controls settings;
-- saved character templates;
-- full save-slot browser metadata;
-- full content-package/mod compatibility model;
-- scenario-region partitioning unless a tiny schema addition is absolutely required to select/start content safely;
-- broad UI skinning/polish beyond readable shell screens;
-- new gameplay systems unrelated to starting/choosing content.
-
-#### Acceptance criteria
-
-- The game can boot into a shell/menu path.
-- The player can choose New Game → Campaign or Standalone Scenario.
-- Invalid/unplayable entries are not silently started.
-- At least one shipped Scenario/Campaign can be started from shell selection and reaches the existing playable runtime.
-- Continue/Load behavior is safe and either functional or clearly disabled with reason.
-- Save/load compatibility remains intact.
-- Existing M25–M30 gameplay tests remain green.
-- Active docs/agent guidance are updated only after implementation is complete.
+- **No character creation:** every start uses the existing prebuilt default Player Character path (the M9-era startup roster with `hero_player`). This is the explicit prebuilt/default path the milestone allows; full creation flow is a future v3 candidate.
+- **New Game start-state inherits the M16 semantics:** `TransitionToScenario` resets gold/resources/services/flags/outcomes/quests/enemy teams per `playerStart`, but the roster, clock, and inventory continue from the current session (there is no scenario-authored roster yet). Starting a New Game after finishing a previous run in the same process therefore keeps that run's roster/day. This is the pre-existing campaign-start behavior, now surfaced through the shell; the Scenario Context + Start-State milestone owns the real fix.
+- **Single-save Continue:** no save slots, no save metadata (version/content ids), no grouped Load Game browser (`game_shell_flow.md` §14/§17 remain future scope).
+- **Legacy compatibility:** `GameMode::CampaignSelectMode` and `OpeningSequence` remain functional for old saves but are no longer entered by the shell. The old cancel-at-title direct dev start was removed from player input; `GameSession::AdvanceMode` remains as the session-level dev/test seam.
 
 ---
 
@@ -207,7 +160,7 @@ Larger systems that remain future candidates unless explicitly selected:
 
 - v2 is complete. Do not keep extending v2.
 - `docs/content_scope_v3.md` is the active scope cap.
-- M31 is selected. Do not implement later v3 candidates inside M31 unless directly required for M31's safe shell/content-selection path.
+- M31 is complete. Select the next v3 milestone from this roadmap's candidates after a code/doc audit; do not bundle later candidates into unscoped work.
 - Milestone-agnostic docs remain source-of-truth for final rules:
   - `docs/game_vision.md`
   - `docs/technical_direction.md`

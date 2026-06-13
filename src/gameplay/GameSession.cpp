@@ -3712,6 +3712,22 @@ void GameSession::StartCampaign(const std::string& campaignId) {
     TransitionToScenario(campaign->startScenarioId, std::nullopt);
 }
 
+void GameSession::StartStandaloneScenario(const std::string& scenarioId) {
+    const data::ScenarioDefinition* scenario = FindScenarioDefinition(scenarioId);
+    if (scenario == nullptr) {
+        return;
+    }
+    // A standalone run is explicitly campaign-free: clear any previous run's
+    // campaign identity so save/load and Scenario Result handling treat the
+    // session as standalone.
+    campaignId_.clear();
+    campaignState_ = CampaignState::None;
+    completedScenarioIds_.clear();
+    campaignFlags_.clear();
+    currentScenarioId_.clear();   // so the start records no completion
+    TransitionToScenario(scenarioId, std::nullopt);
+}
+
 void GameSession::AdvanceCampaignOnVictory() {
     if (campaignState_ != CampaignState::InProgress || !latchedOutcome_.has_value() ||
         latchedOutcome_->state != scenario::ScenarioOutcomeState::Victory) {

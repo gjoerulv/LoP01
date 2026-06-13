@@ -44,9 +44,9 @@ v3 is about **scenario readiness, player information, and authored progression**
 
 The first selected v3 milestone is:
 
-**M31 — Shell Entry + Scenario/Campaign Selection** *(planned)*.
+**M31 — Shell Entry + Scenario/Campaign Selection** *(complete)*.
 
-M31 should implement the first real shell entry path and content-selection gate:
+M31 implemented the first real shell entry path and content-selection gate:
 
 - title/main-menu entry flow;
 - Continue / New Game / Load Game at a bounded level;
@@ -57,7 +57,7 @@ M31 should implement the first real shell entry path and content-selection gate:
 - no character-creation system unless a prebuilt/default path requires a small placeholder;
 - no Mods/settings/accessibility shell except stub/disabled entries if needed for layout.
 
-M31 is selected first because every later v3 milestone benefits from a real way to choose, validate, start, load, and resume authored content safely.
+M31 is complete: the game boots into a main menu (Continue / New Game / Quit), New Game selects Campaign or Standalone Scenario from authored content behind a validation/playability gate, standalone selection enforces standaloneSelectable, Continue is a bounded single-save load with safe failure, and starts hand off through GameSession::StartCampaign / StartStandaloneScenario. Deliberate limitations (prebuilt default Player Character, M16 roster/clock start-state semantics, single save, hidden Settings/Mods/Tutorial/PvP entries) are documented in docs/implementation_roadmap.md §4.
 
 Candidate follow-on v3 milestones, to be selected after M31 based on code/doc audit:
 

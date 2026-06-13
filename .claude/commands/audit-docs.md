@@ -24,6 +24,6 @@ Final-vision/source-of-truth docs:
 - `docs/validation_system.md`
 - `docs/terminology_map.md`
 
-Baseline: post-M30. v2 is complete. Selected next milestone: **M31 — Shell Entry + Scenario/Campaign Selection**.
+Baseline: post-M31. v2 is complete; v3 is the active scope. Latest completed milestone: **M31 — Shell Entry + Scenario/Campaign Selection**. The next milestone is not yet selected.
 
-Flag stale references that describe the project as post-M29 or earlier, say v2 is still active, or say the next milestone is unselected.
+Flag stale references that describe the project as post-M30 or earlier, say v2 is still active, or say M31 is still planned/selected.

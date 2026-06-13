@@ -601,6 +601,14 @@ public:
     // roster) and enters the campaign's startScenarioId in RegionMode. No-ops if
     // the campaign id is unknown.
     void StartCampaign(const std::string& campaignId);
+    // Standalone (non-campaign) scenario start: clears any campaign run state,
+    // then enters `scenarioId` through the same scenario-transition chokepoint
+    // StartCampaign uses (scenario-local reset, playerStart economy/services,
+    // outcome selection, RegionMode). Like StartCampaign it begins from the
+    // existing roster/clock — there is no scenario-authored roster yet. No-ops
+    // if the scenario id is unknown. Callers gate selection legality (e.g.
+    // standaloneSelectable) — this method only requires a valid id.
+    void StartStandaloneScenario(const std::string& scenarioId);
     // Call after an outcome latches while a campaign is active. Advances on
     // Victory (applying the old scenario's carry-over rule), marks the run Failed
     // on Defeat, Completed when the final scenario is won. One-shot per latch.
