@@ -10,6 +10,7 @@
 #include "gameplay/campaign/CampaignProgressionRules.h"
 #include "gameplay/events/EventEngine.h"
 #include "gameplay/events/EventParser.h"
+#include "gameplay/battle/BattleUnitConversion.h"
 #include "gameplay/region/RegionTravelRules.h"
 #include "gameplay/world/RegionRevealRules.h"
 
@@ -3108,6 +3109,160 @@ int GameSession::NodeDefenderPower(const std::vector<std::string>& serviceIds) c
     return power;
 }
 
+std::vector<battle::AutoResolveUnit> GameSession::BuildEnemyGroupForce(
+    const std::string& enemyGroupId) const {
+    std::vector<battle::AutoResolveUnit> force;
+    if (enemyGroupId.empty()) {
+        return force;
+    }
+    const auto groupIt = std::find_if(enemyGroupCatalog_.begin(), enemyGroupCatalog_.end(),
+        [&](const data::EnemyGroupDefinition& group) { return group.id == enemyGroupId; });
+    if (groupIt == enemyGroupCatalog_.end()) {
+        return force;
+    }
+    bool leaderAssigned = false;
+    for (const auto& unitId : groupIt->unitIds) {
+        const auto* unit = FindUnitDefinition(unitId);
+        if (unit == nullptr) {
+            continue;
+        }
+        battle::AutoResolveUnit entry;
+        entry.unitId = unit->id;
+        entry.stats = battle::ToBattleStats(unit->stats);
+        entry.category = battle::ToBattleCategory(unit->category);
+        entry.quantity = 1;   // enemy groups author unit types, not stack counts
+        entry.isPlayerCharacter = unit->isPlayerCharacter;
+        // First hero/leader-category unit carries the aura (an enemy team may have
+        // zero or one assigned leader, docs/combat_rules.md leadership rules).
+        if (!leaderAssigned && (entry.category == battle::UnitCategory::Leader ||
+                                entry.category == battle::UnitCategory::Hero)) {
+            entry.isLeader = true;
+            leaderAssigned = true;
+        }
+        force.push_back(std::move(entry));
+    }
+    return force;
+}
+
+std::vector<battle::AutoResolveUnit> GameSession::BuildNodeDefenderForce(
+    const std::vector<std::string>& serviceIds) const {
+    std::vector<battle::AutoResolveUnit> force;
+    bool leaderAssigned = false;
+    const auto addRef = [&](const std::string& unitId, const std::string& stackId) {
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr || stack->quantity <= 0) {
+            return;
+        }
+        // The Player Character can never be legitimately placed (M25/M28 gates), so
+        // a PC stack here is corrupt data. It never fights — mirroring the capture
+        // path that never removes or makes the PC Temporarily Unavailable.
+        if (UnitIsPlayerCharacter(stack->unitId)) {
+            return;
+        }
+        const auto* unit = FindUnitDefinition(stack->unitId);
+        if (unit == nullptr) {
+            return;
+        }
+        battle::AutoResolveUnit entry;
+        entry.unitId = unit->id;
+        entry.stackId = stack->stackId;
+        entry.stats = battle::ToBattleStats(unit->stats);
+        entry.category = battle::ToBattleCategory(unit->category);
+        entry.quantity = stack->quantity;
+        entry.isPlayerCharacter = unit->isPlayerCharacter;
+        if (!leaderAssigned && (entry.category == battle::UnitCategory::Leader ||
+                                entry.category == battle::UnitCategory::Hero)) {
+            entry.isLeader = true;
+            leaderAssigned = true;
+        }
+        force.push_back(std::move(entry));
+    };
+    for (const auto& serviceId : serviceIds) {
+        const auto* owned = FindOwnedService(serviceId);
+        if (owned == nullptr) {
+            continue;
+        }
+        for (const auto& ref : owned->stationedUnits) {
+            addRef(ref.unitId, ref.stackId);
+        }
+        for (const auto& ref : owned->storedUnits) {
+            addRef(ref.unitId, ref.stackId);
+        }
+    }
+    return force;
+}
+
+int GameSession::PlayerActivePartyPower() const {
+    int power = 0;
+    for (const auto& stackId : activeSlotStackIds_) {
+        if (stackId.empty()) {
+            continue;
+        }
+        const auto* stack = FindStackById(stackId);
+        if (stack == nullptr) {
+            continue;
+        }
+        const auto* unit = FindUnitDefinition(stack->unitId);
+        if (unit == nullptr) {
+            continue;
+        }
+        power += economy::StackDefensePower(unit->stats, stack->quantity);
+    }
+    return power;
+}
+
+GameSession::ThreatPreview GameSession::ThreatPreviewForNode(const std::string& nodeId) const {
+    ThreatPreview preview;
+    if (nodeId.empty()) {
+        return preview;
+    }
+    // M32 fog: an unrevealed node never leaks a preview — unknown stays unknown.
+    if (!IsNodeRevealed(regionId_, nodeId)) {
+        return preview;
+    }
+    const std::string color = HostileTeamColorAtNode(nodeId, playerColor_);
+    if (color.empty()) {
+        return preview;   // no visible hostile team -> nothing to preview
+    }
+    const auto teamIt = std::find_if(enemyTeams_.begin(), enemyTeams_.end(),
+        [&](const EnemyTeamState& team) { return team.teamColor == color; });
+    const int enemyPower = teamIt != enemyTeams_.end() ? EnemyGroupPower(teamIt->enemyGroupId) : 0;
+    preview.known = true;
+    preview.enemyColor = color;
+    preview.band = battle::EstimateThreatBand(PlayerActivePartyPower(), enemyPower);
+    return preview;
+}
+
+GameSession::ThreatPreview GameSession::ServiceDefensePreview(const std::string& serviceId) const {
+    ThreatPreview preview;
+    const auto* owned = FindOwnedService(serviceId);
+    if (owned == nullptr || owned->ownerTeamColor != playerColor_ || owned->locked || owned->destroyed) {
+        return preview;
+    }
+    const auto* def = FindLocationServiceById(serviceId);
+    if (def == nullptr || !economy::ServiceKindIsAttackable(def->kind) || def->locationId.empty()) {
+        return preview;
+    }
+    // Reveal gate + imminent-threat gate: only preview when the service node is
+    // revealed AND a hostile team currently occupies it (an absent-player defense
+    // is about to resolve). No reachability analysis in M33.
+    if (!IsNodeRevealed(regionId_, def->locationId)) {
+        return preview;
+    }
+    const std::string color = HostileTeamColorAtNode(def->locationId, playerColor_);
+    if (color.empty()) {
+        return preview;
+    }
+    const auto teamIt = std::find_if(enemyTeams_.begin(), enemyTeams_.end(),
+        [&](const EnemyTeamState& team) { return team.teamColor == color; });
+    const int enemyPower = teamIt != enemyTeams_.end() ? EnemyGroupPower(teamIt->enemyGroupId) : 0;
+    preview.known = true;
+    preview.enemyColor = color;
+    // Danger to the player: defender (the service garrison) vs the attacker.
+    preview.band = battle::EstimateThreatBand(NodeDefenderPower({serviceId}), enemyPower);
+    return preview;
+}
+
 std::vector<std::string> GameSession::AttackableServiceIdsAtNodeFor(
     const std::string& attackerColor, const std::string& nodeId) const {
     std::vector<std::string> eligible;
@@ -3161,9 +3316,9 @@ GameSession::ServiceAttackOutcome GameSession::ResolveServiceAttack(
 
     const auto teamIt = std::find_if(enemyTeams_.begin(), enemyTeams_.end(),
         [&](const EnemyTeamState& team) { return team.teamColor == attackerColor; });
+    // Cheap "are there any placed defenders?" gate. Undefended nodes are captured
+    // without a fight; defended nodes go through the battle-aligned auto-resolve.
     const int defenderPower = NodeDefenderPower(eligible);
-    const int attackerPower =
-        teamIt != enemyTeams_.end() ? EnemyGroupPower(teamIt->enemyGroupId) : 0;
 
     if (defenderPower <= 0) {
         // Undefended: capture succeeds without battle (mirror of the player's
@@ -3180,20 +3335,30 @@ GameSession::ServiceAttackOutcome GameSession::ResolveServiceAttack(
     }
 
     outcome.defendersFought = true;
-    if (economy::DefendersHoldService(defenderPower, attackerPower)) {
+
+    // M33: the absent-player hold/capture decision is a deterministic, battle-rule-
+    // aligned auto-resolve (expected-damage CTB) rather than the M30 raw additive
+    // strength comparison. Consequences (capture/TU/refs/log/occupation) are
+    // unchanged — only the win/loss decision is now battle-derived.
+    const auto attackerForce =
+        teamIt != enemyTeams_.end() ? BuildEnemyGroupForce(teamIt->enemyGroupId)
+                                    : std::vector<battle::AutoResolveUnit>{};
+    const auto defenderForce = BuildNodeDefenderForce(eligible);
+    const auto autoOutcome = battle::ResolveAuto(attackerForce, defenderForce);
+
+    if (autoOutcome.winner == battle::AutoResolveWinner::Defenders) {
         if (teamIt != enemyTeams_.end()) {
             teamIt->active = false;
         }
         outcome.summaryText = attackerColor + " attacked " + nodeId + " — defenders held ("
-            + std::to_string(defenderPower) + " vs " + std::to_string(attackerPower) + ").";
+            + std::to_string(autoOutcome.defenderSurvivingQuantity) + " defender(s) remain).";
         AppendServiceEvent(outcome.summaryText);
         CheckAndLatchOutcome();
         return outcome;
     }
 
     outcome.attackerWon = true;
-    outcome.summaryText = attackerColor + " overran " + nodeId + " — defenders lost ("
-        + std::to_string(attackerPower) + " vs " + std::to_string(defenderPower) + ").";
+    outcome.summaryText = attackerColor + " overran " + nodeId + " — defenders lost.";
     AppendServiceEvent(outcome.summaryText);
     outcome.capturedServiceIds = ApplyServiceCaptureAtNode(attackerColor, nodeId);
     if (teamIt != enemyTeams_.end()) {

@@ -116,5 +116,7 @@ TEST_CASE("EnemyVisibility: a hostile team on a revealed node shows presence and
     REQUIRE(node->revealed);
     REQUIRE(node->hostileOccupied);
     REQUIRE_FALSE(node->enemyEstimate.empty());
+    // M33: a revealed hostile node also surfaces a bounded threat band.
+    REQUIRE(node->enemyEstimate.find("Threat:") != std::string::npos);
     std::filesystem::remove_all(root);
 }

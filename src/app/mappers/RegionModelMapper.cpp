@@ -196,10 +196,21 @@ namespace app::mappers
             view.revealed = revealed;
             if (nodeHostileOccupied)
             {
-                // Bounded estimate only: known presence + team color. Exact
-                // composition/scouting depth is out of M32 scope.
-                const std::string color = session.HostileTeamColorAtNode(nodes[i].id, "Green");
-                view.enemyEstimate = color.empty() ? "Hostile force" : ("Hostile force (" + color + ")");
+                // Bounded estimate: known presence + team color (M32) plus the M33
+                // threat band (a cheap, read-only §16 estimate of engaging here).
+                // Exact composition/scouting depth remains out of scope.
+                const auto threat = session.ThreatPreviewForNode(nodes[i].id);
+                const std::string color = threat.enemyColor.empty()
+                    ? session.HostileTeamColorAtNode(nodes[i].id, "Green")
+                    : threat.enemyColor;
+                std::string estimate = color.empty() ? "Hostile force" : ("Hostile force (" + color + ")");
+                const char* band = gameplay::battle::ThreatBandLabel(threat.band);
+                if (threat.known && band[0] != '\0')
+                {
+                    estimate += " | Threat: ";
+                    estimate += band;
+                }
+                view.enemyEstimate = std::move(estimate);
             }
             model.nodes.push_back(std::move(view));
         }

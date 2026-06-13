@@ -28,6 +28,9 @@ add_library(ashvale_logic
   src/data/ContentRepository.cpp
   src/data/ContentValidator.cpp
   src/gameplay/battle/Battle.cpp
+  src/gameplay/battle/AutoResolve.cpp
+  src/gameplay/battle/BattleUnitConversion.cpp
+  src/gameplay/battle/ThreatPreview.cpp
   src/gameplay/GameSession.cpp
   src/gameplay/world/NodeWorldState.cpp
   src/gameplay/world/RegionRevealRules.cpp
@@ -128,6 +131,8 @@ if (BUILD_TESTING)
 
   add_executable(ashvale_logic_tests
     tests/BattleFactoryTests.cpp
+    tests/AutoResolveTests.cpp
+    tests/ThreatPreviewTests.cpp
     src/app/BattleEventTextFormatter.cpp
     src/app/MusteringInteraction.cpp
     src/app/TradingPostInteraction.cpp

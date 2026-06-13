@@ -175,9 +175,12 @@ TEST_CASE("Contested content - losing the depot dismisses generics and makes Mir
     session.StartCampaign("campaign_ashvale");
     session.SetDestination("home_base");
 
-    // One guard (generic) + Mira (hero) stored. The shipped Collapsed Gate
-    // warband (eg_ruin_02) outguns them — this REQUIRE guards the content
-    // contract that the loss path is actually reachable with shipped stats.
+    // One guard (generic) + Mira (hero) stored. Under the M33 battle-rule-aligned
+    // auto-resolve, Mira leads the garrison and her aura makes a small hero-led
+    // defence hard to take — no SHIPPED enemy group carries a leader, so a 2-unit
+    // garrison repels them. To exercise the loss path we point the attacker at an
+    // overwhelming warband (real unit ids, test-authored size) that decisively
+    // overruns the garrison.
     REQUIRE(session.AddOwnedUnit("unit_guard", 1));
     const std::string guardStack = SlottedStackIdOf(session, "unit_guard");
     REQUIRE(session.TryStoreStackAtService("river_depot_storage", guardStack));
@@ -185,19 +188,17 @@ TEST_CASE("Contested content - losing the depot dismisses generics and makes Mir
     const std::string miraStack = SlottedStackIdOf(session, "hero_mira");
     REQUIRE(session.TryStoreStackAtService("river_depot_storage", miraStack));
 
-    const auto* guard = repo.FindUnitById("unit_guard");
-    const auto* mira = repo.FindUnitById("hero_mira");
-    const int defenderPower = gameplay::economy::StackDefensePower(guard->stats, 1)
-        + gameplay::economy::StackDefensePower(mira->stats, 1);
-    const int attackerPower = GroupPower(repo, "eg_ruin_02");
-    REQUIRE_FALSE(gameplay::economy::DefendersHoldService(defenderPower, attackerPower));
+    auto groups = repo.EnemyGroups();
+    groups.push_back(data::EnemyGroupDefinition{"eg_test_overwhelm", "Overwhelming Warband",
+        {"unit_guard", "unit_guard", "unit_guard", "unit_guard", "unit_guard", "unit_guard"}});
+    session.SetEnemyGroupCatalog(groups);
 
     // Seed the warband adjacent to the depot directly (the authored event
     // proves the spawn path separately).
     gameplay::EnemyTeamState blue;
     blue.teamColor = "Blue";
     blue.nodeId = "bridge_checkpoint";
-    blue.enemyGroupId = "eg_ruin_02";
+    blue.enemyGroupId = "eg_test_overwhelm";
     session.SetEnemyTeams({blue});
 
     const auto* region = repo.FindRegionById("ashvale_heartland");

@@ -6,6 +6,7 @@
 
 #include "data/definitions/LocationServiceDefinition.h"
 #include "gameplay/ResourceState.h"
+#include "gameplay/battle/ThreatPreview.h"
 #include "gameplay/economy/MineProductionRules.h"
 #include "gameplay/economy/StationingRules.h"
 #include "gameplay/economy/StorageRules.h"
@@ -155,6 +156,17 @@ namespace app::mappers
             else
             {
                 row.statusLabel = "Owned";
+            }
+
+            // M33 bounded threat preview: only when an enemy currently holds the
+            // service node (an imminent absent-player defense). Reveal-gated and
+            // read-only; the band is the cheap §16 estimate.
+            const auto threat = session.ServiceDefensePreview(owned.serviceId);
+            if (threat.known)
+            {
+                const char* band = gameplay::battle::ThreatBandLabel(threat.band);
+                row.threatLabel = std::string("Threat: ") + band +
+                    (threat.enemyColor.empty() ? "" : " (" + threat.enemyColor + ")");
             }
 
             if (def->kind == data::LocationServiceKind::Mine)

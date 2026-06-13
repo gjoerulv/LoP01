@@ -53,6 +53,14 @@ namespace ashvale::rendering
                 context.theme.mutedTextColor);
             y += 24.0f;
 
+            // M33 bounded threat preview line (only when the node is contested).
+            if (!row.threatLabel.empty())
+            {
+                DrawTextEx(font, ("   " + row.threatLabel).c_str(), { 74.0f, y },
+                    context.smallFontSize, 1.0f, context.theme.dangerColor);
+                y += 24.0f;
+            }
+
             if (row.isMine)
             {
                 std::string stationed = "   Stationed: " + std::to_string(row.stationedCount) +

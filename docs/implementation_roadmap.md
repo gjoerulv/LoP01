@@ -2,13 +2,11 @@
 
 ## Context
 
-The previous roadmap completed the v2 scope and started v3. The current codebase is a **post-M32** bounded multi-Region, multi-Scenario vertical slice.
+The previous roadmap completed the v2 scope and started v3. The current codebase is a **post-M33** bounded multi-Region, multi-Scenario vertical slice.
 
 The v1 strategic-economy proof and the v2 contested-infrastructure loop are complete: stationing, storage, claiming, cross-Region loss warnings, service defense, storage loss with Temporarily Unavailable heroes, enemy-side capture pressure, destruction/restoration, and the service-state readout/log all work together in shipped content and tests. `docs/content_scope_v2.md` is historical and should stay archived. The active scope cap is `docs/content_scope_v3.md`.
 
-v3 is about **scenario readiness, player information, and authored progression**. The completed v3 milestones so far are **M31 — Shell Entry + Scenario/Campaign Selection** and **M32 — Scenario Context, Start-State Authoring, and Visibility Foundation**.
-
-The selected next milestone is **M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation**.
+v3 is about **scenario readiness, player information, and authored progression**. The completed v3 milestones so far are **M31 — Shell Entry + Scenario/Campaign Selection**, **M32 — Scenario Context, Start-State Authoring, and Visibility Foundation**, and **M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation**. No next milestone is selected yet; candidates are listed in section 5.
 
 ---
 
@@ -47,7 +45,8 @@ Current stable foundation:
 - persisted bounded `service_event_log`, enemy-phase status lines, overview restoring status, TU heroes section, and recent-events section;
 - M30 content proof: player-owned `river_depot` storage gate, destroyable copper mine, raider pressure events, and end-to-end tests;
 - M31 shell entry flow: `GameMode::Title`, bounded App-local shell screen state, Continue/New Game/Quit, Campaign and Standalone Scenario selection, validation/playability gate, and single-save Continue through `saves/slot_1.json`;
-- M32 Scenario Context + start-state authoring + visibility foundation: an optional authored scenario `regions` context (empty => all Regions, backward compatible) that filters the World Map read model and `TravelToRegion`; an optional `playerStart.roster` (active/reserve unit-id/quantity entries) with validation for unit existence, hero uniqueness, hero quantity, active/reserve capacity, active-leader presence, and exactly-one Player Character; a clean scenario-start reset (unconditional clock→day 1 and reveal seed; roster + inventory/equipment + TU heroes + service log reset only when a roster is authored, then overridden by campaign carry-over); a persistent per-Region HoMM-style reveal layer (radius-2 BFS seed around the start node and start-owned-service nodes, extended on movement and World Map arrival, saved/loaded); and reveal-gated enemy visibility with a bounded presence estimate in the Region read model/renderer.
+- M32 Scenario Context + start-state authoring + visibility foundation: an optional authored scenario `regions` context (empty => all Regions, backward compatible) that filters the World Map read model and `TravelToRegion`; an optional `playerStart.roster` (active/reserve unit-id/quantity entries) with validation for unit existence, hero uniqueness, hero quantity, active/reserve capacity, active-leader presence, and exactly-one Player Character; a clean scenario-start reset (unconditional clock→day 1 and reveal seed; roster + inventory/equipment + TU heroes + service log reset only when a roster is authored, then overridden by campaign carry-over); a persistent per-Region HoMM-style reveal layer (radius-2 BFS seed around the start node and start-owned-service nodes, extended on movement and World Map arrival, saved/loaded); and reveal-gated enemy visibility with a bounded presence estimate in the Region read model/renderer;
+- M33 threat preview + battle-rule-aligned auto-resolve foundation: a deterministic, RNG-free auto-resolve module (`gameplay/battle/AutoResolve`) that reuses the interactive battle's physical-damage formula and leader-aura rule via expected (average) damage, agility-driven CTB ordering, and focus-weakest targeting (basic attacks only — no skills/items/magic/status/escape); the centralized `data->battle` stat conversion (`gameplay/battle/BattleUnitConversion`) shared by `BattleFactory` and auto-resolve; absent-player service-defense resolution now decided by that auto-resolve (Player Character never defends, capture/TU/refs/log/occupation consequences unchanged); and a pure, reveal-gated threat-preview band (`gameplay/battle/ThreatPreview` Low/Even/Dangerous/Overwhelming via §16 ratios) surfaced as a bounded estimate on revealed hostile Region nodes and on contested owned-service overview rows.
 
 ---
 
@@ -66,7 +65,7 @@ Current stable foundation:
 | 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. Build broader trader UI only in a scoped future milestone. |
 | 10 | Scenario `playerStart` now also authors a starting roster (`playerStart.roster`) alongside economy/service start state. Authored hero pool, item/artifact start-state, and per-scenario `unlockedRegions` overrides remain absent. M32 resets inventory/equipment to empty on an authored-roster start (no positive item/artifact authoring), so a clean item/artifact start-state is the only safe subset added. | Roster done by M32. Hero pool and authored item/artifact start-state remain future. |
 | 11 | Scenario Result mode presents deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Future v3 candidate after Scenario Context and quest/guidance foundations. |
-| 12 | M30's absent-player service defense is deterministic strength comparison, not full-simulation auto-resolve. | Selected next: M33 should add threat preview and battle-rule-aligned auto-resolve foundations without inventing a second battle system. |
+| 12 | M30's absent-player service defense was a deterministic additive strength comparison. M33 replaced the hold/capture decision with a battle-rule-aligned deterministic auto-resolve (`gameplay/battle/AutoResolve`) reusing the interactive battle's damage formula + leader aura. The auto-resolve is intentionally simplified (basic physical attacks only; no skills/items/magic/status/escape/revive) and uses expected damage rather than RNG. | Foundation done by M33. Full-fidelity auto-resolve (skills/items/magic/CTB parity, AI choices) remains future battle-depth scope. |
 | 13 | Temporarily Unavailable heroes return directly to reserve after a weekly delay, standing in for shared hero-pool re-entry. | Broad hero recovery/recruitment remains future scope. |
 | 14 | Enemy pressure captures player-owned services only; enemy-side destruction/sabotage/restoration and enemy-vs-enemy contention remain absent. | Future scope. Do not add before scenario visibility/selection and threat systems can explain it. |
 | 15 | Owned-service overview/readout is not the final service-management UI. | Keep read-only unless a scoped milestone selects service-management presentation/actions. |
@@ -103,18 +102,19 @@ No true design contradictions are currently known. Remaining gaps are implementa
 - **Phase 22 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit:** M30 complete.
 - **Phase 23 — Shell Entry + Scenario/Campaign Selection:** M31 complete.
 - **Phase 24 — Scenario Context, Start-State Authoring, and Visibility Foundation:** M32 complete.
+- **Phase 25 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation:** M33 complete.
 
 ---
 
 ## 4. Current next milestone
 
-Latest completed milestone: **M32 — Scenario Context, Start-State Authoring, and Visibility Foundation**.
+Latest completed milestone: **M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation**.
 
 `docs/content_scope_v2.md` is historical/archived. Active planning uses `docs/content_scope_v3.md`.
 
-Selected next milestone: **M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation**.
+No next milestone is selected. Candidates are listed in section 5; select one after auditing the post-M33 codebase.
 
-### M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation (planned)
+### M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation (complete)
 
 **Goal:** make Region/service conflict outcomes understandable before commitment and start replacing M30's deterministic absent-player service-defense stand-in with a battle-rule-aligned auto-resolve foundation.
 
@@ -178,6 +178,14 @@ M33 is complete when:
 - existing M25-M32 tests remain green;
 - `docs/implementation_roadmap.md` is updated to mark M33 complete only after tests/manual validation pass.
 
+#### M33 delivered notes and scoping
+
+- **Auto-resolve** (`gameplay/battle/AutoResolve::ResolveAuto`) is deterministic and RNG-free: it reuses the interactive battle's physical-damage formula and leader-aura rule (via the shared `BattleUnitConversion` so it provably sees the same stats), with **expected (average) damage**, an agility-driven CTB gauge order, and focus-weakest targeting. On equal CTB timing the **defender acts first**, so symmetric fights hold for the defender (consistent with core_loop_rules §13). Empty attackers => defenders win; empty defenders => attackers win. It is a single strength model for resolution — no second battle engine.
+- **Service-defense integration:** only the absent-player hold/capture *decision* changed (M30's additive `DefendersHoldService` → `ResolveAuto`). All M30 consequences are intact: undefended seizure, capture/ownership transfer, generic dismissal, stored-hero TU, Player Character never placed/lost/TU, ref cleanup (no dangling stationed/stored refs), and the bounded service event log. `BuildNodeDefenderForce` now also skips a corrupt PC stack (the PC never defends), mirroring the capture path. Player-present defense is unchanged (still `playerBattleRequired` → interactive battle).
+- **Battle-balance shift:** a hero-led garrison is now markedly more defensible than M30's additive power implied (the hero's leader aura buffs the whole garrison, and no shipped enemy group carries a leader). Affected M30 fixtures (`ServiceDefenseTests`, `EnemyServicePressureTests`, one `ContestedInfrastructureContentTests` loss case) were deliberately re-tuned to decisive battle-aligned forces; their consequence assertions are unchanged.
+- **Threat preview** (`gameplay/battle/ThreatPreview` + `GameSession::ThreatPreviewForNode` / `ServiceDefensePreview`) is the §16 *cheap* estimate, intentionally distinct from the full auto-resolve: a band (Low / Even / Dangerous / Overwhelming) from a battle-stat power ratio (reusing the existing `UnitDefensePower`/`StackDefensePower` proxy — not a new formula). It is pure (tested via a save-state fingerprint) and reveal-gated, so unrevealed/hidden enemies never leak. Region-travel previews surface on revealed hostile nodes (read model + renderer); contested owned-service rows show a bounded threat line in the read-only overview.
+- **No save migration** (additive only; nothing new persisted). No authored-content/JSON schema changes. World Map preview was intentionally left out (no broad UI expansion).
+
 ---
 
 ## 5. Candidate directions after M33 / future v3 milestones
@@ -207,9 +215,8 @@ Larger systems that remain future candidates unless explicitly selected:
 
 - v2 is complete. Do not keep extending v2.
 - `docs/content_scope_v3.md` is the active scope cap.
-- M31 and M32 are complete.
-- M33 is selected and planned.
-- Do not bundle future candidates into M33 unless the active scope is revised deliberately.
+- M31, M32, and M33 are complete.
+- No next milestone is selected. Pick one from section 5 only after auditing the post-M33 codebase; do not bundle multiple candidates without a scoped milestone.
 
 Milestone-agnostic docs remain source-of-truth for final rules:
 

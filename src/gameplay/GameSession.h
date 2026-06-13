@@ -24,6 +24,8 @@
 #include "gameplay/EnemyTeamState.h"
 #include "gameplay/InventoryState.h"
 #include "gameplay/ResourceState.h"
+#include "gameplay/battle/AutoResolve.h"
+#include "gameplay/battle/ThreatPreview.h"
 #include "gameplay/economy/MineProductionRules.h"
 #include "gameplay/economy/StationedProductionRules.h"
 #include "gameplay/economy/TraderOwnershipRules.h"
@@ -664,6 +666,26 @@ public:
     [[nodiscard]] std::string HostileTeamColorAtNode(
         const std::string& nodeId, const std::string& playerColor) const;
 
+    // M33 threat preview. A bounded, read-only danger estimate
+    // (docs/core_loop_rules.md §16). `known` is false when there is no visible
+    // threat to preview — including unrevealed nodes (M32 fog), so unknown enemies
+    // never leak through preview. `band` is a cheap §16 power-ratio estimate (not
+    // the full auto-resolve); `enemyColor` is the bounded presence estimate.
+    // PURE: these methods mutate nothing.
+    struct ThreatPreview {
+        bool known = false;
+        battle::ThreatBand band = battle::ThreatBand::Unknown;
+        std::string enemyColor;
+    };
+    // Danger of the player's active party engaging a hostile team that occupies
+    // `nodeId` in the current Region. Known only when the node is revealed and a
+    // hostile team is present.
+    [[nodiscard]] ThreatPreview ThreatPreviewForNode(const std::string& nodeId) const;
+    // Danger to a player-owned attackable service when a hostile team currently
+    // occupies its node (an imminent absent-player defense). Known only when the
+    // service node is revealed and a hostile team is present there.
+    [[nodiscard]] ThreatPreview ServiceDefensePreview(const std::string& serviceId) const;
+
     // M30 contested infrastructure. Service attacks are node-level: an attack
     // against a node resolves every eligible player-owned service there together
     // (occupation, payout gating, and claiming are already node-keyed). Eligible
@@ -883,11 +905,25 @@ private:
     // trims the oldest entries beyond kMaxServiceEventLogEntries.
     void AppendServiceEvent(std::string text);
     // Deterministic attack strength of an authored enemy group (sum of unit
-    // defense powers; unknown group/units contribute 0).
+    // defense powers; unknown group/units contribute 0). Retained as the cheap
+    // power proxy used by the M33 threat-preview band.
     [[nodiscard]] int EnemyGroupPower(const std::string& enemyGroupId) const;
     // Total defense power of the placed (stationed + stored) stacks across the
-    // eligible services at a node.
+    // eligible services at a node. Cheap power proxy for the threat-preview band.
     [[nodiscard]] int NodeDefenderPower(const std::vector<std::string>& serviceIds) const;
+    // Cheap power of the player's active battle party (the same UnitDefensePower
+    // proxy), used for the Region-travel threat-preview band. Pure read.
+    [[nodiscard]] int PlayerActivePartyPower() const;
+    // M33 auto-resolve force builders. The attacker force is the authored enemy
+    // group's units (one quantity-1 stack each, first hero/leader gets the aura).
+    // The defender force is the placed (stationed + stored) stacks across the
+    // eligible services (first hero gets the aura). Both map authored stats through
+    // the shared data->battle conversion so the auto-resolve sees the same stats
+    // the interactive battle would. Pure reads.
+    [[nodiscard]] std::vector<battle::AutoResolveUnit> BuildEnemyGroupForce(
+        const std::string& enemyGroupId) const;
+    [[nodiscard]] std::vector<battle::AutoResolveUnit> BuildNodeDefenderForce(
+        const std::vector<std::string>& serviceIds) const;
     // Capture worker shared by the auto-resolve attacker-win path and the
     // player-defeat path: resolves placed defender stacks (generic -> dismissed,
     // hero -> Temporarily Unavailable, Player Character stack never removed),

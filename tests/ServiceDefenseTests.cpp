@@ -23,7 +23,8 @@ namespace {
 using data::LocationServiceKind;
 
 data::UnitDefinition MakeUnit(const std::string& id, data::UnitDefinitionCategory category,
-    int attack, int defense, int maxHp, bool isPlayerCharacter = false) {
+    int attack, int defense, int maxHp, int minDamage, int maxDamage,
+    bool isPlayerCharacter = false) {
     data::UnitDefinition u;
     u.id = id;
     u.name = id;
@@ -31,18 +32,23 @@ data::UnitDefinition MakeUnit(const std::string& id, data::UnitDefinitionCategor
     u.stats.attack = attack;
     u.stats.defense = defense;
     u.stats.maxHp = maxHp;
+    u.stats.minDamage = minDamage;
+    u.stats.maxDamage = maxDamage;
     u.stats.agility = 5;
     u.isPlayerCharacter = isPlayerCharacter;
     return u;
 }
 
+// M33: outcomes are now decided by the battle-rule-aligned auto-resolve, so these
+// units carry real damage ranges. Tuned so the intended decisions are decisive:
+// a 3x militia garrison holds vs 2 raiders but is overrun by 3; a lone hero_b is
+// overrun by 2 raiders.
 std::vector<data::UnitDefinition> MakeCatalog() {
     return {
-        // pc power 60; hero_b power 40; militia power 20/unit; raider power 30/unit.
-        MakeUnit("pc_hero", data::UnitDefinitionCategory::Leader, 20, 20, 20, /*isPC=*/true),
-        MakeUnit("hero_b", data::UnitDefinitionCategory::Hero, 15, 10, 15),
-        MakeUnit("militia", data::UnitDefinitionCategory::Generic, 5, 5, 10),
-        MakeUnit("raider", data::UnitDefinitionCategory::Generic, 10, 10, 10),
+        MakeUnit("pc_hero", data::UnitDefinitionCategory::Leader, 20, 20, 24, 6, 9, /*isPC=*/true),
+        MakeUnit("hero_b", data::UnitDefinitionCategory::Hero, 8, 6, 16, 3, 5),
+        MakeUnit("militia", data::UnitDefinitionCategory::Generic, 6, 5, 12, 2, 4),
+        MakeUnit("raider", data::UnitDefinitionCategory::Generic, 10, 6, 12, 3, 5),
     };
 }
 
@@ -57,16 +63,17 @@ data::LocationServiceDefinition MakeService(const std::string& id, const std::st
 
 std::vector<data::EnemyGroupDefinition> MakeGroups() {
     return {
-        // eg_raiders: 2x raider = 60; eg_weak: 1x raider = 30; eg_strong: 3x = 90.
+        // Enemy groups author unit TYPES (each a quantity-1 stack in the auto-
+        // resolve). eg_raiders = 2 raiders; eg_weak = 1; eg_strong = 3.
         data::EnemyGroupDefinition{"eg_raiders", "Raiders", {"raider", "raider"}},
         data::EnemyGroupDefinition{"eg_weak", "Scout", {"raider"}},
         data::EnemyGroupDefinition{"eg_strong", "Warband", {"raider", "raider", "raider"}},
     };
 }
 
-// pc_hero active; steel_mine (iron_mine node) stationed with 3x militia (power
-// 60); river_depot storage stored with 2x militia (power 40) + hero_b (power
-// 40). Player stands on home_base.
+// pc_hero active; steel_mine (iron_mine node) stationed with a 3x militia
+// garrison; river_depot storage stored with 2x militia + hero_b. Player stands on
+// home_base. Hold/capture is decided by the M33 auto-resolve.
 core::SaveData MakeBaseSave() {
     core::SaveData s;
     s.schemaVersion = 5;
@@ -201,7 +208,7 @@ TEST_CASE("ServiceDefenseRules - power formula and tie-goes-to-defender outcome"
 
 TEST_CASE("ServiceAttack - stationed defenders hold the mine and defeat the attacker") {
     auto session = Load(MakeBaseSave());
-    // Defenders 3x militia = 60 vs eg_raiders = 60 -> tie, defenders hold.
+    // Auto-resolve: a 3x militia garrison holds against eg_raiders (2 raiders).
     const auto outcome = session.ResolveServiceAttack("Red", "iron_mine");
 
     REQUIRE(outcome.attacked);
@@ -221,7 +228,7 @@ TEST_CASE("ServiceAttack - stationed defenders hold the mine and defeat the atta
 
 TEST_CASE("ServiceAttack - attacker overruns weaker mine defenders and captures") {
     auto save = MakeBaseSave();
-    // Weaken the garrison: 2x militia = 40 < 60.
+    // Weaken the garrison to 2x militia: the 2 raiders overrun it under auto-resolve.
     save.rosterStacks[1].quantity = 2;
     auto session = Load(save);
 
@@ -243,8 +250,8 @@ TEST_CASE("ServiceAttack - attacker overruns weaker mine defenders and captures"
 }
 
 TEST_CASE("ServiceAttack - storage loss dismisses generics and makes stored heroes TU") {
-    // Depot defenders at full strength: 2x militia (40) + hero_b (40) = 80 vs 60
-    // -> they would hold. Empty the militia stack so only hero_b (40) defends.
+    // Empty the stored militia stack so only hero_b defends the depot; a lone
+    // hero_b is overrun by eg_raiders (2 raiders) under auto-resolve.
     auto save = MakeBaseSave();
     save.rosterStacks[2].quantity = 0;  // stored militia stack emptied
     auto session = Load(save);
@@ -326,7 +333,8 @@ TEST_CASE("ServiceAttack - a corrupt Player Character placement is never lost or
     auto save = MakeBaseSave();
     // Corrupt state: the PC stack is referenced as a stored unit AND slotted.
     save.ownedServices[1].storedUnits = {core::StoredUnitSaveState{"pc_hero", "stk_pc"}};
-    // eg_strong (90) beats the corrupt PC garrison (60) so the capture path runs.
+    // The PC never defends, so the garrison is effectively empty and the attacker
+    // captures (proving the PC is still never lost or made TU on capture).
     auto session = Load(save, "eg_strong");
 
     const auto outcome = session.ResolveServiceAttack("Red", "river_depot");

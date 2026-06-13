@@ -32,7 +32,8 @@ data::RegionNodeDefinition Node(const std::string& id) {
 }
 
 data::UnitDefinition MakeUnit(const std::string& id, data::UnitDefinitionCategory category,
-    int attack, int defense, int maxHp, bool isPlayerCharacter = false) {
+    int attack, int defense, int maxHp, int minDamage, int maxDamage,
+    bool isPlayerCharacter = false) {
     data::UnitDefinition u;
     u.id = id;
     u.name = id;
@@ -40,6 +41,8 @@ data::UnitDefinition MakeUnit(const std::string& id, data::UnitDefinitionCategor
     u.stats.attack = attack;
     u.stats.defense = defense;
     u.stats.maxHp = maxHp;
+    u.stats.minDamage = minDamage;
+    u.stats.maxDamage = maxDamage;
     u.stats.agility = 5;
     u.isPlayerCharacter = isPlayerCharacter;
     return u;
@@ -62,9 +65,11 @@ std::vector<data::RegionLinkDefinition> HeartlandLinks() {
     };
 }
 
-// Player at home_base; mine at iron_mine with 3x militia stationed (power 60);
-// optional second service via tweaks. Red hostile (eg_raiders, 60) placement
-// set per test; Yellow allied to Green.
+// Player at home_base; mine at iron_mine with a 3x militia garrison; optional
+// second service via tweaks. Red hostile (eg_raiders by default) placement set
+// per test; Yellow allied to Green. Hold/capture is decided by the auto-resolve:
+// the 3x militia garrison holds vs eg_raiders (2 raiders) but is overrun by
+// eg_strong (3 raiders).
 struct Fixture {
     core::SaveData save;
     gameplay::EnemyTeamState red;
@@ -107,9 +112,9 @@ struct Fixture {
         gameplay::GameSession session;
         session.SetPlayerColor("Green");
         session.SetUnitCatalog({
-            MakeUnit("pc_hero", data::UnitDefinitionCategory::Leader, 20, 20, 20, true),
-            MakeUnit("militia", data::UnitDefinitionCategory::Generic, 5, 5, 10),
-            MakeUnit("raider", data::UnitDefinitionCategory::Generic, 10, 10, 10),
+            MakeUnit("pc_hero", data::UnitDefinitionCategory::Leader, 20, 20, 24, 6, 9, true),
+            MakeUnit("militia", data::UnitDefinitionCategory::Generic, 6, 5, 12, 2, 4),
+            MakeUnit("raider", data::UnitDefinitionCategory::Generic, 10, 6, 12, 3, 5),
         });
         session.SetLeaderCapableUnitIds({"pc_hero"});
         session.SetLocationServiceCatalog(services);
@@ -154,8 +159,8 @@ const gameplay::EnemyTeamActionResult* ResultFor(
 
 } // namespace
 
-TEST_CASE("EnemyPressure - adjacent owned mine is attacked; equal defenders hold") {
-    Fixture f;  // garrison 60 vs eg_raiders 60: defenders hold
+TEST_CASE("EnemyPressure - adjacent owned mine is attacked; defenders hold") {
+    Fixture f;  // 3x militia garrison holds vs eg_raiders (2 raiders)
     auto session = f.Build();
 
     const auto results = session.ProcessEnemyPhase(HeartlandLinks());
@@ -173,7 +178,7 @@ TEST_CASE("EnemyPressure - adjacent owned mine is attacked; equal defenders hold
 
 TEST_CASE("EnemyPressure - stronger attacker captures the adjacent mine and occupies it") {
     Fixture f;
-    f.red.enemyGroupId = "eg_strong";  // 90 vs 60: attacker wins
+    f.red.enemyGroupId = "eg_strong";  // 3 raiders overrun the 3x militia garrison
     auto session = f.Build();
 
     const auto results = session.ProcessEnemyPhase(HeartlandLinks());

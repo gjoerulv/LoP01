@@ -17,6 +17,10 @@ namespace ashvale::rendering
         std::string kindLabel;                   // "Mine" / "Trading Post" / ...
         std::string locationLabel;               // location (+ region) for "where"
         std::string statusLabel;                 // "Owned" / "Owned (Locked)" / ...
+        // M33 bounded threat preview, set only when a hostile team currently holds
+        // this service's node (imminent absent-player defense), e.g.
+        // "Threat: Dangerous (Red)". Empty otherwise. Read-only estimate.
+        std::string threatLabel;
 
         bool isMine = false;
         int stationedCount = 0;
