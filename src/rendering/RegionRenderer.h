@@ -29,6 +29,13 @@ namespace ashvale::rendering
         bool current = false;
         bool selected = false;
         bool hostileOccupied = false;
+        // M32 fog/reveal: runtime knowledge layer, distinct from authored
+        // `discovered` (which stays the structural-availability flag). `revealed`
+        // is false for nodes the player has not yet uncovered. `enemyEstimate` is a
+        // bounded player-facing presence/estimate line, populated only when a
+        // hostile team is on a revealed node (empty otherwise).
+        bool revealed = true;
+        std::string enemyEstimate;
     };
 
     struct RegionRenderModel

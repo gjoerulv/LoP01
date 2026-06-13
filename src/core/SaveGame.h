@@ -140,6 +140,14 @@ struct ServiceEventLogEntrySaveState {
     std::string text;
 };
 
+// M32 fog/reveal persistence: the revealed node ids for one Region. Reveal is
+// HoMM-persistent (never un-revealed). Absent in legacy saves -> reseeded from
+// the current node on load. Node ids are unique within a Region.
+struct RegionRevealSaveState {
+    std::string regionId;
+    std::vector<std::string> nodeIds;
+};
+
 struct SaveData {
     int schemaVersion = 1;
     int day = 1;
@@ -216,6 +224,11 @@ struct SaveData {
     // optional fields — no schemaVersion bump.
     std::vector<TemporarilyUnavailableHeroSaveState> unavailableHeroes;
     std::vector<ServiceEventLogEntrySaveState> serviceEventLog;
+
+    // M32 fog/reveal state. Per-Region revealed node ids. Absent (legacy saves)
+    // -> empty, in which case GameSession reseeds reveal around the current node
+    // on load. Additive optional field — no schemaVersion bump.
+    std::vector<RegionRevealSaveState> revealedRegionNodes;
 };
 
 class SaveGameRepository {

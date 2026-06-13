@@ -459,6 +459,21 @@ void from_json(const json& j, ServiceEventLogEntrySaveState& data) {
     data.text = j.value("text", std::string{});
 }
 
+void to_json(json& j, const RegionRevealSaveState& data) {
+    j = json{
+        {"region_id", data.regionId},
+        {"node_ids", data.nodeIds}
+    };
+}
+
+void from_json(const json& j, RegionRevealSaveState& data) {
+    j.at("region_id").get_to(data.regionId);
+    data.nodeIds.clear();
+    if (j.contains("node_ids") && j["node_ids"].is_array()) {
+        data.nodeIds = j["node_ids"].get<std::vector<std::string>>();
+    }
+}
+
 void to_json(json& j, const SaveData& data) {
     j = json{
         {"schema_version", data.schemaVersion},
@@ -499,7 +514,8 @@ void to_json(json& j, const SaveData& data) {
         {"resources", data.resources},
         {"owned_services", data.ownedServices},
         {"unavailable_heroes", data.unavailableHeroes},
-        {"service_event_log", data.serviceEventLog}
+        {"service_event_log", data.serviceEventLog},
+        {"revealed_region_nodes", data.revealedRegionNodes}
     };
 }
 
@@ -614,6 +630,13 @@ void from_json(const json& j, SaveData& data) {
     if (j.contains("service_event_log") && j["service_event_log"].is_array()) {
         data.serviceEventLog =
             j["service_event_log"].get<std::vector<ServiceEventLogEntrySaveState>>();
+    }
+
+    // M32 additive: absent revealed_region_nodes (pre-M32 saves) -> empty.
+    data.revealedRegionNodes.clear();
+    if (j.contains("revealed_region_nodes") && j["revealed_region_nodes"].is_array()) {
+        data.revealedRegionNodes =
+            j["revealed_region_nodes"].get<std::vector<RegionRevealSaveState>>();
     }
 
     const bool hasCanonicalStructuralFields =

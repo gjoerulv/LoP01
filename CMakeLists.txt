@@ -30,6 +30,7 @@ add_library(ashvale_logic
   src/gameplay/battle/Battle.cpp
   src/gameplay/GameSession.cpp
   src/gameplay/world/NodeWorldState.cpp
+  src/gameplay/world/RegionRevealRules.cpp
   src/gameplay/region/RegionDeadEndRules.cpp
   src/gameplay/region/RegionTravelRules.cpp
   src/gameplay/scenario/ScenarioOutcomeRules.cpp
@@ -223,8 +224,12 @@ if (BUILD_TESTING)
     tests/WorldMapControllerTests.cpp
     tests/WorldMapEndToEndTests.cpp
     tests/ScenarioContentTests.cpp
+    tests/ScenarioContextTests.cpp
     tests/ScenarioStartStateContentTests.cpp
     tests/ScenarioStartStateTests.cpp
+    tests/ScenarioStartRosterTests.cpp
+    tests/RegionRevealTests.cpp
+    tests/EnemyVisibilityTests.cpp
     tests/CampaignContentTests.cpp
     tests/CampaignProgressionRulesTests.cpp
     tests/CampaignCarryoverTests.cpp

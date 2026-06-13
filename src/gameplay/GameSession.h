@@ -507,6 +507,27 @@ public:
     void SetRegionCatalog(std::vector<data::RegionDefinition> catalog);
     [[nodiscard]] const data::WorldMapDefinition& WorldMap() const;
     [[nodiscard]] bool IsRegionUnlocked(const std::string& regionId) const;
+
+    // M32 Scenario Context. The Region ids that belong to the active Scenario.
+    // Empty means the default context of ALL loaded Regions (backward compatible
+    // with thin scenarios that author no `regions` list). Derived from the active
+    // ScenarioDefinition at scenario start and re-derived on load.
+    [[nodiscard]] const std::vector<std::string>& ScenarioRegionIds() const;
+    // True iff `regionId` is exposable in the active Scenario: always true when no
+    // context is authored (empty set => all Regions), otherwise true only when the
+    // Region is in the context list. Read models (World Map) and TravelToRegion
+    // gate on this so a Scenario cannot expose unrelated global Regions.
+    [[nodiscard]] bool IsRegionInScenarioContext(const std::string& regionId) const;
+
+    // M32 fog/reveal foundation (docs/core_loop_rules.md §15). Reveal is per-Region
+    // and HoMM-persistent (a revealed node never becomes unknown). Seeded around the
+    // start node (and start-owned-service nodes) at scenario start, extended on legal
+    // movement and World Map arrival, and persisted through save/load. Enemy-team and
+    // node read models gate visibility on this so unrevealed nodes hide their content.
+    [[nodiscard]] bool IsNodeRevealed(const std::string& regionId, const std::string& nodeId) const;
+    // Revealed node ids for a Region (order unspecified). Empty when the Region has
+    // no revealed nodes yet. Pure read.
+    [[nodiscard]] std::vector<std::string> RevealedNodeIds(const std::string& regionId) const;
     // True iff on the Region layer and the current node is an authored exit node
     // of the current region's World Map entry.
     [[nodiscard]] bool CanOpenWorldMapHere() const;
@@ -915,6 +936,15 @@ private:
     // victory transition (filtered carry-over applied after reset/seeding).
     void TransitionToScenario(const std::string& scenarioId,
                               std::optional<campaign::CampaignCarrySet> carry);
+    // M32: rebuild the active/reserve roster from an authored scenario starting
+    // roster (clears the previous roster and stack ids first). Generic entries
+    // become quantity stacks; hero entries become quantity-1 stacks. Validation
+    // guarantees the Player Character is present exactly once and the active list
+    // has a leader; this method does not re-validate. Used only when a scenario
+    // authors a roster.
+    void ApplyAuthoredStartRoster(
+        const std::vector<data::ScenarioStartRosterEntry>& active,
+        const std::vector<data::ScenarioStartRosterEntry>& reserve);
     [[nodiscard]] const data::ScenarioDefinition* FindScenarioDefinition(const std::string& id) const;
     [[nodiscard]] const data::CampaignDefinition* FindCampaignDefinition(const std::string& id) const;
     [[nodiscard]] std::string PlayerHeroUnitId() const;
@@ -940,6 +970,24 @@ private:
     data::WorldMapDefinition              worldMap_;
     std::vector<data::RegionDefinition>   regionCatalog_;   // for arrival-node lookup
     std::set<std::string>                 unlockedRegionIds_;
+
+    // M32 Scenario Context: Region ids the active Scenario exposes. Empty => all
+    // Regions (default). Derived from the active ScenarioDefinition at scenario
+    // start (TransitionToScenario) and re-derived in ApplySaveData.
+    std::vector<std::string>              scenarioRegionIds_;
+
+    // M32 fog/reveal runtime state: revealed node ids per Region. HoMM-persistent.
+    std::map<std::string, std::set<std::string>> revealedNodesByRegion_;
+    static constexpr int kRevealRadius = 2;   // nodes revealed ahead on move/seed
+    // Reveal the radius-kRevealRadius graph neighborhood of `nodeId` in `regionId`
+    // (using the region catalog's links). When the region/node is not resolvable
+    // through the catalog, at least the node itself is marked revealed so the
+    // current node is always known. Idempotent.
+    void RevealAroundNode(const std::string& regionId, const std::string& nodeId);
+    // Seed reveal for a fresh scenario start: the current node plus any start-owned
+    // service nodes that live in the current Region. Clears nothing on its own;
+    // TransitionToScenario clears revealedNodesByRegion_ before calling this.
+    void SeedScenarioReveal();
 
     // M14-a team Energy pool. dailyMaxEnergy_ is the day's ceiling and reset
     // target; currentEnergy_ is the spendable amount, clamped to [0, max].

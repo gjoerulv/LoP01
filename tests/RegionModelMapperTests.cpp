@@ -139,6 +139,12 @@ TEST_CASE("RegionModelMapper preview blocks hostile-occupied destination") {
     team.nodeId = "clocktower_square";
     team.active = true;
     session.SetEnemyTeams({team});
+    // M32 fog/reveal: the hostile marker is only surfaced on a REVEALED node.
+    // Seed reveal around the player's node (radius 2 reaches clocktower via
+    // home_base -> bridge -> clocktower) so the known hostile is shown. Travel
+    // legality below uses the true hostile set and is independent of reveal.
+    session.SetRegionCatalog(repository.Regions());
+    session.SetDestination("home_base");
 
     gameplay::SessionSnapshot snapshot;
     snapshot.mode = gameplay::GameMode::RegionMode;
@@ -151,6 +157,7 @@ TEST_CASE("RegionModelMapper preview blocks hostile-occupied destination") {
     const auto model = mapper.Map(repository, session, snapshot, 2, {"bridge_checkpoint"});
 
     REQUIRE(model.travelTimeText == "Unavailable");
+    REQUIRE(model.nodes[2].revealed);
     REQUIRE(model.nodes[2].hostileOccupied);
 
     std::filesystem::remove_all(root);
