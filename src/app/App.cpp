@@ -120,6 +120,7 @@ App::App() {
 
 void App::Run() {
     InitWindow(1280, 720, "Project Ashvale");
+	SetExitKey(KEY_NULL);
     SetTargetFPS(60);
 
     while (!WindowShouldClose() && !quitRequested_) {

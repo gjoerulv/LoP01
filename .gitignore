@@ -5,6 +5,7 @@
 
 build/
 saves/
+.localDocs/
 
 # User-specific files
 *.rsuser
