@@ -2,11 +2,13 @@
 
 ## Context
 
-The previous roadmap finished the v2 scope. The current codebase is a **post-M31** bounded multi-Region, multi-Scenario vertical slice.
+The previous roadmap completed the v2 scope and started v3. The current codebase is a **post-M32** bounded multi-Region, multi-Scenario vertical slice.
 
 The v1 strategic-economy proof and the v2 contested-infrastructure loop are complete: stationing, storage, claiming, cross-Region loss warnings, service defense, storage loss with Temporarily Unavailable heroes, enemy-side capture pressure, destruction/restoration, and the service-state readout/log all work together in shipped content and tests. `docs/content_scope_v2.md` is historical and should stay archived. The active scope cap is `docs/content_scope_v3.md`.
 
-v3 is about **scenario readiness, player information, and authored progression**. The completed v3 milestones so far are **M31 — Shell Entry + Scenario/Campaign Selection** and **M32 — Scenario Context, Start-State Authoring, and Visibility Foundation**. No next milestone is selected yet; candidates are listed in section 5.
+v3 is about **scenario readiness, player information, and authored progression**. The completed v3 milestones so far are **M31 — Shell Entry + Scenario/Campaign Selection** and **M32 — Scenario Context, Start-State Authoring, and Visibility Foundation**.
+
+The selected next milestone is **M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation**.
 
 ---
 
@@ -64,12 +66,12 @@ Current stable foundation:
 | 9 | Trading Post interaction is implemented as a bounded text-prompt service flow, not a full shop/inventory UI. | Gap, not conflict. Build broader trader UI only in a scoped future milestone. |
 | 10 | Scenario `playerStart` now also authors a starting roster (`playerStart.roster`) alongside economy/service start state. Authored hero pool, item/artifact start-state, and per-scenario `unlockedRegions` overrides remain absent. M32 resets inventory/equipment to empty on an authored-roster start (no positive item/artifact authoring), so a clean item/artifact start-state is the only safe subset added. | Roster done by M32. Hero pool and authored item/artifact start-state remain future. |
 | 11 | Scenario Result mode presents deterministic outcome and next step, but not scores, rewards, branching choices, fanfare, or post-victory event chains. | Future v3 candidate after Scenario Context and quest/guidance foundations. |
-| 12 | M30's absent-player service defense is deterministic strength comparison, not full-simulation auto-resolve. | Future v3 candidate: threat preview + auto-resolve foundation with battle AI or battle-rule-aligned simulation. |
-| 13 | Temporarily Unavailable heroes return directly to reserve after a weekly delay, standing in for shared hero-pool re-entry. | M32 may introduce the minimal authored scenario hero pool needed to make this less global, but broad hero recovery/recruitment remains future scope. |
+| 12 | M30's absent-player service defense is deterministic strength comparison, not full-simulation auto-resolve. | Selected next: M33 should add threat preview and battle-rule-aligned auto-resolve foundations without inventing a second battle system. |
+| 13 | Temporarily Unavailable heroes return directly to reserve after a weekly delay, standing in for shared hero-pool re-entry. | Broad hero recovery/recruitment remains future scope. |
 | 14 | Enemy pressure captures player-owned services only; enemy-side destruction/sabotage/restoration and enemy-vs-enemy contention remain absent. | Future scope. Do not add before scenario visibility/selection and threat systems can explain it. |
 | 15 | Owned-service overview/readout is not the final service-management UI. | Keep read-only unless a scoped milestone selects service-management presentation/actions. |
 | 16 | M32 implemented the bounded fog/reveal foundation: persistent per-Region radius-2 reveal seeded at start and extended on movement/World Map arrival, with reveal-gated enemy presence + a bounded estimate in the Region read model. Full scouting ranges/passives, line-of-sight geometry, reveal services, quantity/level-band inspection depth, and hidden-information AI remain unimplemented. | Foundation done by M32. Polish/inspection depth/AI knowledge are future scope. |
-| 17 | M32 fixed the start-state leakage for scenarios that author start-state: clock resets to day 1 unconditionally, and roster + inventory/equipment + TU heroes + service log reset on an authored-roster start so a second New Game does not inherit the previous run. A scenario that authors NO roster still keeps the prebuilt default roster/inventory (the documented M16/M31 default-roster path, relied on by v1/v2 economy-proof content tests). | Resolved by M32 for authored-roster scenarios; default-roster scenarios intentionally unchanged. |
+| 17 | M32 fixed the start-state leakage for scenarios that author start-state: clock resets to day 1 unconditionally, and roster + inventory/equipment + TU heroes + service log reset on an authored-roster start so a second New Game does not inherit the previous run. A scenario that authors no roster still keeps the prebuilt default roster/inventory (the documented M16/M31 default-roster path, relied on by v1/v2 economy-proof content tests). | Resolved by M32 for authored-roster scenarios; default-roster scenarios intentionally unchanged. |
 
 No true design contradictions are currently known. Remaining gaps are implementation sequencing issues.
 
@@ -110,95 +112,80 @@ Latest completed milestone: **M32 — Scenario Context, Start-State Authoring, a
 
 `docs/content_scope_v2.md` is historical/archived. Active planning uses `docs/content_scope_v3.md`.
 
-No next milestone is selected. Candidates are listed in section 5; select one after auditing the post-M32 codebase.
+Selected next milestone: **M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation**.
 
-### M32 — Scenario Context, Start-State Authoring, and Visibility Foundation (complete)
+### M33 — Threat Preview + Battle-Rule-Aligned Auto-Resolve Foundation (planned)
 
-**Goal:** combine the next two v3 scope areas into one ambitious but bounded milestone: (1) Scenario Context + Start-State Authoring and (2) Fog, Reveal, and Enemy Visibility Foundation. M32 should make the shell-selected Scenario actually own its content/start-state boundary and give the player a basic knowledge layer for Region decisions.
+**Goal:** make Region/service conflict outcomes understandable before commitment and start replacing M30's deterministic absent-player service-defense stand-in with a battle-rule-aligned auto-resolve foundation.
 
-M32 should fix the strongest post-M31 weakness: the shell exposes authored Scenario/Campaign starts, but starts still inherit historical global-session state and globally loaded content behaves as if every Scenario shares the same visible world. The milestone should establish the smallest final-compatible Scenario Context and reveal/visibility foundation needed to prevent obvious global-content leakage and to support informed Region-layer play.
+M33 should improve player-facing decision quality and system consistency. The player should get a cheap, bounded preview before dangerous Region/service battles, and absent-player or AI-vs-AI service conflicts should resolve through a deterministic auto-resolve path that is derived from the existing battle model where practical. Do **not** invent a second battle engine.
 
-#### Required M32 deliverables
+#### Required M33 deliverables
 
-1. **Scenario Context / content boundary foundation**
-   - Add the smallest runtime/authored Scenario Context needed to identify which Regions, World Map entries, starting Region/node, and Scenario-visible content belong to the selected Scenario.
-   - Prevent shell-started Scenarios from accidentally exposing unrelated global Regions/World Map entries where the selected Scenario does not include them.
-   - Do not implement full per-Scenario content directories, mod load-order, or editor tooling.
-   - Keep authored content immutable; runtime state belongs in `GameSession`/save structures.
+1. **Threat preview model**
+   - Add a cheap threat preview for player-relevant Region/service fights before committing to travel or service defense where the attacker/defender are knowable under the M32 reveal rules.
+   - Preview must be bounded and player-facing: show relative danger / rough outcome band, not exact hidden debug stats unless the information is already visible.
+   - Respect reveal/visibility: unrevealed or hidden enemies should not leak exact composition through preview.
+   - Keep preview read-only. It must not mutate battle, roster, service, or enemy-team state.
 
-2. **Scenario-authored start-state expansion**
-   - Extend Scenario start-state beyond economy/services to include at least authored active/reserve starting roster and the minimal hero-pool / available-hero identity needed by current systems.
-   - Reset or initialize roster/clock/world-map/reveal state explicitly when starting a selected Scenario so New Game does not inherit previous run state.
-   - Preserve existing `playerStart` economy/service start-state semantics.
-   - Do not implement full character creation, broad item/artifact start-state, skill trees, or full campaign carry-over.
+2. **Battle-rule-aligned auto-resolve foundation**
+   - Introduce a deterministic auto-resolve service or rules module that uses the same durable unit stats and battle assumptions as the existing battle system where practical.
+   - It may remain simplified, but it must be closer to battle rules than M30's raw strength comparison and must have tests proving stable outcomes.
+   - Use it for absent-player service-defense resolution first, replacing or wrapping `ServiceDefenseRules` where scoped and safe.
+   - Do not use this milestone to build full battle AI, action scripting, redo/manual choice, auto-combat controls, or timed status effects.
 
-3. **Fog / reveal / explored foundation**
-   - Add persistent per-Scenario/Region reveal/explored state for Region nodes.
-   - Seed reveal state from Scenario/Region start rules and current player location.
-   - Reveal/explore nodes through legal player movement.
-   - Save/load reveal state.
-   - Keep the foundation simple; do not implement full final fog polish, line-of-sight geometry, scouting actions, or hidden-information AI.
+3. **Integration with service defense and Region travel**
+   - Service attacks against player-owned mines/storage/direct services should use the new auto-resolve path when the player is absent.
+   - Player-present service defense should continue using the existing interactive battle surface unless a safe preview-only hook is added.
+   - Region travel into hostile nodes should surface a preview/warning when the hostile force is visible/known enough.
+   - Existing M25-M32 semantics must remain intact: stationing/storage placement, generic travel loss, reveal-gated enemy visibility, service capture/loss/destruction/restoration, and save/load.
 
-4. **Enemy visibility / inspection foundation**
-   - Add bounded visibility rules for Region-layer enemy teams: visible only when on revealed/known nodes or otherwise visible by the current foundation.
-   - Provide basic player-facing estimates, not exact omniscient debug data, unless exact data is currently the only safe temporary display.
-   - Ensure Region render models, logs, and shell/scenario readouts do not reveal hidden enemy details when the node/team is not visible.
+4. **Presentation/read-model support**
+   - Extend existing Region/World Map/service read models enough to show a bounded threat preview where the player can act on it.
+   - Do not build a full final combat-planning UI.
+   - Use display names and player-facing bands. Avoid id-heavy debug strings.
+   - Keep the UI compatible with M32 fog/reveal: unknown enemies should remain unknown.
 
-5. **UI/read-model support**
-   - Update Region/World Map/readout mappers/renderers so known/revealed/hidden state is understandable.
-   - Avoid a broad UI rewrite. Prefer small model fields, labels, or existing panel/list patterns.
-   - Keep owned-service overview/readout read-only and do not turn it into a remote management UI.
+5. **Validation and tests**
+   - Add focused tests for preview calculation, visibility gating, auto-resolve determinism, service-defense integration, and no unintended roster/service mutation during preview.
+   - Add end-to-end tests showing that absent-player service defense uses the new path and preserves stack/save invariants.
+   - Keep existing battle, service defense, storage, stationing, World Map, reveal, shell, and save/load tests green.
 
-6. **Validation and tests**
-   - Validate Scenario Context references: Region ids, World Map entries, start Region/node, reveal defaults, and authored start roster/hero ids.
-   - Add tests proving a selected Scenario starts with its authored roster/services/resources/reveal state and does not inherit a previous run's roster/day/inventory where M32 owns the reset.
-   - Add tests proving hidden/unrevealed nodes and enemies are not exposed through read models, while revealed nodes/enemies are shown.
-   - Preserve M25-M31 tests.
+#### Explicit M33 out of scope
 
-#### Explicit M32 out of scope
-
-- full Scenario Region Context implementation if a smaller selected-Scenario boundary is sufficient;
-- full content directory partitioning or mod load order;
-- character creation;
-- full campaign carry-over/reward/branch choice presentation;
-- save-slot browser and save metadata UI;
-- full item/artifact start-state unless required for a test-safe roster start and explicitly justified;
-- full fog-of-war polish, line-of-sight geometry, scouting commands, hidden-information AI, or final enemy-inspection UI;
-- threat preview / auto-resolve foundation;
+- full battle AI;
+- player-command automation / auto-combat controls;
+- redo/manual battle selection;
+- timed status effects, spells, broad skill trees, or advanced command depth;
+- full final fog/scouting polish;
+- exact hidden enemy composition leak on unrevealed nodes;
+- full service-management UI;
+- enemy-side economy expansion;
+- enemy-side destruction/sabotage/restoration beyond existing M30 capture pressure;
 - quest/guidance/journal foundation;
-- service-management actions from overview;
-- full release validation pass.
+- release-validation/content-proof closure;
+- save schema migration unless a focused audit proves it unavoidable.
 
-#### M32 acceptance criteria
+#### M33 acceptance criteria
 
-M32 is complete when:
+M33 is complete when:
 
-- starting a Scenario through the shell creates a clean Scenario-specific runtime start state for roster, economy/services, Region/node, and visibility;
-- the selected Scenario cannot accidentally expose unrelated global Regions/World Map entries through normal shell/gameplay read models;
-- Region reveal/explored state persists through save/load;
-- basic enemy visibility/readout respects revealed/hidden state;
-- manual New Game after a previous run no longer inherits the previous run's roster/day state for fields owned by M32;
-- existing v1/v2/M31 gameplay paths remain green;
-- `docs/implementation_roadmap.md` is updated to mark M32 complete only after tests/manual validation pass.
-
-#### M32 delivered notes and scoping
-
-- **Scenario Context** is an authored `regions` id list on the thin scenario. Empty/absent => the default context of all loaded Regions (backward compatible; shipped scenarios are unchanged). When authored, the World Map read model and `GameSession::TravelToRegion` only expose/route in-context Regions, and the start Region must be inside the context. The context is derived (not persisted) and re-derived from the current scenario on load. Full per-Region variable/flag/override Scenario Region Context is still deferred.
-- **Authored roster** is `playerStart.roster.{active,reserve}` of `{unitId, quantity?}`. Validation: unit existence, hero/leader quantity 1, generic positive quantity, active≤5 / reserve≤8, an active leader-capable unit, and exactly one Player Character. When authored, scenario start rebuilds the roster and clears inventory/equipment/TU/log; campaign carry-over still overrides afterwards. When **not** authored, the existing prebuilt roster/inventory is preserved — this is deliberate so the v1/v2 economy-proof content tests (which start `campaign_ashvale` with a custom prebuilt roster) keep passing. Shipped scenarios author no roster; the authored-roster path is proven by focused tests.
-- **Clock** resets to day 1 on every scenario start (unconditional); this is the always-safe part of the leakage fix.
-- **Reveal** is a per-Region HoMM-persistent node set: radius-2 graph-BFS seeded around the start node and start-owned-service nodes, extended on movement (`SetDestination`) and World Map arrival, saved/loaded. A runtime `revealed` flag is added to the Region read model **distinct from** the authored `discovered` structural flag, so navigation is never broken — unknown nodes render faded with `?`.
-- **Enemy visibility** gates the Region read model's hostile marker and a bounded `enemyEstimate` ("Hostile force (Color)") on reveal; travel-legality mechanics still use the true hostile set (knowledge ≠ mechanics).
-- No item/artifact start-state authoring was added; the only inventory change is resetting to empty on an authored-roster start (a clean, non-authoring subset).
+- visible/known hostile Region/service threats expose a bounded preview before player commitment;
+- hidden/unrevealed threats do not leak exact composition through preview;
+- absent-player service-defense resolution uses a deterministic battle-rule-aligned auto-resolve path instead of the old raw strength-only comparison;
+- preview is pure/read-only and tested not to mutate runtime state;
+- auto-resolve preserves roster, stationing, storage, service ownership/loss, TU, and save/load invariants;
+- existing M25-M32 tests remain green;
+- `docs/implementation_roadmap.md` is updated to mark M33 complete only after tests/manual validation pass.
 
 ---
 
-## 5. Candidate directions after M32 / future v3 milestones
+## 5. Candidate directions after M33 / future v3 milestones
 
-These are v3 candidates, not current commitments. Select one only after auditing the post-M32 codebase.
+These are v3 candidates, not current commitments. Select one only after auditing the post-M33 codebase.
 
-1. **Threat Preview + Auto-Resolve Foundation.** Cheap threat preview for Region/service battles and battle-rule-aligned auto-resolve that can eventually replace M30's deterministic absent-player strength comparison.
-2. **Quest / Guidance / Journal Foundation.** Visible objectives, guidance, event-updated goals, and victory/defeat explanation tied to authored Scenarios.
-3. **v3 Content Proof + Release Validation Pass.** A small authored Scenario/Campaign proof using v3 systems plus release-readiness validation checks.
+1. **Quest / Guidance / Journal Foundation.** Visible objectives, guidance, event-updated goals, and victory/defeat explanation tied to authored Scenarios.
+2. **v3 Content Proof + Release Validation Pass.** A small authored Scenario/Campaign proof using v3 systems plus release-readiness validation checks.
 
 Larger systems that remain future candidates unless explicitly selected:
 
@@ -221,16 +208,20 @@ Larger systems that remain future candidates unless explicitly selected:
 - v2 is complete. Do not keep extending v2.
 - `docs/content_scope_v3.md` is the active scope cap.
 - M31 and M32 are complete.
-- No next milestone is selected. Pick one from section 5 only after auditing the post-M32 codebase; do not bundle multiple candidates without a scoped milestone.
-- Milestone-agnostic docs remain source-of-truth for final rules:
-  - `docs/game_vision.md`
-  - `docs/technical_direction.md`
-  - `docs/core_loop_rules.md`
-  - `docs/combat_rules.md`
-  - `docs/game_shell_flow.md`
-  - `docs/presentation_game_feel.md`
-  - `docs/scenario_authoring.md`
-  - `docs/content_schema.md`
-  - `docs/validation_system.md`
-  - `docs/terminology_map.md`
-- Update milestone-agnostic docs only when the actual long-term rule, schema, terminology, or architectural direction changes.
+- M33 is selected and planned.
+- Do not bundle future candidates into M33 unless the active scope is revised deliberately.
+
+Milestone-agnostic docs remain source-of-truth for final rules:
+
+- `docs/game_vision.md`
+- `docs/technical_direction.md`
+- `docs/core_loop_rules.md`
+- `docs/combat_rules.md`
+- `docs/game_shell_flow.md`
+- `docs/presentation_game_feel.md`
+- `docs/scenario_authoring.md`
+- `docs/content_schema.md`
+- `docs/validation_system.md`
+- `docs/terminology_map.md`
+
+Update milestone-agnostic docs only when the actual long-term rule, schema, terminology, or architectural direction changes.
