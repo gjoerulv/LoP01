@@ -1,15 +1,29 @@
-# Audit docs command guidance
+# Audit docs command context
 
-Use this to check documentation after a milestone or planning pass.
+Audit against the active v3 planning layer and the milestone-agnostic final-vision docs.
 
-Current baseline: read from `CLAUDE.md` and `docs/implementation_roadmap.md`.
+Active planning docs:
 
-Checklist:
+- `docs/content_scope_v3.md`
+- `docs/implementation_roadmap.md`
+- `CLAUDE.md`
+- `.github/copilot-instructions.md`
+- `.github/instructions/gameplay.instructions.md`
+- `.github/agents/game-architect.agent.md`
 
-- Active docs must not describe the repo as post-M29 or earlier unless explicitly referring to historical/archive context.
-- Latest completed milestone should match `docs/implementation_roadmap.md`; as of the post-M30 baseline it is **M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit**.
-- The next milestone may be unset. Do not invent one unless asked to recommend the roadmap.
-- `docs/content_scope_v2.md` is complete and ready to archive; once archived, the active scope should be `docs/content_scope_v3.md`.
-- Archived docs are historical context only.
-- Do not update milestone-agnostic final-vision docs just to record milestone status; update them only when the long-term rule, schema, terminology, or architecture actually changes.
-- Prefer concise targeted edits over broad rewrites.
+Final-vision/source-of-truth docs:
+
+- `docs/game_vision.md`
+- `docs/technical_direction.md`
+- `docs/core_loop_rules.md`
+- `docs/combat_rules.md`
+- `docs/game_shell_flow.md`
+- `docs/presentation_game_feel.md`
+- `docs/scenario_authoring.md`
+- `docs/content_schema.md`
+- `docs/validation_system.md`
+- `docs/terminology_map.md`
+
+Baseline: post-M30. v2 is complete. Selected next milestone: **M31 — Shell Entry + Scenario/Campaign Selection**.
+
+Flag stale references that describe the project as post-M29 or earlier, say v2 is still active, or say the next milestone is unselected.

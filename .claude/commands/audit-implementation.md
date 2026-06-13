@@ -1,18 +1,16 @@
-# Audit implementation command guidance
+# Audit implementation command context
 
-Use this to review source changes against the active docs and current architecture.
+Audit implementation against the exact commit/branch provided by the user. Do not rely on cached branch state.
 
-Current baseline: read from `CLAUDE.md` and `docs/implementation_roadmap.md`; as of the post-M30 baseline, **M30 — v2 Completion: Contested Infrastructure, Service State, and Closure Audit** is complete, v2 is ready to archive, and the next milestone is not selected unless the roadmap says otherwise.
+Baseline after `bab8989e6431c63d7583c4e55ff14ba8167d0f2f`: post-M30, active v3 scope, selected M31.
 
-Audit priorities:
+Current completed systems include:
 
-- Verify the branch/commit is current and not stale.
-- Check source/docs alignment.
-- Check separation of concerns: gameplay rules in gameplay/data layers, App handles input/flow, renderers draw models.
-- Check save/load compatibility and runtime/content-state separation.
-- Check performance traps: per-frame scans, repeated parsing, graph rebuilds, large copies, hidden O(n²) paths.
-- Check that ownership claiming remains the narrow player-side path unless a later roadmap explicitly broadens it.
-- Reject implementations that silently change ownership, economy, scenario, roster, stationing, storage, travel-loss, or save semantics without tests and docs.
-- Preserve M25 stationing invariants, M26 player-side claiming semantics, M27 read-only overview semantics, M28 storage invariants, M29 travel-loss semantics, and M30 service-defense/capture/destruction/TU semantics (deterministic resolver, atomic capture resolution, PC never lost/TU, additive save fields) unless a later milestone explicitly changes them.
-- Treat the M27 overview as a strategic readout foundation, not final service-management UI. Reject attempts to add remote stationing, storage/garrison management, service repair/destruction, ownership transfer, or other management actions through it unless selected by roadmap.
-- For travel-loss changes, require explicit warning/confirmation before traveling generic stacks are lost, confirmed removal through `GameSession`, stored/stationed units unaffected, and no broad service-defense/capture/loss scope creep.
+- v1 strategic-economy proof;
+- v2 contested-infrastructure loop: stationing, storage, claiming, travel-loss warning, service defense, storage loss/TU heroes, enemy capture pressure, destruction/restoration, service event log;
+- read-only owned-service overview;
+- current M31 target: shell entry and Scenario/Campaign selection.
+
+For M31 work, reject scope creep into full character creation, full settings/mods/accessibility, full save metadata, Scenario Region Context, fog/scouting, threat preview, item economy, AI economy, or final service-management UI unless the user explicitly changed the roadmap.
+
+Always check docs/source alignment and stale agent guidance.
