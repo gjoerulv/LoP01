@@ -28,7 +28,11 @@ namespace ashvale::rendering
         for (int i = 0; i < static_cast<int>(model.menuItems.size()); ++i)
         {
             const bool selected = (i == model.selectedIndex);
-            const Color color = selected ? context.theme.highlightTextColor : context.theme.textColor;
+            const bool enabled = i >= static_cast<int>(model.menuItemEnabled.size())
+                || model.menuItemEnabled[i];
+            const Color color = !enabled
+                ? context.theme.mutedTextColor
+                : (selected ? context.theme.highlightTextColor : context.theme.textColor);
 
             if (selected)
             {
@@ -37,6 +41,13 @@ namespace ashvale::rendering
 
             DrawTextEx(font, model.menuItems[i].c_str(), { panel.x + 24.0f, y }, context.normalFontSize, 1.0f, color);
             y += 46.0f;
+        }
+
+        if (!model.statusText.empty())
+        {
+            DrawTextEx(font, model.statusText.c_str(),
+                { panel.x, panel.y + panel.height + 18.0f },
+                context.smallFontSize, 1.0f, context.theme.mutedTextColor);
         }
 
         DrawTextEx(font, model.footerHint.c_str(),

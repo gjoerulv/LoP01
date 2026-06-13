@@ -19,12 +19,14 @@ namespace app
             return result;
         }
 
+        // Both axes navigate: Up/Down (target keys) matches the on-screen
+        // "Up/Down to choose" hint; Left/Right (select keys) stays supported.
         int nextIndex = std::clamp(selectedIndex, 0, campaignCount - 1);
-        if (input.selectPrev)
+        if (input.selectPrev || input.targetPrev)
         {
             nextIndex = (nextIndex - 1 + campaignCount) % campaignCount;
         }
-        if (input.selectNext)
+        if (input.selectNext || input.targetNext)
         {
             nextIndex = (nextIndex + 1) % campaignCount;
         }

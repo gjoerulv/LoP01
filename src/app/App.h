@@ -13,9 +13,11 @@
 #include "app/StationingInteraction.h"
 #include "app/StorageInteraction.h"
 #include "app/input/InputTranslator.h"
+#include "app/ShellSelectionRules.h"
 #include "app/mappers/RegionModelMapper.h"
 #include "app/mappers/WorldMapModelMapper.h"
 #include "app/mappers/CampaignModelMapper.h"
+#include "app/mappers/ShellModelMapper.h"
 #include "app/mappers/LocationModelMapper.h"
 #include "app/mappers/HudModelMapper.h"
 #include "app/mappers/BattleModelMapper.h"
@@ -79,6 +81,20 @@ namespace app {
         // Never returns a node that belongs to a different Region.
         [[nodiscard]] std::string ResolveSafeFallbackRegionNodeId() const;
         [[nodiscard]] std::string ResolveBattleScenarioId(const gameplay::SessionSnapshot& snapshot) const;
+
+        // M31 shell entry: the main menu / New Game selection flow hosted in
+        // GameMode::Title. The screen state machine is App-local UI state, never
+        // persisted; all content starts go through GameSession::StartCampaign /
+        // StartStandaloneScenario after the validation/playability gate.
+        void UpdateTitleShell(const input::InputState& input);
+        // Bounded single-save Continue: loads saves/slot_1.json when present and
+        // readable; any failure keeps the shell with a readable status and
+        // mutates nothing.
+        void ContinueFromShell();
+        // Single shell entry point: returns the session to Title, resets the
+        // shell screen state, and refreshes save availability.
+        void EnterShell(const std::string& statusText);
+        [[nodiscard]] shell::ShellEntryStatus ShellContentGate() const;
 
         void UpdateRegionMode(const input::InputState& input);
         void UpdateWorldMapMode(const input::InputState& input);
@@ -144,6 +160,7 @@ namespace app {
         mappers::RegionModelMapper regionModelMapper_;
         mappers::WorldMapModelMapper worldMapModelMapper_;
         mappers::CampaignModelMapper campaignModelMapper_;
+        mappers::ShellModelMapper shellModelMapper_;
         mappers::ScenarioResultModelMapper scenarioResultModelMapper_;
         mappers::OwnedServiceOverviewModelMapper ownedServiceOverviewModelMapper_;
 
@@ -185,6 +202,20 @@ namespace app {
         // state, never persisted).
         bool serviceMaintenanceConfirmPending_ = false;
         std::string serviceMaintenancePendingServiceId_;
+
+        // M31 shell screen state machine, hosted in GameMode::Title. App-local
+        // UI state only — never persisted (a save written in Title boots back to
+        // the shell's main menu anyway).
+        enum class ShellScreen { MainMenu, GameModeSelect, CampaignSelect, ScenarioSelect };
+        ShellScreen shellScreen_ = ShellScreen::MainMenu;
+        int shellSelectedIndex_ = 0;
+        std::string shellStatusText_;
+        // Cached so the shell never probes the filesystem per frame; refreshed by
+        // EnterShell, a successful in-game save, and Continue attempts.
+        bool shellHasSave_ = false;
+        // Computed once at content load; drives the do-not-start-invalid-content gate.
+        int contentValidationErrorCount_ = 0;
+        bool quitRequested_ = false;
     };
 
 } // namespace app
